@@ -9,6 +9,15 @@
 :root{--bg:#0b1220;--panel:#151f30;--panel2:#1d2a3e;--ink:#f5f7fb;--muted:#9aa9bd;--blue:#69a7ff;--green:#68d6a1;--line:#2a3950}
 *{box-sizing:border-box}body{margin:0;background:linear-gradient(160deg,#101d32,#0b1220 48%);color:var(--ink);font:16px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;padding:env(safe-area-inset-top) 16px calc(24px + env(safe-area-inset-bottom));}
 main{max-width:720px;margin:auto}.top{display:flex;align-items:center;justify-content:space-between;padding:22px 2px 14px}.brand{font-size:13px;letter-spacing:2px;color:var(--blue);font-weight:800}.date{color:var(--muted);font-size:13px}.hero{background:linear-gradient(135deg,#203d67,#172b48);border:1px solid #35577e;border-radius:22px;padding:22px;margin:8px 0 16px}.hero small{color:#c3d7f4;letter-spacing:1px}.goal{display:flex;align-items:baseline;gap:8px;margin:6px 0}.goal strong{font-size:48px;line-height:1}.goal span{color:#c3d7f4}.bar{height:9px;background:#0e1b2e;border-radius:20px;overflow:hidden;margin:14px 0 8px}.bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#69a7ff,#68d6a1);border-radius:20px}.sub{font-size:12px;color:#c3d7f4}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.tile,.card{background:var(--panel);border:1px solid var(--line);border-radius:17px;padding:15px}.tile .label{font-size:12px;color:var(--muted)}.tile strong{display:block;font-size:25px;margin:6px 0 2px}.tile em{font-style:normal;font-size:12px;color:var(--muted)}h2{font-size:17px;margin:22px 2px 10px}.card{margin-bottom:12px}.fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.field label{display:block;color:var(--muted);font-size:12px;margin:0 0 6px}.field input,.field select{width:100%;padding:12px;border-radius:11px;border:1px solid var(--line);background:#0e1726;color:var(--ink);font-size:16px;min-width:0}.wide{grid-column:1/-1}button{border:0;border-radius:12px;padding:14px 16px;font-weight:750;font-size:15px;background:var(--blue);color:#081426;width:100%;margin-top:12px}.secondary{background:var(--panel2);color:var(--ink);border:1px solid var(--line)}.history{display:flex;flex-direction:column;gap:8px}.entry{display:flex;justify-content:space-between;gap:10px;padding:12px;background:#101a2a;border-radius:12px;font-size:13px}.entry span{color:var(--muted)}.note{color:var(--muted);font-size:12px;line-height:1.5;margin:12px 2px}.tabs{position:sticky;bottom:0;padding:10px 0 calc(8px + env(safe-area-inset-bottom));background:linear-gradient(transparent,var(--bg) 22%);display:flex;gap:8px}.tabs button{margin:0;padding:11px 6px;font-size:12px}.tabs button.active{background:var(--blue)}.empty{color:var(--muted);font-size:13px;text-align:center;padding:14px}
+
+.gps-status{font-size:13px;color:var(--muted);line-height:1.5;margin:8px 0}
+.gps-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.gps-actions button{margin-top:8px}
+.gps-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:12px}
+.gps-metric{background:#101a2a;border-radius:12px;padding:10px}
+.gps-metric b{display:block;font-size:19px;margin-top:4px}
+.gps-metric span{font-size:11px;color:var(--muted)}
+.gps-list{display:flex;flex-direction:column;gap:7px;margin-top:10px}
 </style>
 </head>
 <body><main>
@@ -20,6 +29,26 @@ main{max-width:720px;margin:auto}.top{display:flex;align-items:center;justify-co
 <div class="tile"><div class="label">WATER</div><strong id="vWater">0 ml</strong><em>Daily guide: 2–2.5 L*</em></div>
 <div class="tile"><div class="label">PROTEIN</div><strong id="vProtein">0 g</strong><em>Planning guide: 90–110 g*</em></div>
 </div>
+
+<h2>GPS walking tracker</h2>
+<section class="card" id="gpsCard">
+  <b id="gpsTitle">Ready when you are</b>
+  <p class="gps-status" id="gpsStatus">Start a walk to request location access and record your route while this page is active. Keep this screen open during the walk.</p>
+  <div class="gps-metrics">
+    <div class="gps-metric"><span>DISTANCE</span><b id="gpsDistance">0.00 km</b></div>
+    <div class="gps-metric"><span>DURATION</span><b id="gpsDuration">00:00</b></div>
+    <div class="gps-metric"><span>PACE</span><b id="gpsPace">—</b></div>
+  </div>
+  <div class="gps-actions">
+    <button id="gpsStart">Start walk</button>
+    <button id="gpsPause" class="secondary" disabled>Pause</button>
+    <button id="gpsFinish" class="secondary" disabled>Finish &amp; save</button>
+    <button id="gpsClear" class="secondary">Clear live route</button>
+  </div>
+  <div class="gps-status" id="gpsAccuracy">GPS accuracy will appear here.</div>
+  <div class="gps-list" id="gpsHistory"><div class="empty">Completed GPS walks will appear here.</div></div>
+</section>
+
 <h2>Log today's progress</h2>
 <section class="card"><div class="fields">
 <div class="field"><label for="steps">Steps</label><input id="steps" type="number" min="0" placeholder="e.g. 8500"></div>
@@ -51,8 +80,80 @@ function render(){
 }
 $('save').onclick=()=>{logs[today]={steps:num('steps'),distance:num('distance'),water:num('water'),protein:num('protein'),weight:num('weight'),waist:num('waist'),sleep:num('sleep'),workout:$('workout').value,food:$('food').value.trim()};localStorage.setItem(key,JSON.stringify(logs));render();alert('MISSION 75: Today’s log saved on this device.');};
 $('clear').onclick=()=>{['steps','distance','water','protein','weight','waist','sleep','workout','food'].forEach(k=>$(k).value='')};
-$('export').onclick=()=>{let blob=new Blob([JSON.stringify(logs,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='mission75-backup.json';a.click();URL.revokeObjectURL(url)};
+$('export').onclick=()=>{let backup={format:'mission75-backup-v2',exportedAt:new Date().toISOString(),logs,gpsSessions};let blob=new Blob([JSON.stringify(backup,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='mission75-backup.json';a.click();URL.revokeObjectURL(url)};
 $('reset').onclick=()=>{if(confirm('Delete all MISSION 75 logs saved in this browser? Export a backup first if needed.')){logs={};localStorage.removeItem(key);render()}};
+
+// GPS WALK TRACKER — foreground browser tracking; not continuous background GPS.
+const GPS_KEY='mission75.gps.sessions.v1';
+let gpsSessions=[];try{gpsSessions=JSON.parse(localStorage.getItem(GPS_KEY)||'[]');if(!Array.isArray(gpsSessions))gpsSessions=[]}catch(e){gpsSessions=[]}
+let gpsWatch=null,gpsState='idle',gpsPoints=[],gpsMeters=0,gpsStartedAt=null,gpsElapsedBeforePause=0,gpsTick=null,gpsLastPosition=null;
+const gpsFmtTime=s=>{s=Math.max(0,Math.floor(s));return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0')};
+const gpsElapsed=()=>gpsElapsedBeforePause+(gpsState==='recording'&&gpsStartedAt?Math.floor((Date.now()-gpsStartedAt)/1000):0);
+function gpsRender(){
+ $('gpsDistance').textContent=(gpsMeters/1000).toFixed(2)+' km';
+ const secs=gpsElapsed();$('gpsDuration').textContent=gpsFmtTime(secs);
+ const pace=gpsMeters>0&&secs>0?(secs/60)/(gpsMeters/1000):0;
+ $('gpsPace').textContent=pace>0&&pace<60?gpsFmtTime(Math.round(pace*60))+'/km':'—';
+ $('gpsStart').disabled=gpsState==='recording'||gpsState==='paused';
+ $('gpsPause').disabled=gpsState!=='recording';$('gpsPause').textContent=gpsState==='paused'?'Resume':'Pause';
+ $('gpsFinish').disabled=!(gpsState==='recording'||gpsState==='paused');
+ $('gpsTitle').textContent=gpsState==='recording'?'Walk in progress':gpsState==='paused'?'Walk paused':'Ready when you are';
+}
+function gpsRenderHistory(){
+ $('gpsHistory').innerHTML=gpsSessions.length?gpsSessions.slice().reverse().slice(0,10).map(s=>`<div class="entry"><div><b>${new Date(s.startedAt).toLocaleString()}</b><br><span>${gpsFmtTime(s.durationSeconds)} · GPS walk</span></div><div style="text-align:right">${(s.distanceMeters/1000).toFixed(2)} km<br><span>Saved on this device</span></div></div>`).join(''):'<div class="empty">Completed GPS walks will appear here.</div>';
+}
+function gpsHaversine(a,b){
+ const rad=x=>x*Math.PI/180,R=6371000,dLat=rad(b.latitude-a.latitude),dLon=rad(b.longitude-a.longitude);
+ const q=Math.sin(dLat/2)**2+Math.cos(rad(a.latitude))*Math.cos(rad(b.latitude))*Math.sin(dLon/2)**2;
+ return 2*R*Math.atan2(Math.sqrt(q),Math.sqrt(1-q));
+}
+function gpsStopWatch(){if(gpsWatch!==null&&navigator.geolocation){navigator.geolocation.clearWatch(gpsWatch);gpsWatch=null}}
+function gpsPosition(pos){
+ const c=pos.coords;$('gpsAccuracy').textContent='GPS accuracy: approximately '+Math.round(c.accuracy)+' m';
+ if(c.accuracy>60){$('gpsStatus').textContent='GPS signal is weak. Move to an open area for a better reading.';return}
+ const point={latitude:c.latitude,longitude:c.longitude,accuracy:c.accuracy,timestamp:pos.timestamp};
+ if(gpsLastPosition){
+   const delta=gpsHaversine(gpsLastPosition,point),seconds=Math.max(1,(point.timestamp-gpsLastPosition.timestamp)/1000);
+   if(delta>=4 && delta/seconds<8){gpsMeters+=delta;gpsPoints.push(point)}
+ }else{gpsPoints.push(point)}
+ gpsLastPosition=point;gpsRender();
+}
+function gpsError(err){
+ const msgs={1:'Location permission was denied. Allow location access in iPhone Settings and try again.',2:'Your location is unavailable. Check Location Services and GPS signal.',3:'GPS timed out. Move outdoors and try again.'};
+ $('gpsStatus').textContent=msgs[err.code]||'Unable to obtain location.';gpsStopWatch();
+ if(gpsState==='recording'){gpsElapsedBeforePause=gpsElapsed();gpsStartedAt=null;clearInterval(gpsTick);gpsState='paused';gpsRender()}
+}
+function gpsStartWatch(){
+ if(!('geolocation' in navigator)){alert('This browser does not support location tracking.');return}
+ if(!window.isSecureContext){alert('GPS requires a secure HTTPS website.');return}
+ gpsState='recording';gpsStartedAt=Date.now();gpsLastPosition=null;
+ $('gpsStatus').textContent='Requesting location permission. Keep Mission 75 open and allow location access.';
+ gpsWatch=navigator.geolocation.watchPosition(gpsPosition,gpsError,{enableHighAccuracy:true,maximumAge:3000,timeout:20000});
+ gpsTick=setInterval(gpsRender,1000);gpsRender();
+}
+$('gpsStart').onclick=()=>{
+ if(gpsState==='paused'){gpsStartWatch();return}
+ gpsPoints=[];gpsMeters=0;gpsElapsedBeforePause=0;gpsStartedAt=null;gpsLastPosition=null;gpsStartWatch();
+};
+$('gpsPause').onclick=()=>{
+ if(gpsState==='recording'){gpsElapsedBeforePause=gpsElapsed();gpsStartedAt=null;gpsStopWatch();clearInterval(gpsTick);gpsState='paused';$('gpsStatus').textContent='Walk paused. Tap Resume to continue.'}
+ else if(gpsState==='paused'){gpsStartWatch();$('gpsStatus').textContent='Walk resumed. Keep this screen open.'}
+ gpsRender();
+};
+$('gpsFinish').onclick=()=>{
+ if(!confirm('Finish this walk and save its GPS summary on this device?'))return;
+ const durationSeconds=gpsElapsed(),startedAt=gpsPoints.length?new Date(gpsPoints[0].timestamp).toISOString():new Date(Date.now()-durationSeconds*1000).toISOString();
+ gpsStopWatch();clearInterval(gpsTick);
+ if(gpsMeters>0||durationSeconds>0){gpsSessions.push({id:'gps-'+Date.now(),startedAt,finishedAt:new Date().toISOString(),durationSeconds,distanceMeters:Math.round(gpsMeters),points:gpsPoints});localStorage.setItem(GPS_KEY,JSON.stringify(gpsSessions))}
+ gpsState='idle';gpsStartedAt=null;gpsElapsedBeforePause=0;gpsLastPosition=null;
+ $('gpsStatus').textContent='Walk saved on this device. Export a backup regularly.';gpsRender();gpsRenderHistory();
+};
+$('gpsClear').onclick=()=>{
+ if(gpsState==='recording'||gpsState==='paused'){alert('Finish the active walk before clearing the live route.');return}
+ gpsPoints=[];gpsMeters=0;gpsElapsedBeforePause=0;gpsRender();$('gpsStatus').textContent='Live route cleared.';
+};
+gpsRender();gpsRenderHistory();
+
 if('serviceWorker' in navigator && location.protocol.startsWith('http'))navigator.serviceWorker.register('./sw.js').catch(()=>{});
 render();
 </script></body></html>
