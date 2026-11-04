@@ -1,10 +1,10 @@
 {
-  "name": "GativX — Your Goal. Your Journey. Your Achievement.",
+  "name": "GativX — From Goals to Xcellence",
   "short_name": "GativX",
   "start_url": "./",
   "display": "standalone",
-  "background_color": "#062D24",
-  "theme_color": "#062D24",
+  "background_color": "#06152F",
+  "theme_color": "#06152F",
   "icons": [
     {
       "src": "icon.svg",
