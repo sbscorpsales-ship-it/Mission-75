@@ -6,7 +6,7 @@ const browser = await chromium.launch({ headless: true });
 const page = await browser.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1 });
 const errors = [];
 page.on("pageerror", error => errors.push(error.message));
-await page.route(/^https?:\\/\\//, route => route.abort());
+await page.route("https://**/*", route => route.abort());
 const fileUrl = pathToFileURL(path.resolve("index.html")).href;
 await page.goto(fileUrl, { waitUntil: "domcontentloaded" });
 await page.waitForTimeout(6500);
