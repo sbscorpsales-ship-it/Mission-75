@@ -49,3 +49,5 @@ else if (/\bplayFanfare\s*\(\s*\)\s*;/.test(introScript)) fail("Intro contains a
 else pass("Intro does not invoke sound automatically");
 
 if (failed) process.exit(1);
+
+// Re-run release gate after workflow activation on main.
