@@ -9,9 +9,9 @@
   "theme_color": "#FFF000",
   "icons": [
     {
-      "src": "./gativx-logo.svg",
+      "src": "./gativx-logo.jpg",
       "sizes": "any",
-      "type": "image/svg+xml",
+      "type": "image/jpeg",
       "purpose": "any maskable"
     }
   ]
