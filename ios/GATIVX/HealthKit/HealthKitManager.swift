@@ -88,11 +88,15 @@ final class HealthKitManager: ObservableObject {
                 }
 
                 collection.enumerateStatistics(from: start, to: end) { statistics, _ in
-                    let total = Int(statistics.sumQuantity()?.doubleValue(for: .count()) ?? 0)
                     let day = calendar.startOfDay(for: statistics.startDate)
-                    self.onDailyTotal?(day, max(0, total))
+                    guard let quantity = statistics.sumQuantity() else {
+                        if calendar.isDateInToday(day) { self.todaySteps = 0 }
+                        return
+                    }
+                    let total = max(0, Int(quantity.doubleValue(for: .count())))
+                    self.onDailyTotal?(day, total)
                     if calendar.isDateInToday(day) {
-                        self.todaySteps = max(0, total)
+                        self.todaySteps = total
                     }
                 }
                 self.statusMessage = "Apple Health step totals refreshed."
