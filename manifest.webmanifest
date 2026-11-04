@@ -1,7 +1,9 @@
 {
-  "name": "GativX — From Goals to Xcellence",
-  "short_name": "GativX",
+  "name": "GATIVX — From Goals to Xcellence",
+  "short_name": "GATIVX",
+  "id": "./",
   "start_url": "./",
+  "scope": "./",
   "display": "standalone",
   "background_color": "#FFF000",
   "theme_color": "#FFF000",
@@ -10,7 +12,7 @@
       "src": "./gativx-logo.svg",
       "sizes": "any",
       "type": "image/svg+xml",
-      "purpose": "any"
+      "purpose": "any maskable"
     }
   ]
 }
