@@ -92,9 +92,30 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 
 /* GativX brand identity */
 .brand-lockup{display:flex;align-items:center;gap:11px}.brand-lockup img{width:64px;height:64px;object-fit:cover;border-radius:15px;box-shadow:0 3px 15px #FFD90055;border:1px solid #FFD84D}.brand{font-size:20px;letter-spacing:1px;font-weight:950;color:#F4FFF7}.brand-x{color:#39B8FF}.top h1{font-size:12px;letter-spacing:.3px;margin:1px 0 0;color:#B5D7C2;font-weight:650}
+
+/* GATIVX animated brand intro */
+#brandIntro{position:fixed;inset:0;z-index:9999;display:grid;place-items:center;padding:24px;background:radial-gradient(circle at 50% 38%,#fff65a 0,#ffe600 42%,#f5c900 100%);color:#07131f;transition:opacity .65s ease,visibility .65s ease}
+#brandIntro.intro-hide{opacity:0;visibility:hidden;pointer-events:none}
+.intro-inner{width:min(620px,100%);text-align:center}
+.intro-emblem{width:min(40vw,190px);height:auto;display:block;margin:0 auto 12px;filter:drop-shadow(0 12px 18px #7d620055);animation:intro-pop .8s cubic-bezier(.2,.9,.2,1) both}
+.intro-word{display:flex;justify-content:center;gap:.015em;font-size:clamp(42px,12vw,88px);font-weight:1000;font-style:italic;letter-spacing:-.075em;line-height:1.04;color:#050505}
+.intro-word span{display:inline-block;opacity:0;transform:translateY(30px) rotate(-8deg);animation:letter-in .48s cubic-bezier(.2,.8,.2,1) forwards}
+.intro-word span:nth-child(1){animation-delay:.65s}.intro-word span:nth-child(2){animation-delay:.82s}.intro-word span:nth-child(3){animation-delay:.99s}.intro-word span:nth-child(4){animation-delay:1.16s}.intro-word span:nth-child(5){animation-delay:1.33s}.intro-word span:nth-child(6){animation-delay:1.5s}
+.intro-acronym{display:flex;flex-wrap:wrap;justify-content:center;gap:7px 12px;margin:22px auto 0;max-width:560px;font-size:clamp(10px,2.6vw,14px);font-weight:900;letter-spacing:.045em;text-transform:uppercase}
+.intro-acronym span{opacity:0;transform:translateY(10px);animation:word-in .42s ease forwards}
+.intro-acronym span:nth-child(1){animation-delay:1.85s}.intro-acronym span:nth-child(2){animation-delay:2.05s}.intro-acronym span:nth-child(3){animation-delay:2.25s}.intro-acronym span:nth-child(4){animation-delay:2.45s}.intro-acronym span:nth-child(5){animation-delay:2.65s}.intro-acronym span:nth-child(6){animation-delay:2.85s}
+.intro-motto{margin:26px 0 0;font-size:clamp(17px,4.5vw,25px);font-weight:950;font-style:italic;color:#09295b;opacity:0;animation:motto-in .7s ease 3.2s forwards}
+.intro-rule{height:4px;width:min(270px,70%);margin:13px auto 0;border-radius:8px;background:linear-gradient(90deg,#075dff,#00bd77,#075dff);transform:scaleX(0);transform-origin:center;animation:rule-in .65s ease 3.55s forwards}
+.intro-skip{margin-top:32px;border:1px solid #17171766;background:#080808;color:#fff;padding:10px 22px;border-radius:999px;font-size:12px;font-weight:800;letter-spacing:.06em}
+@keyframes intro-pop{0%{opacity:0;transform:scale(.72) rotate(-8deg)}100%{opacity:1;transform:scale(1) rotate(0)}}
+@keyframes letter-in{to{opacity:1;transform:translateY(0) rotate(0)}}
+@keyframes word-in{to{opacity:1;transform:translateY(0)}}
+@keyframes motto-in{to{opacity:1}}
+@keyframes rule-in{to{transform:scaleX(1)}}
+@media(prefers-reduced-motion:reduce){#brandIntro *{animation:none!important;opacity:1!important;transform:none!important}}
 </style>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""><script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script></head>
-<body><main>
+<body><div id="brandIntro" role="dialog" aria-label="GativX brand introduction"><div class="intro-inner"><img class="intro-emblem" src="./gativx-logo.svg" alt="GativX running emblem"><div class="intro-word" aria-label="GativX"><span>G</span><span>A</span><span>T</span><span>I</span><span>V</span><span>X</span></div><div class="intro-acronym"><span>Goals</span><span>Act</span><span>Targets</span><span>Training</span><span>Vitality</span><span>Xcellence</span></div><div class="intro-motto">From Goals to Xcellence</div><div class="intro-rule"></div><button class="intro-skip" id="skipBrandIntro" type="button">SKIP INTRO</button></div></div><main>
 <header class="top"><div class="brand-lockup"><img src="./gativx-logo.svg" alt="GativX logo"><div><div class="brand">Gativ<span class="brand-x">X</span></div><h1>From Goals to Xcellence</h1></div></div><div class="date" id="today"></div></header>
 <section class="hero"><div><div class="eyebrow">YOUR PERSONAL MISSION</div><div class="biggoal"><span id="goalWeight">75</span><small> kg target</small></div><div id="weightSummary" class="muted" style="font-size:12px">Start by logging your weight today.</div><div class="progress"><i id="weightBar"></i></div><div id="weightRemaining" class="muted" style="font-size:11px">Every healthy habit counts.</div></div><div class="hero-right"><div class="ring" id="dayRing"><b id="dayPercent">0%</b></div><div class="ringlabel">DAILY HABITS</div></div></section>
 <div class="grid"><div class="tile"><div class="label">STEPS</div><strong id="vSteps">0</strong><small>Goal 10,000</small></div><div class="tile"><div class="label">WALKING</div><strong id="vDistance">0 km</strong><small>Today's distance</small></div><div class="tile"><div class="label">WATER</div><strong id="vWater">0 ml</strong><small>Personal guide</small></div><div class="tile"><div class="label">PROTEIN</div><strong id="vProtein">0 g</strong><small>Daily planning guide</small></div></div>
