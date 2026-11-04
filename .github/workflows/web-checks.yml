@@ -2,7 +2,7 @@ name: GATIVX web release checks
 
 on:
   push:
-    branches: ["gativx/release-dashboard-nav-intro-v1"]
+    branches: ["gativx/dashboard-connected-data-v2"]
     paths:
       - "index.html"
       - "scripts/check-web.mjs"
