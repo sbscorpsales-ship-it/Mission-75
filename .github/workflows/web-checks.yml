@@ -6,6 +6,7 @@ on:
     paths:
       - "index.html"
       - "scripts/check-web.mjs"
+      - "scripts/browser-smoke.mjs"
       - ".github/workflows/web-checks.yml"
   pull_request:
     branches: [main]
