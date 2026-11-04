@@ -221,8 +221,11 @@ $('welcomeDone').addEventListener('change',()=>{let done=welcomeState.done||[];d
 function init(){renderSettings();loadForm();renderSummary();renderGps();coach();}init();window.addEventListener('resize',()=>{if($('pane-trends').classList.contains('active'))drawChart()});
 })();
 </script><script>
-// GATIVX opening sequence + original synthesized startup fanfare.
-(()=>{const intro=document.getElementById("brandIntro");if(!intro)return;let closed=false,audioCtx=null,master=null;
+// GATIVX opening sequence: show once, never block repeat visits.
+(()=>{const intro=document.getElementById("brandIntro");if(!intro)return;const SEEN_KEY="gativx.brandIntro.seen.v1";
+ let seen=false;try{seen=localStorage.getItem(SEEN_KEY)==="1";}catch(e){}
+ if(seen){intro.remove();return;}
+ let closed=false,audioCtx=null,master=null;
  const soundBtn=document.getElementById("introSound");
  const stopSound=()=>{if(master&&audioCtx){try{master.gain.cancelScheduledValues(audioCtx.currentTime);master.gain.setTargetAtTime(0,audioCtx.currentTime,.12);}catch(e){}}};
  const playFanfare=async()=>{const AC=window.AudioContext||window.webkitAudioContext;if(!AC){if(soundBtn)soundBtn.textContent="SOUND UNAVAILABLE";return;}
@@ -234,12 +237,12 @@ function init(){renderSettings();loadForm();renderSummary();renderGps();coach();
    if(soundBtn)soundBtn.textContent="♫ SOUND ON";
   }catch(e){if(soundBtn)soundBtn.textContent="♫ TAP FOR SOUND";}
  };
- const closeIntro=()=>{if(closed)return;closed=true;stopSound();intro.classList.add("intro-hide");window.setTimeout(()=>intro.remove(),900);};
+ const closeIntro=()=>{if(closed)return;closed=true;try{localStorage.setItem(SEEN_KEY,"1");}catch(e){}stopSound();intro.classList.add("intro-hide");window.setTimeout(()=>intro.remove(),900);};
  if(soundBtn)soundBtn.addEventListener("click",playFanfare,{once:true});
  const skip=document.getElementById("skipBrandIntro");if(skip)skip.addEventListener("click",closeIntro,{once:true});
  const reduced=window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches;
- // Try autoplay for browsers that permit it; iOS will expose the sound button if blocked.
- playFanfare();window.setTimeout(closeIntro,reduced?2500:7800);
+ // Sound is user-initiated only; automatically dismiss the first-visit intro.
+ window.setTimeout(closeIntro,reduced?1800:6500);
 })();
 </script><script>
 if("serviceWorker" in navigator){
