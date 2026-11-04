@@ -42,7 +42,8 @@ begin
   do update set
     steps = excluded.steps,
     steps_source = 'apple_health',
-    steps_updated_at = excluded.steps_updated_at;
+    steps_updated_at = excluded.steps_updated_at
+  where public.daily_logs.steps_source is distinct from 'manual';
 end;
 $$;
 
