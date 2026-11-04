@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8"><link rel="manifest" href="./manifest.webmanifest"><link rel="icon" type="image/png" sizes="512x512" href="https://d2ol7oe51mr4n9.cloudfront.net/user_3L8rRDq0q89aOTZmBcYnpQQv8eQ/c8f5006f-fc6b-4793-9a88-83705973de67.png"><link rel="apple-touch-icon" sizes="180x180" href="https://d2ol7oe51mr4n9.cloudfront.net/user_3L8rRDq0q89aOTZmBcYnpQQv8eQ/c8f5006f-fc6b-4793-9a88-83705973de67.png"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta charset="utf-8"><link rel="manifest" href="./manifest.webmanifest"><link rel="icon" type="image/png" sizes="1024x1024" href="https://d2ol7oe51mr4n9.cloudfront.net/user_3L8rRDq0q89aOTZmBcYnpQQv8eQ/04d06032-fc75-4eee-a83c-6d93f3e9a54a.png"><link rel="apple-touch-icon" sizes="180x180" href="https://d2ol7oe51mr4n9.cloudfront.net/user_3L8rRDq0q89aOTZmBcYnpQQv8eQ/04d06032-fc75-4eee-a83c-6d93f3e9a54a.png"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#06152F"><meta name="apple-mobile-web-app-title" content="GativX"><meta name="description" content="GativX — Move. Eat. Track. Grow. Achieve. Your goal. Your journey. Your achievement.">
 <title>GativX — Your Goal. Your Journey. Your Achievement.</title>
 <style>
@@ -91,11 +91,11 @@ button.secondary,.tabs button{background:#124B3A;color:#D9F4E2;border:1px solid 
 button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid #EFFF00;outline-offset:2px}
 
 /* GativX brand identity */
-.brand-lockup{display:flex;align-items:center;gap:11px}.brand-lockup img{width:58px;height:58px;object-fit:contain;border-radius:13px;box-shadow:0 0 12px #D9A44135}.brand{font-size:20px;letter-spacing:1px;font-weight:950;color:#F4FFF7}.brand-x{color:#39B8FF}.top h1{font-size:12px;letter-spacing:.3px;margin:1px 0 0;color:#B5D7C2;font-weight:650}
+.brand-lockup{display:flex;align-items:center;gap:11px}.brand-lockup img{width:64px;height:64px;object-fit:cover;border-radius:15px;box-shadow:0 3px 15px #FFD90055;border:1px solid #FFD84D}.brand{font-size:20px;letter-spacing:1px;font-weight:950;color:#F4FFF7}.brand-x{color:#39B8FF}.top h1{font-size:12px;letter-spacing:.3px;margin:1px 0 0;color:#B5D7C2;font-weight:650}
 </style>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""><script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script></head>
 <body><main>
-<header class="top"><div class="brand-lockup"><img src="./icon.svg" alt="GativX logo"><div><div class="brand">Gativ<span class="brand-x">X</span></div><h1>From Goals to Xcellence</h1></div></div><div class="date" id="today"></div></header>
+<header class="top"><div class="brand-lockup"><img src="https://d2ol7oe51mr4n9.cloudfront.net/user_3L8rRDq0q89aOTZmBcYnpQQv8eQ/04d06032-fc75-4eee-a83c-6d93f3e9a54a.png" alt="GativX logo"><div><div class="brand">Gativ<span class="brand-x">X</span></div><h1>From Goals to Xcellence</h1></div></div><div class="date" id="today"></div></header>
 <section class="hero"><div><div class="eyebrow">YOUR PERSONAL MISSION</div><div class="biggoal"><span id="goalWeight">75</span><small> kg target</small></div><div id="weightSummary" class="muted" style="font-size:12px">Start by logging your weight today.</div><div class="progress"><i id="weightBar"></i></div><div id="weightRemaining" class="muted" style="font-size:11px">Every healthy habit counts.</div></div><div class="hero-right"><div class="ring" id="dayRing"><b id="dayPercent">0%</b></div><div class="ringlabel">DAILY HABITS</div></div></section>
 <div class="grid"><div class="tile"><div class="label">STEPS</div><strong id="vSteps">0</strong><small>Goal 10,000</small></div><div class="tile"><div class="label">WALKING</div><strong id="vDistance">0 km</strong><small>Today's distance</small></div><div class="tile"><div class="label">WATER</div><strong id="vWater">0 ml</strong><small>Personal guide</small></div><div class="tile"><div class="label">PROTEIN</div><strong id="vProtein">0 g</strong><small>Daily planning guide</small></div></div>
 <nav class="tabs" aria-label="Main navigation"><button class="active" data-tab="today">Today</button><button data-tab="log">Daily log</button><button data-tab="trends">Progress</button><button data-tab="coach">Coach</button><button data-tab="walk">Walk tracker</button><button data-tab="data">My data</button></nav>
