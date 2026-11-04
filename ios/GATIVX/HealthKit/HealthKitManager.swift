@@ -80,7 +80,9 @@ final class HealthKitManager: ObservableObject {
         anchorComponents.hour = 0
         guard let anchor = calendar.date(from: anchorComponents) else {
             isRefreshing = false
-            onComplete?()
+            let completions = refreshCompletions
+            refreshCompletions.removeAll()
+            completions.forEach { $0() }
             return
         }
 
