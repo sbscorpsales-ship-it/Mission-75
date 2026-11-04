@@ -1,0 +1,26 @@
+name: GATIVX
+options:
+  bundleIdPrefix: com.paramitsolutions
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+
+targets:
+  GATIVX:
+    type: application
+    platform: iOS
+    sources:
+      - path: GATIVX
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.paramitsolutions.gativx
+        PRODUCT_NAME: GATIVX
+        SWIFT_VERSION: "5.0"
+        TARGETED_DEVICE_FAMILY: "1"
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_NSHealthShareUsageDescription: "GATIVX reads your daily step count to show progress toward your mission."
+        INFOPLIST_KEY_NSLocationWhenInUseUsageDescription: "GATIVX uses your location only when you start a GPS walk."
+        CODE_SIGN_ENTITLEMENTS: GATIVX/GATIVX.entitlements
+        SUPPORTS_MACCATALYST: NO
+    scheme:
+      gatherCoverageData: false
