@@ -1,5 +1,5 @@
-const CACHE="gativx-v23";
-const CORE=["./","./index.html","./manifest.webmanifest","./icon.svg","./gativx-logo.jpg","./gativx-runner.jpg"];
+const CACHE="gativx-v24";
+const CORE=["./","./index.html","./manifest.webmanifest","./icon.svg","./gativx-logo.jpg"];
 self.addEventListener("install",event=>{event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(CORE)).then(()=>self.skipWaiting()));});
 self.addEventListener("activate",event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim()));});
 self.addEventListener("fetch",event=>{
