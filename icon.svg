@@ -1,9 +1,15 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-<defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#0C5138"/><stop offset="1" stop-color="#062D24"/></linearGradient><linearGradient id="ring" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#EFFF00"/><stop offset=".48" stop-color="#39FF14"/><stop offset="1" stop-color="#39B8FF"/></linearGradient></defs>
-<rect width="512" height="512" rx="116" fill="url(#bg)"/>
-<circle cx="256" cy="238" r="158" fill="none" stroke="#1B5943" stroke-width="35"/>
-<circle cx="256" cy="238" r="158" fill="none" stroke="url(#ring)" stroke-width="35" stroke-linecap="round" stroke-dasharray="850 145" transform="rotate(-105 256 238)"/>
-<circle cx="256" cy="238" r="119" fill="#0B3B2F"/>
-<text x="256" y="258" text-anchor="middle" font-family="Arial,sans-serif" font-size="104" font-weight="900" letter-spacing="-5" fill="#F4FFF7">75</text>
-<path d="M155 420h202" stroke="#FF8C00" stroke-width="18" stroke-linecap="round"/><circle cx="382" cy="420" r="13" fill="#FF8C00"/>
+<defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#07502F"/><stop offset="1" stop-color="#031C18"/></linearGradient><linearGradient id="gx" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#EFFF00"/><stop offset=".5" stop-color="#39FF14"/><stop offset="1" stop-color="#00C8FF"/></linearGradient></defs>
+<rect width="512" height="512" rx="112" fill="url(#bg)"/>
+<circle cx="256" cy="170" r="77" fill="#EFFF00" opacity=".95"/>
+<path d="M168 188l58-62 35 39 27-27 57 62H168z" fill="#F4FFF7"/>
+<path d="M111 265c40-73 93-105 145-105 52 0 100 25 145 76" fill="none" stroke="url(#gx)" stroke-width="29" stroke-linecap="round"/>
+<path d="M124 270c44 42 111 55 180 31 34-12 62-34 84-65" fill="none" stroke="#39B8FF" stroke-width="17" stroke-linecap="round"/>
+<path d="M340 205l39 30-49 9" fill="none" stroke="#EFFF00" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M171 220l-21-31m-1 31l-30-8" stroke="#B7FF35" stroke-width="11" stroke-linecap="round"/>
+<path d="M236 223l18-34 14 24 16-14 20 24" fill="none" stroke="#0B3B2F" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M275 201l8-21 10 14 12-7" fill="none" stroke="#0B3B2F" stroke-width="7" stroke-linecap="round"/>
+<text x="256" y="366" text-anchor="middle" font-family="Arial,sans-serif" font-size="82" font-weight="900" font-style="italic" letter-spacing="-5" fill="#F4FFF7">Gativ<tspan fill="#EFFF00">X</tspan></text>
+<path d="M115 402h282" stroke="url(#gx)" stroke-width="10" stroke-linecap="round"/>
+<text x="256" y="446" text-anchor="middle" font-family="Arial,sans-serif" font-size="22" font-weight="800" letter-spacing="3" fill="#D9F4E2">MOVE • GROW • ACHIEVE</text>
 </svg>
