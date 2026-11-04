@@ -1,11 +1,1 @@
-{
-  "name":"MISSION 75",
-  "short_name":"MISSION",
-  "start_url":"./",
-  "display":"standalone",
-  "background_color":"#F4FFF8",
-  "theme_color":"#F4FFF8",
-  "icons":[
-    {"src":"icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any"}
-  ]
-}
+{"name":"MISSION 75","short_name":"MISSION","start_url":"./","display":"standalone","background_color":"#062D24","theme_color":"#062D24","icons":[{"src":"icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any"}]}
