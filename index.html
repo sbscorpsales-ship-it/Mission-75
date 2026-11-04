@@ -1,12 +1,54 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#0b1220"><meta name="description" content="Mission 75 — build stronger habits, one day at a time.">
-<title>Mission 75 — Stronger Every Day</title>
+<meta charset="utf-8"><link rel="manifest" href="./manifest.webmanifest"><link rel="icon" href="./icon.svg" type="image/svg+xml"><link rel="apple-touch-icon" href="./icon.svg"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#F4FFF8"><meta name="description" content="MISSION — your personal goal, your daily progress, your achievement.">
+<title>MISSION 75 — Your Mission, Every Day</title>
 <style>
 :root{color-scheme:dark;--bg:#08111f;--panel:#111d2e;--panel2:#17263b;--line:#263951;--ink:#f3f7ff;--muted:#9aabc1;--blue:#77b5ff;--green:#67d7a5;--gold:#f4c66a;--red:#ff8f8f;--radius:18px}*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 10% 0%,#17345a 0,transparent 38%),var(--bg);color:var(--ink);font:15px/1.45 Inter,system-ui,-apple-system,"Segoe UI",sans-serif;padding:env(safe-area-inset-top) 14px calc(30px + env(safe-area-inset-bottom))}main{max-width:1050px;margin:auto}.top{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:22px 2px 16px}.brand{font-size:12px;font-weight:900;letter-spacing:2.5px;color:var(--blue)}h1{font-size:25px;margin:4px 0 0;letter-spacing:-.7px}.date{color:var(--muted);font-size:12px;text-align:right}.hero{background:linear-gradient(120deg,#1a3b63,#172b47 70%);border:1px solid #355a83;border-radius:24px;padding:20px;margin-bottom:14px;display:grid;grid-template-columns:1fr auto;gap:16px;align-items:center}.eyebrow{color:#c5ddf8;font-size:11px;letter-spacing:1.4px;font-weight:800}.biggoal{font-size:48px;font-weight:900;line-height:1.1;margin:5px 0}.biggoal small{font-size:17px;color:#c5ddf8}.muted{color:var(--muted)}.progress{height:9px;background:#0a1b30;border-radius:99px;overflow:hidden;margin:13px 0 7px}.progress i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--blue),var(--green));border-radius:99px;transition:width .25s}.hero-right{text-align:center;min-width:105px}.ring{width:92px;height:92px;border-radius:50%;display:grid;place-items:center;background:conic-gradient(var(--green) 0deg,#29415e 0deg);position:relative;margin:auto}.ring:before{content:"";position:absolute;inset:8px;background:#18314f;border-radius:50%}.ring b{z-index:1;font-size:20px}.ringlabel{font-size:11px;color:#c5ddf8;margin-top:6px}.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.tile,.card{background:linear-gradient(160deg,#142238,#101a2a);border:1px solid var(--line);border-radius:var(--radius);padding:15px}.tile .label{font-size:10px;color:var(--muted);letter-spacing:1px;font-weight:800}.tile strong{display:block;font-size:25px;margin:5px 0 1px}.tile small{color:var(--muted);font-size:11px}.section-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:22px 2px 10px}.section-head h2{font-size:17px;margin:0}.tag{font-size:10px;color:var(--green);background:#12362f;padding:5px 8px;border-radius:99px}.card{margin-bottom:12px}.fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}.field label{display:block;font-size:11px;color:var(--muted);margin:0 0 6px}.field input,.field select,.field textarea{width:100%;background:#0a1524;border:1px solid #2a3d57;border-radius:11px;color:var(--ink);padding:12px;font:inherit;min-width:0}.field textarea{min-height:70px;resize:vertical}.wide{grid-column:1/-1}button{border:0;border-radius:12px;padding:12px 15px;font:700 13px system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--blue);color:#071323;cursor:pointer}button:disabled{opacity:.4;cursor:not-allowed}.btnrow{display:flex;gap:8px;flex-wrap:wrap}.btnrow button{flex:1}.secondary{background:#1b2b42;color:var(--ink);border:1px solid #30445f}.danger{background:#3b2028;color:#ffd8dc;border:1px solid #71404a}.tabs{display:flex;gap:7px;overflow:auto;padding:10px 0 4px;position:sticky;top:0;z-index:5;background:#08111feF}.tabs button{white-space:nowrap;background:#142238;color:var(--muted);border:1px solid var(--line);padding:10px 13px}.tabs button.active{background:var(--blue);color:#071323}.tabpane{display:none}.tabpane.active{display:block}.two{display:grid;grid-template-columns:1.2fr .8fr;gap:12px}.history{display:flex;flex-direction:column;gap:7px}.entry{display:flex;justify-content:space-between;gap:12px;padding:11px;background:#0b1727;border-radius:11px;font-size:12px}.entry span{color:var(--muted)}.empty{padding:16px;text-align:center;color:var(--muted);font-size:12px}.checklist{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.check{display:flex;align-items:center;gap:8px;background:#0b1727;border:1px solid #253850;border-radius:11px;padding:10px;font-size:12px}.check input{accent-color:var(--green);width:17px;height:17px}.chart{width:100%;height:210px;display:block}.meal{padding:11px 0;border-bottom:1px solid var(--line)}.meal:last-child{border:0}.meal b{font-size:13px}.meal p{margin:4px 0 0;color:var(--muted);font-size:12px}.metricline{display:flex;justify-content:space-between;gap:10px;font-size:12px;margin:7px 0}.metricline b{color:var(--green)}.note{font-size:11px;color:var(--muted);line-height:1.5;margin:10px 2px}.gpsmetrics{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0}.gpsmetrics div{background:#0b1727;padding:10px;border-radius:11px}.gpsmetrics small{display:block;color:var(--muted);font-size:10px}.gpsmetrics b{font-size:18px}.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#e6f4ff;color:#10233a;padding:11px 16px;border-radius:99px;font-weight:800;font-size:12px;box-shadow:0 8px 30px #0008;display:none;z-index:20}.footer{text-align:center;color:#74869d;font-size:10px;padding:22px 0 4px}@media(max-width:700px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.two{grid-template-columns:1fr}.hero{padding:16px}.biggoal{font-size:42px}}@media(max-width:390px){.grid{gap:7px}.tile{padding:12px}.tile strong{font-size:22px}.fields{gap:8px}}
-#gpsMap .leaflet-container{background:#0b1727;font:12px system-ui}#gpsMap .leaflet-control-attribution{font-size:9px}</style>
+#gpsMap .leaflet-container{background:#0b1727;font:12px system-ui}#gpsMap .leaflet-control-attribution{font-size:9px}
+/* MISSION fresh-energy light theme */
+:root{color-scheme:light;--bg:#f4fff8;--panel:#ffffff;--panel2:#f1fbf5;--line:#d9eee2;--ink:#183b35;--muted:#5d786e;--blue:#087cff;--green:#39e65a;--gold:#e6c900;--red:#d94b4b}
+body{background:radial-gradient(ellipse at 8% 0%,#e6ff9e 0,transparent 30%),radial-gradient(ellipse at 95% 8%,#d9edff 0,transparent 28%),var(--bg);color:var(--ink)}
+.brand{color:#087cff}
+h1,.section-head h2{color:#183b35}
+.date,.muted,.note,.tile small,.field label,.meal p,.entry span{color:#5d786e}
+.hero{background:linear-gradient(120deg,#eaffb8 0%,#d8f7ed 52%,#dcecff 100%)!important;border:1px solid #b8e8c9!important;color:#183b35}
+.eyebrow,.ringlabel{color:#315e4d}
+.biggoal small{color:#315e4d}
+.progress{background:#e2eee7}
+.progress i{background:linear-gradient(90deg,#b7ff35,#087cff)}
+.ring{background:conic-gradient(#39e65a 0deg,#dceee4 0deg)}
+.ring:before{background:#fff}
+.ring b{color:#183b35}
+.grid .tile,.card,.tile{background:#fff!important;border:1px solid #d9eee2!important;color:#183b35;box-shadow:0 5px 18px rgba(30,90,65,.055)}
+.tile .label{color:#5d786e}
+.tile strong{color:#183b35}
+.tag{color:#176b42;background:#e4ffb9}
+button{background:#087cff;color:#fff}
+button.secondary,.tabs button{background:#edf6f1;color:#315e4d;border:1px solid #d2e8db}
+.tabs{background:#f4fff8f2}
+.tabs button.active{background:#b7ff35;color:#183b35;border-color:#a5e92b}
+.field input,.field select,.field textarea{background:#f8fffb;border:1px solid #cfe5d7;color:#183b35}
+.field input::placeholder,.field textarea::placeholder{color:#81988e}
+.two .card,.card .card{background:#fbfffc!important}
+.entry,.check,.gpsmetrics div{background:#f1faf4!important;border:1px solid #e0eee5;color:#183b35}
+.check input{accent-color:#39c957}
+.metricline b{color:#087cff}
+.section-head{color:#183b35}
+#startHere{background:linear-gradient(135deg,#f0ffbd,#e5f5ff)!important;border-color:#b7e8c5!important}
+#startHere .eyebrow{color:#315e4d}
+#startHere .muted{color:#4d6d60}
+#gpsMap{background:#eaf4ee!important}
+#gpsMap .leaflet-container{background:#eaf4ee}
+#gpsMap .leaflet-control-attribution{color:#315e4d}
+#gpsMap .leaflet-control-attribution a{color:#087cff}
+.toast{background:#183b35;color:#fff}
+.footer{color:#6a8479}
+.danger{background:#fff0f0;color:#a52d2d;border-color:#f0caca}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid #b7ff35;outline-offset:2px}
+@media(prefers-reduced-motion:no-preference){button,.tile,.card{transition:transform .16s ease,box-shadow .16s ease}button:active{transform:scale(.98)}}
+</style>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""><script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script></head>
 <body><main>
 <header class="top"><div><div class="brand">MISSION 75</div><h1>Stronger every day.</h1></div><div class="date" id="today"></div></header>
