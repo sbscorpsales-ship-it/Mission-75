@@ -1,15 +1,58 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-<defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#07502F"/><stop offset="1" stop-color="#031C18"/></linearGradient><linearGradient id="gx" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#EFFF00"/><stop offset=".5" stop-color="#39FF14"/><stop offset="1" stop-color="#00C8FF"/></linearGradient></defs>
-<rect width="512" height="512" rx="112" fill="url(#bg)"/>
-<circle cx="256" cy="170" r="77" fill="#EFFF00" opacity=".95"/>
-<path d="M168 188l58-62 35 39 27-27 57 62H168z" fill="#F4FFF7"/>
-<path d="M111 265c40-73 93-105 145-105 52 0 100 25 145 76" fill="none" stroke="url(#gx)" stroke-width="29" stroke-linecap="round"/>
-<path d="M124 270c44 42 111 55 180 31 34-12 62-34 84-65" fill="none" stroke="#39B8FF" stroke-width="17" stroke-linecap="round"/>
-<path d="M340 205l39 30-49 9" fill="none" stroke="#EFFF00" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/>
-<path d="M171 220l-21-31m-1 31l-30-8" stroke="#B7FF35" stroke-width="11" stroke-linecap="round"/>
-<path d="M236 223l18-34 14 24 16-14 20 24" fill="none" stroke="#0B3B2F" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
-<path d="M275 201l8-21 10 14 12-7" fill="none" stroke="#0B3B2F" stroke-width="7" stroke-linecap="round"/>
-<text x="256" y="366" text-anchor="middle" font-family="Arial,sans-serif" font-size="82" font-weight="900" font-style="italic" letter-spacing="-5" fill="#F4FFF7">Gativ<tspan fill="#EFFF00">X</tspan></text>
-<path d="M115 402h282" stroke="url(#gx)" stroke-width="10" stroke-linecap="round"/>
-<text x="256" y="446" text-anchor="middle" font-family="Arial,sans-serif" font-size="22" font-weight="800" letter-spacing="3" fill="#D9F4E2">MOVE • GROW • ACHIEVE</text>
+<defs>
+ <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#0A2C58"/><stop offset=".55" stop-color="#06152F"/><stop offset="1" stop-color="#020B1B"/></linearGradient>
+ <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#FFF0B0"/><stop offset=".45" stop-color="#E6A92E"/><stop offset="1" stop-color="#FFF1B8"/></linearGradient>
+ <linearGradient id="bluegreen" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#13B8FF"/><stop offset=".52" stop-color="#25D5B1"/><stop offset="1" stop-color="#B6F23A"/></linearGradient>
+ <linearGradient id="lime" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#D9FF63"/><stop offset="1" stop-color="#48C94B"/></linearGradient>
+ <filter id="glow"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+</defs>
+<rect width="512" height="512" rx="82" fill="url(#bg)"/>
+<rect x="8" y="8" width="496" height="496" rx="76" fill="none" stroke="url(#gold)" stroke-width="5"/>
+<rect x="16" y="16" width="480" height="480" rx="70" fill="none" stroke="#F7D98B" stroke-opacity=".25" stroke-width="1"/>
+<!-- runner and motion arc -->
+<path d="M148 157C195 70 315 55 378 106C410 132 410 162 390 183" fill="none" stroke="url(#bluegreen)" stroke-width="9" stroke-linecap="round"/>
+<g fill="#F5F8FC" filter="url(#glow)">
+ <circle cx="313" cy="91" r="9"/>
+ <path d="M305 103l-22 17 22 11 19-15 13 12-16 15-20-4-18 23-12-7 14-25-23-10 19-21z"/>
+ <path d="M284 119l-30 2-29 18-5-7 28-24 33-5zM320 143l24 15 22-1 2 8-29 8-29-17zM285 151l-20 30-21 7-3-8 18-18 9-23zM339 119l24-14 17 1 2 8-23 7-13 17z"/>
+</g>
+<path d="M180 174l-42 18m55-5l-50 24m64-13l-43 19" stroke="#DDEAF7" stroke-width="3" stroke-linecap="round" opacity=".8"/>
+<!-- main wordmark, each letter carries a discreet symbol -->
+<g font-family="Arial,Helvetica,sans-serif" font-weight="900" font-style="italic">
+ <text x="28" y="290" font-size="112" fill="#F4F7FC">G</text>
+ <text x="126" y="290" font-size="112" fill="url(#lime)">a</text>
+ <text x="218" y="290" font-size="112" fill="#F4F7FC">t</text>
+ <text x="274" y="290" font-size="112" fill="#F4F7FC">i</text>
+ <text x="305" y="290" font-size="112" fill="#F4F7FC">v</text>
+ <text x="382" y="290" font-size="112" fill="url(#bluegreen)">X</text>
+</g>
+<!-- mountain / flag inside G -->
+<path d="M48 253l22-27 14 16 18-24 21 35z" fill="#DCE9F7" stroke="#FFFFFF" stroke-width="2"/>
+<path d="M82 221v-19m0 0h17l-7 7 7 6H82" fill="#F2B544" stroke="#F2B544" stroke-width="3"/>
+<!-- meditation silhouette inside a -->
+<g fill="#082447" stroke="#082447" stroke-width="2">
+ <circle cx="166" cy="229" r="8"/><path d="M158 240q8-8 16 0l8 18-9 6-7-10-7 10-9-6z"/>
+ <path d="M160 260q-19 5-24 16 14 8 29 2 15 6 29-2-5-11-24-16z"/>
+</g>
+<!-- badminton player / shuttle motif on t -->
+<g fill="none" stroke="#E6A12D" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+ <path d="M234 218l8-15 12-8 8 4-10 11-9 3-3 17"/>
+ <path d="M241 205l-9-9m9 9l-1-14"/>
+ <ellipse cx="264" cy="185" rx="8" ry="12" transform="rotate(28 264 185)"/>
+ <path d="M270 174l8-8m-10 14l11-4"/>
+</g>
+<path d="M283 170l10-9m-8 15l13-3m-13-9l11 1" stroke="#F7F9FC" stroke-width="2" stroke-linecap="round"/>
+<!-- dumbbell in i dot -->
+<g stroke="#E6B34D" stroke-width="4" stroke-linecap="round"><path d="M288 190h22m-18-7v14m14-14v14"/></g>
+<!-- heart pulse in v -->
+<path d="M342 228c-11-13-31 0-17 16l17 17 17-17c14-16-6-29-17-16z" fill="#F0A43C" stroke="#F7DCA0" stroke-width="2"/>
+<path d="M329 242h8l4-8 5 16 5-8h7" fill="none" stroke="#092448" stroke-width="3" stroke-linejoin="round"/>
+<!-- trophy on X -->
+<g fill="#E9B54C" stroke="#FFE5A2" stroke-width="2"><path d="M421 210h28v20q-14 19-28 0z"/><path d="M421 215h-9q0 16 15 16m22-16h9q0 16-15 16" fill="none"/><path d="M432 230v9h7v-9m-12 14h18v5h-18z"/></g>
+<!-- progress arrow from G to X -->
+<path d="M54 321C140 374 282 371 418 311" fill="none" stroke="url(#bluegreen)" stroke-width="12" stroke-linecap="round"/>
+<path d="M406 291l29 16-27 22z" fill="#B8ED45"/>
+<text x="256" y="414" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="18" font-weight="800" letter-spacing="1.2" fill="#DCE8F6">GOALS  •  ACT  •  TARGETS</text>
+<text x="256" y="440" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="17" font-weight="800" letter-spacing="1.1" fill="#DCE8F6">TRAINING  •  VITALITY  •  XCELLENCE</text>
+<text x="256" y="476" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="18" font-style="italic" fill="#F6E8C8">From Goals to Xcellence</text>
 </svg>
