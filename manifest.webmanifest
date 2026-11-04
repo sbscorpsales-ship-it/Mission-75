@@ -7,10 +7,10 @@
   "theme_color": "#FFF000",
   "icons": [
     {
-      "src": "https://d2ol7oe51mr4n9.cloudfront.net/user_3L8rRDq0q89aOTZmBcYnpQQv8eQ/04d06032-fc75-4eee-a83c-6d93f3e9a54a.png",
-      "sizes": "1024x1024",
-      "type": "image/png",
-      "purpose": "any maskable"
+      "src": "./gativx-logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
     }
   ]
 }
