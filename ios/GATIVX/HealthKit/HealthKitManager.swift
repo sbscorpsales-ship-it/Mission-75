@@ -12,6 +12,8 @@ final class HealthKitManager: ObservableObject {
     @Published private(set) var lastRefresh: Date?
     @Published private(set) var statusMessage = "Apple Health is not connected."
 
+    var onDailyTotal: ((Date, Int) -> Void)?
+
     private let store = HKHealthStore()
     private var stepObserver: HKObserverQuery?
     private let stepType = HKObjectType.quantityType(forIdentifier: .stepCount)!
@@ -29,58 +31,75 @@ final class HealthKitManager: ObservableObject {
                     self.statusMessage = "Health access request failed: \(error.localizedDescription)"
                     return
                 }
-                // HealthKit does not reveal whether read access was denied. A successful
-                // request call is not proof that the user granted access; query results
-                // may legitimately be empty.
+                // HealthKit intentionally does not reveal whether read access was denied.
                 self.startObserving()
-                self.refreshToday()
-                self.statusMessage = "Apple Health connection requested. Waiting for available step data."
+                self.refreshRecentDays()
+                self.statusMessage = "Apple Health access request completed. Waiting for available step data."
             }
         }
     }
 
-    func refreshToday(onComplete: (() -> Void)? = nil) {
-        guard isAvailable else {
-            onComplete?()
-            return
-        }
+    /// Fetches daily cumulative totals for the current day and previous 29 local days.
+    /// Each total is a HealthKit aggregate, not a sum of raw samples in app code.
+    func refreshRecentDays(days: Int = 30) {
+        guard isAvailable else { return }
         isRefreshing = true
 
         let calendar = Calendar.current
-        let start = calendar.startOfDay(for: Date())
-        guard let end = calendar.date(byAdding: .day, value: 1, to: start) else {
+        let today = calendar.startOfDay(for: Date())
+        guard let end = calendar.date(byAdding: .day, value: 1, to: today),
+              let start = calendar.date(byAdding: .day, value: -(max(1, days) - 1), to: today) else {
             isRefreshing = false
-            onComplete?()
             return
         }
-        let predicate = HKQuery.predicateForSamples(withStart: start, end: end, options: .strictStartDate)
-        let query = HKStatisticsQuery(
+
+        var anchorComponents = calendar.dateComponents([.year, .month, .day], from: today)
+        anchorComponents.hour = 0
+        guard let anchor = calendar.date(from: anchorComponents) else {
+            isRefreshing = false
+            return
+        }
+
+        let query = HKStatisticsCollectionQuery(
             quantityType: stepType,
-            quantitySamplePredicate: predicate,
-            options: .cumulativeSum
-        ) { [weak self] _, statistics, error in
-            let count = Int(statistics?.sumQuantity()?.doubleValue(for: .count()) ?? 0)
+            quantitySamplePredicate: HKQuery.predicateForSamples(withStart: start, end: end, options: .strictStartDate),
+            options: .cumulativeSum,
+            anchorDate: anchor,
+            intervalComponents: DateComponents(day: 1)
+        )
+
+        query.initialResultsHandler = { [weak self] _, collection, error in
             Task { @MainActor in
-                guard let self else {
-                    onComplete?()
-                    return
+                guard let self else { return }
+                defer {
+                    self.isRefreshing = false
+                    self.lastRefresh = Date()
                 }
                 if let error {
-                    self.statusMessage = "Could not read today's steps: \(error.localizedDescription)"
-                } else {
-                    self.todaySteps = max(0, count)
-                    self.lastRefresh = Date()
-                    self.statusMessage = "Step total refreshed from Apple Health."
+                    self.statusMessage = "Could not read Apple Health steps: \(error.localizedDescription)"
+                    return
                 }
-                self.isRefreshing = false
-                onComplete?()
+                guard let collection else {
+                    self.statusMessage = "No step summary is available yet."
+                    return
+                }
+
+                collection.enumerateStatistics(from: start, to: end) { statistics, _ in
+                    let total = Int(statistics.sumQuantity()?.doubleValue(for: .count()) ?? 0)
+                    let day = calendar.startOfDay(for: statistics.startDate)
+                    self.onDailyTotal?(day, max(0, total))
+                    if calendar.isDateInToday(day) {
+                        self.todaySteps = max(0, total)
+                    }
+                }
+                self.statusMessage = "Apple Health step totals refreshed."
             }
         }
         store.execute(query)
     }
 
-    /// Call after the user signs in and the app is ready to sync.
-    /// The observer re-queries the aggregate; it does not attempt to sum raw samples.
+    /// Register once after HealthKit permission is requested.
+    /// iOS background delivery is periodic/best-effort, not a real-time guarantee.
     func startObserving() {
         guard stepObserver == nil, isAvailable else { return }
 
@@ -94,7 +113,7 @@ final class HealthKitManager: ObservableObject {
                 return
             }
             Task { @MainActor in
-                self.refreshToday(onComplete: completion)
+                self.refreshRecentDays(onComplete: completion)
             }
         }
         stepObserver = observer
@@ -103,12 +122,23 @@ final class HealthKitManager: ObservableObject {
         store.enableBackgroundDelivery(for: stepType, frequency: .hourly) { [weak self] success, error in
             Task { @MainActor in
                 if let error {
-                    self?.statusMessage = "Background step refresh is unavailable: \(error.localizedDescription)"
+                    self?.statusMessage = "Background refresh unavailable: \(error.localizedDescription)"
                 } else if success {
-                    self?.statusMessage = "Apple Health updates enabled (iOS may deliver them periodically)."
+                    self?.statusMessage = "Apple Health background updates are enabled where iOS permits."
                 }
             }
         }
+    }
+
+    private func refreshRecentDays(onComplete: (() -> Void)? = nil) {
+        refreshRecentDays(days: 30)
+        // Observer completion must be called after the refresh work is queued and handled.
+        // HealthKit may coalesce future notifications; foreground refresh also repairs missed updates.
+        onComplete?()
+    }
+
+    func refreshOnForeground() {
+        refreshRecentDays()
     }
 
     func stopObserving() {
