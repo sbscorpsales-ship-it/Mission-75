@@ -48,6 +48,10 @@ if (!introScript) fail("Could not locate the intro controller");
 else if (/\bplayFanfare\s*\(\s*\)\s*;/.test(introScript)) fail("Intro contains an automatic sound invocation");
 else pass("Intro does not invoke sound automatically");
 
+if (!html.includes("gativx.profile.v1") || !html.includes('id="profilePhotoInput"') || !html.includes('id="removeProfilePhoto"')) fail("On-device profile photo controls or storage key missing");
+else if (!html.includes("canvas.toDataURL('image/jpeg',.76)") || !html.includes("this device")) fail("Profile photo must be resized and clearly device-local");
+else pass("Profile photo is optional, resized and stored locally only");
+
 if (failed) process.exit(1);
 
 // Re-run release gate after workflow activation on main.
