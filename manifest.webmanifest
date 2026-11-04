@@ -1,1 +1,16 @@
-{"name":"MISSION 75","short_name":"MISSION","start_url":"./","display":"standalone","background_color":"#062D24","theme_color":"#062D24","icons":[{"src":"icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any"}]}
+{
+  "name": "GativX — Your Goal. Your Journey. Your Achievement.",
+  "short_name": "GativX",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#062D24",
+  "theme_color": "#062D24",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
