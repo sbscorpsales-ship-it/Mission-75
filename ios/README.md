@@ -29,7 +29,7 @@ The existing browser uses localStorage keys including `mission75.logs.v1`, `miss
 
 ## iOS project setup
 
-Create an iOS App project in Xcode named GATIVX, bundle identifier owned by Param IT Solutions, minimum iOS 17. Add the Swift files under `ios/GATIVX`.
+On a Mac with Xcode installed, install XcodeGen (`brew install xcodegen`), then run `cd ios && xcodegen generate`. Open the generated `GATIVX.xcodeproj` in Xcode. The project configuration, app entry point, dashboard, HealthKit manager, Supabase REST client, and entitlements are in this repository. The bundle identifier is a starter value (`com.paramitsolutions.gativx`); confirm ownership/availability and set the final identifier before signing.
 
 Enable the HealthKit capability and add these Info.plist usage strings:
 - `NSHealthShareUsageDescription`: "GATIVX reads your daily step count and walking/running distance to show progress toward your mission."
