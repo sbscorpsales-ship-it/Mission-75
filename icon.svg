@@ -1,14 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-<defs>
- <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#F4FFF8"/><stop offset="1" stop-color="#E8F5FF"/></linearGradient>
- <linearGradient id="ring" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#B7FF35"/><stop offset=".48" stop-color="#39E65A"/><stop offset="1" stop-color="#087CFF"/></linearGradient>
-</defs>
+<defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#0C5138"/><stop offset="1" stop-color="#062D24"/></linearGradient><linearGradient id="ring" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#EFFF00"/><stop offset=".48" stop-color="#39FF14"/><stop offset="1" stop-color="#39B8FF"/></linearGradient></defs>
 <rect width="512" height="512" rx="116" fill="url(#bg)"/>
-<circle cx="256" cy="238" r="158" fill="none" stroke="#DCEDE3" stroke-width="35"/>
+<circle cx="256" cy="238" r="158" fill="none" stroke="#1B5943" stroke-width="35"/>
 <circle cx="256" cy="238" r="158" fill="none" stroke="url(#ring)" stroke-width="35" stroke-linecap="round" stroke-dasharray="850 145" transform="rotate(-105 256 238)"/>
-<circle cx="256" cy="238" r="119" fill="#FFFFFF"/>
-<path d="M207 180h91c33 0 55 19 55 48 0 25-17 42-41 47l49 61h-54l-43-56h-12v56h-45V180zm45 38v27h39c11 0 17-5 17-14s-6-13-17-13h-39z" fill="#087CFF" opacity=".0"/>
-<text x="256" y="258" text-anchor="middle" font-family="Arial, sans-serif" font-size="104" font-weight="900" letter-spacing="-5" fill="#183B35">75</text>
-<path d="M155 420h202" stroke="#FF7900" stroke-width="18" stroke-linecap="round"/>
-<circle cx="382" cy="420" r="13" fill="#FF7900"/>
+<circle cx="256" cy="238" r="119" fill="#0B3B2F"/>
+<text x="256" y="258" text-anchor="middle" font-family="Arial,sans-serif" font-size="104" font-weight="900" letter-spacing="-5" fill="#F4FFF7">75</text>
+<path d="M155 420h202" stroke="#FF8C00" stroke-width="18" stroke-linecap="round"/><circle cx="382" cy="420" r="13" fill="#FF8C00"/>
 </svg>
