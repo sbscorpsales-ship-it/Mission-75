@@ -53,6 +53,15 @@ else if (!html.includes("canvas.toDataURL('image/jpeg',.76)") || !html.includes(
 else if (!html.includes('id="profilePhotoInput" type="file" accept="image/*"') || !html.includes("canvas.width=Math.max(1,Math.round(img.width*scale))")) fail("Profile photo picker or bounded image resize missing");
 else pass("Profile photo is optional, resized and stored locally only");
 
+if (!html.includes('id="connectionHeading"') || !html.includes('id="accountConnectionState"')) fail("Dashboard connected-data hub or account state is missing");
+else pass("Dashboard shows account and external data-source connection states");
+
+if (!html.includes('id="accountQuick"') || !html.includes('id="cloudSyncNow"')) fail("Quick account access or manual cloud refresh control is missing");
+else pass("Account access and user-triggered cloud refresh controls are present");
+
+if (!html.includes("Safari cannot read HealthKit") || !html.includes("secure Strava OAuth connection") || !html.includes("Health Connect")) fail("External health-source limitations and permission requirements must be explicit");
+else pass("External integrations are not misrepresented as connected; platform and consent requirements are explicit");
+
 if (failed) process.exit(1);
 
 // Re-run release gate after workflow activation on main.
