@@ -62,6 +62,11 @@ else pass("Account access and user-triggered cloud refresh controls are present"
 if (!html.includes("Safari cannot read HealthKit") || !html.includes("secure Strava OAuth connection") || !html.includes("Health Connect")) fail("External health-source limitations and permission requirements must be explicit");
 else pass("External integrations are not misrepresented as connected; platform and consent requirements are explicit");
 
+if (!html.includes('id="stravaImportCard"') || !html.includes('id="stravaCsvFile"') || !html.includes('gativx.strava.history.v1')) fail("Strava CSV history import controls or local storage are missing");
+else pass("Privacy-first Strava CSV history import is present");
+if (!html.includes("Duplicate activity IDs were skipped") || !html.includes("No route tracks or media were uploaded")) fail("Strava importer must deduplicate and keep route/media data local");
+else pass("Strava import deduplicates activities and does not upload routes or media");
+
 if (failed) process.exit(1);
 
 // Re-run release gate after workflow activation on main.
