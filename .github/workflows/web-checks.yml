@@ -2,10 +2,11 @@ name: GATIVX web release checks
 
 on:
   push:
-    branches: ["gativx/release-dashboard-nav-intro-v1"]
+    branches: ["gativx/dashboard-connected-data-v2"]
     paths:
       - "index.html"
       - "scripts/check-web.mjs"
+      - "scripts/browser-smoke.mjs"
       - ".github/workflows/web-checks.yml"
   pull_request:
     branches: [main]
@@ -30,3 +31,9 @@ jobs:
           node-version: 22
       - name: Validate GATIVX web release
         run: node scripts/check-web.mjs
+      - name: Install browser test runner
+        run: npm install --no-save playwright
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Run mobile browser smoke test
+        run: node scripts/browser-smoke.mjs
