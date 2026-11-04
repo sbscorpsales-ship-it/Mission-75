@@ -34,6 +34,12 @@ for (const key of ["mission75.logs.v1", "mission75.gps.sessions.v1", "mission75.
 }
 if (["mission75.logs.v1", "mission75.gps.sessions.v1", "mission75.settings.v1", "mission75.habits.v1"].every(key => html.includes(key))) pass("Existing local data keys remain present");
 
+for (const id of ["vSteps", "vHeartPoints", "vActiveMinutes", "vDistance", "vWater", "vProtein"]) {
+  if (!html.includes('id="' + id + '"')) fail("Dashboard metric missing: " + id);
+}
+pass("Six activity dashboard metric IDs are present");
+if (!html.includes("x.steps==null?'—':fmt(x.steps)") || !html.includes("x.distance==null?'—':Number(x.distance).toFixed(2)+' km'")) fail("Missing activity data must not display as zero");
+else pass("Missing step and distance values remain unknown, not zero");
 if (!html.includes('gativx.brandIntro.seen.v1')) fail("First-visit intro flag missing");
 else pass("First-visit intro persistence flag is present");
 
