@@ -41,8 +41,8 @@ final class HealthKitManager: ObservableObject {
 
     /// Fetches daily cumulative totals for the current day and previous 29 local days.
     /// Each total is a HealthKit aggregate, not a sum of raw samples in app code.
-    func refreshRecentDays(days: Int = 30) {
-        guard isAvailable else { return }
+    func refreshRecentDays(days: Int = 30, onComplete: (() -> Void)? = nil) {
+        guard isAvailable else { onComplete?(); return }
         isRefreshing = true
 
         let calendar = Calendar.current
@@ -50,6 +50,7 @@ final class HealthKitManager: ObservableObject {
         guard let end = calendar.date(byAdding: .day, value: 1, to: today),
               let start = calendar.date(byAdding: .day, value: -(max(1, days) - 1), to: today) else {
             isRefreshing = false
+            onComplete?()
             return
         }
 
@@ -57,6 +58,7 @@ final class HealthKitManager: ObservableObject {
         anchorComponents.hour = 0
         guard let anchor = calendar.date(from: anchorComponents) else {
             isRefreshing = false
+            onComplete?()
             return
         }
 
@@ -74,6 +76,7 @@ final class HealthKitManager: ObservableObject {
                 defer {
                     self.isRefreshing = false
                     self.lastRefresh = Date()
+                    onComplete?()
                 }
                 if let error {
                     self.statusMessage = "Could not read Apple Health steps: \(error.localizedDescription)"
@@ -113,7 +116,7 @@ final class HealthKitManager: ObservableObject {
                 return
             }
             Task { @MainActor in
-                self.refreshRecentDays(onComplete: completion)
+                self.refreshRecentDays(days: 30, onComplete: completion)
             }
         }
         stepObserver = observer
@@ -128,13 +131,6 @@ final class HealthKitManager: ObservableObject {
                 }
             }
         }
-    }
-
-    private func refreshRecentDays(onComplete: (() -> Void)? = nil) {
-        refreshRecentDays(days: 30)
-        // Observer completion must be called after the refresh work is queued and handled.
-        // HealthKit may coalesce future notifications; foreground refresh also repairs missed updates.
-        onComplete?()
     }
 
     func refreshOnForeground() {
