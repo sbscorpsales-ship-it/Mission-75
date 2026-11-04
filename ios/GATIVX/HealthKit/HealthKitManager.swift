@@ -17,6 +17,7 @@ final class HealthKitManager: ObservableObject {
     private let store = HKHealthStore()
     private let connectionRequestedKey = "gativx.healthkit.connectionRequested"
     private var stepObserver: HKObserverQuery?
+    private var refreshCompletions: [() -> Void] = []
     private let stepType = HKObjectType.quantityType(forIdentifier: .stepCount)!
 
     /// Call on launch. The app remembers that the user initiated Health access,
@@ -57,15 +58,21 @@ final class HealthKitManager: ObservableObject {
     /// Missing samples remain nil; they are never represented as a measured zero.
     func refreshRecentDays(days: Int = 30, onComplete: (() -> Void)? = nil) {
         guard isAvailable else { onComplete?(); return }
-        guard !isRefreshing else { onComplete?(); return }
+        if isRefreshing {
+            if let onComplete { refreshCompletions.append(onComplete) }
+            return
+        }
         isRefreshing = true
+        if let onComplete { refreshCompletions.append(onComplete) }
 
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
         guard let end = calendar.date(byAdding: .day, value: 1, to: today),
               let start = calendar.date(byAdding: .day, value: -(max(1, days) - 1), to: today) else {
             isRefreshing = false
-            onComplete?()
+            let completions = refreshCompletions
+            refreshCompletions.removeAll()
+            completions.forEach { $0() }
             return
         }
 
@@ -91,7 +98,9 @@ final class HealthKitManager: ObservableObject {
                 defer {
                     self.isRefreshing = false
                     self.lastRefresh = Date()
-                    onComplete?()
+                    let completions = self.refreshCompletions
+                    self.refreshCompletions.removeAll()
+                    completions.forEach { $0() }
                 }
                 if let error {
                     self.statusMessage = "Could not read Apple Health steps: \(error.localizedDescription)"
