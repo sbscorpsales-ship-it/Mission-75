@@ -1,10 +1,16 @@
 import SwiftUI
 
 struct ContentView: View {
+    @Environment(\.scenePhase) private var scenePhase
     @StateObject private var health = HealthKitManager()
     @StateObject private var cloud = SupabaseRESTClient()
     @State private var email = ""
     @State private var password = ""
+
+    private var stepProgress: Double {
+        guard let steps = health.todaySteps else { return 0 }
+        return min(Double(steps) / 10_000, 1)
+    }
 
     var body: some View {
         NavigationStack {
@@ -14,10 +20,13 @@ struct ContentView: View {
 
                 VStack(spacing: 8) {
                     Text("TODAY'S STEPS").font(.caption.weight(.bold)).foregroundStyle(.secondary)
-                    Text(health.todaySteps.formatted()).font(.system(size: 48, weight: .bold, design: .rounded))
-                    Text("Goal: 10,000").font(.subheadline).foregroundStyle(.secondary)
-                    ProgressView(value: min(Double(health.todaySteps) / 10_000, 1))
-                        .tint(.yellow)
+                    Text(health.todaySteps?.formatted() ?? "—")
+                        .font(.system(size: 48, weight: .bold, design: .rounded))
+                    Text(health.todaySteps == nil ? "Waiting for Apple Health data" : "Goal: 10,000")
+                        .font(.subheadline).foregroundStyle(.secondary)
+                    ProgressView(value: stepProgress).tint(.yellow)
+                    Text("Steps are read from Apple Health, which can combine supported iPhone and wearable sources.")
+                        .font(.caption2).foregroundStyle(.secondary).multilineTextAlignment(.center)
                 }
                 .padding().frame(maxWidth: .infinity)
                 .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 20))
@@ -72,6 +81,7 @@ struct ContentView: View {
                     guard cloud.isSignedIn else { return }
                     Task { await cloud.syncSteps(date: day, steps: total) }
                 }
+                health.resumeIfPreviouslyConnected()
                 health.refreshOnForeground()
             }
             .onChange(of: cloud.isSignedIn) { _, signedIn in
@@ -80,6 +90,11 @@ struct ContentView: View {
                         Task { await cloud.syncSteps(date: day, steps: total) }
                     }
                     health.refreshRecentDays()
+                }
+            }
+            .onChange(of: scenePhase) { _, phase in
+                if phase == .active {
+                    health.refreshOnForeground()
                 }
             }
         }
