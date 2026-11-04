@@ -2,11 +2,11 @@ import Foundation
 import HealthKit
 import Combine
 
-/// Read-only HealthKit integration for GATIVX.
-/// HealthKit owns aggregation across iPhone, Apple Watch, and other authorized sources.
+/// Read-only HealthKit integration. HealthKit performs source aggregation so
+/// GATIVX does not add overlapping iPhone and wearable step samples itself.
 @MainActor
 final class HealthKitManager: ObservableObject {
-    @Published private(set) var todaySteps: Int = 0
+    @Published private(set) var todaySteps: Int?
     @Published private(set) var isAvailable = HKHealthStore.isHealthDataAvailable()
     @Published private(set) var isRefreshing = false
     @Published private(set) var lastRefresh: Date?
@@ -15,8 +15,21 @@ final class HealthKitManager: ObservableObject {
     var onDailyTotal: ((Date, Int) -> Void)?
 
     private let store = HKHealthStore()
+    private let connectionRequestedKey = "gativx.healthkit.connectionRequested"
     private var stepObserver: HKObserverQuery?
     private let stepType = HKObjectType.quantityType(forIdentifier: .stepCount)!
+
+    /// Call on launch. The app remembers that the user initiated Health access,
+    /// then re-registers its observer after every app restart.
+    func resumeIfPreviouslyConnected() {
+        guard UserDefaults.standard.bool(forKey: connectionRequestedKey) else { return }
+        guard isAvailable else {
+            statusMessage = "Apple Health is not available on this device."
+            return
+        }
+        startObserving()
+        refreshRecentDays()
+    }
 
     func requestReadAccessAndStart() {
         guard isAvailable else {
@@ -31,18 +44,20 @@ final class HealthKitManager: ObservableObject {
                     self.statusMessage = "Health access request failed: \(error.localizedDescription)"
                     return
                 }
-                // HealthKit intentionally does not reveal whether read access was denied.
+                // HealthKit does not reveal whether read access was denied.
+                UserDefaults.standard.set(true, forKey: self.connectionRequestedKey)
                 self.startObserving()
                 self.refreshRecentDays()
-                self.statusMessage = "Apple Health access request completed. Waiting for available step data."
+                self.statusMessage = "Apple Health connection requested. Waiting for step data."
             }
         }
     }
 
-    /// Fetches daily cumulative totals for the current day and previous 29 local days.
-    /// Each total is a HealthKit aggregate, not a sum of raw samples in app code.
+    /// Fetch daily cumulative totals for today and the previous 29 local days.
+    /// Missing samples remain nil; they are never represented as a measured zero.
     func refreshRecentDays(days: Int = 30, onComplete: (() -> Void)? = nil) {
         guard isAvailable else { onComplete?(); return }
+        guard !isRefreshing else { onComplete?(); return }
         isRefreshing = true
 
         let calendar = Calendar.current
@@ -83,30 +98,32 @@ final class HealthKitManager: ObservableObject {
                     return
                 }
                 guard let collection else {
-                    self.statusMessage = "No step summary is available yet."
+                    self.todaySteps = nil
+                    self.statusMessage = "Apple Health returned no step summary."
                     return
                 }
 
+                self.todaySteps = nil
+                var foundToday = false
                 collection.enumerateStatistics(from: start, to: end) { statistics, _ in
                     let day = calendar.startOfDay(for: statistics.startDate)
-                    guard let quantity = statistics.sumQuantity() else {
-                        if calendar.isDateInToday(day) { self.todaySteps = 0 }
-                        return
-                    }
+                    guard let quantity = statistics.sumQuantity() else { return }
                     let total = max(0, Int(quantity.doubleValue(for: .count())))
                     self.onDailyTotal?(day, total)
                     if calendar.isDateInToday(day) {
+                        foundToday = true
                         self.todaySteps = total
                     }
                 }
-                self.statusMessage = "Apple Health step totals refreshed."
+                self.statusMessage = foundToday
+                    ? "Apple Health step totals refreshed."
+                    : "No step samples returned. Check Health access and device data; no zero has been assumed."
             }
         }
         store.execute(query)
     }
 
-    /// Register once after HealthKit permission is requested.
-    /// iOS background delivery is periodic/best-effort, not a real-time guarantee.
+    /// iOS background delivery is best-effort and not a real-time guarantee.
     func startObserving() {
         guard stepObserver == nil, isAvailable else { return }
 
@@ -131,7 +148,7 @@ final class HealthKitManager: ObservableObject {
                 if let error {
                     self?.statusMessage = "Background refresh unavailable: \(error.localizedDescription)"
                 } else if success {
-                    self?.statusMessage = "Apple Health background updates are enabled where iOS permits."
+                    self?.statusMessage = "Apple Health background updates enabled where iOS permits."
                 }
             }
         }
@@ -141,11 +158,14 @@ final class HealthKitManager: ObservableObject {
         refreshRecentDays()
     }
 
-    func stopObserving() {
+    func disconnect() {
+        UserDefaults.standard.removeObject(forKey: connectionRequestedKey)
         if let stepObserver {
             store.stop(stepObserver)
             self.stepObserver = nil
         }
         store.disableBackgroundDelivery(for: stepType) { _, _ in }
+        todaySteps = nil
+        statusMessage = "Apple Health connection stopped in GATIVX."
     }
 }
