@@ -167,4 +167,13 @@ function renderWelcome(){const done=welcomeState.done||[];$('welcomeDays').inner
 $('welcomeDone').addEventListener('change',()=>{let done=welcomeState.done||[];done=$('welcomeDone').checked?[...new Set([...done,welcomeDay])]:done.filter(x=>x!==welcomeDay);welcomeState.done=done;localStorage.setItem(WKEY,JSON.stringify(welcomeState));renderWelcome()});renderWelcome();
 function init(){renderSettings();loadForm();renderSummary();renderGps();coach();}init();window.addEventListener('resize',()=>{if($('pane-trends').classList.contains('active'))drawChart()});
 })();
-</script></body></html>
+</script><script>
+if("serviceWorker" in navigator){
+ window.addEventListener("load",()=>{
+  navigator.serviceWorker.register("./sw.js",{updateViaCache:"none"})
+   .then(reg=>reg.update())
+   .catch(err=>console.warn("MISSION offline update unavailable:",err));
+ });
+}
+</script>
+</body></html>
