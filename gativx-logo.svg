@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="t d">
+<title id="t">GATIVX</title><desc id="d">A runner sprinting inside a bold G above the GATIVX wordmark.</desc>
+<defs><linearGradient id="y" x2="0" y2="1"><stop stop-color="#fff52b"/><stop offset="1" stop-color="#ffd900"/></linearGradient><linearGradient id="edge" x2="0" y2="1"><stop stop-color="#fff"/><stop offset="1" stop-color="#ffb900"/></linearGradient><filter id="shadow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="10"/></filter></defs>
+<rect width="1024" height="1024" rx="60" fill="url(#y)"/>
+<path d="M790 235A330 330 0 1 0 803 680L690 680A220 220 0 1 1 694 326Z" fill="#000"/>
+<path d="M692 535H845L802 710H596L625 626H715Z" fill="#000"/>
+<path d="M315 735Q500 665 690 690" fill="none" stroke="#000" stroke-width="15" stroke-linecap="round"/>
+<g fill="#000">
+<circle cx="583" cy="302" r="31"/>
+<path d="M564 337q38-25 67 7l29 57-34 31-39-42-39 34-35-26 43-56z"/>
+<path d="M578 374l-86 30-62 69-29-25 59-91 95-38z"/>
+<path d="M633 388l74 20 46 63-31 27-52-48-67-5z"/>
+<path d="M546 423l-25 103-78 75-31-31 58-77 16-93z"/>
+<path d="M623 421l79 75-12 42-91-51-31-44z"/>
+<path d="M452 574l-55 94-54 30-21-34 49-55 33-77z"/>
+<path d="M684 492l70 30 19 42-39 19-48-39-53-20z"/>
+</g>
+<g stroke="#000" stroke-width="12" stroke-linecap="round"><path d="M392 365l-93 9m114 39l-112 12m131 36l-126 13m146 33l-118 12" fill="none"/></g>
+<path d="M142 827H882" stroke="#000" stroke-width="5" opacity=".18"/>
+<text x="512" y="930" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="126" font-weight="900" font-style="italic" letter-spacing="-8" fill="#000">GATIV<tspan fill="#000">X</tspan></text>
+<path d="M780 947l115-123" stroke="#e11b22" stroke-width="19" stroke-linecap="square"/>
+</svg>
