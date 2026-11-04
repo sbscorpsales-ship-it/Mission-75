@@ -7,8 +7,8 @@ const html = fs.readFileSync("index.html", "utf8");
 const fail = (message) => { console.error(`FAIL: ${message}`); process.exitCode = 1; };
 const pass = (message) => console.log(`PASS: ${message}`);
 
-const scripts = [...html.matchAll(/<script\\b([^>]*)>([\\s\\S]*?)<\\/script>/gi)]
-  .filter(([, attrs]) => !/\\bsrc\\s*=/.test(attrs))
+const scripts = [...html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)]
+  .filter(([, attrs]) => !/\bsrc\s*=/.test(attrs))
   .map(([, , body]) => body)
   .filter(body => body.trim());
 
@@ -40,7 +40,7 @@ else pass("First-visit intro persistence flag is present");
 const introScript = scripts.find(source => source.includes("gativx.brandIntro.seen.v1"));
 if (!introScript) fail("Could not locate the intro controller");
 else {
-  if (/\\bplayFanfare\\s*\\(\\s*\\)\\s*;/.test(introScript)) fail("Intro contains an automatic sound invocation");
+  if (/\bplayFanfare\s*\(\s*\)\s*;/.test(introScript)) fail("Intro contains an automatic sound invocation");
   else pass("Intro does not invoke sound automatically");
 }
 if (process.exitCode) process.exit(1);
