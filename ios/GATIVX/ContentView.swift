@@ -36,7 +36,7 @@ struct ContentView: View {
         sessionStatus = selectedActivity + " saved · " + (sessionSteps?.formatted() ?? "step count unavailable") + " steps"
         sessionStarted = nil
         if cloud.isSignedIn, let steps = record.steps {
-            await cloud.syncActivitySession(id: record.id, activity: record.activity, startedAt: record.startedAt, finishedAt: record.finishedAt, steps: steps)
+            Task { await cloud.syncActivitySession(id: record.id, activity: record.activity, startedAt: record.startedAt, finishedAt: record.finishedAt, steps: steps) }
         } else {
             sessionStatus += " · saved on this iPhone; sign in to sync"
         }
