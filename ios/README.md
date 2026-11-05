@@ -35,7 +35,7 @@ Enable the HealthKit capability and add these Info.plist usage strings:
 - `NSHealthShareUsageDescription`: "GATIVX reads your daily step count and walking/running distance to show progress toward your mission."
 - `NSHealthUpdateUsageDescription` is not required unless a future feature writes health data. Do not request write access for this read-only step integration.
 
-Add the official Supabase Swift SDK package (supabase-swift) to the Xcode project. Keep the project URL and publishable/anon key in app configuration; never embed a service-role key. Configure the same Supabase Auth project and RLS policies as the web app.
+The current native client uses Supabase Auth and PostgREST directly through URLSession (`GATIVX/Cloud/SupabaseRESTClient.swift`); it does not currently depend on the Supabase Swift SDK. Keep the project URL and publishable/anon key in app configuration; never embed a service-role key. Before release, verify the same Supabase Auth project, daily_logs RLS policies, and `sync_healthkit_daily_steps` RPC against the live schema.
 
 Enable the HealthKit background-delivery entitlement/capability as required by the current Apple developer provisioning workflow. Test authorization, lock-screen/background delivery, app relaunch, time-zone/day-boundary changes, offline retry, and multi-source step totals on a real iPhone.
 
