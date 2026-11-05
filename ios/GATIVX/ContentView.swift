@@ -37,6 +37,14 @@ struct ContentView: View {
         sessionStarted = nil
     }
 
+    private func syncSavedActivitySessions() {
+        let history = (try? JSONDecoder().decode([ActivitySessionRecord].self, from: UserDefaults.standard.data(forKey: "gativx.activitySessions.v1") ?? Data())) ?? []
+        for record in history {
+            guard let steps = record.steps else { continue }
+            Task { await cloud.syncActivitySession(id: record.id, activity: record.activity, startedAt: record.startedAt, finishedAt: record.finishedAt, steps: steps) }
+        }
+    }
+
     private var stepProgress: Double {
         guard let steps = health.todaySteps else { return 0 }
         return min(Double(steps) / 10_000, 1)
