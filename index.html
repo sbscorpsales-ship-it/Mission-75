@@ -260,8 +260,8 @@ function importAppleHealthShortcutSteps(){
  const params=new URLSearchParams(window.location.search);
  if(!params.has('gativx_steps'))return;
  const raw=params.get('gativx_steps'),n=Number(raw),date=params.get('gativx_date')||localDate();
- const validDate=/^\\d{4}-\\d{2}-\\d{2}$/.test(date)&&!Number.isNaN(Date.parse(date+'T00:00:00'));
- if(!/^\\d{1,6}$/.test(raw||'')||!Number.isSafeInteger(n)||n<0||n>100000||!validDate){
+ const validDate=/^\d{4}-\d{2}-\d{2}$/.test(date)&&!Number.isNaN(Date.parse(date+'T00:00:00'));
+ if(!/^\d{1,6}$/.test(raw||'')||!Number.isSafeInteger(n)||n<0||n>100000||!validDate){
   toast('Apple Health import link is invalid. No data was changed.');
   params.delete('gativx_steps');params.delete('gativx_date');
   const clean=window.location.pathname+(params.toString()?'?'+params.toString():'')+window.location.hash;
