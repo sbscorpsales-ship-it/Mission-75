@@ -191,7 +191,7 @@ body{padding-bottom:calc(112px + env(safe-area-inset-bottom))}
 const $=id=>document.getElementById(id),KEY='mission75.logs.v1',GPS='mission75.gps.sessions.v1',SET='mission75.settings.v1',HAB='mission75.habits.v1';
 const localDate=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`};
 const safeParse=(s,f)=>{try{return JSON.parse(s)||f}catch{return f}};
-const removeFalseManualStepRecord=record=>{if(!record||Number(record.steps)!==36||record.stepsSource!=='manual')return false;delete record.steps;delete record.stepsSource;delete record.stepsUpdatedAt;return true};
+const removeFalseManualStepRecord=record=>{if(!record||Number(record.steps)!==36)return false;delete record.steps;delete record.stepsSource;delete record.stepsUpdatedAt;return true};
 let logs=safeParse(localStorage.getItem(KEY),{}),gps=safeParse(localStorage.getItem(GPS),[]),settings={startWeight:84,targetWeight:75,stepGoal:10000,waterGoal:2500,proteinGoal:100,...safeParse(localStorage.getItem(SET),{})},habits=safeParse(localStorage.getItem(HAB),{});
 let removedFalseManualSteps=false;Object.keys(logs).forEach(d=>{if(removeFalseManualStepRecord(logs[d])){removedFalseManualSteps=true;if(!Object.keys(logs[d]).length)delete logs[d]}});if(removedFalseManualSteps)localStorage.setItem(KEY,JSON.stringify(logs));
 let selectedDate=localDate(),gpsState='idle',watchId=null,points=[],meters=0,started=0,elapsedBefore=0,tick=null,lastPoint=null;
