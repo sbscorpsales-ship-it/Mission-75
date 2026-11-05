@@ -38,6 +38,8 @@ for (const id of ids) if (!html.includes('id="' + id + '"')) fail("Dashboard met
 if (ids.every(id => html.includes('id="' + id + '"'))) pass("Six activity dashboard metric elements are present");
 if (!html.includes('id="vActiveMinutes"') || !html.includes('id="vActivitySource"') || !html.includes("function sessionsForDate(date)")) fail("GPS activity totals must feed the daily activity dashboard");
 else pass("Saved GPS walks feed daily activity type, active minutes and distance");
+if (!html.includes("sessionStartedAt=0") || !html.includes("startedAt:new Date(sessionStartedAt||Date.now()-sec*1000).toISOString()")) fail("GPS walk must preserve its actual start time through GPS lock and pause/resume");
+else pass("GPS walk preserves its actual start time through GPS lock and pause/resume");
 if (!html.includes('id="vActiveMinutesSource"') || !html.includes("From '+sessions.length+' saved GPS session")) fail("Active-minutes tile must explain the source of its displayed duration");
 else pass("Active-minutes tile explains when its duration comes from saved GPS sessions");
 if (html.includes('id="vHeartPoints"')) fail("Do not display uncomputed heart points");
