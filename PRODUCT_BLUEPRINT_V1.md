@@ -203,3 +203,19 @@ The product must be simple for beginners, useful to serious fitness users, acces
 - Final pricing after testing willingness to pay and unit economics.
 
 **Document status:** Master product blueprint V1.0. This is a planning specification, not evidence that the listed features are already implemented.
+
+
+## 10. Company brand signature standard — all products
+
+Param IT Solutions is the consistent developer/publisher brand across every product it develops, owns, distributes or markets. This is a company-wide identity rule, not a GATIVX-only treatment.
+
+- Use one approved company signature/wordmark consistently: **PARAM IT SOLUTIONS · BELGAUM, INDIA**.
+- Keep the signature visually secondary to each product's own brand: small, restrained, legible and never competing with the product name or primary user task.
+- Include the signature in appropriate product touchpoints: splash/about screen, settings or information area, website/product footer, help/support and product documentation. Include developer/publisher attribution in app-store listings and legal/privacy materials where appropriate.
+- Use the approved logo artwork, clear space, minimum legible size, colour variants and contrast rules. Do not redraw, stretch, recolour arbitrarily or create a different company mark for each product.
+- Product-specific branding remains primary; the Param IT Solutions signature is the consistent maker's mark across the portfolio.
+- Maintain a shared brand asset pack and a short brand-use guide for every new product and marketing release.
+- Use **™** only as an unregistered trademark claim where appropriate; use **®** only after the relevant mark is officially registered in the applicable jurisdiction. A logo/signature alone does not establish registration or prevent copying.
+- Keep the attribution factual: do not claim ownership, development, certification or registration that has not been established.
+
+**Standard signature text:** “Developed by Param IT Solutions · Belgaum, India”. Use a shorter “Param IT Solutions” maker's mark where space is limited.
