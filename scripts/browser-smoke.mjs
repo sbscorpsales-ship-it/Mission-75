@@ -29,7 +29,7 @@ assert(await page.locator("#cloudSignIn").count() === 1, "Sign-in action is miss
 assert(await page.locator("#cloudSignUp").count() === 1, "Sign-up action is missing");
 assert(await page.locator("#cloudSyncNow").count() === 1, "Manual sync action is missing");
 assert(await page.locator("#stravaImportCard").isVisible(), "Strava history importer is missing");
-const csv = 'Activity ID,Activity Date,Activity Name,Activity Type,Distance,Moving Time,Total Steps\\n12345,"Nov 20, 2025, 2:46:58 AM",Morning Walk,Walk,6491.6,3242,7340\n';
+const csv = 'Activity ID,Activity Date,Activity Name,Activity Type,Distance,Moving Time,Total Steps\n12345,"Nov 20, 2025, 2:46:58 AM",Morning Walk,Walk,6491.6,3242,7340\n';
 await page.locator("#stravaCsvFile").setInputFiles({ name: "activities.csv", mimeType: "text/csv", buffer: Buffer.from(csv) });
 await page.locator("#stravaImportBtn").click();
 assert((await page.locator("#stravaImportStatus").textContent()).includes("1 rows read"), "Strava CSV did not import");
