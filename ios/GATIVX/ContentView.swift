@@ -35,6 +35,11 @@ struct ContentView: View {
         UserDefaults.standard.set(try? JSONEncoder().encode(history), forKey: "gativx.activitySessions.v1")
         sessionStatus = selectedActivity + " saved · " + (sessionSteps?.formatted() ?? "step count unavailable") + " steps"
         sessionStarted = nil
+        if cloud.isSignedIn, let steps = record.steps {
+            Task { await cloud.syncActivitySession(id: record.id, activity: record.activity, startedAt: record.startedAt, finishedAt: record.finishedAt, steps: steps) }
+        } else {
+            sessionStatus += " · saved on this iPhone; sign in to sync"
+        }
     }
 
     private func syncSavedActivitySessions() {
@@ -142,6 +147,7 @@ struct ContentView: View {
                 }
                 health.resumeIfPreviouslyConnected()
                 health.refreshOnForeground()
+                if cloud.isSignedIn { syncSavedActivitySessions() }
             }
             .onChange(of: cloud.isSignedIn) { _, signedIn in
                 if signedIn {
