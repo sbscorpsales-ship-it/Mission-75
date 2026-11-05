@@ -82,6 +82,33 @@ final class SupabaseRESTClient: ObservableObject {
         guard (200..<300).contains(http.statusCode) else { throw Self.serverError(data) }
     }
 
+    func syncActivitySession(id: UUID, activity: String, startedAt: Date, finishedAt: Date, steps: Int) async {
+        guard steps >= 0, isSignedIn else { return }
+        do {
+            guard let token = accessToken else { throw ClientError.notSignedIn }
+            var request = URLRequest(url: baseURL.appendingPathComponent("rest/v1/rpc/sync_activity_session_steps"))
+            request.httpMethod = "POST"
+            request.setValue(publishableKey, forHTTPHeaderField: "apikey")
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            let iso = ISO8601DateFormatter()
+            iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            request.httpBody = try JSONSerialization.data(withJSONObject: [
+                "p_session_id": id.uuidString,
+                "p_activity": activity,
+                "p_started_at": iso.string(from: startedAt),
+                "p_finished_at": iso.string(from: finishedAt),
+                "p_steps": steps
+            ])
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let http = response as? HTTPURLResponse else { throw ClientError.invalidResponse }
+            guard (200..<300).contains(http.statusCode) else { throw Self.serverError(data) }
+            status = "Activity session synced to your GATIVX account."
+        } catch {
+            status = "Activity sync pending: \(error.localizedDescription). Open the app later to retry."
+        }
+    }
+
     private func refreshSession() async throws {
         guard let refreshToken else { throw ClientError.notSignedIn }
         var request = URLRequest(url: baseURL.appendingPathComponent("auth/v1/token").appending(queryItems: [URLQueryItem(name: "grant_type", value: "refresh_token")]))
