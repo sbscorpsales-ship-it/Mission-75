@@ -65,6 +65,11 @@ assert(Math.abs(new Date(savedWalk.startedAt).getTime() - walkStartedAt) < 5000,
 assert(savedWalk.points.length >= 2, "GPS route points were not persisted");
 assert((await page.locator("#vActivityType").textContent()).trim() === "Walk", "Saved GPS walk did not update dashboard activity type");
 assert((await page.locator("#vDistance").textContent()).includes("km"), "Saved GPS walk did not update dashboard distance");
+await page.locator('[data-tab="trends"]').click();
+assert(parseFloat((await page.locator("#totalWalk").textContent()).replace(" km", "")) > 0, "Saved GPS walk did not contribute to Journey total walking distance");
+assert((await page.locator("#weeklyStats").textContent()).includes("km"), "Saved GPS walk did not appear in weekly activity");
+assert((await page.locator("#recentHistory").textContent()).includes("GPS walk"), "Saved GPS walk did not appear in recent activity");
+await page.locator('[data-tab="walk"]').click();
 await page.reload({ waitUntil: "domcontentloaded" });
 await page.waitForTimeout(800);
 const persistedWalks = await page.evaluate(() => JSON.parse(localStorage.getItem("mission75.gps.sessions.v1") || "[]"));
