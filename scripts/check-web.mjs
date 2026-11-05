@@ -33,9 +33,13 @@ const keys = ["mission75.logs.v1", "mission75.gps.sessions.v1", "mission75.setti
 for (const key of keys) if (!html.includes(key)) fail("Existing user-data key missing: " + key);
 if (keys.every(key => html.includes(key))) pass("Existing local data keys remain present");
 
-const ids = ["vSteps", "vHeartPoints", "vActiveMinutes", "vDistance", "vWater", "vProtein"];
+const ids = ["vSteps", "vActivityType", "vActiveMinutes", "vDistance", "vWater", "vProtein"];
 for (const id of ids) if (!html.includes('id="' + id + '"')) fail("Dashboard metric missing: " + id);
 if (ids.every(id => html.includes('id="' + id + '"'))) pass("Six activity dashboard metric elements are present");
+if (!html.includes('id="vActiveMinutes"') || !html.includes('id="vActivitySource"') || !html.includes("function sessionsForDate(date)")) fail("GPS activity totals must feed the daily activity dashboard");
+else pass("Saved GPS walks feed daily activity type, active minutes and distance");
+if (html.includes('id="vHeartPoints"')) fail("Do not display uncomputed heart points");
+else pass("No uncomputed heart-points metric is shown");
 
 if (!html.includes("x.steps==null?'—':fmt(x.steps)") || !html.includes("x.distance==null?'—':Number(x.distance).toFixed(2)+' km'")) fail("Missing activity data must not display as zero");
 else pass("Missing step and distance values remain unknown, not zero");
