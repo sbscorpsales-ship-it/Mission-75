@@ -38,6 +38,12 @@ struct ContentView: View {
                 .tint(.black)
                 .foregroundStyle(.yellow)
 
+                Button("Refresh steps now") {
+                    health.refreshRecentDays()
+                }
+                .buttonStyle(.bordered)
+                .disabled(!health.isAvailable || health.isRefreshing)
+
                 if !cloud.isSignedIn {
                     VStack(spacing: 10) {
                         Text("Sign in with your existing GATIVX account")
