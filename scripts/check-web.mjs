@@ -5,6 +5,7 @@ import path from "node:path";
 import { spawnSync } from "node:child_process";
 
 const html = fs.readFileSync("index.html", "utf8");
+const healthKitMigration = fs.readFileSync("supabase/migrations/202611050001_preserve_legacy_manual_steps.sql", "utf8");
 let failed = false;
 const fail = (message) => { failed = true; console.error("FAIL: " + message); };
 const pass = (message) => console.log("PASS: " + message);
@@ -42,6 +43,8 @@ if (!html.includes("sessionStartedAt=0") || !html.includes("startedAt:new Date(s
 else pass("GPS walk preserves its actual start time through GPS lock and pause/resume");
 if (!html.includes('id="vActiveMinutesSource"') || !html.includes("From '+sessions.length+' saved GPS session")) fail("Active-minutes tile must explain the source of its displayed duration");
 else pass("Active-minutes tile explains when its duration comes from saved GPS sessions");
+if (!healthKitMigration.includes("public.daily_logs.steps_source = 'apple_health'") || !healthKitMigration.includes("public.daily_logs.steps is null")) fail("HealthKit sync must preserve legacy/manual step entries without provenance");
+else pass("HealthKit sync protects legacy manual steps as well as explicitly marked manual entries");
 if (html.includes('id="vHeartPoints"')) fail("Do not display uncomputed heart points");
 else pass("No uncomputed heart-points metric is shown");
 
