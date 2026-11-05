@@ -35,6 +35,19 @@ struct ContentView: View {
         UserDefaults.standard.set(try? JSONEncoder().encode(history), forKey: "gativx.activitySessions.v1")
         sessionStatus = selectedActivity + " saved · " + (sessionSteps?.formatted() ?? "step count unavailable") + " steps"
         sessionStarted = nil
+        if cloud.isSignedIn, let steps = record.steps {
+            Task { await cloud.syncActivitySession(id: record.id, activity: record.activity, startedAt: record.startedAt, finishedAt: record.finishedAt, steps: steps) }
+        } else {
+            sessionStatus += " · saved on this iPhone; sign in to sync"
+        }
+    }
+
+    private func syncSavedActivitySessions() async {
+        let history = (try? JSONDecoder().decode([ActivitySessionRecord].self, from: UserDefaults.standard.data(forKey: "gativx.activitySessions.v1") ?? Data())) ?? []
+        for record in history {
+            guard let steps = record.steps else { continue }
+            Task { await cloud.syncActivitySession(id: record.id, activity: record.activity, startedAt: record.startedAt, finishedAt: record.finishedAt, steps: steps) }
+        }
     }
 
     private var stepProgress: Double {
@@ -134,6 +147,7 @@ struct ContentView: View {
                 }
                 health.resumeIfPreviouslyConnected()
                 health.refreshOnForeground()
+                if cloud.isSignedIn { Task { await syncSavedActivitySessions() } }
             }
             .onChange(of: cloud.isSignedIn) { _, signedIn in
                 if signedIn {
@@ -141,11 +155,16 @@ struct ContentView: View {
                         Task { await cloud.syncSteps(date: day, steps: total) }
                     }
                     health.refreshRecentDays()
+                    // Retry sessions saved before sign-in; onAppear alone misses this transition.
+                    Task { await syncSavedActivitySessions() }
                 }
             }
             .onChange(of: scenePhase) { _, phase in
                 if phase == .active {
                     health.refreshOnForeground()
+                    if cloud.isSignedIn {
+                        Task { await syncSavedActivitySessions() }
+                    }
                 }
             }
         }
