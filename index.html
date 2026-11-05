@@ -259,10 +259,14 @@ function init(){renderSettings();loadForm();renderSummary();renderGps();coach();
 function importAppleHealthShortcutSteps(){
  const params=new URLSearchParams(window.location.search);
  if(!params.has('gativx_steps'))return;
- const raw=params.get('gativx_steps'),n=Number(raw),date=params.get('gativx_date')||localDate();
- const parts=date.split('-').map(Number),check=parts.length===3?new Date(parts[0],parts[1]-1,parts[2]):new Date(NaN);const validDate=/^\d{4}-\d{2}-\d{2}$/.test(date)&&check.getFullYear()===parts[0]&&check.getMonth()===parts[1]-1&&check.getDate()===parts[2];
- if(!/^\d{1,6}$/.test(raw||'')||!Number.isSafeInteger(n)||n<0||n>100000||!validDate){
-  toast('Apple Health import link is invalid. No data was changed.');
+ const raw=(params.get('gativx_steps')||'').trim();
+ // Shortcuts may stringify a numeric result with locale grouping or a decimal suffix.
+ const numeric=raw.replace(/,/g,'');
+ const parsed=Number(numeric),n=Math.round(parsed),date=params.get('gativx_date')||localDate();
+ const parts=date.split('-').map(Number),check=parts.length===3?new Date(parts[0],parts[1]-1,parts[2]):new Date(NaN);
+ const validDate=/^\d{4}-\d{2}-\d{2}$/.test(date)&&check.getFullYear()===parts[0]&&check.getMonth()===parts[1]-1&&check.getDate()===parts[2];
+ if(!raw||!/^\d+(?:\.\d+)?$/.test(numeric)||!Number.isFinite(parsed)||!Number.isSafeInteger(n)||n<0||n>100000||!validDate){
+  toast('Apple Health did not send a valid step total. No data was changed.');
   params.delete('gativx_steps');params.delete('gativx_date');
   const clean=window.location.pathname+(params.toString()?'?'+params.toString():'')+window.location.hash;
   window.history.replaceState({},'',clean);return;
