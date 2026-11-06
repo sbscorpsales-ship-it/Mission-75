@@ -37,6 +37,22 @@ async function smoke(engine, label) {
     const page = await context.newPage();
     const errors = [];
     page.on("pageerror", error => errors.push(error.message));
+    // Deterministic Geolocation API callback stub: exercise the app's real
+    // watchPosition, route filtering, finish, and local persistence logic.
+    await page.addInitScript(() => {
+      const callbacks = [];
+      window.__gativxGeoCallbacks = callbacks;
+      Object.defineProperty(navigator, "geolocation", {
+        configurable: true,
+        value: {
+          watchPosition(success) { callbacks.push(success); return callbacks.length; },
+          clearWatch() {},
+          getCurrentPosition(success) {
+            success({ coords: { latitude: 15.85, longitude: 74.50, accuracy: 5 }, timestamp: Date.now() });
+          }
+        }
+      });
+    });
     await page.route("https://**/*", route => route.abort());
     await page.goto(baseUrl, { waitUntil: "domcontentloaded" });
     await page.waitForTimeout(6500);
@@ -60,17 +76,22 @@ async function smoke(engine, label) {
 
     // Exercise the real GPS start/finish/save path with deterministic browser geolocation.
     await page.locator('[data-tab="walk"]').click();
-    await context.setGeolocation({ latitude: 15.85, longitude: 74.50, accuracy: 5 });
     await page.locator("#gpsStart").click();
-    await page.waitForTimeout(1200);
-    await context.setGeolocation({ latitude: 15.85005, longitude: 74.50005, accuracy: 5 });
-    await page.waitForTimeout(1800);
+    await page.waitForTimeout(150);
+    await page.evaluate(() => window.__gativxGeoCallbacks[0]({
+      coords: { latitude: 15.85, longitude: 74.50, accuracy: 5 }, timestamp: Date.now()
+    }));
+    await page.waitForTimeout(1400);
+    await page.evaluate(() => window.__gativxGeoCallbacks[0]({
+      coords: { latitude: 15.85005, longitude: 74.50005, accuracy: 5 }, timestamp: Date.now()
+    }));
+    await page.waitForTimeout(200);
     page.once("dialog", dialog => dialog.accept());
     await page.locator("#gpsFinish").click();
     await page.waitForTimeout(250);
     const sessions = await page.evaluate(() => JSON.parse(localStorage.getItem("mission75.gps.sessions.v1") || "[]"));
     assert(sessions.length === 1, label + ": GPS walk was not saved to local storage");
-    assert((sessions[0].points || []).length >= 2, label + ": saved GPS walk is missing route points");
+    assert((sessions[0].points || []).length >= 2, label + ": saved GPS walk is missing route points: " + JSON.stringify(sessions[0]));
     assert(Number(sessions[0].distanceMeters) > 0, label + ": saved GPS walk has no measured distance");
     assert(errors.length === 0, label + ": browser runtime errors: " + errors.join("; "));
     console.log("PASS: " + label + " mobile dashboard, six tabs, account controls, GPS start/finish, route-point persistence, and no uncaught runtime errors");
