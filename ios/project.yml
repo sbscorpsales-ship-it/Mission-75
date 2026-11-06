@@ -10,7 +10,7 @@ targets:
     type: application
     platform: iOS
     sources:
-      - path: GATIVX
+      - GATIVX
     info:
       path: GATIVX/Info.plist
       properties:
