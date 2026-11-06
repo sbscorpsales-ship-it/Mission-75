@@ -83,13 +83,14 @@ final class WalkLocationManager: NSObject, ObservableObject, CLLocationManagerDe
                 requestedAlwaysAuthorization = true
                 manager.requestAlwaysAuthorization()
             }
-            if !isTracking { start() }
+            if wantsTracking && !isTracking { start() }
         } else if manager.authorizationStatus == .denied || manager.authorizationStatus == .restricted {
             status = "Location permission denied"
         }
     }
 
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+        guard wantsTracking else { return }
         for location in locations where location.horizontalAccuracy >= 0 && location.horizontalAccuracy <= 50 {
             if let last = points.last,
                location.timestamp.timeIntervalSince(last.timestamp) < 1 { continue }
