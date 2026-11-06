@@ -12,8 +12,8 @@ struct GATIVXRoutePoint: Codable {
         [
             "latitude": latitude,
             "longitude": longitude,
-            "timestamp": ISO8601DateFormatter().string(from: timestamp),
-            "horizontal_accuracy": horizontalAccuracy
+            "timestamp": Int64(timestamp.timeIntervalSince1970 * 1000),
+            "accuracy": horizontalAccuracy
         ]
     }
 }
