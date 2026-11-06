@@ -40,6 +40,9 @@ struct ContentView: View {
                     return
                 }
                 self.motionTodaySteps = data?.numberOfSteps.intValue
+                if let total = data?.numberOfSteps.intValue, self.cloud.isSignedIn {
+                    Task { await self.cloud.syncMotionDailySteps(date: Date(), steps: total) }
+                }
             }
         }
     }
