@@ -21,6 +21,15 @@ struct ContentView: View {
     @State private var isFinishingSession = false
     @State private var sessionStatus = "Start a session to count steps."
 
+    /// Route HealthKit's daily aggregate directly into the signed-in cloud account.
+    /// HealthKit is the daily source of truth; Core Motion remains session-only.
+    private func connectHealthKitToCloud() {
+        health.onDailyTotal = { day, total in
+            guard cloud.isSignedIn else { return }
+            Task { await cloud.syncMotionDailySteps(date: day, steps: total) }
+        }
+    }
+
     private func refreshDirectMotionSteps() {
         guard CMPedometer.isStepCountingAvailable() else {
             sessionStatus = "iPhone motion step counting is unavailable."
@@ -42,10 +51,6 @@ struct ContentView: View {
                 }
                 let total = data?.numberOfSteps.intValue ?? 0
                 self.motionTodaySteps = total
-                if self.cloud.isSignedIn {
-                    Task { await self.cloud.syncMotionDailySteps(date: queryTime, steps: total) }
-                }
-
                 // Core Motion reports the cumulative count since startOfDay.
                 // Sync each changed total so cloud data does not wait for the next launch.
                 self.dailyPedometer.startUpdates(from: startOfDay) { liveData, liveError in
@@ -58,9 +63,6 @@ struct ContentView: View {
                         guard let liveTotal = liveData?.numberOfSteps.intValue,
                               liveTotal != self.motionTodaySteps else { return }
                         self.motionTodaySteps = liveTotal
-                        if self.cloud.isSignedIn {
-                            Task { await self.cloud.syncMotionDailySteps(date: Date(), steps: liveTotal) }
-                        }
                     }
                 }
             }
@@ -183,7 +185,7 @@ struct ContentView: View {
     }
 
     private var stepProgress: Double {
-        guard let steps = motionTodaySteps else { return 0 }
+        guard let steps = health.todaySteps else { return 0 }
         return min(Double(steps) / 10_000, 1)
     }
 
@@ -194,13 +196,13 @@ struct ContentView: View {
                 Text("From Goals to Xcellence").font(.subheadline).foregroundStyle(.secondary)
 
                 VStack(spacing: 8) {
-                    Text("TODAY'S STEPS").font(.caption.weight(.bold)).foregroundStyle(.secondary)
-                    Text(motionTodaySteps?.formatted() ?? "—")
+                    Text("TODAY'S APPLE HEALTH STEPS").font(.caption.weight(.bold)).foregroundStyle(.secondary)
+                    Text(health.todaySteps?.formatted() ?? "—")
                         .font(.system(size: 48, weight: .bold, design: .rounded))
-                    Text(motionTodaySteps == nil ? "Waiting for direct iPhone motion data" : "Goal: 10,000 · iPhone sensor")
+                    Text(health.todaySteps == nil ? "Waiting for Apple Health step data" : "Goal: 10,000 · Apple Health")
                         .font(.subheadline).foregroundStyle(.secondary)
                     ProgressView(value: stepProgress).tint(.yellow)
-                    Text("Primary total is read directly from the iPhone motion sensor. Apple Health is optional.")
+                    Text("Daily total comes directly from Apple Health. Live walk steps use the iPhone motion sensor.")
                         .font(.caption2).foregroundStyle(.secondary).multilineTextAlignment(.center)
                 }
                 .padding().frame(maxWidth: .infinity)
@@ -226,7 +228,7 @@ struct ContentView: View {
                             finishActivitySession()
                         }.buttonStyle(.bordered).disabled(isFinishingSession)
                     }
-                    Text("Both today’s total and live session count come directly from iPhone motion data.")
+                    Text("Daily total is from Apple Health. Session steps are measured separately by Core Motion.")
                         .font(.caption2).foregroundStyle(.secondary)
                 }.padding().frame(maxWidth: .infinity, alignment: .leading)
                  .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 20))
@@ -284,9 +286,8 @@ struct ContentView: View {
             .padding()
             .navigationBarTitleDisplayMode(.inline)
             .onAppear {
-                // HealthKit is optional display/import only. Core Motion owns
-                // the primary daily total and must not be overwritten by HealthKit.
-                health.onDailyTotal = nil
+                // Install the HealthKit-to-cloud callback before starting any queries.
+                connectHealthKitToCloud()
                 health.resumeIfPreviouslyConnected()
                 health.refreshOnForeground()
                 refreshDirectMotionSteps()
@@ -295,7 +296,7 @@ struct ContentView: View {
             }
             .onChange(of: cloud.isSignedIn) { _, signedIn in
                 if signedIn {
-                    health.onDailyTotal = nil
+                    connectHealthKitToCloud()
                     health.refreshRecentDays()
                     refreshDirectMotionSteps()
                     Task { await syncSavedActivitySessions() }
