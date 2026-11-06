@@ -82,7 +82,7 @@ final class SupabaseRESTClient: ObservableObject {
         guard (200..<300).contains(http.statusCode) else { throw Self.serverError(data) }
     }
 
-    func syncMotionDailySteps(date: Date, steps: Int) async {
+    func syncMotionDailySteps(date: Date, steps: Int, retryAfterRefresh: Bool = true) async {
         guard steps >= 0, isSignedIn else { return }
         do {
             guard let token = accessToken else { throw ClientError.notSignedIn }
