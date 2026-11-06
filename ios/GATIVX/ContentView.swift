@@ -125,6 +125,7 @@ struct ContentView: View {
                     id: record.id, activity: record.activity,
                     startedAt: record.startedAt, finishedAt: record.finishedAt, steps: steps
                 )
+                await cloud.syncActivitySessionRoute(id: record.id, route: record.route ?? [])
             }
         } else {
             sessionStatus += " · saved on this iPhone; sign in to sync"
@@ -146,6 +147,7 @@ struct ContentView: View {
                 id: record.id, activity: record.activity,
                 startedAt: record.startedAt, finishedAt: record.finishedAt, steps: steps
             )
+            await cloud.syncActivitySessionRoute(id: record.id, route: record.route ?? [])
         }
     }
 
