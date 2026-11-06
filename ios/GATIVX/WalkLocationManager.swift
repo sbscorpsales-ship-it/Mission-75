@@ -100,6 +100,9 @@ final class WalkLocationManager: NSObject, ObservableObject, CLLocationManagerDe
                 timestamp: location.timestamp
             ))
         }
+        if let data = try? JSONEncoder().encode(points) {
+            UserDefaults.standard.set(data, forKey: "gativx.activeRoute.v1")
+        }
         status = "Recording GPS route · \(points.count) points"
     }
 
