@@ -1,18 +1,44 @@
 import { chromium, webkit } from "playwright";
 import { pathToFileURL } from "node:url";
 import path from "node:path";
+import http from "node:http";
+import fs from "node:fs";
+import { fileURLToPath } from "node:url";
+
+const root = process.cwd();
+const mime = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".json": "application/json", ".webmanifest": "application/manifest+json", ".svg": "image/svg+xml", ".png": "image/png", ".jpg": "image/jpeg", ".css": "text/css" };
+const server = http.createServer((req, res) => {
+  const pathname = decodeURIComponent(new URL(req.url, "http://127.0.0.1").pathname);
+  const relative = pathname === "/" ? "index.html" : pathname.slice(1);
+  const target = path.resolve(root, relative);
+  if (!target.startsWith(root + path.sep) && target !== path.join(root, "index.html")) {
+    res.writeHead(403).end("Forbidden"); return;
+  }
+  fs.readFile(target, (error, data) => {
+    if (error) { res.writeHead(404).end("Not found"); return; }
+    res.writeHead(200, { "Content-Type": mime[path.extname(target)] || "application/octet-stream", "Cache-Control": "no-store" });
+    res.end(data);
+  });
+});
+await new Promise(resolve => server.listen(4173, "127.0.0.1", resolve));
+const baseUrl = "http://127.0.0.1:4173/";
 
 const assert = (condition, message) => { if (!condition) throw new Error(message); };
-const fileUrl = pathToFileURL(path.resolve("index.html")).href;
 
 async function smoke(engine, label) {
   const browser = await engine.launch({ headless: true });
   try {
-    const page = await browser.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1 });
+    const context = await browser.newContext({
+      viewport: { width: 390, height: 844 },
+      deviceScaleFactor: 1,
+      geolocation: { latitude: 15.85, longitude: 74.50, accuracy: 5 },
+      permissions: ["geolocation"]
+    });
+    const page = await context.newPage();
     const errors = [];
     page.on("pageerror", error => errors.push(error.message));
     await page.route("https://**/*", route => route.abort());
-    await page.goto(fileUrl, { waitUntil: "domcontentloaded" });
+    await page.goto(baseUrl, { waitUntil: "domcontentloaded" });
     await page.waitForTimeout(6500);
 
     assert(await page.locator("#connectionHeading").isVisible(), label + ": connected-data hub is not visible");
@@ -31,12 +57,32 @@ async function smoke(engine, label) {
     assert(await page.locator("#cloudSignIn").count() === 1, label + ": sign-in action is missing");
     assert(await page.locator("#cloudSignUp").count() === 1, label + ": sign-up action is missing");
     assert(await page.locator("#cloudSyncNow").count() === 1, label + ": manual cloud-sync action is missing");
+
+    // Exercise the real GPS start/finish/save path with deterministic browser geolocation.
+    await page.locator('[data-tab="walk"]').click();
+    await context.setGeolocation({ latitude: 15.85, longitude: 74.50, accuracy: 5 });
+    await page.locator("#gpsStart").click();
+    await page.waitForTimeout(1200);
+    await context.setGeolocation({ latitude: 15.85005, longitude: 74.50005, accuracy: 5 });
+    await page.waitForTimeout(1800);
+    page.once("dialog", dialog => dialog.accept());
+    await page.locator("#gpsFinish").click();
+    await page.waitForTimeout(250);
+    const sessions = await page.evaluate(() => JSON.parse(localStorage.getItem("mission75.gps.sessions.v1") || "[]"));
+    assert(sessions.length === 1, label + ": GPS walk was not saved to local storage");
+    assert((sessions[0].points || []).length >= 2, label + ": saved GPS walk is missing route points");
+    assert(Number(sessions[0].distanceMeters) > 0, label + ": saved GPS walk has no measured distance");
     assert(errors.length === 0, label + ": browser runtime errors: " + errors.join("; "));
-    console.log("PASS: " + label + " mobile viewport, six dashboard metrics, six navigation tabs, account controls, and no uncaught runtime errors");
+    console.log("PASS: " + label + " mobile dashboard, six tabs, account controls, GPS start/finish, route-point persistence, and no uncaught runtime errors");
+    await context.close();
   } finally {
     await browser.close();
   }
 }
 
-await smoke(chromium, "Chromium / Chrome engine");
-await smoke(webkit, "WebKit / Safari engine");
+try {
+  await smoke(chromium, "Chromium / Chrome engine");
+  await smoke(webkit, "WebKit / Safari engine");
+} finally {
+  await new Promise(resolve => server.close(resolve));
+}
