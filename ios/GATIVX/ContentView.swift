@@ -24,24 +24,37 @@ struct ContentView: View {
             return
         }
         let startOfDay = Calendar.current.startOfDay(for: Date())
-        dailyPedometer.startUpdates(from: startOfDay) { data, error in
-            DispatchQueue.main.async {
-                if let error {
-                    self.sessionStatus = "Direct iPhone step read failed: " + error.localizedDescription
-                    return
-                }
-                self.motionTodaySteps = data?.numberOfSteps.intValue
-            }
-        }
-        dailyPedometer.queryPedometerData(from: startOfDay, to: Date()) { data, error in
+        // Stop any prior stream before refreshing; query first so an older
+        // asynchronous query cannot overwrite a newer live sensor update.
+        dailyPedometer.stopUpdates()
+        let queryTime = Date()
+        dailyPedometer.queryPedometerData(from: startOfDay, to: queryTime) { data, error in
             DispatchQueue.main.async {
                 if let error {
                     self.sessionStatus = "Could not read today's iPhone motion total: " + error.localizedDescription
                     return
                 }
-                self.motionTodaySteps = data?.numberOfSteps.intValue
-                if let total = data?.numberOfSteps.intValue, self.cloud.isSignedIn {
-                    Task { await self.cloud.syncMotionDailySteps(date: Date(), steps: total) }
+                let total = data?.numberOfSteps.intValue ?? 0
+                self.motionTodaySteps = total
+                if self.cloud.isSignedIn {
+                    Task { await self.cloud.syncMotionDailySteps(date: queryTime, steps: total) }
+                }
+
+                // Core Motion reports the cumulative count since startOfDay.
+                // Sync each changed total so cloud data does not wait for the next launch.
+                self.dailyPedometer.startUpdates(from: startOfDay) { liveData, liveError in
+                    DispatchQueue.main.async {
+                        if let liveError {
+                            self.sessionStatus = "Live iPhone motion updates paused: " + liveError.localizedDescription
+                            return
+                        }
+                        guard let liveTotal = liveData?.numberOfSteps.intValue,
+                              liveTotal != self.motionTodaySteps else { return }
+                        self.motionTodaySteps = liveTotal
+                        if self.cloud.isSignedIn {
+                            Task { await self.cloud.syncMotionDailySteps(date: Date(), steps: liveTotal) }
+                        }
+                    }
                 }
             }
         }
@@ -237,6 +250,7 @@ struct ContentView: View {
                 }
                 health.resumeIfPreviouslyConnected()
                 health.refreshOnForeground()
+                refreshDirectMotionSteps()
                 if cloud.isSignedIn { Task { await syncSavedActivitySessions() } }
             }
             .onChange(of: cloud.isSignedIn) { _, signedIn in
@@ -252,6 +266,7 @@ struct ContentView: View {
             .onChange(of: scenePhase) { _, phase in
                 if phase == .active {
                     health.refreshOnForeground()
+                    refreshDirectMotionSteps()
                     if cloud.isSignedIn {
                         Task { await syncSavedActivitySessions() }
                     }
