@@ -1,12 +1,12 @@
 import SwiftUI
 import CoreMotion
 
-private struct ActivitySessionRecord: Codable { let id: UUID; let activity: String; let startedAt: Date; let finishedAt: Date; let steps: Int? }
+private struct ActivitySessionRecord: Codable { let id: UUID; let activity: String; let startedAt: Date; let finishedAt: Date; let steps: Int?; let routePoints: [GATIVXRoutePoint] }
 
 struct ContentView: View {
     @Environment(\.scenePhase) private var scenePhase
     @StateObject private var health = HealthKitManager()
-    @StateObject private var cloud = SupabaseRESTClient()
+    @StateObject private var cloud = SupabaseRESTClient()\n    @StateObject private var routeRecorder = GPSRouteRecorder()
     @State private var email = ""
     @State private var password = ""
     @State private var pedometer = CMPedometer()
@@ -21,13 +21,13 @@ struct ContentView: View {
         Task {
             for record in history {
                 guard let steps = record.steps else { continue }
-                await cloud.syncActivitySession(id: record.id, activity: record.activity, startedAt: record.startedAt, finishedAt: record.finishedAt, steps: steps)
+                await cloud.syncActivitySession(id: record.id, activity: record.activity, startedAt: record.startedAt, finishedAt: record.finishedAt, steps: steps)\n                if !record.routePoints.isEmpty { await cloud.syncActivitySessionRoute(id: record.id, points: record.routePoints) }
             }
         }
     }
     private func startActivitySession() {
         guard CMPedometer.isStepCountingAvailable() else { sessionStatus = "Step counting is unavailable."; return }
-        let start = Date(); sessionStarted = start; sessionSteps = 0
+        let start = Date(); sessionStarted = start; sessionSteps = 0\n        routeRecorder.start()
         sessionStatus = "Counting steps for " + selectedActivity.lowercased() + "…"
         pedometer.startUpdates(from: start) { data, error in
             DispatchQueue.main.async {
@@ -46,7 +46,7 @@ struct ContentView: View {
         pedometer.queryPedometerData(from: start, to: finishedAt) { data, _ in
             DispatchQueue.main.async {
                 let finalSteps = data?.numberOfSteps.intValue ?? self.sessionSteps
-                let record = ActivitySessionRecord(id: UUID(), activity: activity, startedAt: start, finishedAt: finishedAt, steps: finalSteps)
+                let record = ActivitySessionRecord(id: UUID(), activity: activity, startedAt: start, finishedAt: finishedAt, steps: finalSteps, routePoints: routePoints)
                 var history = (try? JSONDecoder().decode([ActivitySessionRecord].self, from: UserDefaults.standard.data(forKey: "gativx.activitySessions.v1") ?? Data())) ?? []
                 history.insert(record, at: 0)
                 UserDefaults.standard.set(try? JSONEncoder().encode(history), forKey: "gativx.activitySessions.v1")
@@ -93,14 +93,14 @@ struct ContentView: View {
                         Text(sessionSteps?.formatted() ?? "—").font(.system(size: 34, weight: .bold, design: .rounded))
                         Text("steps this session").font(.subheadline).foregroundStyle(.secondary)
                     }
-                    Text(sessionStatus).font(.caption).foregroundStyle(.secondary)
+                    Text(sessionStatus).font(.caption).foregroundStyle(.secondary)\n                    Text(routeRecorder.status + " · " + routeRecorder.points.count.formatted() + " GPS points").font(.caption2).foregroundStyle(.secondary)
                     if sessionStarted == nil {
                         Button("Start activity") { startActivitySession() }.buttonStyle(.borderedProminent).tint(.green)
                             .disabled(!CMPedometer.isStepCountingAvailable())
                     } else {
                         Button("Finish & save activity", role: .destructive) { finishActivitySession() }.buttonStyle(.bordered)
                     }
-                    Text("Live session steps use iPhone motion data. Today total above comes from Apple Health.")
+                    Text("Session steps use iPhone motion data. GPS route is recorded separately while an activity is active. Allow location access for route tracking.")
                         .font(.caption2).foregroundStyle(.secondary)
                 }.padding().frame(maxWidth: .infinity, alignment: .leading)
                  .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 20))
