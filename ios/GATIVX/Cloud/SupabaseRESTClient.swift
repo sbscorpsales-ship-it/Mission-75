@@ -82,7 +82,7 @@ final class SupabaseRESTClient: ObservableObject {
         guard (200..<300).contains(http.statusCode) else { throw Self.serverError(data) }
     }
 
-    func syncActivitySession(id: UUID, activity: String, startedAt: Date, finishedAt: Date, steps: Int) async {
+    func syncActivitySession(id: UUID, activity: String, startedAt: Date, finishedAt: Date, steps: Int, retryAfterRefresh: Bool = true) async {
         guard steps >= 0, finishedAt >= startedAt else { return }
         do {
             guard let token = accessToken else { throw ClientError.notSignedIn }
@@ -102,9 +102,9 @@ final class SupabaseRESTClient: ObservableObject {
             ])
             let (data, response) = try await URLSession.shared.data(for: request)
             guard let http = response as? HTTPURLResponse else { throw ClientError.invalidResponse }
-            if http.statusCode == 401 {
+            if http.statusCode == 401 && retryAfterRefresh {
                 try await refreshSession()
-                await syncActivitySession(id: id, activity: activity, startedAt: startedAt, finishedAt: finishedAt, steps: steps)
+                await syncActivitySession(id: id, activity: activity, startedAt: startedAt, finishedAt: finishedAt, steps: steps, retryAfterRefresh: false)
                 return
             }
             guard (200..<300).contains(http.statusCode) else { throw Self.serverError(data) }
