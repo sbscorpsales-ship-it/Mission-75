@@ -13,6 +13,7 @@ struct ContentView: View {
     @State private var pedometer = CMPedometer()
     @State private var dailyPedometer = CMPedometer()
     @State private var motionTodaySteps: Int?
+    @State private var motionRefreshID = UUID()
     @State private var selectedActivity = "Walking"
     @State private var sessionActivity = "Walking"
     @State private var sessionSteps: Int?
@@ -26,12 +27,15 @@ struct ContentView: View {
             return
         }
         let startOfDay = Calendar.current.startOfDay(for: Date())
-        // Stop any prior stream before refreshing; query first so an older
-        // asynchronous query cannot overwrite a newer live sensor update.
+        // Give each refresh a generation ID so a slow, older query or stream
+        // cannot overwrite the newest total after foreground/scene transitions.
+        let refreshID = UUID()
+        motionRefreshID = refreshID
         dailyPedometer.stopUpdates()
         let queryTime = Date()
         dailyPedometer.queryPedometerData(from: startOfDay, to: queryTime) { data, error in
             DispatchQueue.main.async {
+                guard self.motionRefreshID == refreshID else { return }
                 if let error {
                     self.sessionStatus = "Could not read today's iPhone motion total: " + error.localizedDescription
                     return
@@ -46,6 +50,7 @@ struct ContentView: View {
                 // Sync each changed total so cloud data does not wait for the next launch.
                 self.dailyPedometer.startUpdates(from: startOfDay) { liveData, liveError in
                     DispatchQueue.main.async {
+                        guard self.motionRefreshID == refreshID else { return }
                         if let liveError {
                             self.sessionStatus = "Live iPhone motion updates paused: " + liveError.localizedDescription
                             return
