@@ -13,6 +13,7 @@ struct ContentView: View {
     @State private var dailyPedometer = CMPedometer()
     @State private var motionTodaySteps: Int?
     @State private var selectedActivity = "Walking"
+    @State private var sessionActivity = "Walking"
     @State private var sessionSteps: Int?
     @State private var sessionStarted: Date?
     @State private var isFinishingSession = false
@@ -65,8 +66,9 @@ struct ContentView: View {
         guard sessionStarted == nil, !isFinishingSession else { return }
         let start = Date()
         sessionStarted = start
+        sessionActivity = selectedActivity
         sessionSteps = 0
-        sessionStatus = "Counting steps for " + selectedActivity.lowercased() + "…"
+        sessionStatus = "Counting steps for " + sessionActivity.lowercased() + "…"
         pedometer.startUpdates(from: start) { data, error in
             DispatchQueue.main.async {
                 if let error {
@@ -99,7 +101,7 @@ struct ContentView: View {
 
     private func persistFinishedSession(startedAt: Date, finishedAt: Date, steps: Int?) {
         let record = ActivitySessionRecord(
-            id: UUID(), activity: selectedActivity,
+            id: UUID(), activity: sessionActivity,
             startedAt: startedAt, finishedAt: finishedAt, steps: steps
         )
         var history = (try? JSONDecoder().decode(
@@ -110,7 +112,7 @@ struct ContentView: View {
         UserDefaults.standard.set(try? JSONEncoder().encode(history), forKey: "gativx.activitySessions.v1")
 
         sessionSteps = steps
-        sessionStatus = selectedActivity + " saved · " + (steps?.formatted() ?? "step count unavailable") + " steps"
+        sessionStatus = sessionActivity + " saved · " + (steps?.formatted() ?? "step count unavailable") + " steps"
         sessionStarted = nil
         isFinishingSession = false
 
@@ -173,6 +175,7 @@ struct ContentView: View {
                     Picker("Activity", selection: $selectedActivity) {
                         ForEach(["Walking", "Running", "Hiking", "Other"], id: \.self) { Text($0) }
                     }.pickerStyle(.segmented)
+                    .disabled(sessionStarted != nil || isFinishingSession)
                     HStack(alignment: .firstTextBaseline) {
                         Text(sessionSteps?.formatted() ?? "—").font(.system(size: 34, weight: .bold, design: .rounded))
                         Text("steps this session").font(.subheadline).foregroundStyle(.secondary)
@@ -244,10 +247,9 @@ struct ContentView: View {
             .padding()
             .navigationBarTitleDisplayMode(.inline)
             .onAppear {
-                health.onDailyTotal = { day, total in
-                    guard cloud.isSignedIn else { return }
-                    Task { await cloud.syncSteps(date: day, steps: total) }
-                }
+                // HealthKit is optional display/import only. Core Motion owns
+                // the primary daily total and must not be overwritten by HealthKit.
+                health.onDailyTotal = nil
                 health.resumeIfPreviouslyConnected()
                 health.refreshOnForeground()
                 refreshDirectMotionSteps()
@@ -255,9 +257,7 @@ struct ContentView: View {
             }
             .onChange(of: cloud.isSignedIn) { _, signedIn in
                 if signedIn {
-                    health.onDailyTotal = { day, total in
-                        Task { await cloud.syncSteps(date: day, steps: total) }
-                    }
+                    health.onDailyTotal = nil
                     health.refreshRecentDays()
                     refreshDirectMotionSteps()
                     Task { await syncSavedActivitySessions() }
