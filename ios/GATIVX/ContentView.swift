@@ -55,6 +55,8 @@ struct ContentView: View {
                     Text(health.todaySteps == nil ? "Waiting for Apple Health data" : "Goal: 10,000")
                         .font(.subheadline).foregroundStyle(.secondary)
                     ProgressView(value: stepProgress).tint(.yellow)
+                    Text("Active energy: " + (health.todayActiveEnergyKcal.map { "\($0) kcal" } ?? "—") + " · Apple Health measured active calories, not total calories.")
+                        .font(.caption).foregroundStyle(.secondary)
                     Text("Steps are read from Apple Health, which can combine supported iPhone and wearable sources.")
                         .font(.caption2).foregroundStyle(.secondary).multilineTextAlignment(.center)
                 }
