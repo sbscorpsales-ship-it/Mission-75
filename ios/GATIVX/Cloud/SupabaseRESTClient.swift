@@ -113,7 +113,7 @@ final class SupabaseRESTClient: ObservableObject {
             status = "Activity saved on this iPhone; cloud sync pending: " + error.localizedDescription
         }
     }
-    func syncActivitySessionRoute(id: UUID, points: [GATIVXRoutePoint]) async {
+    func syncActivitySessionRoute(id: UUID, points: [GATIVXRoutePoint], retryAfterRefresh: Bool = true) async {
         guard !points.isEmpty, points.count <= 20_000 else { return }
         do {
             guard let token = accessToken else { throw ClientError.notSignedIn }
