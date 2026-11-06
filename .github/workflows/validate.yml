@@ -1,0 +1,35 @@
+name: GATIVX release gates
+
+on:
+  push:
+    branches: [main, "gativx/**"]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  web-validation:
+    name: Web app syntax and install assets
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Validate web app, manifest, icons and scripts
+        run: python .github/scripts/validate_web.py
+
+  ios-build:
+    name: Native iOS simulator build
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Generate Xcode project
+        run: xcodegen generate --spec ios/project.yml --project ios
+      - name: Compile GATIVX for iOS Simulator
+        run: xcodebuild -project ios/GATIVX.xcodeproj -scheme GATIVX -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build
