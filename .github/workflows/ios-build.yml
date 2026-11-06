@@ -1,30 +1,36 @@
 name: GATIVX iOS build check
-# Single-queue build validation for the current native iOS source.
 
 on:
   workflow_dispatch:
   push:
+    branches:
+      - "gativx/ios-healthkit-mainline-2026-11-06"
     paths:
       - "ios/**"
       - ".github/workflows/ios-build.yml"
 
-concurrency:
-  group: gativx-ios-build-${{ github.ref }}
-  cancel-in-progress: false
+permissions:
+  contents: read
 
 jobs:
   build-ios:
     runs-on: macos-15
+    timeout-minutes: 30
     steps:
       - name: Check out source
         uses: actions/checkout@v4
-      - name: Show Xcode version
-        run: xcodebuild -version
-      - name: Install XcodeGen
-        run: brew install xcodegen
+      - name: Show Xcode and XcodeGen versions
+        run: |
+          xcodebuild -version
+          brew install xcodegen
+          xcodegen --version
       - name: Generate Xcode project
         working-directory: ios
-        run: xcodegen generate --spec project.yml
+        run: |
+          pwd
+          find GATIVX -type f -maxdepth 4 -print
+          xcodegen generate --spec project.yml
+          test -d GATIVX.xcodeproj
       - name: Compile for iPhone Simulator (no signing)
         run: |
           xcodebuild \
