@@ -15,6 +15,16 @@ struct ContentView: View {
     @State private var sessionStarted: Date?
     @State private var sessionStatus = "Start a session to count steps."
 
+    private func syncSavedActivitySessions() {
+        guard cloud.isSignedIn else { return }
+        let history = (try? JSONDecoder().decode([ActivitySessionRecord].self, from: UserDefaults.standard.data(forKey: "gativx.activitySessions.v1") ?? Data())) ?? []
+        Task {
+            for record in history {
+                guard let steps = record.steps else { continue }
+                await cloud.syncActivitySession(id: record.id, activity: record.activity, startedAt: record.startedAt, finishedAt: record.finishedAt, steps: steps)
+            }
+        }
+    }
     private func startActivitySession() {
         guard CMPedometer.isStepCountingAvailable() else { sessionStatus = "Step counting is unavailable."; return }
         let start = Date(); sessionStarted = start; sessionSteps = 0
@@ -35,6 +45,7 @@ struct ContentView: View {
         UserDefaults.standard.set(try? JSONEncoder().encode(history), forKey: "gativx.activitySessions.v1")
         sessionStatus = selectedActivity + " saved · " + (sessionSteps?.formatted() ?? "step count unavailable") + " steps"
         sessionStarted = nil
+        syncSavedActivitySessions()
     }
 
     private var stepProgress: Double {
@@ -143,6 +154,7 @@ struct ContentView: View {
                         Task { await cloud.syncSteps(date: day, steps: total) }
                     }
                     health.refreshRecentDays()
+                    syncSavedActivitySessions()
                 }
             }
             .onChange(of: scenePhase) { _, phase in
