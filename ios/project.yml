@@ -21,6 +21,8 @@ targets:
         INFOPLIST_KEY_NSHealthShareUsageDescription: "GATIVX reads your daily step count to show progress toward your mission."
         INFOPLIST_KEY_NSMotionUsageDescription: "GATIVX counts steps during an activity session using the iPhone motion sensor."
         INFOPLIST_KEY_NSLocationWhenInUseUsageDescription: "GATIVX uses your location only when you start a GPS walk."
+        INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription: "GATIVX uses background location during an active walk so your route continues to record when the screen is locked."
+        INFOPLIST_KEY_UIBackgroundModes: "location"
         CODE_SIGN_ENTITLEMENTS: GATIVX/GATIVX.entitlements
         SUPPORTS_MACCATALYST: NO
     scheme:
