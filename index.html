@@ -191,6 +191,8 @@ body{padding-bottom:calc(112px + env(safe-area-inset-bottom))}
 .gativx-about .about-credit strong{color:#B7FF35}
 .gativx-about .about-credit span{color:#B4D2C0;font-size:10px;letter-spacing:.12em;font-weight:800}
 @media(max-width:560px){.gativx-about{padding:17px 13px}.gativx-about .about-head{align-items:flex-start;gap:8px}.gativx-about .about-title{font-size:19px}.gativx-about .about-month-label{font-size:10px}.gativx-about #aboutMonth{max-width:120px;padding:8px 5px;font-size:12px}.gativx-about .about-day{font-size:11px;padding:9px 0}.gativx-about .about-lesson{padding:13px}.gativx-about .about-lesson h3{font-size:19px}.gativx-about .about-lesson>p{font-size:15px;line-height:1.75}.gativx-about .about-benefit p,.gativx-about .about-action p{font-size:14px}}
+.gativx-about .about-punch{margin:12px 0 14px;padding:14px 15px;border-left:4px solid #B7FF35;border-radius:0 12px 12px 0;background:linear-gradient(100deg,#174d38,#103b2d);color:#E8FFB9;font-size:19px;font-weight:900;line-height:1.4;letter-spacing:.01em;text-align:left}
+@media(max-width:560px){.gativx-about .about-punch{font-size:18px;padding:13px 12px}}
 </style>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""><script async src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script></head>
 <body><div id="brandIntro" role="dialog" aria-label="GATIVX opening animation">
@@ -232,6 +234,7 @@ body{padding-bottom:calc(112px + env(safe-area-inset-bottom))}
   <div class="about-week" id="aboutWeek" role="group" aria-label="Choose a day of the week"></div>
   <article class="about-lesson" aria-live="polite">
     <div class="about-lesson-tag" id="aboutLessonTag">SUNDAY · LESSON 1 OF 7</div>
+    <div class="about-punch" id="aboutPunch" aria-live="polite">Small steps. Stronger you.</div>
     <h3 id="aboutLessonTitle">Start with one small step</h3>
     <p id="aboutLessonBody"></p>
     <div class="about-benefit"><b>WHY IT HELPS</b><p id="aboutLessonBenefit"></p></div>
@@ -258,6 +261,14 @@ const val=id=>{const v=parseFloat($(id).value);return Number.isFinite(v)?v:null}
 const fmt=n=>Number(n||0).toLocaleString('en-IN');
 $('today').textContent=new Date().toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'short',year:'numeric'});$('logDate').value=selectedDate;
 const learningDays=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+const dailyPunches={
+ today:["Today is yours. Begin with purpose.","Show up for yourself. That is strength.","One good choice can change your day.","Focus on progress, not perfection.","Protect your energy. Honour your goals.","Notice how far your effort has brought you.","Reset. Refocus. Rise again."],
+ trends:["Your journey is bigger than one number.","Every milestone begins with a decision.","Small wins are proof of growing strength.","Consistency makes progress visible.","A slow phase is not a stop sign.","Adjust the plan, never abandon your worth.","Look back with pride. Move forward with purpose."],
+ log:["Honest tracking. Powerful learning.","Every entry tells part of your story.","Know your numbers. Own your choices.","Fuel your body with care, not guilt.","Hydrate. Replenish. Keep moving.","Recovery is part of the work.","Turn today's insight into tomorrow's action."],
+ coach:["Your next chapter starts with one choice.","Build habits that carry you forward.","Nourish the body. Strengthen the mind.","Motivation fades. Your reason can remain.","Speak to yourself with strength and kindness.","A good plan makes room for real life.","Learn. Adapt. Become stronger."],
+ walk:["Every step is a promise to yourself.","Meet the morning with movement and intent.","Find your rhythm. Let your strength grow.","A gentle walk is still a win.","Climb at your pace. Progress has no shortcut.","Rest is not retreat. It is preparation.","Look at the distance you have travelled."],
+ data:["Your goals deserve your attention.","Permission is power. Choose what you share.","Clarity builds confidence.","Protect your progress and your privacy.","Your story is worth safeguarding.","Connect with purpose. Stay in control.","Own your data. Own your journey."]
+};
 const learningThemes=[
  ["Foundations","Start simple and understand the basics"],
  ["Consistency","Make useful actions repeatable"],
@@ -363,6 +374,7 @@ function renderLearning(){
  week.innerHTML=learningDays.map((day,index)=>{const id=learningId(activeLearningSection,selectedLearningMonth,index),done=!!learningState.completed[id];return '<button type="button" class="about-day'+(done?' done':'')+'" data-learning-day="'+index+'" aria-pressed="'+(index===selectedLearningDay?'true':'false')+'" aria-label="'+day+(done?', completed':'')+'">'+day.slice(0,3)+'</button>'}).join("");
  const item=lessonFor(activeLearningSection,monthIndex,selectedLearningDay),dayName=learningDays[selectedLearningDay],id=learningId(activeLearningSection,selectedLearningMonth,selectedLearningDay),done=!!learningState.completed[id];
  $("aboutLessonTag").textContent=dayName.toUpperCase()+" · LESSON "+(selectedLearningDay+1)+" OF 7 · "+monthLabel(selectedLearningMonth).toUpperCase();
+ $("aboutPunch").textContent=dailyPunches[activeLearningSection][selectedLearningDay];
  $("aboutLessonTitle").textContent=item.title;
  $("aboutLessonBody").textContent=item.body;
  $("aboutLessonBenefit").textContent=item.benefit;
