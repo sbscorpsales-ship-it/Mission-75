@@ -2,9 +2,10 @@ name: GATIVX web release checks
 
 on:
   push:
-    branches: ["gativx/dashboard-connected-data-v2"]
+    branches: ["main", "gativx/dashboard-connected-data-v2"]
     paths:
       - "index.html"
+      - "sw.js"
       - "scripts/check-web.mjs"
       - "scripts/browser-smoke.mjs"
       - ".github/workflows/web-checks.yml"
