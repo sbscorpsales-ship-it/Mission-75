@@ -15,6 +15,7 @@ final class WalkLocationManager: NSObject, ObservableObject, CLLocationManagerDe
     @Published private(set) var status = "GPS not started"
     private let manager = CLLocationManager()
     private var isTracking = false
+    private var requestedAlwaysAuthorization = false
 
     override init() {
         super.init()
@@ -23,6 +24,7 @@ final class WalkLocationManager: NSObject, ObservableObject, CLLocationManagerDe
         manager.desiredAccuracy = kCLLocationAccuracyBest
         manager.distanceFilter = 5
         manager.pausesLocationUpdatesAutomatically = false
+        manager.allowsBackgroundLocationUpdates = false
     }
 
     func begin() {
@@ -55,7 +57,15 @@ final class WalkLocationManager: NSObject, ObservableObject, CLLocationManagerDe
     }
 
     func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
-        if manager.authorizationStatus == .authorizedAlways || manager.authorizationStatus == .authorizedWhenInUse {
+        if manager.authorizationStatus == .authorizedAlways {
+            manager.allowsBackgroundLocationUpdates = true
+            if !isTracking { start() }
+        } else if manager.authorizationStatus == .authorizedWhenInUse {
+            manager.allowsBackgroundLocationUpdates = false
+            if !requestedAlwaysAuthorization {
+                requestedAlwaysAuthorization = true
+                manager.requestAlwaysAuthorization()
+            }
             if !isTracking { start() }
         } else if manager.authorizationStatus == .denied || manager.authorizationStatus == .restricted {
             status = "Location permission denied"
