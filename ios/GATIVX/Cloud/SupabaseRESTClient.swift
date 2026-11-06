@@ -102,7 +102,7 @@ final class SupabaseRESTClient: ObservableObject {
             ])
             let (data, response) = try await URLSession.shared.data(for: request)
             guard let http = response as? HTTPURLResponse else { throw ClientError.invalidResponse }
-            if http.statusCode == 401 {
+            if http.statusCode == 401, retryAfterRefresh {
                 try await refreshSession()
                 await syncMotionDailySteps(date: date, steps: steps, retryAfterRefresh: false)
                 return
