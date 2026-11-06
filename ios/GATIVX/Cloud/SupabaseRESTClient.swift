@@ -159,6 +159,36 @@ final class SupabaseRESTClient: ObservableObject {
         guard (200..<300).contains(http.statusCode) else { throw Self.serverError(data) }
     }
 
+    func syncActivitySessionRoute(id: UUID, route: [GATIVXRoutePoint]) async {
+        guard !route.isEmpty, isSignedIn else { return }
+        do {
+            guard let token = accessToken else { throw ClientError.notSignedIn }
+            var request = URLRequest(url: baseURL.appendingPathComponent("rest/v1/rpc/sync_activity_session_route"))
+            request.httpMethod = "POST"
+            request.setValue(publishableKey, forHTTPHeaderField: "apikey")
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            let encoder = JSONEncoder()
+            encoder.dateEncodingStrategy = .iso8601
+            let routeData = try encoder.encode(route)
+            let routeJSON = try JSONSerialization.jsonObject(with: routeData)
+            request.httpBody = try JSONSerialization.data(withJSONObject: [
+                "p_session_id": id.uuidString,
+                "p_route_points": routeJSON
+            ])
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let http = response as? HTTPURLResponse else { throw ClientError.invalidResponse }
+            if http.statusCode == 401 {
+                try await refreshSession()
+                await syncActivitySessionRoute(id: id, route: route)
+                return
+            }
+            guard (200..<300).contains(http.statusCode) else { throw Self.serverError(data) }
+        } catch {
+            status = "Route sync pending: \(error.localizedDescription)"
+        }
+    }
+
     private func refreshSession() async throws {
         guard let refreshToken else { throw ClientError.notSignedIn }
         var request = URLRequest(url: baseURL.appendingPathComponent("auth/v1/token").appending(queryItems: [URLQueryItem(name: "grant_type", value: "refresh_token")]))
