@@ -18,6 +18,7 @@ final class HealthKitManager: ObservableObject {
     private let connectionRequestedKey = "gativx.healthkit.connectionRequested"
     private var stepObserver: HKObserverQuery?
     private var refreshCompletions: [() -> Void] = []
+    private var refreshQueued = false
     private let stepType = HKObjectType.quantityType(forIdentifier: .stepCount)!
 
     /// Call on launch. The app remembers that the user initiated Health access,
@@ -59,6 +60,7 @@ final class HealthKitManager: ObservableObject {
     func refreshRecentDays(days: Int = 30, onComplete: (() -> Void)? = nil) {
         guard isAvailable else { onComplete?(); return }
         if isRefreshing {
+            refreshQueued = true
             if let onComplete { refreshCompletions.append(onComplete) }
             return
         }
@@ -100,9 +102,17 @@ final class HealthKitManager: ObservableObject {
                 defer {
                     self.isRefreshing = false
                     self.lastRefresh = Date()
-                    let completions = self.refreshCompletions
-                    self.refreshCompletions.removeAll()
-                    completions.forEach { $0() }
+                    if self.refreshQueued {
+                        // A HealthKit observer/foreground event arrived while the
+                        // previous query was running. Run a fresh query before
+                        // acknowledging queued observer completions.
+                        self.refreshQueued = false
+                        self.refreshRecentDays(days: 30)
+                    } else {
+                        let completions = self.refreshCompletions
+                        self.refreshCompletions.removeAll()
+                        completions.forEach { $0() }
+                    }
                 }
                 if let error {
                     self.statusMessage = "Could not read Apple Health steps: \(error.localizedDescription)"

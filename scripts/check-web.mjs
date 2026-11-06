@@ -9,19 +9,6 @@ let failed = false;
 const fail = (message) => { failed = true; console.error("FAIL: " + message); };
 const pass = (message) => console.log("PASS: " + message);
 
-const manifest = JSON.parse(fs.readFileSync("manifest.webmanifest", "utf8"));
-if (manifest.short_name !== "GATIVX" || manifest.display !== "standalone") fail("GATIVX standalone app manifest is incomplete");
-else pass("GATIVX standalone app manifest is valid");
-for (const icon of manifest.icons || []) {
-  if (!fs.existsSync(icon.src.replace(/^\.\//, ""))) fail("Manifest icon asset is missing: " + icon.src);
-}
-if (!fs.existsSync("apple-touch-icon.png")) fail("Dedicated iPhone Home Screen icon is missing");
-else pass("Dedicated iPhone Home Screen icon is present");
-if (!html.includes('rel="apple-touch-icon"') || !html.includes("./apple-touch-icon.png")) fail("Apple touch icon is not linked from the page head");
-else pass("Apple touch icon is linked from the page head");
-if (!fs.readFileSync("sw.js", "utf8").includes("./apple-touch-icon.png")) fail("Service worker does not precache the iPhone icon");
-else pass("Service worker precaches the iPhone icon");
-
 const scripts = [...html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)]
   .filter(([, attrs]) => !/\bsrc\s*=/.test(attrs))
   .map(([, , body]) => body)

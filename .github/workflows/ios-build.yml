@@ -36,4 +36,21 @@ jobs:
             -sdk iphonesimulator \
             -configuration Debug \
             CODE_SIGNING_ALLOWED=NO \
+            -derivedDataPath "$RUNNER_TEMP/GATIVXDerivedData" \
             build
+
+      - name: Verify generated iOS privacy strings and HealthKit entitlements
+        run: |
+          set -euo pipefail
+          APP="$RUNNER_TEMP/GATIVXDerivedData/Build/Products/Debug-iphonesimulator/GATIVX.app"
+          INFO="$APP/Info.plist"
+          test -f "$INFO"
+          for KEY in NSHealthShareUsageDescription NSMotionUsageDescription NSLocationWhenInUseUsageDescription; do
+            VALUE=$(/usr/libexec/PlistBuddy -c "Print :$KEY" "$INFO")
+            test -n "$VALUE"
+            echo "$KEY: present"
+          done
+          plutil -lint ios/GATIVX/GATIVX.entitlements
+          /usr/libexec/PlistBuddy -c 'Print :com.apple.developer.healthkit' ios/GATIVX/GATIVX.entitlements | grep -qx true
+          /usr/libexec/PlistBuddy -c 'Print :com.apple.developer.healthkit.background-delivery' ios/GATIVX/GATIVX.entitlements | grep -qx true
+          echo 'HealthKit entitlement declarations: present'
