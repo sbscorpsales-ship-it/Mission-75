@@ -82,6 +82,38 @@ final class SupabaseRESTClient: ObservableObject {
         guard (200..<300).contains(http.statusCode) else { throw Self.serverError(data) }
     }
 
+    func syncMotionDailySteps(date: Date, steps: Int) async {
+        guard steps >= 0, isSignedIn else { return }
+        do {
+            guard let token = accessToken else { throw ClientError.notSignedIn }
+            var request = URLRequest(url: baseURL.appendingPathComponent("rest/v1/rpc/sync_motion_daily_steps"))
+            request.httpMethod = "POST"
+            request.setValue(publishableKey, forHTTPHeaderField: "apikey")
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            let formatter = DateFormatter()
+            formatter.locale = Locale(identifier: "en_US_POSIX")
+            formatter.timeZone = TimeZone.current
+            formatter.dateFormat = "yyyy-MM-dd"
+            request.httpBody = try JSONSerialization.data(withJSONObject: [
+                "p_log_date": formatter.string(from: date),
+                "p_steps": steps,
+                "p_updated_at": ISO8601DateFormatter().string(from: Date())
+            ])
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let http = response as? HTTPURLResponse else { throw ClientError.invalidResponse }
+            if http.statusCode == 401 {
+                try await refreshSession()
+                await syncMotionDailySteps(date: date, steps: steps)
+                return
+            }
+            guard (200..<300).contains(http.statusCode) else { throw Self.serverError(data) }
+            status = "Direct iPhone motion steps synced to your GATIVX account."
+        } catch {
+            status = "Motion step sync pending: \(error.localizedDescription)"
+        }
+    }
+
     func syncActivitySession(id: UUID, activity: String, startedAt: Date, finishedAt: Date, steps: Int) async {
         guard steps >= 0, isSignedIn else { return }
         do {
