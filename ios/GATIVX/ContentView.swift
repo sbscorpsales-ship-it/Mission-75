@@ -28,10 +28,13 @@ struct ContentView: View {
             guard cloud.isSignedIn else { completion(); return }
             Task { @MainActor in
                 // Serialize daily upserts so refresh-token rotation cannot race.
+                var allSynced = true
                 for (day, total) in totals {
-                    _ = await cloud.syncMotionDailySteps(date: day, steps: total)
+                    let synced = await cloud.syncMotionDailySteps(date: day, steps: total)
+                    allSynced = allSynced && synced
+                    if !allSynced { break }
                 }
-                completion()
+                completion(allSynced)
             }
         }
     }
