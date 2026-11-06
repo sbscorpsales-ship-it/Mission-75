@@ -16,6 +16,7 @@ final class WalkLocationManager: NSObject, ObservableObject, CLLocationManagerDe
     private let manager = CLLocationManager()
     private var isTracking = false
     private var requestedAlwaysAuthorization = false
+    private var wantsTracking = false
 
     override init() {
         super.init()
@@ -28,6 +29,7 @@ final class WalkLocationManager: NSObject, ObservableObject, CLLocationManagerDe
     }
 
     func begin() {
+        wantsTracking = true
         points.removeAll()
         switch manager.authorizationStatus {
         case .notDetermined:
@@ -50,6 +52,7 @@ final class WalkLocationManager: NSObject, ObservableObject, CLLocationManagerDe
     }
 
     func finish() -> [GATIVXRoutePoint] {
+        wantsTracking = false
         manager.stopUpdatingLocation()
         isTracking = false
         status = points.isEmpty ? "No GPS points recorded" : "Route captured · \(points.count) points"
@@ -59,7 +62,7 @@ final class WalkLocationManager: NSObject, ObservableObject, CLLocationManagerDe
     func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
         if manager.authorizationStatus == .authorizedAlways {
             manager.allowsBackgroundLocationUpdates = true
-            if !isTracking { start() }
+            if wantsTracking && !isTracking { start() }
         } else if manager.authorizationStatus == .authorizedWhenInUse {
             manager.allowsBackgroundLocationUpdates = false
             if !requestedAlwaysAuthorization {
