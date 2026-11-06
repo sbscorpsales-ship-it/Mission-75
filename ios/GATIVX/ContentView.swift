@@ -6,7 +6,8 @@ private struct ActivitySessionRecord: Codable { let id: UUID; let activity: Stri
 struct ContentView: View {
     @Environment(\.scenePhase) private var scenePhase
     @StateObject private var health = HealthKitManager()
-    @StateObject private var cloud = SupabaseRESTClient()\n    @StateObject private var routeRecorder = GPSRouteRecorder()
+    @StateObject private var cloud = SupabaseRESTClient()
+    @StateObject private var routeRecorder = GPSRouteRecorder()
     @State private var email = ""
     @State private var password = ""
     @State private var pedometer = CMPedometer()
@@ -21,13 +22,15 @@ struct ContentView: View {
         Task {
             for record in history {
                 guard let steps = record.steps else { continue }
-                await cloud.syncActivitySession(id: record.id, activity: record.activity, startedAt: record.startedAt, finishedAt: record.finishedAt, steps: steps)\n                if let points = record.routePoints, !points.isEmpty { await cloud.syncActivitySessionRoute(id: record.id, points: points) }
+                await cloud.syncActivitySession(id: record.id, activity: record.activity, startedAt: record.startedAt, finishedAt: record.finishedAt, steps: steps)
+                if let points = record.routePoints, !points.isEmpty { await cloud.syncActivitySessionRoute(id: record.id, points: points) }
             }
         }
     }
     private func startActivitySession() {
         guard CMPedometer.isStepCountingAvailable() else { sessionStatus = "Step counting is unavailable."; return }
-        let start = Date(); sessionStarted = start; sessionSteps = 0\n        routeRecorder.start()
+        let start = Date(); sessionStarted = start; sessionSteps = 0
+        routeRecorder.start()
         sessionStatus = "Counting steps for " + selectedActivity.lowercased() + "…"
         pedometer.startUpdates(from: start) { data, error in
             DispatchQueue.main.async {
@@ -93,7 +96,8 @@ struct ContentView: View {
                         Text(sessionSteps?.formatted() ?? "—").font(.system(size: 34, weight: .bold, design: .rounded))
                         Text("steps this session").font(.subheadline).foregroundStyle(.secondary)
                     }
-                    Text(sessionStatus).font(.caption).foregroundStyle(.secondary)\n                    Text(routeRecorder.status + " · " + routeRecorder.points.count.formatted() + " GPS points").font(.caption2).foregroundStyle(.secondary)
+                    Text(sessionStatus).font(.caption).foregroundStyle(.secondary)
+                    Text(routeRecorder.status + " · " + routeRecorder.points.count.formatted() + " GPS points").font(.caption2).foregroundStyle(.secondary)
                     if sessionStarted == nil {
                         Button("Start activity") { startActivitySession() }.buttonStyle(.borderedProminent).tint(.green)
                             .disabled(!CMPedometer.isStepCountingAvailable())
