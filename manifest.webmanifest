@@ -12,19 +12,13 @@
   "orientation": "portrait",
   "background_color": "#062D24",
   "theme_color": "#062D24",
-  "description": "GATIVX — Move. Eat. Track. Grow. Achieve.",
+  "description": "GATIVX — Goal. Ambition. Transform. Inspire. Vitality. Xcellence.",
   "icons": [
     {
-      "src": "./icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any"
-    },
-    {
-      "src": "./apple-touch-icon.png",
-      "sizes": "180x180",
+      "src": "./gativx-master.png?v=20261107",
+      "sizes": "256x256",
       "type": "image/png",
-      "purpose": "any"
+      "purpose": "any maskable"
     }
   ]
 }
