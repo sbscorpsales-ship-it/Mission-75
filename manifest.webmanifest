@@ -5,14 +5,26 @@
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#FFF000",
-  "theme_color": "#FFF000",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "portrait",
+  "background_color": "#062D24",
+  "theme_color": "#062D24",
+  "description": "GATIVX — Move. Eat. Track. Grow. Achieve.",
   "icons": [
     {
-      "src": "./gativx-logo.jpg",
+      "src": "./icon.svg",
       "sizes": "any",
-      "type": "image/jpeg",
-      "purpose": "any maskable"
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "./apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
     }
   ]
 }
