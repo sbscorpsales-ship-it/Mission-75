@@ -13,40 +13,90 @@ struct ContentView: View {
     @State private var selectedActivity = "Walking"
     @State private var sessionSteps: Int?
     @State private var sessionStarted: Date?
+    @State private var isFinishingSession = false
     @State private var sessionStatus = "Start a session to count steps."
 
     private func startActivitySession() {
         guard CMPedometer.isStepCountingAvailable() else { sessionStatus = "Step counting is unavailable."; return }
-        let start = Date(); sessionStarted = start; sessionSteps = 0
+        guard sessionStarted == nil, !isFinishingSession else { return }
+        let start = Date()
+        sessionStarted = start
+        sessionSteps = 0
         sessionStatus = "Counting steps for " + selectedActivity.lowercased() + "…"
         pedometer.startUpdates(from: start) { data, error in
             DispatchQueue.main.async {
-                if let error { self.sessionStatus = "Motion step count unavailable: " + error.localizedDescription; return }
+                if let error {
+                    self.sessionStatus = "Motion step count unavailable: " + error.localizedDescription
+                    return
+                }
                 self.sessionSteps = data?.numberOfSteps.intValue
             }
         }
     }
+
     private func finishActivitySession() {
+        guard let start = sessionStarted, !isFinishingSession else { return }
+        isFinishingSession = true
+        let finish = Date()
         pedometer.stopUpdates()
-        guard let start = sessionStarted else { return }
-        let record = ActivitySessionRecord(id: UUID(), activity: selectedActivity, startedAt: start, finishedAt: Date(), steps: sessionSteps)
-        var history = (try? JSONDecoder().decode([ActivitySessionRecord].self, from: UserDefaults.standard.data(forKey: "gativx.activitySessions.v1") ?? Data())) ?? []
+
+        // Ask Core Motion for the complete interval at Finish, rather than
+        // relying only on the most recent asynchronous live-update callback.
+        pedometer.queryPedometerData(from: start, to: finish) { data, error in
+            DispatchQueue.main.async {
+                let finalSteps = data?.numberOfSteps.intValue ?? self.sessionSteps
+                if let error {
+                    self.sessionStatus = "Final motion query unavailable; saving last live reading. " + error.localizedDescription
+                }
+                self.persistFinishedSession(startedAt: start, finishedAt: finish, steps: finalSteps)
+            }
+        }
+    }
+
+    private func persistFinishedSession(startedAt: Date, finishedAt: Date, steps: Int?) {
+        let record = ActivitySessionRecord(
+            id: UUID(), activity: selectedActivity,
+            startedAt: startedAt, finishedAt: finishedAt, steps: steps
+        )
+        var history = (try? JSONDecoder().decode(
+            [ActivitySessionRecord].self,
+            from: UserDefaults.standard.data(forKey: "gativx.activitySessions.v1") ?? Data()
+        )) ?? []
         history.insert(record, at: 0)
         UserDefaults.standard.set(try? JSONEncoder().encode(history), forKey: "gativx.activitySessions.v1")
-        sessionStatus = selectedActivity + " saved · " + (sessionSteps?.formatted() ?? "step count unavailable") + " steps"
+
+        sessionSteps = steps
+        sessionStatus = selectedActivity + " saved · " + (steps?.formatted() ?? "step count unavailable") + " steps"
         sessionStarted = nil
-        if cloud.isSignedIn, let steps = record.steps {
-            Task { await cloud.syncActivitySession(id: record.id, activity: record.activity, startedAt: record.startedAt, finishedAt: record.finishedAt, steps: steps) }
+        isFinishingSession = false
+
+        if cloud.isSignedIn, let steps {
+            Task {
+                await cloud.syncActivitySession(
+                    id: record.id, activity: record.activity,
+                    startedAt: record.startedAt, finishedAt: record.finishedAt, steps: steps
+                )
+            }
         } else {
             sessionStatus += " · saved on this iPhone; sign in to sync"
         }
     }
 
+    @MainActor
     private func syncSavedActivitySessions() async {
-        let history = (try? JSONDecoder().decode([ActivitySessionRecord].self, from: UserDefaults.standard.data(forKey: "gativx.activitySessions.v1") ?? Data())) ?? []
+        let history = (try? JSONDecoder().decode(
+            [ActivitySessionRecord].self,
+            from: UserDefaults.standard.data(forKey: "gativx.activitySessions.v1") ?? Data()
+        )) ?? []
+
+        // Await each upload so token refreshes and status updates are serialized.
+        // Session UUIDs make the server upsert idempotent if a retry is needed.
         for record in history {
             guard let steps = record.steps else { continue }
-            Task { await cloud.syncActivitySession(id: record.id, activity: record.activity, startedAt: record.startedAt, finishedAt: record.finishedAt, steps: steps) }
+            await cloud.syncActivitySession(
+                id: record.id, activity: record.activity,
+                startedAt: record.startedAt, finishedAt: record.finishedAt, steps: steps
+            )
         }
     }
 
@@ -86,9 +136,11 @@ struct ContentView: View {
                     Text(sessionStatus).font(.caption).foregroundStyle(.secondary)
                     if sessionStarted == nil {
                         Button("Start activity") { startActivitySession() }.buttonStyle(.borderedProminent).tint(.green)
-                            .disabled(!CMPedometer.isStepCountingAvailable())
+                            .disabled(!CMPedometer.isStepCountingAvailable() || isFinishingSession)
                     } else {
-                        Button("Finish & save activity", role: .destructive) { finishActivitySession() }.buttonStyle(.bordered)
+                        Button(isFinishingSession ? "Finishing…" : "Finish & save activity", role: .destructive) {
+                            finishActivitySession()
+                        }.buttonStyle(.bordered).disabled(isFinishingSession)
                     }
                     Text("Live session steps use iPhone motion data. Today total above comes from Apple Health.")
                         .font(.caption2).foregroundStyle(.secondary)
@@ -155,7 +207,6 @@ struct ContentView: View {
                         Task { await cloud.syncSteps(date: day, steps: total) }
                     }
                     health.refreshRecentDays()
-                    // Retry sessions saved before sign-in; onAppear alone misses this transition.
                     Task { await syncSavedActivitySessions() }
                 }
             }
