@@ -2,15 +2,14 @@ name: GATIVX iOS build check
 
 on:
   workflow_dispatch:
-  pull_request:
-    paths:
-      - "ios/**"
-      - ".github/workflows/ios-build.yml"
-      - "README.md"
   push:
     paths:
       - "ios/**"
       - ".github/workflows/ios-build.yml"
+
+concurrency:
+  group: gativx-ios-build-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   build-ios:
@@ -18,17 +17,13 @@ jobs:
     steps:
       - name: Check out source
         uses: actions/checkout@v4
-
       - name: Show Xcode version
         run: xcodebuild -version
-
       - name: Install XcodeGen
         run: brew install xcodegen
-
       - name: Generate Xcode project
         working-directory: ios
         run: xcodegen generate --spec project.yml
-
       - name: Compile for iPhone Simulator (no signing)
         run: |
           xcodebuild \
@@ -39,7 +34,6 @@ jobs:
             -derivedDataPath build/DerivedData \
             CODE_SIGNING_ALLOWED=NO \
             build
-
       - name: Upload simulator app bundle
         uses: actions/upload-artifact@v4
         with:
