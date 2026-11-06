@@ -201,8 +201,13 @@ struct ContentView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 20) {
-                Text("GATIVX").font(.system(size: 34, weight: .black, design: .rounded))
+                (Text("GATIVX") + Text("™").font(.system(size: 13, weight: .black, design: .rounded)).baselineOffset(16))
+                    .font(.system(size: 34, weight: .black, design: .rounded))
                 Text("From Goals to Xcellence").font(.subheadline).foregroundStyle(.secondary)
+                Text("A PARAM IT SOLUTIONS PRODUCT · BELGAUM")
+                    .font(.system(size: 9, weight: .heavy, design: .rounded))
+                    .tracking(1.1)
+                    .foregroundStyle(.secondary)
 
                 VStack(spacing: 8) {
                     Text("TODAY'S APPLE HEALTH STEPS").font(.caption.weight(.bold)).foregroundStyle(.secondary)
