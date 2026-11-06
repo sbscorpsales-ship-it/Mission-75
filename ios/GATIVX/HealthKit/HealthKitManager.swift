@@ -7,6 +7,7 @@ import Combine
 @MainActor
 final class HealthKitManager: ObservableObject {
     @Published private(set) var todaySteps: Int?
+    @Published private(set) var todayActiveEnergyKcal: Int?
     @Published private(set) var isAvailable = HKHealthStore.isHealthDataAvailable()
     @Published private(set) var isRefreshing = false
     @Published private(set) var lastRefresh: Date?
@@ -19,6 +20,7 @@ final class HealthKitManager: ObservableObject {
     private var stepObserver: HKObserverQuery?
     private var refreshCompletions: [() -> Void] = []
     private let stepType = HKObjectType.quantityType(forIdentifier: .stepCount)!
+    private let activeEnergyType = HKObjectType.quantityType(forIdentifier: .activeEnergyBurned)!
 
     /// Call on launch. The app remembers that the user initiated Health access,
     /// then re-registers its observer after every app restart.
@@ -38,7 +40,7 @@ final class HealthKitManager: ObservableObject {
             return
         }
 
-        store.requestAuthorization(toShare: [], read: [stepType]) { [weak self] _, error in
+        store.requestAuthorization(toShare: [], read: [stepType, activeEnergyType]) { [weak self] _, error in
             Task { @MainActor in
                 guard let self else { return }
                 if let error {
@@ -132,6 +134,24 @@ final class HealthKitManager: ObservableObject {
             }
         }
         store.execute(query)
+        refreshTodayActiveEnergy()
+    }
+
+    /// Reads Apple's measured active energy only. This is not total daily energy expenditure.
+    private func refreshTodayActiveEnergy() {
+        let start = Calendar.current.startOfDay(for: Date())
+        let predicate = HKQuery.predicateForSamples(withStart: start, end: Date(), options: .strictStartDate)
+        let query = HKStatisticsQuery(quantityType: activeEnergyType, quantitySamplePredicate: predicate, options: .cumulativeSum) { [weak self] _, statistics, error in
+            Task { @MainActor in
+                guard let self else { return }
+                guard error == nil, let quantity = statistics?.sumQuantity() else {
+                    self.todayActiveEnergyKcal = nil
+                    return
+                }
+                self.todayActiveEnergyKcal = max(0, Int(quantity.doubleValue(for: .kilocalorie()).rounded()))
+            }
+        }
+        store.execute(query)
     }
 
     /// iOS background delivery is best-effort and not a real-time guarantee.
@@ -177,6 +197,7 @@ final class HealthKitManager: ObservableObject {
         }
         store.disableBackgroundDelivery(for: stepType) { _, _ in }
         todaySteps = nil
+        todayActiveEnergyKcal = nil
         statusMessage = "Apple Health connection stopped in GATIVX."
     }
 }
