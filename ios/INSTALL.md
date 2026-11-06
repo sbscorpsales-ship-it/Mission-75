@@ -1,6 +1,6 @@
 # GATIVX iPhone app — build and install
 
-The Safari dashboard cannot read Apple Health. Use this native iPhone app for HealthKit access.
+The Safari dashboard cannot access iPhone motion sensors directly. Use this native iPhone app for direct Core Motion step counting.
 
 ## Build on a Mac
 
@@ -12,7 +12,7 @@ The Safari dashboard cannot read Apple Health. Use this native iPhone app for He
    `open GATIVX.xcodeproj`
 4. In Xcode, select the GATIVX target → Signing & Capabilities. Select your Apple Developer team and enable the HealthKit capability. Keep the HealthKit entitlements.
 5. Connect your iPhone, select it as the run destination, then Build and Run.
-6. In GATIVX, tap **Connect Apple Health**, approve read access to Steps in the Health app prompt, then sign in using the same GATIVX cloud account used on the web dashboard.
+6. In GATIVX, today's primary step total and live activity-session steps are read directly from the iPhone's Core Motion pedometer. Apple Health is optional; it does not overwrite the primary Core Motion daily total. Sign in using the same GATIVX cloud account used on the web dashboard.
 
 ## What to expect
 
@@ -23,4 +23,4 @@ The Safari dashboard cannot read Apple Health. Use this native iPhone app for He
 
 ## First-device verification
 
-After installation and permission approval, check that today's step total appears in the native app. Sign in and confirm its cloud status reports successful step sync. Then reload the Safari dashboard and check the Steps tile. A missing value should remain blank rather than being reported as zero.
+After installation, approve Motion & Fitness access if iOS prompts. Walk with the phone in your pocket, reopen GATIVX, and confirm today's total increases. Start and finish a short activity session and verify it remains saved after force-closing/reopening. Sign in and confirm cloud sync, then reload the Safari dashboard. Physical iPhone testing is required; simulator builds cannot verify sensor behavior.

@@ -82,6 +82,125 @@ final class SupabaseRESTClient: ObservableObject {
         guard (200..<300).contains(http.statusCode) else { throw Self.serverError(data) }
     }
 
+    @discardableResult
+    func syncMotionDailySteps(date: Date, steps: Int, retryAfterRefresh: Bool = true) async -> Bool {
+        guard steps >= 0, isSignedIn else { return false }
+        do {
+            guard let token = accessToken else { throw ClientError.notSignedIn }
+            var request = URLRequest(url: baseURL.appendingPathComponent("rest/v1/rpc/sync_motion_daily_steps"))
+            request.httpMethod = "POST"
+            request.setValue(publishableKey, forHTTPHeaderField: "apikey")
+            request.setValue("Bearer \\(token)", forHTTPHeaderField: "Authorization")
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            let formatter = DateFormatter()
+            formatter.locale = Locale(identifier: "en_US_POSIX")
+            formatter.timeZone = TimeZone.current
+            formatter.dateFormat = "yyyy-MM-dd"
+            request.httpBody = try JSONSerialization.data(withJSONObject: [
+                "p_log_date": formatter.string(from: date),
+                "p_steps": steps,
+                "p_updated_at": ISO8601DateFormatter().string(from: Date())
+            ])
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let http = response as? HTTPURLResponse else { throw ClientError.invalidResponse }
+            if http.statusCode == 401, retryAfterRefresh {
+                try await refreshSession()
+                return await syncMotionDailySteps(date: date, steps: steps, retryAfterRefresh: false)
+            }
+            guard (200..<300).contains(http.statusCode) else { throw Self.serverError(data) }
+            status = "Apple Health daily steps synced to your GATIVX account."
+            return true
+        } catch {
+            status = "Apple Health sync pending: \\(error.localizedDescription)"
+            return false
+        }
+    }
+
+    func syncActivitySession(id: UUID, activity: String, startedAt: Date, finishedAt: Date, steps: Int) async {
+        guard steps >= 0, isSignedIn else { return }
+        do {
+            try await performActivitySessionSync(
+                id: id, activity: activity, startedAt: startedAt,
+                finishedAt: finishedAt, steps: steps, retryAfterRefresh: true
+            )
+            status = "Activity session synced to your GATIVX account."
+        } catch {
+            status = "Activity sync pending: \(error.localizedDescription). Open the app later to retry."
+        }
+    }
+
+    private func performActivitySessionSync(
+        id: UUID, activity: String, startedAt: Date, finishedAt: Date,
+        steps: Int, retryAfterRefresh: Bool
+    ) async throws {
+        guard let token = accessToken else { throw ClientError.notSignedIn }
+        var request = URLRequest(url: baseURL.appendingPathComponent("rest/v1/rpc/sync_activity_session_steps"))
+        request.httpMethod = "POST"
+        request.setValue(publishableKey, forHTTPHeaderField: "apikey")
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        let iso = ISO8601DateFormatter()
+        iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        request.httpBody = try JSONSerialization.data(withJSONObject: [
+            "p_session_id": id.uuidString,
+            "p_activity": activity,
+            "p_started_at": iso.string(from: startedAt),
+            "p_finished_at": iso.string(from: finishedAt),
+            "p_steps": steps
+        ])
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse else { throw ClientError.invalidResponse }
+        if http.statusCode == 401, retryAfterRefresh {
+            try await refreshSession()
+            try await performActivitySessionSync(
+                id: id, activity: activity, startedAt: startedAt,
+                finishedAt: finishedAt, steps: steps, retryAfterRefresh: false
+            )
+            return
+        }
+        guard (200..<300).contains(http.statusCode) else { throw Self.serverError(data) }
+    }
+
+    func syncActivitySessionRoute(id: UUID, route: [GATIVXRoutePoint]) async {
+        guard !route.isEmpty, isSignedIn else { return }
+        do {
+            try await performActivitySessionRouteSync(
+                id: id, route: route, retryAfterRefresh: true
+            )
+        } catch {
+            status = "Route sync pending: \(error.localizedDescription)"
+        }
+    }
+
+    private func performActivitySessionRouteSync(
+        id: UUID, route: [GATIVXRoutePoint], retryAfterRefresh: Bool
+    ) async throws {
+        guard let token = accessToken else { throw ClientError.notSignedIn }
+        var request = URLRequest(url: baseURL.appendingPathComponent("rest/v1/rpc/sync_activity_session_route"))
+        request.httpMethod = "POST"
+        request.setValue(publishableKey, forHTTPHeaderField: "apikey")
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        let routeData = try encoder.encode(route)
+        let routeJSON = try JSONSerialization.jsonObject(with: routeData)
+        request.httpBody = try JSONSerialization.data(withJSONObject: [
+            "p_session_id": id.uuidString,
+            "p_route_points": routeJSON
+        ])
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse else { throw ClientError.invalidResponse }
+        if http.statusCode == 401, retryAfterRefresh {
+            try await refreshSession()
+            try await performActivitySessionRouteSync(
+                id: id, route: route, retryAfterRefresh: false
+            )
+            return
+        }
+        guard (200..<300).contains(http.statusCode) else { throw Self.serverError(data) }
+    }
+
     private func refreshSession() async throws {
         guard let refreshToken else { throw ClientError.notSignedIn }
         var request = URLRequest(url: baseURL.appendingPathComponent("auth/v1/token").appending(queryItems: [URLQueryItem(name: "grant_type", value: "refresh_token")]))
@@ -90,14 +209,21 @@ final class SupabaseRESTClient: ObservableObject {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try JSONSerialization.data(withJSONObject: ["refresh_token": refreshToken])
         let (data, response) = try await URLSession.shared.data(for: request)
-        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
-            clearSession()
+        guard let http = response as? HTTPURLResponse else { throw ClientError.invalidResponse }
+        guard (200..<300).contains(http.statusCode) else {
+            // A timeout, offline phone, or 5xx is not proof that the user's
+            // session is revoked. Keep the Keychain refresh token for retry.
+            let body = String(data: data, encoding: .utf8) ?? ""
+            let isRevoked = http.statusCode == 400 &&
+                (body.contains("invalid_grant") || body.contains("refresh_token_not_found"))
+            if isRevoked { clearSession() }
             throw Self.serverError(data)
         }
         let session = try JSONDecoder().decode(AuthSession.self, from: data)
         accessToken = session.accessToken
         self.refreshToken = session.refreshToken
         saveSession(session)
+        isSignedIn = true
     }
 
     func signOut() {
@@ -109,11 +235,14 @@ final class SupabaseRESTClient: ObservableObject {
         let data = try? JSONEncoder().encode(session)
         guard let data else { return }
         let query: [String: Any] = [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: sessionStore]
-        SecItemDelete(query as CFDictionary)
-        var add = query
-        add[kSecValueData as String] = data
-        add[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
-        SecItemAdd(add as CFDictionary, nil)
+        let attributes: [String: Any] = [kSecValueData as String: data]
+        let status = SecItemUpdate(query as CFDictionary, attributes as CFDictionary)
+        if status == errSecItemNotFound {
+            var add = query
+            add[kSecValueData as String] = data
+            add[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+            SecItemAdd(add as CFDictionary, nil)
+        }
     }
 
     private func readSession() -> AuthSession? {

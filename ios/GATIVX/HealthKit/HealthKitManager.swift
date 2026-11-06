@@ -12,12 +12,13 @@ final class HealthKitManager: ObservableObject {
     @Published private(set) var lastRefresh: Date?
     @Published private(set) var statusMessage = "Apple Health is not connected."
 
-    var onDailyTotal: ((Date, Int) -> Void)?
+    var onDailyTotals: (([(Date, Int)], @escaping (Bool) -> Void) -> Void)?
 
     private let store = HKHealthStore()
     private let connectionRequestedKey = "gativx.healthkit.connectionRequested"
     private var stepObserver: HKObserverQuery?
     private var refreshCompletions: [() -> Void] = []
+    private var refreshQueued = false
     private let stepType = HKObjectType.quantityType(forIdentifier: .stepCount)!
 
     /// Call on launch. The app remembers that the user initiated Health access,
@@ -59,6 +60,7 @@ final class HealthKitManager: ObservableObject {
     func refreshRecentDays(days: Int = 30, onComplete: (() -> Void)? = nil) {
         guard isAvailable else { onComplete?(); return }
         if isRefreshing {
+            refreshQueued = true
             if let onComplete { refreshCompletions.append(onComplete) }
             return
         }
@@ -97,30 +99,29 @@ final class HealthKitManager: ObservableObject {
         query.initialResultsHandler = { [weak self] _, collection, error in
             Task { @MainActor in
                 guard let self else { return }
-                defer {
-                    self.isRefreshing = false
-                    self.lastRefresh = Date()
-                    let completions = self.refreshCompletions
-                    self.refreshCompletions.removeAll()
-                    completions.forEach { $0() }
+                let finishRefresh: (Bool) -> Void = { [weak self] success in
+                    Task { @MainActor in self?.completeRefresh(success: success) }
                 }
                 if let error {
                     self.statusMessage = "Could not read Apple Health steps: \(error.localizedDescription)"
+                    finishRefresh(true)
                     return
                 }
                 guard let collection else {
                     self.todaySteps = nil
                     self.statusMessage = "Apple Health returned no step summary."
+                    finishRefresh()
                     return
                 }
 
                 self.todaySteps = nil
                 var foundToday = false
+                var dailyTotals: [(Date, Int)] = []
                 collection.enumerateStatistics(from: start, to: end) { statistics, _ in
                     let day = calendar.startOfDay(for: statistics.startDate)
                     guard let quantity = statistics.sumQuantity() else { return }
                     let total = max(0, Int(quantity.doubleValue(for: .count())))
-                    self.onDailyTotal?(day, total)
+                    dailyTotals.append((day, total))
                     if calendar.isDateInToday(day) {
                         foundToday = true
                         self.todaySteps = total
@@ -129,9 +130,33 @@ final class HealthKitManager: ObservableObject {
                 self.statusMessage = foundToday
                     ? "Apple Health step totals refreshed."
                     : "No step samples returned. Check Health access and device data; no zero has been assumed."
+                if let sync = self.onDailyTotals, !dailyTotals.isEmpty {
+                    sync(dailyTotals, finishRefresh)
+                } else {
+                    finishRefresh(true)
+                }
             }
         }
         store.execute(query)
+    }
+
+    private func completeRefresh(success: Bool) {
+        isRefreshing = false
+        lastRefresh = Date()
+        guard success else {
+            // Do not acknowledge HealthKit until cloud sync succeeds. Keep the
+            // observer completion queued for the next foreground/background retry.
+            statusMessage = "Apple Health read; cloud sync pending. Will retry before acknowledging delivery."
+            return
+        }
+        if refreshQueued {
+            refreshQueued = false
+            refreshRecentDays(days: 30)
+        } else {
+            let completions = refreshCompletions
+            refreshCompletions.removeAll()
+            completions.forEach { $0() }
+        }
     }
 
     /// iOS background delivery is best-effort and not a real-time guarantee.
