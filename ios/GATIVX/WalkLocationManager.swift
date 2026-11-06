@@ -21,6 +21,10 @@ final class WalkLocationManager: NSObject, ObservableObject, CLLocationManagerDe
     override init() {
         super.init()
         manager.delegate = self
+        if let data = UserDefaults.standard.data(forKey: "gativx.activeRoute.v1"),
+           let saved = try? JSONDecoder().decode([GATIVXRoutePoint].self, from: data) {
+            points = saved
+        }
         manager.activityType = .fitness
         manager.desiredAccuracy = kCLLocationAccuracyBest
         manager.distanceFilter = 5
@@ -31,6 +35,7 @@ final class WalkLocationManager: NSObject, ObservableObject, CLLocationManagerDe
     func begin() {
         wantsTracking = true
         points.removeAll()
+        UserDefaults.standard.removeObject(forKey: "gativx.activeRoute.v1")
         switch manager.authorizationStatus {
         case .notDetermined:
             manager.requestWhenInUseAuthorization()
@@ -54,6 +59,7 @@ final class WalkLocationManager: NSObject, ObservableObject, CLLocationManagerDe
     func finish() -> [GATIVXRoutePoint] {
         wantsTracking = false
         manager.stopUpdatingLocation()
+        UserDefaults.standard.removeObject(forKey: "gativx.activeRoute.v1")
         isTracking = false
         status = points.isEmpty ? "No GPS points recorded" : "Route captured · \(points.count) points"
         return points
