@@ -5,6 +5,10 @@ import path from "node:path";
 import { spawnSync } from "node:child_process";
 
 const html = fs.readFileSync("index.html", "utf8");
+let failed = false;
+const fail = (message) => { failed = true; console.error("FAIL: " + message); };
+const pass = (message) => console.log("PASS: " + message);
+
 const manifest = JSON.parse(fs.readFileSync("manifest.webmanifest", "utf8"));
 if (manifest.short_name !== "GATIVX" || manifest.display !== "standalone") fail("GATIVX standalone app manifest is incomplete");
 else pass("GATIVX standalone app manifest is valid");
@@ -17,9 +21,6 @@ if (!html.includes('rel="apple-touch-icon"') || !html.includes("./apple-touch-ic
 else pass("Apple touch icon is linked from the page head");
 if (!fs.readFileSync("sw.js", "utf8").includes("./apple-touch-icon.png")) fail("Service worker does not precache the iPhone icon");
 else pass("Service worker precaches the iPhone icon");
-let failed = false;
-const fail = (message) => { failed = true; console.error("FAIL: " + message); };
-const pass = (message) => console.log("PASS: " + message);
 
 const scripts = [...html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)]
   .filter(([, attrs]) => !/\bsrc\s*=/.test(attrs))
