@@ -82,14 +82,15 @@ final class SupabaseRESTClient: ObservableObject {
         guard (200..<300).contains(http.statusCode) else { throw Self.serverError(data) }
     }
 
-    func syncMotionDailySteps(date: Date, steps: Int, retryAfterRefresh: Bool = true) async {
-        guard steps >= 0, isSignedIn else { return }
+    @discardableResult
+    func syncMotionDailySteps(date: Date, steps: Int, retryAfterRefresh: Bool = true) async -> Bool {
+        guard steps >= 0, isSignedIn else { return false }
         do {
             guard let token = accessToken else { throw ClientError.notSignedIn }
             var request = URLRequest(url: baseURL.appendingPathComponent("rest/v1/rpc/sync_motion_daily_steps"))
             request.httpMethod = "POST"
             request.setValue(publishableKey, forHTTPHeaderField: "apikey")
-            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            request.setValue("Bearer \\(token)", forHTTPHeaderField: "Authorization")
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
             let formatter = DateFormatter()
             formatter.locale = Locale(identifier: "en_US_POSIX")
@@ -104,13 +105,14 @@ final class SupabaseRESTClient: ObservableObject {
             guard let http = response as? HTTPURLResponse else { throw ClientError.invalidResponse }
             if http.statusCode == 401, retryAfterRefresh {
                 try await refreshSession()
-                await syncMotionDailySteps(date: date, steps: steps, retryAfterRefresh: false)
-                return
+                return await syncMotionDailySteps(date: date, steps: steps, retryAfterRefresh: false)
             }
             guard (200..<300).contains(http.statusCode) else { throw Self.serverError(data) }
-            status = "Direct iPhone motion steps synced to your GATIVX account."
+            status = "Apple Health daily steps synced to your GATIVX account."
+            return true
         } catch {
-            status = "Motion step sync pending: \(error.localizedDescription)"
+            status = "Apple Health sync pending: \\(error.localizedDescription)"
+            return false
         }
     }
 
