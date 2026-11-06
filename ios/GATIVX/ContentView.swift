@@ -1,7 +1,7 @@
 import SwiftUI
 import CoreMotion
 
-private struct ActivitySessionRecord: Codable { let id: UUID; let activity: String; let startedAt: Date; let finishedAt: Date; let steps: Int?; let routePoints: [GATIVXRoutePoint] }
+private struct ActivitySessionRecord: Codable { let id: UUID; let activity: String; let startedAt: Date; let finishedAt: Date; let steps: Int?; let routePoints: [GATIVXRoutePoint]? }
 
 struct ContentView: View {
     @Environment(\.scenePhase) private var scenePhase
@@ -21,7 +21,7 @@ struct ContentView: View {
         Task {
             for record in history {
                 guard let steps = record.steps else { continue }
-                await cloud.syncActivitySession(id: record.id, activity: record.activity, startedAt: record.startedAt, finishedAt: record.finishedAt, steps: steps)\n                if !record.routePoints.isEmpty { await cloud.syncActivitySessionRoute(id: record.id, points: record.routePoints) }
+                await cloud.syncActivitySession(id: record.id, activity: record.activity, startedAt: record.startedAt, finishedAt: record.finishedAt, steps: steps)\n                if let points = record.routePoints, !points.isEmpty { await cloud.syncActivitySessionRoute(id: record.id, points: points) }
             }
         }
     }
