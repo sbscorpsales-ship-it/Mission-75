@@ -5,6 +5,12 @@ import path from "node:path";
 const browser = await chromium.launch({ headless: true });
 const page = await browser.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1 });
 const errors = [];
+await page.addInitScript(() => {
+  Object.defineProperty(navigator, "geolocation", { configurable: true, value: {
+    watchPosition(success) { window.__gativxGpsSuccess = success; return 7; },
+    clearWatch() { window.__gativxGpsSuccess = null; }
+  }});
+});
 page.on("pageerror", error => errors.push(error.message));
 await page.route("https://**/*", route => route.abort());
 const fileUrl = pathToFileURL(path.resolve("index.html")).href;
@@ -28,6 +34,30 @@ assert(await page.locator("#cloudPassword").count() === 1, "Password sign-in fie
 assert(await page.locator("#cloudSignIn").count() === 1, "Sign-in action is missing");
 assert(await page.locator("#cloudSignUp").count() === 1, "Sign-up action is missing");
 assert(await page.locator("#cloudSyncNow").count() === 1, "Manual sync action is missing");
+// Exercise the actual GPS save path with deterministic, realistic location fixes.
+await page.locator('[data-tab="walk"]').click();
+await page.locator("#gpsStart").click();
+await page.waitForFunction(() => typeof window.__gativxGpsSuccess === "function");
+const t = Date.now();
+await page.evaluate((t) => {
+  const emit = window.__gativxGpsSuccess;
+  emit({ timestamp: t, coords: { latitude: 15.850000, longitude: 74.500000, accuracy: 8 } });
+  emit({ timestamp: t + 5000, coords: { latitude: 15.850090, longitude: 74.500000, accuracy: 8 } });
+}, t);
+page.once("dialog", dialog => dialog.accept());
+await page.locator("#gpsFinish").click();
+await page.waitForFunction(() => {
+  const logs = JSON.parse(localStorage.getItem("mission75.logs.v1") || "{}");
+  const sessions = JSON.parse(localStorage.getItem("mission75.gps.sessions.v1") || "[]");
+  return sessions.length > 0 && Object.values(logs).some(row => Number(row.distance) > 0);
+});
+const gpsResult = await page.evaluate(() => ({
+  sessions: JSON.parse(localStorage.getItem("mission75.gps.sessions.v1") || "[]"),
+  logs: JSON.parse(localStorage.getItem("mission75.logs.v1") || "{}")
+}));
+assert(gpsResult.sessions[0].points.length >= 2, "Saved GPS session is missing route points");
+assert(gpsResult.sessions[0].distanceMeters > 0, "Saved GPS session has no measured distance");
+assert(Object.values(gpsResult.logs).some(row => Number(row.distance) > 0 && row.workout === "Walk"), "GPS distance was not added to today's daily activity log");
 assert(errors.length === 0, "Browser runtime errors: " + errors.join("; "));
 
 console.log("PASS: mobile dashboard renders six activity metrics and connected-data hub");
