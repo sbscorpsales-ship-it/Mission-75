@@ -351,12 +351,12 @@ function monthLabel(key){const [y,m]=key.split("-").map(Number);return new Date(
 function lessonFor(section,monthIndex,dayIndex){const base=learningCurriculum[section]||learningCurriculum.today;const item=base[dayIndex];const theme=learningThemes[monthIndex];return {title:item[0],body:item[1]+" "+monthAngles[monthIndex],benefit:item[2],action:item[3]+" Monthly focus: "+theme[0]+".",tip:item[4]+" "+theme[1]}}
 function learningId(section,month,day){return section+"|"+month+"|"+day}
 function renderLearning(){
- const guide=sectionGuides[activeLearningSection]||sectionGuides.today;
+ const sectionLabels={today:"Home",trends:"Journey",log:"Record",coach:"Coach",walk:"Walk",data:"You"};const sectionLabel=sectionLabels[activeLearningSection]||"Home";
  const name=$("aboutSectionName"),title=$("aboutTitle"),intro=$("aboutIntro"),week=$("aboutWeek"),monthSelect=$("aboutMonth");
  if(!name||!title||!intro||!week||!monthSelect)return;
  const [year,month]=selectedLearningMonth.split("-").map(Number),monthIndex=(month-1)%12;
- name.textContent=guide.title.split("·")[0].trim().toUpperCase()+" · DAILY LESSON";
- title.textContent=learningThemes[monthIndex][0]+": "+(guide.title.split("·")[1]||"Your learning journey").trim();
+ name.textContent=sectionLabel.toUpperCase()+" · DAILY LESSON";
+ title.textContent=learningThemes[monthIndex][0]+": "+sectionLabel+" learning";
  intro.textContent="One practical lesson each day. Seven lessons each week. "+learningThemes[monthIndex][1]+" Your learning stays available when you revisit earlier months.";
  const monthNames=Array.from({length:12},(_,n)=>{const d=new Date(year,month-1-n,1);return {key:d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0"),label:d.toLocaleDateString("en-IN",{month:"long",year:"numeric"})}});
  if(monthSelect.options.length!==12||monthSelect.dataset.month!==selectedLearningMonth){monthSelect.innerHTML=monthNames.map(x=>'<option value="'+x.key+'">'+x.label+'</option>').join("");monthSelect.value=selectedLearningMonth;monthSelect.dataset.month=selectedLearningMonth}
