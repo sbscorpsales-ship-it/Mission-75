@@ -161,18 +161,36 @@ body{padding-bottom:calc(112px + env(safe-area-inset-bottom))}
 .connection-hub{margin:12px 0 16px}.connection-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}.connection-card{background:#fff;border:1px solid #d9eee2;border-radius:15px;padding:12px;min-width:0}.connection-card b{display:block;font-size:12px;margin-bottom:5px}.connection-card p{font-size:11px;color:#5d786e;margin:0;line-height:1.45}.connection-state{display:inline-flex;margin-top:8px;font-size:10px;font-weight:800;border-radius:999px;padding:4px 7px;background:#edf6f1;color:#315e4d}.connection-state.pending{background:#fff4d7;color:#795500}.connection-state.live{background:#e4ffb9;color:#176b42}
 @media(max-width:620px){.connection-grid{grid-template-columns:1fr}.connection-card{padding:11px}}
 
-/* Contextual GATIVX guide: one section's useful detail at a time */
+/* GATIVX Daily Learning Engine */
 .gativx-about{margin:26px 0 8px;padding:20px 17px 18px;border:1px solid #287653;border-radius:20px;background:linear-gradient(145deg,#0d4032,#092f27);color:#F4FFF7;text-align:left}
 .gativx-about .about-kicker{color:#B7FF35;font-size:11px;font-weight:950;letter-spacing:.16em;text-align:center}
-.gativx-about .about-title{margin:9px 0 5px;color:#E8FFB9;text-align:center;font-size:20px}
-.gativx-about .about-intro{max-width:650px;margin:0 auto 14px;text-align:center;color:#C4E2D0;font-size:13px;line-height:1.55}
-.gativx-about .about-points{max-width:680px;margin:0 auto;padding:0;list-style:none;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
-.gativx-about .about-points li{position:relative;padding:10px 11px 10px 28px;border:1px solid #1e6247;border-radius:11px;background:#082f26;color:#C5E2D0;font-size:12px;line-height:1.5}
-.gativx-about .about-points li:before{content:"✓";position:absolute;left:10px;top:10px;color:#B7FF35;font-weight:900}
+.gativx-about .about-head{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin:12px 0 6px}
+.gativx-about .about-eyebrow{font-size:10px;font-weight:900;letter-spacing:.12em;color:#B7FF35}
+.gativx-about .about-title{margin:4px 0 0;color:#E8FFB9;font-size:20px;line-height:1.2}
+.gativx-about .about-month-label{display:grid;gap:4px;color:#AFCFBD;font-size:10px;font-weight:800}
+.gativx-about #aboutMonth{max-width:142px;padding:8px;border:1px solid #287653;border-radius:9px;background:#082f26;color:#F4FFF7;font-size:11px}
+.gativx-about .about-intro{margin:8px 0 13px;color:#C4E2D0;font-size:12px;line-height:1.55}
+.gativx-about .about-week{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px;margin:12px 0}
+.gativx-about .about-day{min-width:0;padding:8px 2px;border:1px solid #287653;border-radius:9px;background:#0b382d;color:#C4E2D0;font-size:10px;font-weight:800}
+.gativx-about .about-day[aria-pressed=true]{background:#B7FF35;color:#09291f;border-color:#B7FF35}
+.gativx-about .about-day.done:after{content:" ✓";display:block;font-size:9px}
+.gativx-about .about-lesson{padding:14px;border:1px solid #287653;border-radius:14px;background:#082f26}
+.gativx-about .about-lesson-tag{color:#B7FF35;font-size:10px;font-weight:900;letter-spacing:.12em}
+.gativx-about .about-lesson h3{margin:7px 0;color:#F0FFD9;font-size:17px}
+.gativx-about .about-lesson>p{margin:7px 0;color:#C4E2D0;font-size:12px;line-height:1.6}
+.gativx-about .about-benefit,.gativx-about .about-action{margin-top:10px;padding:10px;border-radius:10px;background:#104333}
+.gativx-about .about-benefit b,.gativx-about .about-action b{color:#B7FF35;font-size:9px;letter-spacing:.12em}
+.gativx-about .about-benefit p,.gativx-about .about-action p{margin:4px 0 0;color:#D3E9DA;font-size:11px;line-height:1.55}
+.gativx-about .about-lesson .about-tip{padding-left:10px;border-left:2px solid #B7FF35;color:#B8D7C5;font-size:11px}
+.gativx-about .about-complete{width:100%;margin-top:8px;padding:11px;border:1px solid #B7FF35;border-radius:10px;background:#B7FF35;color:#09291f;font-weight:900;font-size:12px}
+.gativx-about .about-complete[aria-pressed=true]{background:#164a37;color:#D9FF9B}
+.gativx-about .about-progress{margin:12px 2px 0;color:#B8D7C5;font-size:10px;font-weight:800}
+.gativx-about .about-progress-track{height:6px;margin-top:6px;border-radius:9px;background:#164a37;overflow:hidden}
+.gativx-about .about-progress-track i{display:block;width:0;height:100%;background:#B7FF35;transition:width .2s}
 .gativx-about .about-credit{margin-top:15px;padding-top:12px;border-top:1px solid #287653;text-align:center;color:#F4FFF7;font-size:11px;line-height:1.65}
 .gativx-about .about-credit strong{color:#B7FF35}
 .gativx-about .about-credit span{color:#9FC4AE;font-size:9px;letter-spacing:.12em;font-weight:800}
-@media(max-width:560px){.gativx-about{padding:16px 12px}.gativx-about .about-title{font-size:18px}.gativx-about .about-points{grid-template-columns:1fr;gap:6px}.gativx-about .about-points li{padding:9px 10px 9px 27px;font-size:11px}.gativx-about .about-points li:before{top:9px}}
+@media(max-width:560px){.gativx-about{padding:16px 12px}.gativx-about .about-head{align-items:flex-start}.gativx-about .about-title{font-size:17px}.gativx-about .about-month-label{font-size:9px}.gativx-about #aboutMonth{max-width:116px;padding:7px 4px}.gativx-about .about-day{font-size:9px;padding:8px 0}.gativx-about .about-lesson{padding:11px}}
 </style>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""><script async src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script></head>
 <body><div id="brandIntro" role="dialog" aria-label="GATIVX opening animation">
@@ -207,11 +225,21 @@ body{padding-bottom:calc(112px + env(safe-area-inset-bottom))}
  <div style="display:grid;grid-template-columns:42px minmax(0,1fr);align-items:center;gap:12px;padding:11px 8px"><b style="font-size:27px;color:#25c765;text-align:center">X</b><div><strong style="display:block;color:#f4fff7">XCELLENCE</strong><span style="color:#a9b8ae">Strive for your best.</span></div></div>
  </div><div style="text-align:center;border-top:1px solid #19452d;margin-top:12px;padding:14px 4px 4px"><div style="font-size:20px;font-weight:950;font-style:italic;color:#b7ff35">From Goals to Xcellence</div><div style="font-size:9px;letter-spacing:.16em;font-weight:850;color:#9edbb2;margin-top:8px">A PARAM IT SOLUTIONS PRODUCT · BELGAUM</div></div>
 </div><div class="card"><div class="eyebrow">PERSONAL TARGETS</div><div class="fields"><div class="field"><label for="startWeight">Starting weight (kg)</label><input id="startWeight" type="number" step=".1" min="30" max="300"></div><div class="field"><label for="targetWeight">Target weight (kg)</label><input id="targetWeight" type="number" step=".1" min="30" max="300"></div><div class="field"><label for="stepGoal">Daily step goal</label><input id="stepGoal" type="number" min="1000" max="50000" step="500"></div><div class="field"><label for="waterGoal">Water guide (ml)</label><input id="waterGoal" type="number" min="250" max="6000" step="250"></div><div class="field"><label for="proteinGoal">Protein planning guide (g)</label><input id="proteinGoal" type="number" min="10" max="250" step="5"></div></div><button id="saveSettings" style="width:100%;margin-top:12px">Save my targets</button></div><div class="card"><div class="eyebrow">YOUR PROFILE PHOTO</div><p class="muted" style="font-size:12px">Choose a photo from your iPhone or device. It is resized and stored only in this browser on this device; it is not uploaded or synced.</p><button type="button" class="secondary" id="removeProfilePhoto">Remove profile photo</button><p class="note" id="profilePhotoStatus" role="status">No photo selected.</p></div><div class="card"><div class="eyebrow">BACKUP & RESTORE</div><p class="muted" style="font-size:12px">Export a backup regularly. Import a previous GativX JSON backup to restore or merge your records on this browser.</p><div class="btnrow"><button id="exportJson">Export full backup</button><button class="secondary" id="exportCsv">Export logs as CSV</button></div><div class="field" style="margin-top:12px"><label for="importFile">Import GativX JSON backup</label><input id="importFile" type="file" accept="application/json,.json"></div><button id="importJson" class="secondary" style="width:100%">Import / merge backup</button></div><div class="card" id="cloudCard"><div class="eyebrow">CLOUD ACCOUNT & SYNC</div><p class="muted" style="font-size:12px">Create an account or sign in to back up your logs, activity entries and GPS sessions across devices. Your account only accesses its own records. Use Sync now to refresh your private cloud data.</p><div class="fields"><div class="field"><label for="cloudName">Display name (new account)</label><input id="cloudName" autocomplete="name" placeholder="Your name"></div><div class="field"><label for="cloudEmail">Email</label><input id="cloudEmail" type="email" autocomplete="email" placeholder="you@example.com"></div><div class="field wide"><label for="cloudPassword">Password</label><input id="cloudPassword" type="password" autocomplete="current-password" placeholder="At least 6 characters"></div></div><div class="btnrow" style="margin-top:12px"><button id="cloudSignIn">Sign in</button><button class="secondary" id="cloudSignUp">Create account</button><button class="secondary" id="cloudResend">Resend confirmation email</button><button class="secondary" id="cloudSyncNow" type="button">Sync now</button><button class="secondary" id="cloudSignOut" style="display:none">Sign out</button></div><p id="cloudStatus" class="note" role="status">Not connected. Your data remains saved on this device.</p></div><div class="card"><div class="eyebrow">PRIVACY & STORAGE</div><p class="muted" style="font-size:12px">Your records are stored on this device and, when you sign in, synced to your private GativX cloud account. GPS recording requires this page to stay open. This Safari web app does not directly read Apple Health, Health Connect or Strava. Apple Health requires the native iPhone companion; Android Health Connect requires a native Android integration; Strava requires an approved OAuth connection. External health data is never imported without your permission. Anyone with access to this browser profile may be able to access locally stored records.</p><button id="resetData" class="danger" style="width:100%">Delete all data from this browser</button></div></section>
-<footer class="footer gativx-about" id="gativxAbout" aria-label="GATIVX section guide">
-  <div class="about-kicker">GATIVX · FROM GOALS TO XCELLENCE</div>
-  <h2 class="about-title" id="aboutTitle">Your daily starting point</h2>
-  <p class="about-intro" id="aboutIntro">A clear view of today's activity and the small habits that move you forward.</p>
-  <ul class="about-points" id="aboutPoints" aria-live="polite"></ul>
+<footer class="footer gativx-about" id="gativxAbout" aria-label="GATIVX daily learning">
+  <div class="about-kicker">GATIVX · DAILY LEARNING ENGINE</div>
+  <div class="about-head"><div><div class="about-eyebrow" id="aboutSectionName">HOME · TODAY'S LESSON</div><h2 class="about-title" id="aboutTitle">Your daily lesson</h2></div><label class="about-month-label">Learning month<select id="aboutMonth" aria-label="Choose learning month"></select></label></div>
+  <p class="about-intro" id="aboutIntro">One useful lesson a day. Seven lessons each week. New focus every month.</p>
+  <div class="about-week" id="aboutWeek" role="group" aria-label="Choose a day of the week"></div>
+  <article class="about-lesson" aria-live="polite">
+    <div class="about-lesson-tag" id="aboutLessonTag">SUNDAY · LESSON 1 OF 7</div>
+    <h3 id="aboutLessonTitle">Start with one small step</h3>
+    <p id="aboutLessonBody"></p>
+    <div class="about-benefit"><b>WHY IT HELPS</b><p id="aboutLessonBenefit"></p></div>
+    <div class="about-action"><b>YOUR ACTION TODAY</b><p id="aboutLessonAction"></p></div>
+    <p class="about-tip" id="aboutLessonTip"></p>
+    <button type="button" class="about-complete" id="aboutComplete">Mark lesson complete</button>
+  </article>
+  <div class="about-progress"><span id="aboutProgressText">0 of 7 lessons completed this month</span><div class="about-progress-track"><i id="aboutProgressBar"></i></div></div>
   <div class="about-credit"><strong>GATIVX™</strong> is a product of <strong>Param IT Solutions · Belgaum</strong><br><span>MOVE · EAT · TRACK · GROW · ACHIEVE</span></div>
 </footer>
 </main><div class="toast" id="toast" role="status"></div>
@@ -229,16 +257,127 @@ const toast=m=>{const t=$('toast');t.textContent=m;t.style.display='block';clear
 const val=id=>{const v=parseFloat($(id).value);return Number.isFinite(v)?v:null};
 const fmt=n=>Number(n||0).toLocaleString('en-IN');
 $('today').textContent=new Date().toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'short',year:'numeric'});$('logDate').value=selectedDate;
-const sectionGuides={
- today:{title:"Home · Your daily command centre",intro:"Start here to understand today, choose one useful action and build momentum without chasing perfection.",points:["See today's steps, activity, wellbeing and habit snapshot in one place.","Check your personal mission and the next small action towards your target.","Use Daily Snapshot to spot what needs attention today.","Build consistency with simple daily habits—not all-or-nothing goals.","Notice patterns in movement, rest, hydration and food notes.","Celebrate small wins and use them to plan tomorrow."]},
- trends:{title:"Journey · Turn effort into visible progress",intro:"Your journey view helps you connect daily actions with longer-term change.",points:["Follow weight and activity trends over days and weeks, not one reading.","Compare logged steps and walking distance across the week.","Use milestones to break a big goal into achievable stages.","Look for consistency patterns and identify gaps without self-judgment.","Review progress before adjusting your goals or routine.","Remember: trends are more meaningful than a single day's result."]},
- log:{title:"Record · Give your progress useful data",intro:"Small, honest records help GATIVX make your guidance more relevant and your progress easier to understand.",points:["Log weight under similar conditions to make comparisons fair.","Record steps and walking distance; identify whether values are manual or synced.","Track water, protein, meals and food notes to understand daily patterns.","Record sleep duration and energy to see how recovery affects your day.","Choose the workout type and note how you felt during it.","Keep entries realistic—estimates are better than invented precision."]},
- coach:{title:"Coach · Build habits that last",intro:"Coach turns your goal into practical next steps. It is a guide for learning, planning and reflection—not a replacement for professional medical advice.",points:["Clarify your goal and turn it into small actions you can repeat.","Create a realistic daily plan around movement, meals, hydration and rest.","Build consistency with habit prompts, reflection and weekly check-ins.","Learn simple principles of balanced vegetarian meals and protein variety.","Use motivation and mindset tools when progress feels slow.","Adapt the plan to your time, energy, experience and available equipment.","Review wins and obstacles, then choose one improvement for tomorrow.","For pain, illness or medical concerns, seek guidance from a qualified professional."]},
- walk:{title:"Walk · Make every step purposeful",intro:"Walking can support cardiovascular fitness, stamina, mood and everyday mobility. Start at a comfortable level and build gradually.",points:["Easy morning walks help establish a consistent movement routine and gently prepare you for the day.","Brisk walking raises effort: aim for a pace where you can talk, but singing would feel difficult; build duration gradually.","A short, comfortable 10–15 minute walk after a meal may help reduce post-meal sitting; avoid rushing or walking hard if you feel unwell.","Use pace, duration and distance together to understand your effort—not distance alone.","Notice elevation gain: hills add challenge, so slow down and progress carefully as fitness improves.","Use GPS route tracking to review where you walked, distance and pace; GPS estimates can vary with signal and surroundings.","Take recovery or easy-walk days when needed, wear supportive footwear and stay hydrated in the heat.","Stop if you feel chest pain, dizziness or unusual breathlessness; seek medical help when symptoms are concerning."]},
- data:{title:"You · Your profile, privacy and connections",intro:"You are in control of your account, preferences and the information GATIVX stores or connects.",points:["Keep your profile and personal mission details current.","Review connected services and understand which data each connection can provide.","Grant health and location permissions only when you choose to use those features.","Check whether a value was entered manually, imported or synced from a connected source.","Use available export and backup options to keep a copy of your records.","Understand that browser storage and native-app permissions work differently.","Protect your account and avoid sharing login codes or private health information.","Use data controls carefully; deleting browser data may remove records stored only on this device."]}
+const learningDays=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+const learningThemes=[
+ ["Foundations","Start simple and understand the basics"],
+ ["Consistency","Make useful actions repeatable"],
+ ["Technique","Improve quality, form and awareness"],
+ ["Strength","Build capacity gradually and safely"],
+ ["Balance","Bring movement, food and recovery together"],
+ ["Progress","Measure what matters and adjust"],
+ ["Confidence","Grow independence and self-belief"],
+ ["Resilience","Handle setbacks and return steadily"],
+ ["Precision","Use better observations and smarter choices"],
+ ["Performance","Develop stamina, strength and efficiency"],
+ ["Mindfulness","Notice signals, stress and recovery"],
+ ["Reflection","Review the year and set the next direction"]
+];
+const learningCurriculum={
+ today:[
+  ["A fresh start, not a perfect day","A useful day begins with one achievable choice. Look at your snapshot, choose one habit to support your mission and make that the priority.","A small repeatable action is easier to sustain than an ambitious plan that competes with everything else.","Choose one action you can complete today in 10–20 minutes.","Keep the promise small enough that you can repeat it tomorrow."],
+  ["Build a daily rhythm","Use a simple morning check-in and an evening review. A rhythm reduces the effort needed to decide what to do next.","Regular cues help healthy behaviours become part of ordinary life.","Pick one consistent cue—after waking, after breakfast or before bed—and attach one healthy action to it.","Consistency is built by returning to the routine, not by never missing."],
+  ["Understand your activity snapshot","Steps, movement, sleep and habits each describe a different part of your day. No single number tells the whole story.","Looking at several signals helps you avoid judging a day by one metric.","Notice one positive signal and one area you would like to improve.","Treat device estimates as helpful indicators, not perfect measurements."],
+  ["Choose a realistic priority","Trying to change everything at once can make progress feel difficult. Choose the one behaviour that would make the biggest difference this week.","A clear priority protects attention and makes progress easier to recognise.","Write one specific goal for the next seven days and decide when you will do it.","Make the goal measurable and kind to your current starting point."],
+  ["Connect habits to energy","Movement, meals, hydration and sleep influence how ready you feel for the day. Observe patterns rather than assuming one cause.","Noticing patterns helps you make adjustments that fit your real life.","Record your energy level and one behaviour that may have influenced it.","A few honest notes over time are more useful than a perfect one-day record."],
+  ["Celebrate evidence of effort","Progress includes showing up, recording honestly and making a thoughtful adjustment—not only weight or distance changes.","Recognising effort supports confidence and helps you continue through slower periods.","Name one action you completed this week and why it mattered.","Celebrate actions you control, not only outcomes you cannot control."],
+  ["Plan the next small step","A weekly review turns experience into a practical plan. Keep what worked and change one thing that did not.","Small adjustments help your routine evolve without starting over.","Choose one habit to keep, one to simplify and one new action to test.","Your next week is a fresh opportunity, not a test you passed or failed."]
+ ],
+ trends:[
+  ["Progress is a pattern","A single weigh-in or activity total can be affected by timing, hydration and ordinary variation. Look across several entries.","Longer trends provide context and reduce overreaction to daily fluctuations.","Review at least two or three comparable entries before drawing a conclusion.","Compare like with like: same units, similar conditions and consistent recording."],
+  ["Set a meaningful milestone","Large goals become manageable when divided into smaller checkpoints that describe behaviours as well as outcomes.","Milestones make the route visible and give you chances to adjust early.","Set one weekly process milestone, such as completing planned walks or strength sessions.","Choose milestones that depend mainly on actions you can control."],
+  ["Read your weekly activity","Steps, distance and workout sessions are related but not interchangeable. A short purposeful workout may not create a high step count.","Understanding each measure helps you interpret your week more accurately.","Compare your activity across days and note which sessions felt easiest to repeat.","Do not compare GPS distance with step-derived distance as if they were identical."],
+  ["Look for consistency","A routine that happens most weeks can be more valuable than occasional intense bursts followed by long gaps.","Consistency supports gradual adaptation and makes planning more predictable.","Identify the days and times when movement fits your schedule best.","Build a minimum version of your routine for busy days."],
+  ["Understand plateaus","Progress can slow for many reasons, including changing routines, recovery, stress and measurement variation.","A calm review helps you avoid unnecessary changes and extreme responses.","Review your recent routine, sleep and records before changing your target.","If you are concerned about persistent changes in weight or health, consult a clinician."],
+  ["Adjust one variable","Changing many parts of a plan at once makes it hard to know what helped. Test one reasonable adjustment at a time.","Simple experiments help you learn what works in your circumstances.","Choose one adjustment for next week—timing, duration or frequency—and observe it.","Give a safe, manageable change enough time before judging it."],
+  ["Write your weekly review","A short reflection can turn numbers into decisions: what worked, what got in the way and what comes next.","Reflection connects tracking with useful action.","Write one win, one challenge and one next step.","Keep your review factual and encouraging."]
+ ],
+ log:[
+  ["Record honestly","A useful log reflects what actually happened, including estimates and missed entries. Avoid filling gaps with guesses presented as facts.","Reliable records make comparisons and coaching more trustworthy.","Enter today's values you know and leave unknown fields blank.","Use the same units and note whether a value is measured, estimated or imported."],
+  ["Make weight entries comparable","Body weight naturally varies during the day. Similar timing and conditions make a series easier to interpret.","Consistency reduces noise when reviewing a longer trend.","If you choose to weigh, use a consistent time and similar conditions.","One reading is not a verdict on your health or effort."],
+  ["Understand steps and distance","Steps count movement cycles; GPS distance estimates the path travelled. Different devices and methods can report different totals.","Knowing the source helps prevent accidental double counting or false comparisons.","Check whether today's step value is manual, imported or synced before saving.","Never add two sources together if they describe the same steps."],
+  ["Log food with useful detail","A brief food note can capture meal timing, variety, hunger and context without requiring perfect calorie counting.","Patterns in food notes can help you plan balanced and satisfying meals.","Write one note about protein, vegetables or meal timing today.","Avoid judging foods as morally good or bad; focus on overall patterns."],
+  ["Track hydration thoughtfully","Fluid needs vary with weather, activity, body size and medical circumstances. A log helps you notice your own routine.","Regular access to fluids can support comfort and exercise in warm conditions.","Record the water you actually drink and keep water accessible during the day.","Follow clinician advice if you have a condition requiring fluid limits."],
+  ["Record sleep and recovery","Sleep duration is only one part of recovery. Timing, regularity and how rested you feel also matter.","Sleep notes can reveal patterns that affect energy, appetite and training readiness.","Log approximate sleep hours and one sentence about how rested you feel.","Do not treat a wearable sleep estimate as a medical diagnosis."],
+  ["Turn records into a decision","Data becomes useful when it answers a question or guides a small next step.","A short review prevents tracking from becoming busywork.","Choose one entry from this week and decide what it suggests you could try next.","Keep the next action realistic and review it after a few days."]
+ ],
+ coach:[
+  ["Define the real goal","A meaningful goal says what you want to improve and why it matters in everyday life. It should fit your current starting point.","A clear reason helps you stay engaged when motivation changes.","Write your goal and one personal reason it matters to you.","Make the goal specific, realistic and flexible enough to adapt."],
+  ["Turn goals into habits","A goal describes a destination; a habit is an action you can repeat. Start with a small behaviour linked to a reliable cue.","Repeatable actions reduce reliance on motivation alone.","Attach a 5–10 minute action to a daily cue you already have.","Make the first version easy; increase it only when it feels sustainable."],
+  ["Plan balanced meals","A practical meal pattern can include a protein source, vegetables or fruit, and a satisfying staple such as roti, rice or millet.","Variety helps support nourishment and makes meals more satisfying.","Plan one meal today around dal, beans, curd, paneer, tofu or another suitable protein.","Individual nutrition needs differ; seek a registered dietitian for tailored advice."],
+  ["Use motivation wisely","Motivation rises and falls. Planning for low-energy days makes it easier to keep a routine alive.","A smaller fallback action can preserve continuity during busy periods.","Create a five-minute version of one habit for difficult days.","Rest is sometimes the right action; consistency does not mean pushing through illness."],
+  ["Practise supportive self-talk","The way you respond to setbacks can influence whether you return to your plan. Replace blame with curiosity.","A constructive response makes problem-solving easier.","When something slips, ask: what made it difficult and what could make it easier?","Speak to yourself as you would speak to a friend learning a new skill."],
+  ["Build a personal weekly plan","A good plan includes activity, meals, recovery and realistic time commitments. It should work with your life rather than against it.","Planning reduces last-minute decisions and helps balance effort with recovery.","Schedule your next week's movement sessions and one preparation task.","Leave space for rest, family, work and unexpected changes."],
+  ["Review and adapt","Coaching works best as a cycle: choose, try, observe and adjust. Keep changes small enough to evaluate.","Reflection builds independence and helps you learn from experience.","Write what worked, what did not and one experiment for next week.","GATIVX guidance is educational, not a substitute for medical or dietetic care."]
+ ],
+ walk:[
+  ["Why a regular walk matters","Walking is accessible aerobic movement that can support heart and lung fitness, stamina, mood and everyday mobility. Start from your current ability.","Regular moderate activity contributes to overall health and can be accumulated in manageable bouts.","Take a comfortable walk and notice how your breathing and energy feel.","If you are new to exercise or have health concerns, begin gently and seek appropriate clinical advice."],
+  ["Morning walks and routine","A morning walk can provide a predictable movement cue and help some people feel more alert. The best time is the time you can sustain.","A regular time and route can make walking easier to repeat.","Choose a safe, familiar route and schedule a comfortable walk after waking or breakfast.","Warm up gently, consider traffic and heat, and do not sacrifice needed sleep to walk early."],
+  ["Brisk walking and pace","Brisk walking means moving at a purposeful moderate intensity. A useful talk test: you can talk, but singing would be difficult.","A moderate effort can improve aerobic fitness when built up progressively.","After an easy warm-up, try a few short brisk intervals with easy walking between them.","Reduce pace if you cannot speak comfortably; build duration before chasing speed."],
+  ["Walking after meals","A gentle 10–15 minute walk after a meal can be a practical way to break up sitting and may help moderate the post-meal rise in blood glucose for some people.","Short, comfortable movement bouts can fit into daily life without requiring a long workout.","If comfortable, take an easy stroll after one meal today; keep it relaxed rather than intense.","Avoid brisk exertion immediately after a heavy meal if it causes discomfort; individual needs vary."],
+  ["Pace, distance and hills","Distance describes how far you travel; pace describes time per kilometre; elevation gain describes accumulated uphill climbing. Hills usually increase effort.","Using several measures gives a fuller picture of walking load and helps you progress sensibly.","Record a familiar route and compare time, distance and how hard it felt.","GPS elevation and pace are estimates; do not chase numbers at the expense of safe footing."],
+  ["Recovery, shoes and safety","Comfortable footwear, gradual increases, hydration and recovery days help make walking sustainable. Heat, uneven surfaces and fatigue change the risk.","Managing load reduces avoidable soreness and helps you keep walking regularly.","Check your footwear and plan an easier route or rest if your legs feel unusually tired.","Stop for chest pain, faintness or unusual breathlessness and seek urgent medical help when symptoms are severe."],
+  ["Your weekly walking review","A useful walking week balances frequency, duration, intensity and recovery. More is not automatically better.","Reviewing effort as well as distance helps you choose a sensible next step.","Look back at your walks and choose one small improvement for next week.","Increase only one factor at a time—such as duration, frequency or hills."]
+ ],
+ data:[
+  ["Know your profile","Your profile and mission settings help GATIVX present relevant goals and progress. Keep them accurate and update them when your priorities change.","Current settings make summaries and targets more meaningful.","Review your goal and check that your units and personal details are correct.","Only enter information you are comfortable storing in the app."],
+  ["Understand permissions","Health and location permissions allow specific features to work. Permission should be purposeful and under your control.","Knowing what you have enabled helps you make informed privacy choices.","Review the permissions you have granted to GATIVX and your browser or device.","Safari websites cannot directly read Apple Health data; native app permissions are different."],
+  ["Know where data comes from","A value may be typed manually, imported through a shortcut or received from a connected service. Its source affects how you interpret it.","Clear source labels help prevent duplicate or misleading records.","Open one recent record and check whether its source is identified.","If a value looks wrong, verify the original source before editing or importing again."],
+  ["Protect your account","Your login codes and account access protect personal records. Avoid sharing one-time codes or using untrusted links.","Good account habits reduce the chance of someone else accessing your information.","Check that you are using the official GATIVX address and keep your sign-in details private.","Never send passwords or one-time codes in chat."],
+  ["Back up important records","Browser-only records can be tied to that browser and device. An export or supported account sync can help preserve information.","A backup can reduce the risk of losing useful history when changing devices or clearing browser data.","Review the app's available export or backup options before clearing browser data.","Do not assume that every local record has already synced to the cloud."],
+  ["Connect services carefully","Connected services may provide different kinds of information and may require separate permissions or setup.","Understanding each connection helps you choose only the integrations you need.","Review the connection status and read what data the service can share.","A connection label is not proof of a successful recent sync; check the last sync status."],
+  ["Make privacy a habit","Good data stewardship means sharing only what is needed, reviewing permissions and understanding deletion controls.","Thoughtful privacy choices help you use digital tools with confidence.","Review one privacy setting and make sure it matches your preference.","Deleting browser data may remove local-only records; confirm backups first."]
+ ]
 };
-function renderAbout(name){const guide=sectionGuides[name]||sectionGuides.today;const title=$("aboutTitle"),intro=$("aboutIntro"),points=$("aboutPoints");if(!title||!intro||!points)return;title.textContent=guide.title;intro.textContent=guide.intro;points.innerHTML=guide.points.map(point=>'<li>'+point.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</li>').join('')}
-renderAbout('today');
+const monthAngles=[
+ "Begin with a simple baseline and learn the essentials.",
+ "Create repeatable routines that fit ordinary busy days.",
+ "Pay attention to technique, quality and useful feedback.",
+ "Build capacity gradually without rushing intensity.",
+ "Balance effort with food, hydration and recovery.",
+ "Review your records and make one evidence-informed adjustment.",
+ "Strengthen confidence by practising skills independently.",
+ "Prepare for interruptions and learn how to restart gently.",
+ "Notice details and improve the quality of your decisions.",
+ "Apply what you have learned to build sustainable performance.",
+ "Listen to your body and make room for recovery and reflection.",
+ "Review the year, recognise progress and choose your next direction."
+];
+const lessonStateKey="gativx.dailyLearning.v1";
+let learningState={completed:{},...(safeParse(localStorage.getItem(lessonStateKey),{}))};
+let selectedLearningDay=(new Date().getDay()+0)%7;
+let selectedLearningMonth=localDate().slice(0,7);
+let activeLearningSection="today";
+function monthLabel(key){const [y,m]=key.split("-").map(Number);return new Date(y,m-1,1).toLocaleDateString("en-IN",{month:"long",year:"numeric"})}
+function lessonFor(section,monthIndex,dayIndex){const base=learningCurriculum[section]||learningCurriculum.today;const item=base[dayIndex];const theme=learningThemes[monthIndex];return {title:item[0],body:item[1]+" "+monthAngles[monthIndex],benefit:item[2],action:item[3]+" Monthly focus: "+theme[0]+".",tip:item[4]+" "+theme[1]}}
+function learningId(section,month,day){return section+"|"+month+"|"+day}
+function renderLearning(){
+ const guide=sectionGuides[activeLearningSection]||sectionGuides.today;
+ const name=$("aboutSectionName"),title=$("aboutTitle"),intro=$("aboutIntro"),week=$("aboutWeek"),monthSelect=$("aboutMonth");
+ if(!name||!title||!intro||!week||!monthSelect)return;
+ const [year,month]=selectedLearningMonth.split("-").map(Number),monthIndex=(month-1)%12;
+ name.textContent=guide.title.split("·")[0].trim().toUpperCase()+" · DAILY LESSON";
+ title.textContent=learningThemes[monthIndex][0]+": "+(guide.title.split("·")[1]||"Your learning journey").trim();
+ intro.textContent="One practical lesson each day. Seven lessons each week. "+learningThemes[monthIndex][1]+" Your learning stays available when you revisit earlier months.";
+ const monthNames=Array.from({length:12},(_,n)=>{const d=new Date(year,month-1-n,1);return {key:d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0"),label:d.toLocaleDateString("en-IN",{month:"long",year:"numeric"})}});
+ if(monthSelect.options.length!==12||monthSelect.dataset.month!==selectedLearningMonth){monthSelect.innerHTML=monthNames.map(x=>'<option value="'+x.key+'">'+x.label+'</option>').join("");monthSelect.value=selectedLearningMonth;monthSelect.dataset.month=selectedLearningMonth}
+ week.innerHTML=learningDays.map((day,index)=>{const id=learningId(activeLearningSection,selectedLearningMonth,index),done=!!learningState.completed[id];return '<button type="button" class="about-day'+(done?' done':'')+'" data-learning-day="'+index+'" aria-pressed="'+(index===selectedLearningDay?'true':'false')+'" aria-label="'+day+(done?', completed':'')+'">'+day.slice(0,3)+'</button>'}).join("");
+ const item=lessonFor(activeLearningSection,monthIndex,selectedLearningDay),dayName=learningDays[selectedLearningDay],id=learningId(activeLearningSection,selectedLearningMonth,selectedLearningDay),done=!!learningState.completed[id];
+ $("aboutLessonTag").textContent=dayName.toUpperCase()+" · LESSON "+(selectedLearningDay+1)+" OF 7 · "+monthLabel(selectedLearningMonth).toUpperCase();
+ $("aboutLessonTitle").textContent=item.title;
+ $("aboutLessonBody").textContent=item.body;
+ $("aboutLessonBenefit").textContent=item.benefit;
+ $("aboutLessonAction").textContent=item.action;
+ $("aboutLessonTip").textContent="GATIVX TIP: "+item.tip;
+ const complete=$("aboutComplete");complete.textContent=done?"✓ Lesson completed · Tap to undo":"Mark lesson complete";complete.setAttribute("aria-pressed",done?"true":"false");
+ const count=learningDays.filter((_,d)=>!!learningState.completed[learningId(activeLearningSection,selectedLearningMonth,d)]).length;
+ $("aboutProgressText").textContent=count+" of 7 lessons completed · "+monthLabel(selectedLearningMonth);
+ $("aboutProgressBar").style.width=(count/7*100)+"%";
+ week.querySelectorAll("[data-learning-day]").forEach(button=>button.addEventListener("click",()=>{selectedLearningDay=Number(button.dataset.learningDay);renderLearning()}));
+}
+function renderAbout(name){activeLearningSection=name in learningCurriculum?name:"today";selectedLearningDay=(new Date().getDay()+0)%7;selectedLearningMonth=localDate().slice(0,7);renderLearning()}
+$("aboutMonth")?.addEventListener("change",event=>{selectedLearningMonth=event.target.value;renderLearning()});
+$("aboutComplete")?.addEventListener("click",()=>{const id=learningId(activeLearningSection,selectedLearningMonth,selectedLearningDay);if(learningState.completed[id])delete learningState.completed[id];else learningState.completed[id]=new Date().toISOString();localStorage.setItem(lessonStateKey,JSON.stringify(learningState));renderLearning()});
+renderAbout("today");
 function showTab(name){const target=document.getElementById('pane-'+name);if(!target)return;renderAbout(name);const home=name==='today';document.querySelectorAll('.tabs button').forEach(b=>{const active=b.dataset.tab===name;b.classList.toggle('active',active);b.setAttribute('aria-current',active?'page':'false')});document.querySelectorAll('.tabpane').forEach(p=>{const active=p===target;p.hidden=!active;p.style.setProperty('display',active?'block':'none','important');p.classList.toggle('active',active);p.setAttribute('aria-hidden',active?'false':'true')});['.hero','.activity-snapshot','.connection-hub','#startHere'].forEach(sel=>{const el=document.querySelector(sel);if(el)el.hidden=!home});if(name==='trends')drawChart();if(name==='walk'){renderGps();initGpsMap();setTimeout(()=>gpsMap&&gpsMap.invalidateSize(),120)}window.scrollTo(0,0)}
 window.showTab=showTab;document.querySelectorAll('.tabs button').forEach(b=>b.addEventListener('click',()=>showTab(b.dataset.tab)));
 const habitNames=['Walk or move','Protein with meals','Drink water regularly','Eat vegetables / fruit','Strength or mobility','Wind down for sleep'];
