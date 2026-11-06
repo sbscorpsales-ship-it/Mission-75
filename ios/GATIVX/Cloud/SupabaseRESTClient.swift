@@ -128,9 +128,9 @@ final class SupabaseRESTClient: ObservableObject {
             ])
             let (data, response) = try await URLSession.shared.data(for: request)
             guard let http = response as? HTTPURLResponse else { throw ClientError.invalidResponse }
-            if http.statusCode == 401 {
+            if http.statusCode == 401 && retryAfterRefresh {
                 try await refreshSession()
-                await syncActivitySessionRoute(id: id, points: points)
+                await syncActivitySessionRoute(id: id, points: points, retryAfterRefresh: false)
                 return
             }
             guard (200..<300).contains(http.statusCode) else { throw Self.serverError(data) }
