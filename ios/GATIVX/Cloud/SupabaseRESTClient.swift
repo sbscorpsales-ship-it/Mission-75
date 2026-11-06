@@ -104,7 +104,7 @@ final class SupabaseRESTClient: ObservableObject {
             guard let http = response as? HTTPURLResponse else { throw ClientError.invalidResponse }
             if http.statusCode == 401 {
                 try await refreshSession()
-                await syncMotionDailySteps(date: date, steps: steps)
+                await syncMotionDailySteps(date: date, steps: steps, retryAfterRefresh: false)
                 return
             }
             guard (200..<300).contains(http.statusCode) else { throw Self.serverError(data) }
