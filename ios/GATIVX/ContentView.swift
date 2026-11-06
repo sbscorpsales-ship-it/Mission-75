@@ -69,6 +69,8 @@ struct ContentView: View {
         sessionStarted = start
         sessionActivity = selectedActivity
         sessionSteps = 0
+        UserDefaults.standard.set(start, forKey: "gativx.activeSession.startedAt.v1")
+        UserDefaults.standard.set(sessionActivity, forKey: "gativx.activeSession.activity.v1")
         location.begin()
         sessionStatus = "Counting steps for " + sessionActivity.lowercased() + "…"
         pedometer.startUpdates(from: start) { data, error in
@@ -117,6 +119,8 @@ struct ContentView: View {
         sessionSteps = steps
         sessionStatus = sessionActivity + " saved · " + (steps?.formatted() ?? "step count unavailable") + " steps"
         sessionStarted = nil
+        UserDefaults.standard.removeObject(forKey: "gativx.activeSession.startedAt.v1")
+        UserDefaults.standard.removeObject(forKey: "gativx.activeSession.activity.v1")
         isFinishingSession = false
 
         if cloud.isSignedIn, let steps {
@@ -129,6 +133,28 @@ struct ContentView: View {
             }
         } else {
             sessionStatus += " · saved on this iPhone; sign in to sync"
+        }
+    }
+
+    private func recoverInterruptedSessionIfNeeded() {
+        guard sessionStarted == nil,
+              let startedAt = UserDefaults.standard.object(forKey: "gativx.activeSession.startedAt.v1") as? Date,
+              startedAt < Date(),
+              Date().timeIntervalSince(startedAt) < 24 * 60 * 60 else { return }
+        sessionStarted = startedAt
+        sessionActivity = UserDefaults.standard.string(forKey: "gativx.activeSession.activity.v1") ?? "Walking"
+        selectedActivity = sessionActivity
+        sessionSteps = 0
+        sessionStatus = "Recovered interrupted activity · checking its complete step count"
+        location.resume()
+        pedometer.startUpdates(from: startedAt) { data, error in
+            DispatchQueue.main.async {
+                if let error {
+                    self.sessionStatus = "Recovered session; final step query will be used: " + error.localizedDescription
+                } else {
+                    self.sessionSteps = data?.numberOfSteps.intValue
+                }
+            }
         }
     }
 
@@ -259,6 +285,7 @@ struct ContentView: View {
                 health.resumeIfPreviouslyConnected()
                 health.refreshOnForeground()
                 refreshDirectMotionSteps()
+                recoverInterruptedSessionIfNeeded()
                 if cloud.isSignedIn { Task { await syncSavedActivitySessions() } }
             }
             .onChange(of: cloud.isSignedIn) { _, signedIn in
