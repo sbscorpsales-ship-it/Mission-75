@@ -24,9 +24,15 @@ struct ContentView: View {
     /// Route HealthKit's daily aggregate directly into the signed-in cloud account.
     /// HealthKit is the daily source of truth; Core Motion remains session-only.
     private func connectHealthKitToCloud() {
-        health.onDailyTotal = { day, total in
-            guard cloud.isSignedIn else { return }
-            Task { await cloud.syncMotionDailySteps(date: day, steps: total) }
+        health.onDailyTotals = { totals, completion in
+            guard cloud.isSignedIn else { completion(); return }
+            Task { @MainActor in
+                // Serialize daily upserts so refresh-token rotation cannot race.
+                for (day, total) in totals {
+                    _ = await cloud.syncMotionDailySteps(date: day, steps: total)
+                }
+                completion()
+            }
         }
     }
 
