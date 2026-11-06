@@ -186,12 +186,11 @@ struct ContentView: View {
                 .foregroundStyle(.yellow)
 
                 Button {
-                    health.refreshRecentDays()
+                    refreshDirectMotionSteps()
                 } label: {
                     Label("Refresh iPhone steps", systemImage: "arrow.clockwise")
                 }
                 .buttonStyle(.bordered)
-                .disabled(!health.isAvailable || health.isRefreshing)
 
                 if !cloud.isSignedIn {
                     VStack(spacing: 10) {
