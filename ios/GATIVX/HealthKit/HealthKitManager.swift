@@ -12,7 +12,7 @@ final class HealthKitManager: ObservableObject {
     @Published private(set) var lastRefresh: Date?
     @Published private(set) var statusMessage = "Apple Health is not connected."
 
-    var onDailyTotals: (([(Date, Int)], @escaping () -> Void) -> Void)?
+    var onDailyTotals: (([(Date, Int)], @escaping (Bool) -> Void) -> Void)?
 
     private let store = HKHealthStore()
     private let connectionRequestedKey = "gativx.healthkit.connectionRequested"
@@ -99,12 +99,12 @@ final class HealthKitManager: ObservableObject {
         query.initialResultsHandler = { [weak self] _, collection, error in
             Task { @MainActor in
                 guard let self else { return }
-                let finishRefresh = { [weak self] in
-                    Task { @MainActor in self?.completeRefresh() }
+                let finishRefresh: (Bool) -> Void = { [weak self] success in
+                    Task { @MainActor in self?.completeRefresh(success: success) }
                 }
                 if let error {
                     self.statusMessage = "Could not read Apple Health steps: \(error.localizedDescription)"
-                    finishRefresh()
+                    finishRefresh(true)
                     return
                 }
                 guard let collection else {
@@ -133,11 +133,30 @@ final class HealthKitManager: ObservableObject {
                 if let sync = self.onDailyTotals, !dailyTotals.isEmpty {
                     sync(dailyTotals, finishRefresh)
                 } else {
-                    finishRefresh()
+                    finishRefresh(true)
                 }
             }
         }
         store.execute(query)
+    }
+
+    private func completeRefresh(success: Bool) {
+        isRefreshing = false
+        lastRefresh = Date()
+        guard success else {
+            // Do not acknowledge HealthKit until cloud sync succeeds. Keep the
+            // observer completion queued for the next foreground/background retry.
+            statusMessage = "Apple Health read; cloud sync pending. Will retry before acknowledging delivery."
+            return
+        }
+        if refreshQueued {
+            refreshQueued = false
+            refreshRecentDays(days: 30)
+        } else {
+            let completions = refreshCompletions
+            refreshCompletions.removeAll()
+            completions.forEach { $0() }
+        }
     }
 
     /// iOS background delivery is best-effort and not a real-time guarantee.
