@@ -10,11 +10,39 @@ struct ContentView: View {
     @State private var email = ""
     @State private var password = ""
     @State private var pedometer = CMPedometer()
+    @State private var dailyPedometer = CMPedometer()
+    @State private var motionTodaySteps: Int?
     @State private var selectedActivity = "Walking"
     @State private var sessionSteps: Int?
     @State private var sessionStarted: Date?
     @State private var isFinishingSession = false
     @State private var sessionStatus = "Start a session to count steps."
+
+    private func refreshDirectMotionSteps() {
+        guard CMPedometer.isStepCountingAvailable() else {
+            sessionStatus = "iPhone motion step counting is unavailable."
+            return
+        }
+        let startOfDay = Calendar.current.startOfDay(for: Date())
+        dailyPedometer.startUpdates(from: startOfDay) { data, error in
+            DispatchQueue.main.async {
+                if let error {
+                    self.sessionStatus = "Direct iPhone step read failed: " + error.localizedDescription
+                    return
+                }
+                self.motionTodaySteps = data?.numberOfSteps.intValue
+            }
+        }
+        dailyPedometer.queryPedometerData(from: startOfDay, to: Date()) { data, error in
+            DispatchQueue.main.async {
+                if let error {
+                    self.sessionStatus = "Could not read today's iPhone motion total: " + error.localizedDescription
+                    return
+                }
+                self.motionTodaySteps = data?.numberOfSteps.intValue
+            }
+        }
+    }
 
     private func startActivitySession() {
         guard CMPedometer.isStepCountingAvailable() else { sessionStatus = "Step counting is unavailable."; return }
@@ -101,7 +129,7 @@ struct ContentView: View {
     }
 
     private var stepProgress: Double {
-        guard let steps = health.todaySteps else { return 0 }
+        guard let steps = motionTodaySteps else { return 0 }
         return min(Double(steps) / 10_000, 1)
     }
 
@@ -113,12 +141,12 @@ struct ContentView: View {
 
                 VStack(spacing: 8) {
                     Text("TODAY'S STEPS").font(.caption.weight(.bold)).foregroundStyle(.secondary)
-                    Text(health.todaySteps?.formatted() ?? "—")
+                    Text(motionTodaySteps?.formatted() ?? "—")
                         .font(.system(size: 48, weight: .bold, design: .rounded))
-                    Text(health.todaySteps == nil ? "Waiting for Apple Health data" : "Goal: 10,000")
+                    Text(motionTodaySteps == nil ? "Waiting for direct iPhone motion data" : "Goal: 10,000 · iPhone sensor")
                         .font(.subheadline).foregroundStyle(.secondary)
                     ProgressView(value: stepProgress).tint(.yellow)
-                    Text("Steps are read from Apple Health, which can combine supported iPhone and wearable sources.")
+                    Text("Primary total is read directly from the iPhone motion sensor. Apple Health is optional.")
                         .font(.caption2).foregroundStyle(.secondary).multilineTextAlignment(.center)
                 }
                 .padding().frame(maxWidth: .infinity)
@@ -142,7 +170,7 @@ struct ContentView: View {
                             finishActivitySession()
                         }.buttonStyle(.bordered).disabled(isFinishingSession)
                     }
-                    Text("Live session steps use iPhone motion data. Today total above comes from Apple Health.")
+                    Text("Both today’s total and live session count come directly from iPhone motion data.")
                         .font(.caption2).foregroundStyle(.secondary)
                 }.padding().frame(maxWidth: .infinity, alignment: .leading)
                  .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 20))
@@ -157,7 +185,7 @@ struct ContentView: View {
                 Button {
                     health.refreshRecentDays()
                 } label: {
-                    Label("Refresh steps now", systemImage: "arrow.clockwise")
+                    Label("Refresh iPhone steps", systemImage: "arrow.clockwise")
                 }
                 .buttonStyle(.bordered)
                 .disabled(!health.isAvailable || health.isRefreshing)
