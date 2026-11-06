@@ -207,14 +207,21 @@ final class SupabaseRESTClient: ObservableObject {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try JSONSerialization.data(withJSONObject: ["refresh_token": refreshToken])
         let (data, response) = try await URLSession.shared.data(for: request)
-        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
-            clearSession()
+        guard let http = response as? HTTPURLResponse else { throw ClientError.invalidResponse }
+        guard (200..<300).contains(http.statusCode) else {
+            // A timeout, offline phone, or 5xx is not proof that the user's
+            // session is revoked. Keep the Keychain refresh token for retry.
+            let body = String(data: data, encoding: .utf8) ?? ""
+            let isRevoked = http.statusCode == 400 &&
+                (body.contains("invalid_grant") || body.contains("refresh_token_not_found"))
+            if isRevoked { clearSession() }
             throw Self.serverError(data)
         }
         let session = try JSONDecoder().decode(AuthSession.self, from: data)
         accessToken = session.accessToken
         self.refreshToken = session.refreshToken
         saveSession(session)
+        isSignedIn = true
     }
 
     func signOut() {
@@ -226,11 +233,14 @@ final class SupabaseRESTClient: ObservableObject {
         let data = try? JSONEncoder().encode(session)
         guard let data else { return }
         let query: [String: Any] = [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: sessionStore]
-        SecItemDelete(query as CFDictionary)
-        var add = query
-        add[kSecValueData as String] = data
-        add[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
-        SecItemAdd(add as CFDictionary, nil)
+        let attributes: [String: Any] = [kSecValueData as String: data]
+        let status = SecItemUpdate(query as CFDictionary, attributes as CFDictionary)
+        if status == errSecItemNotFound {
+            var add = query
+            add[kSecValueData as String] = data
+            add[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+            SecItemAdd(add as CFDictionary, nil)
+        }
     }
 
     private func readSession() -> AuthSession? {
