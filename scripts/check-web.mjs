@@ -13,7 +13,8 @@ const manifest = JSON.parse(fs.readFileSync("manifest.webmanifest", "utf8"));
 if (manifest.short_name !== "GATIVX" || manifest.display !== "standalone") fail("GATIVX standalone app manifest is incomplete");
 else pass("GATIVX standalone app manifest is valid");
 for (const icon of manifest.icons || []) {
-  if (!fs.existsSync(icon.src.replace(/^\.\//, ""))) fail("Manifest icon asset is missing: " + icon.src);
+  const iconPath = icon.src.split(/[?#]/, 1)[0].replace(/^\.\//, "");
+  if (!fs.existsSync(iconPath)) fail("Manifest icon asset is missing: " + icon.src);
 }
 if (!fs.existsSync("apple-touch-icon.png")) fail("Dedicated iPhone Home Screen icon is missing");
 else pass("Dedicated iPhone Home Screen icon is present");
