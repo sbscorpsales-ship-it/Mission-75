@@ -12,7 +12,7 @@ final class HealthKitManager: ObservableObject {
     @Published private(set) var lastRefresh: Date?
     @Published private(set) var statusMessage = "Apple Health is not connected."
 
-    var onDailyTotal: ((Date, Int) -> Void)?
+    var onDailyTotals: (([(Date, Int)], @escaping () -> Void) -> Void)?
 
     private let store = HKHealthStore()
     private let connectionRequestedKey = "gativx.healthkit.connectionRequested"
@@ -99,38 +99,29 @@ final class HealthKitManager: ObservableObject {
         query.initialResultsHandler = { [weak self] _, collection, error in
             Task { @MainActor in
                 guard let self else { return }
-                defer {
-                    self.isRefreshing = false
-                    self.lastRefresh = Date()
-                    if self.refreshQueued {
-                        // A HealthKit observer/foreground event arrived while the
-                        // previous query was running. Run a fresh query before
-                        // acknowledging queued observer completions.
-                        self.refreshQueued = false
-                        self.refreshRecentDays(days: 30)
-                    } else {
-                        let completions = self.refreshCompletions
-                        self.refreshCompletions.removeAll()
-                        completions.forEach { $0() }
-                    }
+                let finishRefresh = { [weak self] in
+                    Task { @MainActor in self?.completeRefresh() }
                 }
                 if let error {
                     self.statusMessage = "Could not read Apple Health steps: \(error.localizedDescription)"
+                    finishRefresh()
                     return
                 }
                 guard let collection else {
                     self.todaySteps = nil
                     self.statusMessage = "Apple Health returned no step summary."
+                    finishRefresh()
                     return
                 }
 
                 self.todaySteps = nil
                 var foundToday = false
+                var dailyTotals: [(Date, Int)] = []
                 collection.enumerateStatistics(from: start, to: end) { statistics, _ in
                     let day = calendar.startOfDay(for: statistics.startDate)
                     guard let quantity = statistics.sumQuantity() else { return }
                     let total = max(0, Int(quantity.doubleValue(for: .count())))
-                    self.onDailyTotal?(day, total)
+                    dailyTotals.append((day, total))
                     if calendar.isDateInToday(day) {
                         foundToday = true
                         self.todaySteps = total
@@ -139,6 +130,11 @@ final class HealthKitManager: ObservableObject {
                 self.statusMessage = foundToday
                     ? "Apple Health step totals refreshed."
                     : "No step samples returned. Check Health access and device data; no zero has been assumed."
+                if let sync = self.onDailyTotals, !dailyTotals.isEmpty {
+                    sync(dailyTotals, finishRefresh)
+                } else {
+                    finishRefresh()
+                }
             }
         }
         store.execute(query)
