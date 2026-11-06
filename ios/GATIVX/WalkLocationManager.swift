@@ -33,9 +33,17 @@ final class WalkLocationManager: NSObject, ObservableObject, CLLocationManagerDe
     }
 
     func begin() {
-        wantsTracking = true
         points.removeAll()
         UserDefaults.standard.removeObject(forKey: "gativx.activeRoute.v1")
+        beginTracking()
+    }
+
+    func resume() {
+        beginTracking()
+    }
+
+    private func beginTracking() {
+        wantsTracking = true
         switch manager.authorizationStatus {
         case .notDetermined:
             manager.requestWhenInUseAuthorization()
