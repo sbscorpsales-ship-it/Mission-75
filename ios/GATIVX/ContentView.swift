@@ -246,6 +246,7 @@ struct ContentView: View {
                         Task { await cloud.syncSteps(date: day, steps: total) }
                     }
                     health.refreshRecentDays()
+                    refreshDirectMotionSteps()
                     Task { await syncSavedActivitySessions() }
                 }
             }
