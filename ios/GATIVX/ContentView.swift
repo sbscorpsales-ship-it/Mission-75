@@ -1,12 +1,13 @@
 import SwiftUI
 import CoreMotion
 
-private struct ActivitySessionRecord: Codable { let id: UUID; let activity: String; let startedAt: Date; let finishedAt: Date; let steps: Int? }
+private struct ActivitySessionRecord: Codable { let id: UUID; let activity: String; let startedAt: Date; let finishedAt: Date; let steps: Int?; let route: [GATIVXRoutePoint]? }
 
 struct ContentView: View {
     @Environment(\.scenePhase) private var scenePhase
     @StateObject private var health = HealthKitManager()
     @StateObject private var cloud = SupabaseRESTClient()
+    @StateObject private var location = WalkLocationManager()
     @State private var email = ""
     @State private var password = ""
     @State private var pedometer = CMPedometer()
@@ -68,6 +69,7 @@ struct ContentView: View {
         sessionStarted = start
         sessionActivity = selectedActivity
         sessionSteps = 0
+        location.begin()
         sessionStatus = "Counting steps for " + sessionActivity.lowercased() + "…"
         pedometer.startUpdates(from: start) { data, error in
             DispatchQueue.main.async {
@@ -84,6 +86,7 @@ struct ContentView: View {
         guard let start = sessionStarted, !isFinishingSession else { return }
         isFinishingSession = true
         let finish = Date()
+        let capturedRoute = location.finish()
         pedometer.stopUpdates()
 
         // Ask Core Motion for the complete interval at Finish, rather than
@@ -94,15 +97,15 @@ struct ContentView: View {
                 if let error {
                     self.sessionStatus = "Final motion query unavailable; saving last live reading. " + error.localizedDescription
                 }
-                self.persistFinishedSession(startedAt: start, finishedAt: finish, steps: finalSteps)
+                self.persistFinishedSession(startedAt: start, finishedAt: finish, steps: finalSteps, route: capturedRoute)
             }
         }
     }
 
-    private func persistFinishedSession(startedAt: Date, finishedAt: Date, steps: Int?) {
+    private func persistFinishedSession(startedAt: Date, finishedAt: Date, steps: Int?, route: [GATIVXRoutePoint]) {
         let record = ActivitySessionRecord(
             id: UUID(), activity: sessionActivity,
-            startedAt: startedAt, finishedAt: finishedAt, steps: steps
+            startedAt: startedAt, finishedAt: finishedAt, steps: steps, route: route
         )
         var history = (try? JSONDecoder().decode(
             [ActivitySessionRecord].self,
@@ -181,6 +184,7 @@ struct ContentView: View {
                         Text("steps this session").font(.subheadline).foregroundStyle(.secondary)
                     }
                     Text(sessionStatus).font(.caption).foregroundStyle(.secondary)
+                    Text(location.status).font(.caption2).foregroundStyle(.secondary)
                     if sessionStarted == nil {
                         Button("Start activity") { startActivitySession() }.buttonStyle(.borderedProminent).tint(.green)
                             .disabled(!CMPedometer.isStepCountingAvailable() || isFinishingSession)
