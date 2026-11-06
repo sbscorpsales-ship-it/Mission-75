@@ -37,15 +37,25 @@ struct ContentView: View {
         }
     }
     private func finishActivitySession() {
-        pedometer.stopUpdates()
         guard let start = sessionStarted else { return }
-        let record = ActivitySessionRecord(id: UUID(), activity: selectedActivity, startedAt: start, finishedAt: Date(), steps: sessionSteps)
-        var history = (try? JSONDecoder().decode([ActivitySessionRecord].self, from: UserDefaults.standard.data(forKey: "gativx.activitySessions.v1") ?? Data())) ?? []
-        history.insert(record, at: 0)
-        UserDefaults.standard.set(try? JSONEncoder().encode(history), forKey: "gativx.activitySessions.v1")
-        sessionStatus = selectedActivity + " saved · " + (sessionSteps?.formatted() ?? "step count unavailable") + " steps"
-        sessionStarted = nil
-        syncSavedActivitySessions()
+        let finishedAt = Date()
+        let activity = selectedActivity
+        pedometer.stopUpdates()
+        // Query the complete interval after stopping live updates so the final
+        // motion samples are included even if the last callback was delayed.
+        pedometer.queryPedometerData(from: start, to: finishedAt) { data, _ in
+            DispatchQueue.main.async {
+                let finalSteps = data?.numberOfSteps.intValue ?? self.sessionSteps
+                let record = ActivitySessionRecord(id: UUID(), activity: activity, startedAt: start, finishedAt: finishedAt, steps: finalSteps)
+                var history = (try? JSONDecoder().decode([ActivitySessionRecord].self, from: UserDefaults.standard.data(forKey: "gativx.activitySessions.v1") ?? Data())) ?? []
+                history.insert(record, at: 0)
+                UserDefaults.standard.set(try? JSONEncoder().encode(history), forKey: "gativx.activitySessions.v1")
+                self.sessionSteps = finalSteps
+                self.sessionStatus = activity + " saved · " + (finalSteps?.formatted() ?? "step count unavailable") + " steps"
+                self.sessionStarted = nil
+                self.syncSavedActivitySessions()
+            }
+        }
     }
 
     private var stepProgress: Double {
@@ -147,6 +157,8 @@ struct ContentView: View {
                 }
                 health.resumeIfPreviouslyConnected()
                 health.refreshOnForeground()
+                // A Keychain-restored session is already signed in before onChange fires.
+                if cloud.isSignedIn { syncSavedActivitySessions() }
             }
             .onChange(of: cloud.isSignedIn) { _, signedIn in
                 if signedIn {
