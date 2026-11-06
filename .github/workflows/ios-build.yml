@@ -1,4 +1,5 @@
 name: GATIVX iOS build check
+# Single-queue build validation for the current native iOS source.
 
 on:
   workflow_dispatch:
