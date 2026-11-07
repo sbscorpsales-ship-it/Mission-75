@@ -9,10 +9,20 @@ final class CloudSyncStore: ObservableObject {
     @Published private(set) var email: String?
     @Published private(set) var status = "Checking secure cloud session"
 
+    #if targetEnvironment(simulator)
+    private let client = SupabaseClient(
+        supabaseURL: URL(string: "https://crarbbsvcczwmtvxyrxo.supabase.co")!,
+        supabaseKey: "sb_publishable_XAGRFtrWrFqJ-SfXh2WbRQ_jCcPnr-6",
+        options: SupabaseClientOptions(
+            auth: .init(storage: SimulatorAuthStorage())
+        )
+    )
+    #else
     private let client = SupabaseClient(
         supabaseURL: URL(string: "https://crarbbsvcczwmtvxyrxo.supabase.co")!,
         supabaseKey: "sb_publishable_XAGRFtrWrFqJ-SfXh2WbRQ_jCcPnr-6"
     )
+    #endif
     private var authEventsTask: Task<Void, Never>?
 
     init() {
@@ -177,3 +187,29 @@ enum CloudSyncError: LocalizedError {
         }
     }
 }
+
+
+#if targetEnvironment(simulator)
+private final class SimulatorAuthStorage: AuthLocalStorage, @unchecked Sendable {
+    private let lock = NSLock()
+    private var values: [String: Data] = [:]
+
+    func store(key: String, value: Data) throws {
+        lock.lock()
+        defer { lock.unlock() }
+        values[key] = value
+    }
+
+    func retrieve(key: String) throws -> Data? {
+        lock.lock()
+        defer { lock.unlock() }
+        return values[key]
+    }
+
+    func remove(key: String) throws {
+        lock.lock()
+        defer { lock.unlock() }
+        values.removeValue(forKey: key)
+    }
+}
+#endif
