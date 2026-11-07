@@ -25,9 +25,8 @@ targets:
         SUPPORTS_MACCATALYST: NO
     scheme:
       gatherCoverageData: false
-      test:
-        targets:
-          - WALKONTests
+      testTargets:
+        - WALKONTests
   WALKONTests:
     type: bundle.unit-test
     platform: iOS
