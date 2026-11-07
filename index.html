@@ -475,7 +475,36 @@ $('cloudSignIn').onclick=()=>cloudAuth('signin');$('cloudSignUp').onclick=()=>cl
 
 $('accountQuick').addEventListener('click',()=>showTab('data'));
 $('cloudSyncNow').addEventListener('click',()=>{if(!cloudUser){cloudMsg('Please sign in before syncing.');showTab('data');return}cloudSync()});
-function initCloud(){if(!cloudClient&&window.supabase&&window.supabase.createClient)cloudClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);if(!cloudClient)return;cloudUi();cloudClient.auth.getSession().then(r=>{cloudUser=r.data.session&&r.data.session.user||null;cloudUi();if(cloudUser)cloudSync()});cloudClient.auth.onAuthStateChange((event,session)=>{cloudUser=session&&session.user||null;cloudUi();if(cloudUser&&event==='SIGNED_IN')setTimeout(cloudSync,0)})}initCloud();const cloudScript=document.querySelector('script[src*="supabase-js"]');if(cloudScript){cloudScript.addEventListener('load',initCloud,{once:true});cloudScript.addEventListener('error',()=>cloudMsg('Cloud library could not load. Your device data is still available; check your internet and retry.'),{once:true})}
+function initCloud(){if(!cloudClient&&window.supabase&&window.supabase.createClient)cloudClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);if(!cloudClient)return;cloudUi();cloudClient.auth.getSession().then(r=>{cloudUser=r.data.session&&r.data.session.user||null;cloudUi();if(cloudUser){cloudSync();startNativeMotionPolling()}});cloudClient.auth.onAuthStateChange((event,session)=>{cloudUser=session&&session.user||null;cloudUi();if(cloudUser&&event==='SIGNED_IN'){setTimeout(cloudSync,0);startNativeMotionPolling()}else if(!cloudUser&&nativeMotionPoll!==null){clearInterval(nativeMotionPoll);nativeMotionPoll=null}})}initCloud();const cloudScript=document.querySelector('script[src*="supabase-js"]');if(cloudScript){cloudScript.addEventListener('load',initCloud,{once:true});cloudScript.addEventListener('error',()=>cloudMsg('Cloud library could not load. Your device data is still available; check your internet and retry.'),{once:true})}
+// Native-to-web live bridge: read the signed-in member's latest iPhone motion
+// observation independently of the full backup sync. This prevents Safari from
+// remaining stuck on an older Apple Health daily_logs value.
+async function refreshNativeMotionFromCloud(){
+ if(!cloudClient||!cloudUser)return;
+ try{
+  const day=localDate();
+  const q=await cloudClient.from('motion_daily_steps').select('log_date,steps,distance_m,measured_at').eq('user_id',cloudUser.id).eq('log_date',day).maybeSingle();
+  if(q.error)throw q.error;
+  if(!q.data)return;
+  const all=safeParse(localStorage.getItem('gativx.motionDaily.v1'),'{}');
+  const incoming={steps:Number(q.data.steps)||0,distanceMeters:q.data.distance_m==null?null:Number(q.data.distance_m),measuredAt:q.data.measured_at||null};
+  const existing=all[day];
+  const incomingAt=Date.parse(incoming.measuredAt||'')||0,existingAt=Date.parse(existing?.measuredAt||'')||0;
+  if(!existing||incomingAt>=existingAt){
+   all[day]=incoming;
+   localStorage.setItem('gativx.motionDaily.v1',JSON.stringify(all));
+   renderSummary();
+  }
+ }catch(e){console.warn('Native motion refresh pending:',e)}
+}
+let nativeMotionPoll=null;
+function startNativeMotionPolling(){
+ if(nativeMotionPoll!==null)clearInterval(nativeMotionPoll);
+ refreshNativeMotionFromCloud();
+ nativeMotionPoll=setInterval(refreshNativeMotionFromCloud,30000);
+}
+window.addEventListener('focus',refreshNativeMotionFromCloud);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshNativeMotionFromCloud()});
 const welcomePlan=[['Set your mission','Open My data and set your starting weight and personal target. Choose a goal that is realistic for you.','Your target is a direction, not a deadline.'],['Explore Today','Review the dashboard and habit checklist. Choose a small number of habits you can realistically practise.','Do not try to change everything at once.'],['Make your first daily log','Open Daily log and record the information you know: activity, water, meals and sleep. Save it.','Honest estimates are more useful than skipped entries.'],['Understand your progress','Open Progress and learn how daily entries become trends over time.','Look for patterns across weeks, not one-day fluctuations.'],['Use your Coach','Open Coach and explore the practical suggestions. Choose one useful action to try.','Use the app for habit support; it does not diagnose or treat health conditions.'],['Try the Walk Tracker','Open Walk tracker, review the instructions and record a walk when you are ready. Allow location access only while using the feature.','Keep your phone with you and keep the page open during GPS recording.'],['Back up and build your routine','Open My data and check your cloud sign-in and sync status. Review what you learned and choose a simple daily routine.','Your account keeps your records available across devices when sync is complete.']];
 const WKEY='mission75.welcome7.v1';let welcomeState=safeParse(localStorage.getItem(WKEY),'{}');if(!welcomeState||typeof welcomeState!=='object'||Array.isArray(welcomeState))welcomeState={};let welcomeDay=0;
 function renderWelcome(){const done=welcomeState.done||[];$('welcomeDays').innerHTML=welcomePlan.map((x,i)=>'<button type="button" class="'+(i===welcomeDay?'':'secondary')+'" data-wday="'+i+'" style="padding:9px 12px;min-width:42px">Day '+(i+1)+(done.includes(i)?' ✓':'')+'</button>').join('');$('welcomeDays').querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{welcomeDay=Number(b.dataset.wday);renderWelcome()}));const x=welcomePlan[welcomeDay];$('welcomeDayTitle').textContent='DAY '+(welcomeDay+1)+' · '+x[0].toUpperCase();$('welcomeDayText').textContent=x[1];$('welcomeTip').textContent='TIP: '+x[2];$('welcomeDone').checked=done.includes(welcomeDay);$('welcomeProgress').textContent=done.length+' of 7 days';$('welcomeBar').style.width=(done.length/7*100)+'%';$('welcomeDoneLabel').textContent=done.includes(welcomeDay)?'Completed — tap to mark this step incomplete':'I completed this getting-started step';}
