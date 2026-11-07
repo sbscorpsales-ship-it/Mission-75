@@ -23,14 +23,24 @@ final class WalkTracker: NSObject, ObservableObject, CLLocationManagerDelegate {
     private let pedometer = CMPedometer()
     private var startDate: Date?
     private var requestedAlways = false
+    private var lastCheckpointAt = Date.distantPast
+    private var lastCheckpointSteps = -1
+    private var lastCheckpointRouteCount = -1
     var onCheckpoint: ((Date, Int, Double, [WalkSession.RoutePoint]) -> Void)?
 
-    private func checkpoint() {
+    private func checkpoint(force: Bool = false) {
         guard let startDate else { return }
+        let now = Date()
+        let stepsAdvanced = lastCheckpointSteps < 0 || abs(liveSteps - lastCheckpointSteps) >= 20
+        let routeAdvanced = lastCheckpointRouteCount < 0 || route.count - lastCheckpointRouteCount >= 5
+        guard force || now.timeIntervalSince(lastCheckpointAt) >= 10 || stepsAdvanced || routeAdvanced else { return }
         onCheckpoint?(startDate, liveSteps, distanceMeters, route)
+        lastCheckpointAt = now
+        lastCheckpointSteps = liveSteps
+        lastCheckpointRouteCount = route.count
     }
 
-    func checkpointNow() { checkpoint() }
+    func checkpointNow() { checkpoint(force: true) }
 
     func restore(_ snapshot: ActiveWalkSnapshot) {
         guard !isTracking else { return }
@@ -40,6 +50,10 @@ final class WalkTracker: NSObject, ObservableObject, CLLocationManagerDelegate {
         distanceMeters = snapshot.distanceMeters
         route = snapshot.route
         gpsAccuracy = snapshot.route.last?.horizontalAccuracy
+        lastCheckpointAt = .distantPast
+        lastCheckpointSteps = -1
+        lastCheckpointRouteCount = -1
+        checkpoint(force: true)
         locationStatus = "Recovered interrupted walk — recording resumed"
         switch location.authorizationStatus {
         case .authorizedAlways:
@@ -94,7 +108,10 @@ final class WalkTracker: NSObject, ObservableObject, CLLocationManagerDelegate {
         route = []
         liveSteps = 0
         gpsAccuracy = nil
-        checkpoint()
+        lastCheckpointAt = .distantPast
+        lastCheckpointSteps = -1
+        lastCheckpointRouteCount = -1
+        checkpoint(force: true)
 
         switch location.authorizationStatus {
         case .authorizedAlways:
@@ -137,6 +154,7 @@ final class WalkTracker: NSObject, ObservableObject, CLLocationManagerDelegate {
             completion(nil)
             return
         }
+        checkpoint(force: true)
         isTracking = false
         let ended = Date()
         location.stopUpdatingLocation()
