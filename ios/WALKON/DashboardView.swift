@@ -39,13 +39,14 @@ struct DashboardView: View {
             }
         }
         .onChange(of: scenePhase) { _, phase in
-            guard cloud.isSignedIn else { return }
-            if phase == .active {
+            if phase == .active, cloud.isSignedIn || cloud.isOfflineMode {
                 health.refresh()
-                Task {
-                    await cloud.syncPendingWalks(from: store)
-                    if let steps = health.steps {
-                        await cloud.syncHealthKitSteps(steps, measuredAt: health.lastUpdated ?? Date())
+                if cloud.isSignedIn {
+                    Task {
+                        await cloud.syncPendingWalks(from: store)
+                        if let steps = health.steps {
+                            await cloud.syncHealthKitSteps(steps, measuredAt: health.lastUpdated ?? Date())
+                        }
                     }
                 }
             }
