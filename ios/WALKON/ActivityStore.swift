@@ -30,8 +30,14 @@ struct WalkSession: Identifiable, Codable {
 
     static func acceptedDistance(from previous: RoutePoint, to next: RoutePoint) -> Double? {
         guard previous.timestamp < next.timestamp,
-              previous.horizontalAccuracy >= 0, previous.horizontalAccuracy <= 35,
-              next.horizontalAccuracy >= 0, next.horizontalAccuracy <= 35 else { return nil }
+              previous.latitude.isFinite, previous.latitude >= -90, previous.latitude <= 90,
+              previous.longitude.isFinite, previous.longitude >= -180, previous.longitude <= 180,
+              next.latitude.isFinite, next.latitude >= -90, next.latitude <= 90,
+              next.longitude.isFinite, next.longitude >= -180, next.longitude <= 180,
+              previous.horizontalAccuracy.isFinite, previous.horizontalAccuracy >= 0,
+              previous.horizontalAccuracy <= 35,
+              next.horizontalAccuracy.isFinite, next.horizontalAccuracy >= 0,
+              next.horizontalAccuracy <= 35 else { return nil }
         let elapsed = next.timestamp.timeIntervalSince(previous.timestamp)
         guard elapsed <= 30 else { return nil }
         let oldLocation = CLLocation(latitude: previous.latitude, longitude: previous.longitude)
