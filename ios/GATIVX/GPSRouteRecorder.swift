@@ -49,20 +49,31 @@ final class GPSRouteRecorder: NSObject, ObservableObject, CLLocationManagerDeleg
             status = "Allow location access, then tap Start activity again."
         case .denied, .restricted:
             status = "Location access is blocked. Enable it in Settings > Privacy & Security > Location Services."
-        case .authorizedWhenInUse, .authorizedAlways:
-            beginUpdates()
+        case .authorizedWhenInUse:
+            // Foreground-only permission: record while GATIVX is open.
+            // Do not enable background location updates without Always access.
+            beginUpdates(allowsBackground: false)
+        case .authorizedAlways:
+            beginUpdates(allowsBackground: true)
         @unknown default:
             status = "Location permission could not be determined."
         }
     }
 
-    private func beginUpdates() {
-        guard CLLocationManager.locationServicesEnabled() else { return }
+    private func beginUpdates(allowsBackground: Bool) {
+        guard CLLocationManager.locationServicesEnabled() else {
+            status = "Location Services are turned off."
+            return
+        }
+        // iOS requires the app to have the matching background location
+        // capability and authorization before background updates are enabled.
+        manager.allowsBackgroundLocationUpdates = allowsBackground
+        manager.showsBackgroundLocationIndicator = allowsBackground
         isRecording = true
-        manager.allowsBackgroundLocationUpdates = true
-        manager.showsBackgroundLocationIndicator = true
         manager.startUpdatingLocation()
-        status = "GPS route recording."
+        status = allowsBackground
+            ? "GPS route recording, including supported background use."
+            : "GPS route recording while GATIVX is open. Allow Always location for background recording."
     }
 
     func stop() {
