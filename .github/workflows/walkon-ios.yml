@@ -1,0 +1,54 @@
+name: WALKON iOS build
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "ios/WALKON/**"
+      - "ios/project.yml"
+      - ".github/workflows/walkon-ios.yml"
+  push:
+    branches:
+      - "walkon/**"
+    paths:
+      - "ios/WALKON/**"
+      - "ios/project.yml"
+      - ".github/workflows/walkon-ios.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build-ios:
+    runs-on: macos-15
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Show Xcode version
+        run: xcodebuild -version
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate WALKON project
+        run: xcodegen generate --spec ios/project.yml --project ios
+
+      - name: Compile WALKON for iPhone Simulator
+        run: |
+          xcodebuild \
+            -project ios/WALKON.xcodeproj \
+            -scheme WALKON \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            -configuration Debug \
+            -derivedDataPath build/WALKON-Simulator \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+
+      - name: Upload simulator build
+        uses: actions/upload-artifact@v4
+        with:
+          name: WALKON-iOS-Simulator
+          path: build/WALKON-Simulator/Build/Products/Debug-iphonesimulator/WALKON.app
+          if-no-files-found: error
