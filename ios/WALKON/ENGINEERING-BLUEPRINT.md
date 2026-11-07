@@ -639,3 +639,129 @@ If/when Android is approved, use Health Connect for aggregated step reading and 
 Source: https://developer.android.com/health-and-fitness/health-connect/migration/fit
 
 Android implementation is not part of the iPhone v1 delivery.
+
+
+## 18. Existing scaffold audit — exact replacement specification
+
+Audit date: 2026-11-07. Audited the current committed Swift files, Info.plist, entitlements and XcodeGen spec on main. The current app is a visual/functional stub only. It must not be used for a real walk or described as an accurate recorder.
+
+### 18.1 File-by-file findings
+
+| Current file | Defect in current implementation | Required replacement |
+|---|---|---|
+| `WALKONApp.swift` | No UIApplicationDelegate/scene recovery integration; no dependency composition or database bootstrap | Add app delegate adaptor and scene lifecycle recovery coordinator; open/migrate SQLite before showing dashboard; surface bootstrap failure |
+| `DashboardView.swift` | UI directly owns prototype services; Start/Finish only; no pause/resume/discard; no permission/error/save states; no route map; assumes metric values exist | Make a presentation-only view observing typed app state; route all actions through WorkoutCoordinator; show explicit GPS and Health states, map/stats switch, pause/resume/finish/discard, saving/retry and recoverable draft |
+| `HealthSteps.swift` | One-shot HKStatisticsQuery; no observer/background refresh/day rollover; reports authorization success as connected although read grants cannot be inferred; query errors discarded; silently shows zero | Replace with HealthKitDailyStepsService using HKStatisticsCollectionQuery + HKObserverQuery, explicit unavailable/no-data/error/refreshing states, local calendar boundaries, foreground and timezone refresh |
+| `WalkTracker.swift` | Bypasses HKWorkoutSession; no pause/resume; requests When-In-Use at start then starts GPS without waiting for authorization; no Always/background recovery path; no timestamps stored; no stale/out-of-order checks; simplistic 40m filter and 100m jump rule; sums all accepted deltas; no gap markers; no final pedometer reconciliation; no error handling | Delete as the owner of workout lifecycle. Split into WorkoutCoordinator (HealthKit session state) and RouteRecorder (Core Location sampling/filtering). Optional SessionStepProvider wraps CMPedometer only if validated as the chosen session step source |
+| `ActivityStore.swift` | Entire unbounded history and route arrays encoded to UserDefaults; duplicate saves insert duplicate sessions; no durable drafts, transactions, event journal, migrations or route indexing | Replace with SQLiteWorkoutRepository, versioned schema, foreign keys, WAL, unique workout IDs, append-only RoutePoint storage, transaction APIs, recovery journal and idempotent state transitions |
+| `Info.plist` | Missing HealthKit write usage description for saving workouts; location Always purpose string exists but code does not request/handle authorization state; no explicit app background lifecycle configuration contract | Add `NSHealthUpdateUsageDescription`; retain minimum Health read/location purpose strings; request Always only if required by tested background design and explain the purpose; validate background location mode and runtime authorization |
+| `WALKON.entitlements` | HealthKit entitlement present; no build-time check that signing profile includes it | Keep entitlement; verify signed provisioning profile contains HealthKit capability; fail release build if missing |
+| `ios/project.yml` | Deployment target iOS 17 conflicts with chosen iOS 26 workout-session architecture; no unit test target or explicit generated project settings for supported orientations/privacy manifest | Set iOS 26.0; add test target and explicit bundle/build settings; add privacy manifest only if included SDKs or collected data require it; validate generated Info.plist and signing |
+| `.github/workflows/walkon-ios-build.yml` | macOS-15 runner does not guarantee Xcode 26; only simulator Debug build; no unit tests, Release build, artifact retention or version assertion | Use an available runner with Xcode 26; assert `xcodebuild -version` and iOS SDK; generate project; build Debug + Release simulator; run unit tests; archive device build only in a separately configured signing job |
+
+### 18.2 Required replacement/additional source files
+
+- `AppEnvironment.swift`: owns shared services and bootstrapping.
+- `WorkoutCoordinator.swift`: actor or main-actor-isolated state owner for HKWorkoutSession, HKLiveWorkoutBuilder, delegate callbacks, lifecycle transitions and recovery.
+- `RouteRecorder.swift`: Core Location authorization, active-session updates, route point validation, segment boundaries, gap markers and incremental HealthKit route-series insertion.
+- `HealthKitDailyStepsService.swift`: daily cumulative query, observer query, background delivery, day rollover and explicit query states.
+- `SessionStepProvider.swift`: optional CMPedometer wrapper; used only if the builder does not provide a validated session step quantity.
+- `SQLiteWorkoutRepository.swift`: migrations, transaction boundaries, append-only route batches, draft reads and idempotent finalization.
+- `WorkoutRecoveryCoordinator.swift`: reconcile scene-recovered HealthKit session with local event journal and saved workout IDs.
+- `WorkoutModels.swift`: typed states, metric provenance, route sample, route segment, error and save outcome models.
+- `WorkoutMapView.swift`: render route points and GPS gaps without mutating source data.
+- `HealthKitAuthorizationService.swift`: minimum read/share type set and request status messaging.
+- `ActivityLiveStatus.swift`: optional ActivityKit surface after core recording works.
+- Test target: `WorkoutStateMachineTests.swift`, `RouteRecorderTests.swift`, `SQLiteWorkoutRepositoryTests.swift`, `HealthKitMappingTests.swift`, `WorkoutRecoveryTests.swift`.
+
+### 18.3 Required type/state contracts
+
+Workout state must be an enum, not unrelated booleans:
+- idle
+- authorizing
+- preparing
+- recording
+- paused
+- finishing
+- workoutSaved
+- routeFinalizing
+- completed
+- recoverableFailure
+
+Every transition is validated centrally. UI commands are intents; the UI must wait for the delegate/platform-confirmed transition before displaying success.
+
+GPS quality must be a separate enum:
+- permissionRequired
+- servicesDisabled
+- acquiring
+- good
+- weak
+- unavailable
+
+Save status must be separate from workout state:
+- notStarted
+- localDraftSaved
+- workoutSavePending
+- workoutSaved
+- routeSavePending
+- completed
+- retryableFailure
+
+A session metric must carry value, unit, source, sample interval and availability. A missing statistic is nil/unavailable, not numeric zero.
+
+### 18.4 Required unit and integration tests
+
+**Workout state machine**
+- Start while already recording is ignored without a second HealthKit session.
+- Pause while idle and resume while idle are rejected.
+- Pause/resume transitions occur only after delegate confirmation.
+- Repeated Finish taps create one finalization operation.
+- Discard removes only the draft and never deletes an already completed HealthKit workout.
+- HealthKit session error moves to recoverableFailure with the platform error preserved.
+
+**Route validation**
+- Reject negative horizontal accuracy, invalid coordinates, stale timestamps and out-of-order points.
+- Reject implausible speed/displacement spikes.
+- Do not add distance for a rejected point.
+- A long GPS gap starts a new segment; no line/distance is fabricated across it.
+- Pause/resume creates separate segments.
+- Reprocessing the same raw route with the same algorithm version produces deterministic distance.
+- Route point timestamp, horizontal accuracy and source are persisted.
+
+**SQLite and idempotency**
+- Appending route batches then force-terminating preserves committed batches.
+- A duplicate point batch ID cannot duplicate points.
+- Duplicate workout UUID insertion fails safely.
+- Schema migration preserves completed sessions and drafts.
+- Foreign-key violation rolls back the entire transaction.
+- A crash between workout save and route finalization recovers to routeFinalizing, not a second workout save.
+- A local DB failure after HealthKit save is reconciled on next launch.
+
+**HealthKit mapping**
+- Daily total uses the local calendar day and cumulative sum.
+- Observer notifications trigger a fresh aggregate query.
+- Midnight/timezone changes refresh the day predicate.
+- Query error, no samples and unavailable HealthKit remain distinguishable.
+- Builder metrics are mapped only when the matching quantity statistic exists.
+- Session steps use exactly one selected source; daily total is never incremented manually.
+
+**Device integration**
+- Start/stop outdoor walk and confirm one HealthKit workout.
+- Confirm one HealthKit route associated with that workout.
+- Lock screen, background, phone-call interruption and controlled crash recovery.
+- Health read/share permissions denied or revoked.
+- Location denied, reduced accuracy, Always denied, services disabled and GPS loss.
+- Low storage, low battery and app termination.
+- Run on iPhone 12 Pro Max on installed iOS 27.0.1; simulator cannot replace these tests.
+
+### 18.5 Immediate implementation blockers
+
+1. The current project is configured for iOS 17 and cannot be the final project configuration for the chosen iOS 26+ workflow.
+2. No HealthKit workout session or workout route saving exists in the current code.
+3. No pause/resume or durable route persistence exists.
+4. Existing route samples lose timestamps and accuracy metadata.
+5. Existing step query can misrepresent access state and becomes stale.
+6. No recovery integration exists.
+7. No test target or signed device build evidence exists.
+
+These are code defects and missing capabilities, not user setup problems. Do not ask the user to repair them manually.
