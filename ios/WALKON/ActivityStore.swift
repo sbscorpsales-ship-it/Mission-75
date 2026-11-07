@@ -1,6 +1,14 @@
 import Foundation
 import Combine
 
+struct ActiveWalkSnapshot: Codable {
+    let startedAt: Date
+    let savedAt: Date
+    let steps: Int
+    let distanceMeters: Double
+    let route: [WalkSession.RoutePoint]
+}
+
 struct WalkSession: Identifiable, Codable {
     struct RoutePoint: Codable {
         let latitude: Double
@@ -25,6 +33,7 @@ final class ActivityStore: ObservableObject {
     @Published private(set) var storageStatus = "Preparing local activity storage"
 
     private let fileName = "walkon-activities-v1.json"
+    private let activeFileName = "walkon-active-walk-v1.json"
     private let encoder: JSONEncoder = {
         let value = JSONEncoder()
         value.dateEncodingStrategy = .iso8601
@@ -53,6 +62,46 @@ final class ActivityStore: ObservableObject {
             storageStatus = "Could not save walk: \(error.localizedDescription)"
             return false
         }
+    }
+
+    func checkpoint(startedAt: Date, steps: Int, distanceMeters: Double, route: [WalkSession.RoutePoint]) {
+        let snapshot = ActiveWalkSnapshot(startedAt: startedAt, savedAt: Date(), steps: max(steps, 0),
+                                          distanceMeters: max(distanceMeters, 0), route: route)
+        do {
+            let data = try encoder.encode(snapshot)
+            try data.write(to: activeStorageURL, options: [.atomic, .completeFileProtectionUnlessOpen])
+        } catch {
+            storageStatus = "Active walk checkpoint failed: \(error.localizedDescription)"
+        }
+    }
+
+    func recoverActiveWalk() -> ActiveWalkSnapshot? {
+        guard let url = activeStorageURL, FileManager.default.fileExists(atPath: url.path) else { return nil }
+        do {
+            let data = try Data(contentsOf: url)
+            let snapshot = try decoder.decode(ActiveWalkSnapshot.self, from: data)
+            guard snapshot.startedAt <= Date(), snapshot.savedAt <= Date(),
+                  Date().timeIntervalSince(snapshot.savedAt) < 24 * 60 * 60 else {
+                try? FileManager.default.removeItem(at: url)
+                return nil
+            }
+            return snapshot
+        } catch {
+            storageStatus = "An interrupted walk could not be recovered: \(error.localizedDescription)"
+            return nil
+        }
+    }
+
+    func clearActiveWalkCheckpoint() {
+        guard let url = activeStorageURL else { return }
+        do { if FileManager.default.fileExists(atPath: url.path) { try FileManager.default.removeItem(at: url) } }
+        catch { storageStatus = "Could not clear completed walk checkpoint: \(error.localizedDescription)" }
+    }
+
+    private var activeStorageURL: URL? {
+        FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first?
+            .appendingPathComponent("WALKON", isDirectory: true)
+            .appendingPathComponent(activeFileName, isDirectory: false)
     }
 
     private var storageURL: URL? {
