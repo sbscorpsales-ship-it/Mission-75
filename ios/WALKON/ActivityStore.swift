@@ -24,6 +24,7 @@ struct WalkSession: Identifiable, Codable {
     let steps: Int
     let distanceMeters: Double
     let route: [RoutePoint]
+    var cloudSyncedAt: Date? = nil
 
     var duration: TimeInterval { max(endedAt.timeIntervalSince(startedAt), 0) }
 
@@ -115,6 +116,19 @@ final class ActivityStore: ObservableObject {
         } catch {
             storageStatus = "An interrupted walk could not be recovered: \(error.localizedDescription)"
             return nil
+        }
+    }
+
+    func markCloudSynced(_ sessionID: UUID, at date: Date = Date()) {
+        guard let index = sessions.firstIndex(where: { $0.id == sessionID }) else { return }
+        let previous = sessions[index].cloudSyncedAt
+        sessions[index].cloudSyncedAt = date
+        do {
+            try persist()
+            storageStatus = "Walk saved locally and backed up to your account"
+        } catch {
+            sessions[index].cloudSyncedAt = previous
+            storageStatus = "Cloud backup succeeded; local sync marker could not be saved"
         }
     }
 
