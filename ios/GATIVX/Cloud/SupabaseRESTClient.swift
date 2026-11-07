@@ -1,4 +1,5 @@
 import Foundation
+import CoreLocation
 import Security
 import Combine
 
@@ -113,7 +114,7 @@ final class SupabaseRESTClient: ObservableObject {
             status = "Activity saved on this iPhone; cloud sync pending: " + error.localizedDescription
         }
     }
-    func syncActivitySessionRoute(id: UUID, points: [GATIVXRoutePoint], retryAfterRefresh: Bool = true) async {
+    func syncActivitySessionRoute(id: UUID, startedAt: Date, finishedAt: Date, points: [GATIVXRoutePoint], retryAfterRefresh: Bool = true) async {
         guard !points.isEmpty, points.count <= 20_000 else { return }
         do {
             guard let token = accessToken else { throw ClientError.notSignedIn }
@@ -130,11 +131,41 @@ final class SupabaseRESTClient: ObservableObject {
             guard let http = response as? HTTPURLResponse else { throw ClientError.invalidResponse }
             if http.statusCode == 401 && retryAfterRefresh {
                 try await refreshSession()
-                await syncActivitySessionRoute(id: id, points: points, retryAfterRefresh: false)
+                await syncActivitySessionRoute(id: id, startedAt: startedAt, finishedAt: finishedAt, points: points, retryAfterRefresh: false)
                 return
             }
             guard (200..<300).contains(http.statusCode) else { throw Self.serverError(data) }
-            status = "Activity steps and GPS route synced to your GATIVX account."
+
+            // Mirror native GPS routes into walk_sessions, which the web dashboard reads.
+            let coordinates = points.map { CLLocation(latitude: $0.latitude, longitude: $0.longitude) }
+            var distanceMeters = 0.0
+            if coordinates.count > 1 {
+                for index in 1..<coordinates.count {
+                    distanceMeters += coordinates[index - 1].distance(from: coordinates[index])
+                }
+            }
+            var walkRequest = URLRequest(url: baseURL.appendingPathComponent("rest/v1/rpc/sync_walk_session_route"))
+            walkRequest.httpMethod = "POST"
+            walkRequest.setValue(publishableKey, forHTTPHeaderField: "apikey")
+            walkRequest.setValue("Bearer " + token, forHTTPHeaderField: "Authorization")
+            walkRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            walkRequest.httpBody = try JSONSerialization.data(withJSONObject: [
+                "p_session_id": id.uuidString,
+                "p_started_at": formatter.string(from: startedAt),
+                "p_finished_at": formatter.string(from: finishedAt),
+                "p_duration_seconds": max(0, min(86400, Int(finishedAt.timeIntervalSince(startedAt)))),
+                "p_distance_m": distanceMeters,
+                "p_route_points": points.map { $0.cloudValue }
+            ])
+            let (walkData, walkResponse) = try await URLSession.shared.data(for: walkRequest)
+            guard let walkHTTP = walkResponse as? HTTPURLResponse else { throw ClientError.invalidResponse }
+            if walkHTTP.statusCode == 401 && retryAfterRefresh {
+                try await refreshSession()
+                await syncActivitySessionRoute(id: id, startedAt: startedAt, finishedAt: finishedAt, points: points, retryAfterRefresh: false)
+                return
+            }
+            guard (200..<300).contains(walkHTTP.statusCode) else { throw Self.serverError(walkData) }
+            status = "Activity route synced to native history and GATIVX walking dashboard."
         } catch {
             status = "GPS route saved on this iPhone; cloud sync pending: " + error.localizedDescription
         }
