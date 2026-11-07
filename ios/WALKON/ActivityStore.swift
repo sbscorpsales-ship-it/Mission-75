@@ -101,13 +101,13 @@ final class ActivityStore: ObservableObject {
         }
     }
 
-    func recoverActiveWalk() -> ActiveWalkSnapshot? {
+    func recoverActiveWalk(now: Date = Date()) -> ActiveWalkSnapshot? {
         guard let url = activeStorageURL, FileManager.default.fileExists(atPath: url.path) else { return nil }
         do {
             let data = try Data(contentsOf: url)
             let snapshot = try decoder.decode(ActiveWalkSnapshot.self, from: data)
-            guard snapshot.startedAt <= Date(), snapshot.savedAt <= Date(), snapshot.savedAt >= snapshot.startedAt,
-                  Date().timeIntervalSince(snapshot.savedAt) < 24 * 60 * 60 else {
+            guard snapshot.startedAt <= now, snapshot.savedAt <= now, snapshot.savedAt >= snapshot.startedAt,
+                  now.timeIntervalSince(snapshot.savedAt) < 24 * 60 * 60 else {
                 try? FileManager.default.removeItem(at: url)
                 return nil
             }
