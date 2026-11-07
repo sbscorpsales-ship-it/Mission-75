@@ -1,6 +1,6 @@
 import Foundation
 import Combine
-import Supabase
+@preconcurrency import Supabase
 
 @MainActor
 final class CloudSyncStore: ObservableObject {
@@ -30,7 +30,7 @@ final class CloudSyncStore: ObservableObject {
     init() {
         authEventsTask = Task { [weak self] in
             guard let self else { return }
-            let events = await self.client.auth.authStateChanges
+            let events = self.client.auth.authStateChanges
             for await (_, session) in events {
                 self.hasResolvedAuth = true
                 self.isSignedIn = session != nil
