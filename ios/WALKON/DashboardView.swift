@@ -19,7 +19,7 @@ struct DashboardView: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(background)
-            } else if !cloud.isSignedIn {
+            } else if !cloud.isSignedIn && !cloud.isOfflineMode {
                 SignInView(cloud: cloud)
             } else {
                 mainTabs
@@ -116,15 +116,22 @@ struct DashboardView: View {
                             Label(cloud.status, systemImage: "icloud")
                                 .font(.caption).foregroundStyle(.secondary)
                             Spacer()
-                            Button("Sign out") {
-                                Task {
-                                    do { try await cloud.signOut() }
-                                    catch { }
+                            if cloud.isSignedIn {
+                                Button("Sign out") {
+                                    Task {
+                                        do { try await cloud.signOut() }
+                                        catch { }
+                                    }
                                 }
+                                .font(.caption.weight(.semibold))
+                                .buttonStyle(.bordered)
+                                .tint(.secondary)
+                            } else {
+                                Button("Connect account") { cloud.connectAccount() }
+                                    .font(.caption.weight(.semibold))
+                                    .buttonStyle(.bordered)
+                                    .tint(.mint)
                             }
-                            .font(.caption.weight(.semibold))
-                            .buttonStyle(.bordered)
-                            .tint(.secondary)
                         }
                         if let email = cloud.email {
                             Text(email).font(.caption2).foregroundStyle(.tertiary)
