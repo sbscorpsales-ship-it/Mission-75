@@ -135,8 +135,24 @@ jobs:
           APP_PRIVACY="build/WALKON-Simulator/Build/Products/Debug-iphonesimulator/WALKON.app/PrivacyInfo.xcprivacy"
           test -f "$APP_PRIVACY"
           plutil -lint "$APP_PRIVACY"
-          /usr/libexec/PlistBuddy -c "Print :NSPrivacyAccessedAPITypes:0:NSPrivacyAccessedAPITypeReasons:0" "$APP_PRIVACY" | grep -q "CA92.1"
-          /usr/libexec/PlistBuddy -c "Print :NSPrivacyCollectedDataTypes:4:NSPrivacyCollectedDataType" "$APP_PRIVACY" | grep -q "NSPrivacyCollectedDataTypePreciseLocation"
+          python3 - "$APP_PRIVACY" <<'PY'
+          import plistlib, sys
+          with open(sys.argv[1], "rb") as stream:
+              manifest = plistlib.load(stream)
+          accessed = manifest.get("NSPrivacyAccessedAPITypes", [])
+          assert any(
+              item.get("NSPrivacyAccessedAPIType") == "NSPrivacyAccessedAPICategoryUserDefaults"
+              and "CA92.1" in item.get("NSPrivacyAccessedAPITypeReasons", [])
+              for item in accessed
+          ), "Missing approved UserDefaults API reason"
+          collected = {
+              item.get("NSPrivacyCollectedDataType")
+              for item in manifest.get("NSPrivacyCollectedDataTypes", [])
+          }
+          assert "NSPrivacyCollectedDataTypePreciseLocation" in collected, "Precise location disclosure missing"
+          assert "NSPrivacyCollectedDataTypeHealth" in collected, "Health data disclosure missing"
+          assert "NSPrivacyCollectedDataTypeFitness" in collected, "Fitness data disclosure missing"
+          PY
 
       - name: Upload simulator build
         uses: actions/upload-artifact@v4
