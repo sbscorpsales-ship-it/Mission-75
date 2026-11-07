@@ -1,0 +1,21 @@
+name: WALKON iOS Build
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "ios/**"
+      - ".github/workflows/walkon-ios-build.yml"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Generate Xcode project
+        run: xcodegen generate --spec ios/project.yml
+      - name: Build iOS Simulator target
+        run: xcodebuild -project ios/WALKON.xcodeproj -scheme WALKON -sdk iphonesimulator -configuration Debug CODE_SIGNING_ALLOWED=NO build
