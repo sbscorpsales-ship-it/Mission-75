@@ -43,13 +43,13 @@ jobs:
         run: |
           DEVICE_ID=$(xcrun simctl list devices available | awk -F '[()]' '/iPhone/ {print $2; exit}')
           test -n "$DEVICE_ID"
-          xcodebuild \\
-            -project ios/WALKON.xcodeproj \\
-            -scheme WALKON \\
-            -destination "platform=iOS Simulator,id=$DEVICE_ID" \\
-            -configuration Debug \\
-            -derivedDataPath build/WALKON-Tests \\
-            CODE_SIGNING_ALLOWED=NO \\
+          xcodebuild \
+            -project ios/WALKON.xcodeproj \
+            -scheme WALKON \
+            -destination "platform=iOS Simulator,id=$DEVICE_ID" \
+            -configuration Debug \
+            -derivedDataPath build/WALKON-Tests \
+            CODE_SIGNING_ALLOWED=NO \
             test
 
       - name: Compile WALKON for iPhone Simulator
