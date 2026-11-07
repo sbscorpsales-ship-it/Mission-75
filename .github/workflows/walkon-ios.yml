@@ -1,6 +1,7 @@
 name: WALKON iOS build
 
 # Dedicated validation for the standalone WALKON native iOS target.
+# Re-run against the latest recovery and HealthKit observer implementation.
 
 on:
   workflow_dispatch:
