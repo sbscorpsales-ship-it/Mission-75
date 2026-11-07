@@ -55,6 +55,17 @@ struct ContentView: View {
         }
     }
 
+    private func syncCurrentMotionSnapshotToCloud() {
+        guard cloud.isSignedIn, let steps = liveMotionSteps else { return }
+        Task {
+            await cloud.syncMotionDailySteps(
+                date: Date(),
+                steps: steps,
+                distanceMeters: liveMotionDistanceMeters
+            )
+        }
+    }
+
     private func syncSavedActivitySessions() {
         guard cloud.isSignedIn else { return }
         let history = (try? JSONDecoder().decode([ActivitySessionRecord].self, from: UserDefaults.standard.data(forKey: "gativx.activitySessions.v1") ?? Data())) ?? []
@@ -239,6 +250,7 @@ struct ContentView: View {
                         Task { await cloud.syncSteps(date: day, steps: total) }
                     }
                     health.refreshRecentDays()
+                    syncCurrentMotionSnapshotToCloud()
                     syncSavedActivitySessions()
                 }
             }
