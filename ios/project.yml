@@ -12,6 +12,13 @@ targets:
       - path: WALKON
     info:
       path: WALKON/Info.plist
+      properties:
+        NSHealthShareUsageDescription: "WALKON reads your daily step count from Apple Health to show your activity progress."
+        NSMotionUsageDescription: "WALKON uses motion sensors to count steps during a walk you start."
+        NSLocationWhenInUseUsageDescription: "WALKON records your walking route only during an activity you start."
+        NSLocationAlwaysAndWhenInUseUsageDescription: "WALKON uses location during an active walk so route recording can continue when your phone is locked."
+        UIBackgroundModes:
+          - location
     entitlements:
       path: WALKON/WALKON.entitlements
     settings:
