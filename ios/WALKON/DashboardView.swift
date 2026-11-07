@@ -1,19 +1,24 @@
 import SwiftUI
 
 struct DashboardView: View {
+    @Environment(\.scenePhase) private var scenePhase
     @StateObject private var health = HealthSteps()
     @StateObject private var tracker = WalkTracker()
     @StateObject private var store = ActivityStore()
     private let goal = 8000
+    private let background = Color(red: 0.035, green: 0.055, blue: 0.07)
 
     var body: some View {
         TabView {
             today.tabItem { Label("Today", systemImage: "sun.max.fill") }
-            activity.tabItem { Label("Activity", systemImage: "figure.walk") }
-            history.tabItem { Label("History", systemImage: "chart.bar.fill") }
+            activity.tabItem { Label("Walk", systemImage: "figure.walk") }
+            history.tabItem { Label("History", systemImage: "clock.arrow.circlepath") }
         }
         .tint(Color(red: 0.72, green: 1.0, blue: 0.22))
         .onAppear { health.requestAccessAndRefresh() }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { health.refresh() }
+        }
     }
 
     private var today: some View {
@@ -26,41 +31,48 @@ struct DashboardView: View {
                             Text("Move with purpose.").font(.title2.bold())
                         }
                         Spacer()
-                        Image(systemName: "figure.walk").font(.title).foregroundStyle(.black).padding(14).background(Color.mint, in: Circle())
+                        Image(systemName: "figure.walk").font(.title).foregroundStyle(.black)
+                            .padding(14).background(Color.mint, in: Circle())
                     }
                     VStack(alignment: .leading, spacing: 12) {
                         Text("TODAY'S STEPS").font(.caption.bold()).tracking(1.6).foregroundStyle(.secondary)
                         HStack(alignment: .firstTextBaseline, spacing: 8) {
-                            Text(health.steps.formatted()).font(.system(size: 48, weight: .bold, design: .rounded)).monospacedDigit()
+                            Text(health.steps?.formatted() ?? "—")
+                                .font(.system(size: 48, weight: .bold, design: .rounded)).monospacedDigit()
                             Text("/ \(goal.formatted())").foregroundStyle(.secondary)
                         }
-                        ProgressView(value: min(Double(health.steps) / Double(goal), 1))
+                        ProgressView(value: min(Double(health.steps ?? 0) / Double(goal), 1))
                             .tint(.mint).scaleEffect(x: 1, y: 1.7, anchor: .center)
                         HStack {
                             Label(health.status, systemImage: "heart.text.square")
                             Spacer()
-                            Text("\(max(goal - health.steps, 0).formatted()) to go")
+                            Text("\(max(goal - (health.steps ?? 0), 0).formatted()) to go")
                         }.font(.caption).foregroundStyle(.secondary)
                         Button { health.refresh() } label: {
                             Label("Refresh Apple Health", systemImage: "arrow.clockwise")
                                 .font(.subheadline.weight(.semibold))
                         }.buttonStyle(.bordered).tint(.mint)
+                        if let updated = health.lastUpdated {
+                            Text("Last checked \(updated.formatted(date: .omitted, time: .shortened))")
+                                .font(.caption2).foregroundStyle(.tertiary)
+                        }
                     }
                     .padding(20).background(Color.white.opacity(0.07), in: RoundedRectangle(cornerRadius: 24))
                     HStack(spacing: 12) {
                         metric("WALKS", value: "\(store.sessions.count)", icon: "figure.walk")
                         metric("DISTANCE", value: String(format: "%.2f km", store.sessions.reduce(0) { $0 + $1.distanceMeters } / 1000), icon: "point.topleft.down.to.point.bottomright.curvepath")
                     }
+                    Text(store.storageStatus).font(.caption).foregroundStyle(.secondary)
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Your next step").font(.headline)
-                        Text("Start a walk to record live steps, distance and your GPS route. Only activities started in WALKON are saved.")
+                        Text("Start a walk to record live steps, distance and your GPS route. Your walks stay on this iPhone.")
                             .font(.subheadline).foregroundStyle(.secondary)
                     }
                     .padding(18).frame(maxWidth: .infinity, alignment: .leading)
                     .background(Color.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 20))
                 }.padding(20)
             }
-            .background(Color(red: 0.035, green: 0.055, blue: 0.07))
+            .background(background)
             .toolbar(.hidden, for: .navigationBar)
         }
     }
@@ -69,28 +81,37 @@ struct DashboardView: View {
         NavigationStack {
             VStack(spacing: 22) {
                 Image(systemName: "figure.walk.motion").font(.system(size: 64)).foregroundStyle(.mint)
-                Text(tracker.isTracking ? "Walk in progress" : "Ready when you are")
-                    .font(.title2.bold())
+                Text(tracker.isTracking ? "Walk in progress" : "Ready when you are").font(.title2.bold())
                 HStack(spacing: 28) {
-                    metric("STEPS", value: tracker.liveSteps.formatted(), icon: "shoe")
+                    metric("SESSION STEPS", value: tracker.liveSteps.formatted(), icon: "shoe")
                     metric("DISTANCE", value: String(format: "%.2f km", tracker.distanceMeters / 1000), icon: "location")
+                }
+                if let accuracy = tracker.gpsAccuracy {
+                    Label("GPS accuracy about \(Int(accuracy)) m", systemImage: "location.fill")
+                        .font(.caption).foregroundStyle(.secondary)
                 }
                 Button {
                     if tracker.isTracking {
-                        if let session = tracker.stop() { store.save(session) }
-                    } else { tracker.start() }
+                        tracker.finish { session in
+                            if let session { _ = store.save(session) }
+                        }
+                    } else {
+                        tracker.start()
+                    }
                 } label: {
                     Text(tracker.isTracking ? "Finish walk" : "Start walking")
                         .font(.headline).frame(maxWidth: .infinity).padding()
                         .background(tracker.isTracking ? Color.orange : Color.mint, in: Capsule())
                         .foregroundStyle(.black)
                 }
+                .accessibilityHint(tracker.isTracking ? "Stops recording and saves this walk" : "Starts recording steps and GPS route")
                 Text(tracker.locationStatus).font(.caption).foregroundStyle(.secondary)
-                Text("Keep WALKON active in the background and allow location access to record your route while walking.")
+                Text("Keep location access enabled for route recording. Allow Always access to continue while the screen is locked.")
                     .font(.footnote).multilineTextAlignment(.center).foregroundStyle(.secondary)
-            }.padding(24).frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(Color(red: 0.035, green: 0.055, blue: 0.07))
-                .navigationTitle("Activity")
+            }
+            .padding(24).frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(background)
+            .navigationTitle("Walk")
         }
     }
 
@@ -99,17 +120,18 @@ struct DashboardView: View {
             List(store.sessions) { session in
                 VStack(alignment: .leading, spacing: 6) {
                     Text(session.startedAt.formatted(date: .abbreviated, time: .shortened)).font(.headline)
-                    Text("\(session.steps.formatted()) steps  ·  \(String(format: "%.2f km", session.distanceMeters / 1000))")
+                    Text("\(session.steps.formatted()) steps  ·  \(String(format: "%.2f km", session.distanceMeters / 1000))  ·  \(Int(session.duration / 60)) min")
                         .font(.subheadline).foregroundStyle(.secondary)
+                    Text("\(session.route.count) GPS points").font(.caption).foregroundStyle(.tertiary)
                 }.padding(.vertical, 5)
                 .listRowBackground(Color.white.opacity(0.06))
             }
             .scrollContentBackground(.hidden)
-            .background(Color(red: 0.035, green: 0.055, blue: 0.07))
+            .background(background)
             .navigationTitle("Your walks")
             .overlay {
                 if store.sessions.isEmpty {
-                    ContentUnavailableView("No walks yet", systemImage: "figure.walk", description: Text("Your new activity history starts with your first walk."))
+                    ContentUnavailableView("No walks yet", systemImage: "figure.walk", description: Text("Your activity history starts with your first walk."))
                 }
             }
         }
@@ -119,7 +141,8 @@ struct DashboardView: View {
         VStack(alignment: .leading, spacing: 9) {
             Label(title, systemImage: icon).font(.caption.bold()).foregroundStyle(.secondary)
             Text(value).font(.title2.bold()).monospacedDigit()
-        }.frame(maxWidth: .infinity, alignment: .leading)
-            .padding(16).background(Color.white.opacity(0.07), in: RoundedRectangle(cornerRadius: 18))
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(16).background(Color.white.opacity(0.07), in: RoundedRectangle(cornerRadius: 18))
     }
 }
