@@ -18,6 +18,10 @@ await page.goto(fileUrl, { waitUntil: "domcontentloaded" });
 await page.waitForTimeout(6500);
 
 const assert = (condition, message) => { if (!condition) throw new Error(message); };
+if (await page.locator("#gxModal.open").count()) {
+  assert(await page.locator("#gxHeading").isVisible(), "First-run goal onboarding did not render");
+  await page.locator("#gxSkip").click();
+}
 assert(await page.locator("#connectionHeading").count() === 1, "Connected-data hub is missing from the profile");
 assert(await page.locator(".activity-grid .tile").count() === 6, "Expected six dashboard metrics");
 assert(await page.locator("[data-tab]").count() === 6, "Expected six navigation destinations");
