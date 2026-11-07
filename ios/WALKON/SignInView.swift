@@ -65,8 +65,13 @@ struct SignInView: View {
             }
             .padding(20)
             .background(Color.white.opacity(0.07), in: RoundedRectangle(cornerRadius: 22))
+            Button("Continue offline — no cloud backup") {
+                cloud.continueOffline()
+            }
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(.mint)
             Spacer()
-            Text("Your activity stays on this iPhone and syncs to your private account after sign-in.")
+            Text("Your activity stays on this iPhone. Connect an account later to back it up.")
                 .font(.caption)
                 .foregroundStyle(.tertiary)
                 .multilineTextAlignment(.center)
