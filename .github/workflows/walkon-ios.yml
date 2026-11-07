@@ -131,6 +131,11 @@ jobs:
           /usr/libexec/PlistBuddy -c "Print :UIBackgroundModes:0" "$APP_INFO" | grep -q location
           /usr/libexec/PlistBuddy -c "Print :com.apple.developer.healthkit" ios/WALKON/WALKON.entitlements | grep -q true
           /usr/libexec/PlistBuddy -c "Print :com.apple.developer.healthkit.background-delivery" ios/WALKON/WALKON.entitlements | grep -q true
+          APP_PRIVACY="build/WALKON-Simulator/Build/Products/Debug-iphonesimulator/WALKON.app/PrivacyInfo.xcprivacy"
+          test -f "$APP_PRIVACY"
+          plutil -lint "$APP_PRIVACY"
+          /usr/libexec/PlistBuddy -c "Print :NSPrivacyAccessedAPITypes:0:NSPrivacyAccessedAPITypeReasons:0" "$APP_PRIVACY" | grep -q "CA92.1"
+          /usr/libexec/PlistBuddy -c "Print :NSPrivacyCollectedDataTypes:4:NSPrivacyCollectedDataType" "$APP_PRIVACY" | grep -q "NSPrivacyCollectedDataTypePreciseLocation"
 
       - name: Upload simulator build
         uses: actions/upload-artifact@v4
