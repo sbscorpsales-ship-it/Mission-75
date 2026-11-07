@@ -10,11 +10,9 @@ targets:
     type: application
     platform: iOS
     sources:
-      - path: "GATIVX"
+      - path: GATIVX
     info:
-      properties:
-        UIBackgroundModes:
-          - location
+      path: GATIVX/Info.plist
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.paramitsolutions.gativx
