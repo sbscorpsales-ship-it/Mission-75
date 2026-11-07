@@ -134,7 +134,6 @@ jobs:
           grep -A1 '<key>com.apple.developer.healthkit.background-delivery</key>' ios/WALKON/WALKON.entitlements | grep -q '<true/>'
           APP_PRIVACY="build/WALKON-Simulator/Build/Products/Debug-iphonesimulator/WALKON.app/PrivacyInfo.xcprivacy"
           test -f "$APP_PRIVACY"
-          plutil -lint "$APP_PRIVACY"
           python3 - "$APP_PRIVACY" <<'PY'
           import plistlib, sys
           with open(sys.argv[1], "rb") as stream:
@@ -152,6 +151,7 @@ jobs:
           assert "NSPrivacyCollectedDataTypePreciseLocation" in collected, "Precise location disclosure missing"
           assert "NSPrivacyCollectedDataTypeHealth" in collected, "Health data disclosure missing"
           assert "NSPrivacyCollectedDataTypeFitness" in collected, "Fitness data disclosure missing"
+          print("WALKON privacy manifest validated")
           PY
 
       - name: Upload simulator build
