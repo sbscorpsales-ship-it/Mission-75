@@ -1572,3 +1572,146 @@ WALKON is not market-ready because it has many features or resembles a highly ra
 - core functionality remains useful without a paid subscription or network connection.
 
 Research status: market shortlist and product lessons documented. Not a final feature specification and not evidence that WALKON has been implemented or field-tested.
+
+
+## 26. Deeper product and platform findings — second research pass
+
+Research update: 2026-11-07. This pass focuses on verified workflows, data-source rules, hands-free use, export/privacy, subscription boundaries and failure patterns. It extends the app shortlist rather than treating store ratings as technical proof.
+
+### 26.1 Pacer — phone-first walking and source selection
+
+**Verified from Pacer's own documentation**
+- Pacer's default step-counting method uses the phone's built-in motion sensors.
+- It can also integrate with Apple Health on iOS, and with Samsung Health / Google Fit integrations on Android as documented in its support article.
+- Its product combines steps, distance, active time, goals, plans, outdoor GPS routes and group challenges.
+
+**WALKON implications**
+- Phone-only tracking must be a complete first-class experience; a watch must not be required.
+- An integration must explicitly define whether WALKON reads a health hub, writes to it, or uses the phone sensor directly. A single metric must not be counted through two paths.
+- Give the user a visible source explanation and a way to diagnose why a wearable or health hub is not contributing.
+- Walking plans and groups consume the validated daily/session records; they do not create new sensor data.
+
+Source:
+- https://support.mypacer.com/hc/en-us/articles/41658925082253-Which-wearables-3rd-party-app-integration-does-Pacer-support
+- https://apps.apple.com/in/app/pacer-pedometer-step-counter/id600446812
+
+### 26.2 StepsApp — simple passive tracking, widgets and explicit free/paid boundary
+
+**Verified from official listing and support**
+- Automatic step tracking, daily goals, streaks, challenges, leaderboards, Apple Health integration, Apple Watch support, trends, awards, Home Screen/Lock Screen widgets and data export are advertised.
+- Its support page says basic step tracking, step/distance analysis and calorie counting are free; GPS workouts/map tracking, insights/trends, some goals and ad-free use are in Pro.
+- Google Play listing advertises Google Fit integration, notifications, charts and monthly/yearly views.
+
+**WALKON implications**
+- The daily dashboard must be useful in seconds: today's steps, goal progress, weekly pattern and last update.
+- Widgets/lock-screen surfaces are valuable because passive tracking is often checked briefly.
+- Export and user access to history should be a trust feature, not a premium hostage.
+- Do not put the fundamental ability to record and retain a walk behind a subscription. Premium can add advanced coaching, analytics and customisation after the core remains dependable.
+
+Sources:
+- https://apps.apple.com/in/app/stepsapp-pedometer/id1037595083
+- https://steps.app/support/pedometer/ios/purchase/which-extra-features-are-included-in-the-pro-version
+- https://play.google.com/store/apps/details?id=com.stepsappgmbh.stepsapp
+
+### 26.3 Walkmeter — hands-free, data-rich and privacy-oriented design
+
+**Verified from developer documentation**
+- Records walking, hiking, running, cycling and other activity types; offers over 250 statistics, maps, graphs, splits, intervals and zones.
+- Supports Bluetooth heart-rate sensors and Apple Watch heart-rate data; uses the built-in accelerometer for step cadence.
+- On iPhone, it can use barometric altimeter data for ascent/descent.
+- Provides Siri voice commands for start, stop, lap and spoken statistics.
+- Supports spoken announcements, live tracking, route navigation and export/import formats including GPX, TCX, FIT, KML and CSV.
+- Its developer says workouts are stored on-device by default until the user chooses to share.
+
+**WALKON implications**
+- Hands-free interaction is a real fitness use case: voice commands and spoken progress can reduce the need to look at a phone while walking.
+- Advanced statistics should be configurable and derived from a traceable set of base measurements.
+- Export should be planned into the data model from the beginning; use documented interchange formats where practical.
+- Barometric elevation is a candidate signal, not a universal guarantee. Check sensor availability and calibrate/filter before displaying ascent.
+- Privacy-first local recording is a competitive advantage. Cloud/community sharing should be opt-in and separate from recording.
+
+Sources:
+- https://walkmeter.com/features/
+- https://walkmeter.com/documentation/
+- https://walkmeter.org/features/
+
+### 26.4 Apple Health — source priority and aggregation are user-controlled
+
+**Verified from Apple Support**
+- iPhone automatically counts steps and walking/running distance; Apple Watch contributes additional activity and health data.
+- Health organises similar measurements from different sources.
+- The user can inspect and reorder sources for a data type; the top source has priority when multiple sources contribute.
+- Newly added sources appear above existing ones by default.
+
+**WALKON implications**
+- HealthKit daily steps are not equivalent to adding all raw step samples from every device. Use HealthKit statistics for the dashboard.
+- Do not build a competing hidden source-priority system.
+- If showing source details, explain what HealthKit exposes and respect read-permission privacy.
+- WALKON's own recorded workout remains a separately identified activity; don't inject a second copy of its steps into the daily total.
+
+Source:
+- https://support.apple.com/en-in/108779
+
+### 26.5 Google Fit retirement — avoid a new integration dependency
+
+**Verified from Google**
+- Google Fit APIs are supported only until the end of 2026.
+- Google's migration guide recommends Health Connect for mobile-first step-tracking applications and the Google Health API for certain cloud/web companion integrations.
+- The migration guide says some old Fit APIs, including goals and BLE-specific services, have no direct replacement and should use Android platform APIs where appropriate.
+
+**WALKON implications**
+- Do not build a new Android architecture on Google Fit APIs.
+- Health Connect is the default Android health-data interchange/aggregation layer for mobile.
+- Use Android Sensors / Recording API / location and Bluetooth platform APIs for live on-device functionality according to the specific job.
+- Keep the adapter boundary so a future Google health service integration does not require rewriting workout-domain logic.
+
+Sources:
+- https://developers.google.com/fit/rest
+- https://developer.android.com/health-and-fitness/health-connect/migration/fit
+
+### 26.6 Customer failure evidence — synchronisation is a core feature
+
+**Nike Run Club public App Store review sample**
+- Reviews include reports of watch/phone sync failures, lost workouts, repeated log-outs, GPS distance loss and completed activities not registering in plans.
+- Other users praise guided runs and training plans; the app's value proposition is strong but only when recorded activities flow correctly into the plan/history.
+
+**Garmin Connect third-party review analysis**
+- A 2026 review study sampled 3,000 US Google Play reviews and identified 131 substantial complaints about watch-to-phone transfer across multiple app builds.
+- This is a specific review sample, not a population-wide failure rate, but it highlights the structural importance of reliable Bluetooth pairing and data transfer.
+
+**WALKON implications**
+- Every external source needs connection state, last successful sync, last received sample time, source identity and a retry/recovery state.
+- A watch disconnect must not erase the phone's local workout.
+- A completed workout must not be marked fully synced until the receiving platform confirms the write.
+- Sync operations must be idempotent and use stable IDs to avoid duplicates after retry.
+- Plans/challenges should reconcile from the durable workout record rather than depend on a fragile one-time callback.
+
+Sources:
+- https://apps.apple.com/us/app/nike-run-club-running-coach/id387771637?see-all=reviews
+- https://inapp.pro/en/rating/run-tracking/nike-run-club-running-coach
+- https://unstar.app/blog/garmin-connect-not-syncing-watch-disconnecting-reviews-2026
+
+### 26.7 Product architecture consequences — requirements now made explicit
+
+The following requirements are promoted from market observations into WALKON design constraints:
+
+1. **Phone-first operation:** daily steps and a recorded walk must work without a wearable.
+2. **Single metric authority:** one selected source for each displayed metric/time window; no silent addition of overlapping sources.
+3. **Source diagnostics:** record source, sample timestamps, last update, permission, availability and sync status.
+4. **Local-first recording:** durable local activity journal before optional cloud sync.
+5. **Recoverable sync:** stable workout IDs, retryable writes and duplicate protection.
+6. **Hands-free path:** voice/audio controls are a separate consumer of workout state, not another recorder.
+7. **Configurable detail:** simple default dashboard; advanced stats, splits, intervals and zones available without cluttering the primary flow.
+8. **Privacy/export:** local storage, explicit sharing, and exportable user history.
+9. **Free core:** passive daily steps, recording, completed workout history and basic progress remain usable without subscription.
+10. **Native platform adapters:** HealthKit/Core Motion/Core Location on iOS; Health Connect/SensorManager/Android location APIs on Android. Do not use Google Fit as the new Android foundation.
+
+### 26.8 Evidence quality and remaining work
+
+- Official Apple, Google, Samsung and app-developer support pages are used for platform behaviour and advertised capabilities.
+- App Store / Google Play listings are used for currently advertised features, compatibility and surfaced rating snapshots.
+- Customer reviews and third-party review studies are qualitative evidence of pain points. They do not establish the internal cause of a GPS or sync failure.
+- No competitor's private algorithm, source code, undocumented endpoint or hidden sensor-fusion pipeline has been inspected.
+- Remaining research: obtain a broader, reproducible cross-platform review sample for Strava, Pacer, StepsApp, Samsung Health, Fitbit/Google Health, adidas Running and Hevy; compare recent release regressions and accessibility/offline/privacy details; complete Android device/OEM variation research; verify all proposed iOS/Android API capabilities against current SDK documentation.
+
+Research status: deeper second pass documented. This is a durable design reference, not a claim of exhaustive market coverage or successful WALKON field implementation.
