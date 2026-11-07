@@ -52,7 +52,8 @@ After these: consolidate contradictions, close architecture decisions, produce a
 ## Last verified checkpoint
 - **Latest completed section:** 35.
 - **Latest research update:** Section 35 — calories and energy expenditure validity.
-- **Section-35 commit/blob:** to be recorded from the successful GitHub update and verification.
+- **Section-35 commit:** 8e48fc8e6aa445ac373d69bcd7a8998409f9aa61.
+- **Section-35 research blob:** 037fac2378d3a0f6d9bc48fa331ad92d7561bb7e.
 - **Next action:** research Section 36 — battery, thermal management and long-session behaviour.
 - **After Section 36:** Section 37 — offline-first storage, sync, conflict handling and export.
 
