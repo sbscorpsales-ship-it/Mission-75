@@ -35,5 +35,5 @@ For TestFlight distribution, configure an Apple Distribution certificate, an App
 
 - Apple Health daily steps and live walk-session steps are separate readings. Do not add them together; they can represent overlapping activity.
 - HealthKit background delivery is best-effort and controlled by iOS, not guaranteed to refresh in real time.
-- Completed walks and active-walk recovery checkpoints are stored locally first. When signed in and online, daily Apple Health totals and completed walk sessions/routes are backed up through authenticated, owner-scoped database RPCs. Unsent walks remain local and are retried when the app is active again.
+- Completed walks and active-walk recovery checkpoints are stored locally first. When signed in and online, daily Apple Health totals and completed walk-session steps, distance and routes are backed up through authenticated, owner-scoped database RPCs. Unsent walks remain local and are retried when the app is active again.
 - A simulator build cannot validate real HealthKit permissions, actual step counts, GPS accuracy, locked-screen behavior, or battery use. Those require a signed build on a physical iPhone.
