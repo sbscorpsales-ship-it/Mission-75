@@ -95,7 +95,7 @@ final class ActivityStore: ObservableObject {
             let directoryURL: URL = url.deletingLastPathComponent()
             try FileManager.default.createDirectory(at: directoryURL, withIntermediateDirectories: true, attributes: nil)
             let data = try encoder.encode(snapshot)
-            try data.write(to: url, options: [.atomic, .completeFileProtectionUnlessOpen])
+            try data.write(to: url, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
         } catch {
             storageStatus = "Active walk checkpoint failed: \(error.localizedDescription)"
         }
@@ -157,6 +157,6 @@ final class ActivityStore: ObservableObject {
             withIntermediateDirectories: true
         )
         let data = try encoder.encode(sessions)
-        try data.write(to: url, options: [.atomic, .completeFileProtectionUnlessOpen])
+        try data.write(to: url, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
     }
 }
