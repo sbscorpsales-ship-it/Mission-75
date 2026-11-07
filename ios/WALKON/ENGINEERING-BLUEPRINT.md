@@ -1875,3 +1875,176 @@ Before Android code is approved:
 8. Verify local save, export and retry after offline periods.
 
 Research status: detailed Android step semantics and four additional app/product workflows documented. No Android implementation has been written or device-tested.
+
+
+## 28. Location and GPS engine — iOS, Android and smartphone GNSS limitations
+
+Research update: 2026-11-07. This section defines what phone location systems actually provide, why routes drift, and how WALKON should consume native location services. It deliberately separates public platform behaviour from research algorithms and competitor internals.
+
+### 28.1 The phone does not expose a raw, perfect GPS track
+
+A smartphone location fix is a system estimate. Satellite GNSS is one input, but the OS can also use Wi-Fi, cellular, Bluetooth and device sensors to estimate position, altitude, heading and movement. Apple's Core Location documentation explicitly describes this multi-source approach. Android's Fused Location Provider likewise combines available location signals and lets the app request a quality/power trade-off.
+
+Consequences:
+- `CLLocation` / Android `Location` is a platform estimate, not a raw satellite measurement.
+- An app generally cannot command the phone to use only one physical positioning chip and assume that produces the best route.
+- Location accuracy is a reported estimate, not a guarantee that the true point lies inside a perfect circle.
+- GPS may take time to improve after start; buildings, roofs, trees, terrain and reflected/non-line-of-sight signals can degrade it.
+- WALKON should preserve native metadata and avoid claiming metre-perfect accuracy.
+
+Sources:
+- https://developer.apple.com/documentation/corelocation
+- https://developers.google.com/location-context/fused-location-provider
+- https://support.apple.com/en-us/102515
+
+### 28.2 iOS location acquisition
+
+**Public system interface**
+- Core Location provides location, altitude, course/heading and diagnostics through `CLLocationManager`, `CLLocationUpdate` and related APIs.
+- The framework can combine GPS, Wi-Fi, Bluetooth, magnetometer, barometer and cellular hardware.
+- `CLLocation` supplies coordinate, timestamp, horizontal accuracy, altitude, vertical accuracy, speed and course; speed/course validity must be checked rather than assumed.
+- Users can grant precise or reduced accuracy and can change authorization while the app is running.
+
+**Background operation**
+- iOS suspends most apps shortly after they move to the background.
+- In a suspended state, an app does not execute and does not receive live location callbacks; the system may queue updates and deliver them later.
+- For an explicitly active fitness workout, Apple documents the Location Updates background mode and modern `CLBackgroundActivitySession` / `CLServiceSession` approach. The app must communicate the active location use and recreate required service sessions appropriately after relaunch.
+- This is not a promise of uninterrupted execution after force-quit, device shutdown, permission revocation or system resource failure.
+
+**WALKON iOS design**
+- Location begins only after the user explicitly starts an outdoor recording.
+- Request When In Use access for the active workout flow; request Always only if a separately justified feature truly requires it.
+- Use one chosen Core Location pipeline per app version. Do not run parallel legacy and modern streams and merge their duplicate locations.
+- Persist timestamp, coordinate, horizontal accuracy, altitude, vertical accuracy, speed, course, source information where exposed, and receipt time.
+- Surface reduced accuracy, denied permission, location services off, no fix and temporarily stale data as distinct states.
+- Treat the background recording status and Live Activity as a view of the same workout coordinator, not separate recording engines.
+
+Sources:
+- https://developer.apple.com/documentation/corelocation
+- https://developer.apple.com/documentation/corelocation/handling-location-updates-in-the-background
+
+### 28.3 Android location acquisition
+
+**Public system interface**
+- Google Play services Fused Location Provider combines GPS and Wi-Fi and other available signals behind a single API.
+- `FusedLocationProviderClient` supports one-shot current location and repeated updates.
+- Fine location provides more precise data; coarse location is obfuscated/throttled. Android 12+ allows users to force approximate location even when an app requests fine location.
+- A request can return older cached locations; timestamp validation is required.
+
+**Background operation**
+- Ordinary coarse/fine location permission does not by itself grant unrestricted background delivery.
+- A user-initiated active workout should use the appropriate location foreground service with a visible notification and correct foreground-service type/permissions for the target Android version.
+- `ACCESS_BACKGROUND_LOCATION` has separate restrictions and should not be requested by default if the active-workout foreground-service pattern is sufficient.
+- Google Play policy expects background location to be core, user-beneficial, clearly disclosed and policy-compliant.
+- OEM battery managers can add device-specific restrictions; verify Samsung, Pixel and at least one additional OEM family.
+
+**WALKON Android design**
+- Start location only as part of a user-started outdoor workout.
+- Prefer the Fused Location Provider for the standard route path; use platform GNSS APIs only if a later proven requirement justifies the complexity.
+- Use a foreground location service for a visible active workout, following current Android API-level requirements.
+- Check permission precision, location settings, provider availability and timestamps at runtime.
+- Keep one authoritative location stream; do not combine duplicate Fused Location and raw GNSS streams into distance.
+
+Sources:
+- https://developers.google.com/android/reference/com/google/android/gms/location/FusedLocationProviderClient
+- https://developers.google.com/location-context/fused-location-provider
+- https://developer.android.com/develop/sensors-and-location/location/permissions
+- https://support.google.com/googleplay/android-developer/answer/9799150
+
+### 28.4 Why smartphone routes drift — GNSS and urban canyons
+
+GNSS errors are not just random noise. Buildings and other obstacles can block direct satellite signals or reflect them, creating non-line-of-sight (NLOS) and multipath errors. A 2023 smartphone study of urban GNSS found NLOS was the dominant source of its observed code outliers in the studied environment. Research on pedestrian positioning shows that GNSS combined with inertial measurements can improve continuity in challenging environments, but the results depend on the specific algorithm, hardware, calibration and test environment.
+
+WALKON implications:
+- A single bad fix can jump a route across a road or around a block.
+- Averaging every point blindly can smooth away real corners and still retain systematic multipath error.
+- A low reported accuracy value is not proof that the location is correct; use temporal continuity, speed/course plausibility and signal diagnostics where available.
+- Do not snap routes to roads/sidewalks in v1 unless the map-matching source, licence, confidence and failure behaviour are explicitly designed.
+- Preserve raw accepted observations and quality metadata so a future algorithm can be compared without losing evidence.
+
+Research sources:
+- https://www.sciencedirect.com/science/article/pii/S0263224123013301
+- https://doi.org/10.1109/ACCESS.2021.3055485
+- https://doi.org/10.1109/ACCESS.2021.3052733
+
+### 28.5 WALKON route point and quality contract
+
+Every received location observation should be normalized into a record with:
+- workout UUID and route-segment UUID;
+- source platform and provider (Core Location / Fused Location Provider / accessory if ever supported);
+- latitude/longitude in WGS84;
+- monotonic event timestamp and wall-clock timestamp where available;
+- horizontal accuracy in metres;
+- altitude and vertical accuracy;
+- speed and speed accuracy where supported;
+- course/heading and course accuracy where supported;
+- source/mock indicator where exposed;
+- callback receipt timestamp;
+- authorization precision and service state;
+- acceptance/rejection decision and reason;
+- algorithm version.
+
+Do not discard a sample without recording a diagnostic reason in a bounded diagnostic stream. Avoid retaining excessive raw diagnostics beyond the user's workout history and privacy policy.
+
+### 28.6 Distance, speed, pace and route segmentation
+
+**Distance**
+- Calculate route distance only from sequential accepted points within the same active segment.
+- Reject invalid coordinates, negative accuracy, stale/out-of-order timestamps and implausible displacement/speed spikes.
+- Use both the platform-reported accuracy and temporal plausibility; never rely on one hard-coded threshold as a universal truth.
+- Preserve a GPS gap when no reliable points arrive. Never draw a straight line through a long gap and count it as travelled distance.
+- Store raw accepted coordinates separately from derived/smoothed display geometry.
+- Use double precision/metres internally; round only for presentation.
+
+**Speed and pace**
+- Treat system speed as a sensor estimate with its own accuracy and validity.
+- Do not derive pace from one noisy point interval.
+- Use a rolling time/distance window with a minimum valid movement interval; display unavailable or unstable when quality is poor.
+- Keep elapsed time, paused time and moving time separate.
+- Define average pace from validated distance divided by the appropriate duration; name the duration (elapsed vs moving).
+
+**Segments**
+- Manual pause closes the active segment.
+- Resume starts a new segment.
+- Long GPS gaps remain explicit gap events within a segment or split the geometry, depending on the final route model; they are never bridged as real travel.
+- A finish event closes all open segments exactly once.
+
+### 28.7 GPS acquisition and quality UX
+
+Before start:
+- Explain location permission in the context of recording an outdoor route.
+- Display location readiness/quality as acquiring, usable, weak or unavailable, based on actual diagnostics and sample age.
+- Do not force the user to wait forever for a perfect fix; allow recording with a clear warning and retain the lower-quality state.
+
+During recording:
+- Show an unobtrusive quality indicator and last-fix age.
+- Do not animate the route as if it were exact when the location is stale or poor.
+- Show a gap warning only when actionable; avoid alert fatigue.
+- Provide a clear active recording indicator and stop control.
+
+After recording:
+- Show the route with uncertain/gap regions visually distinguishable.
+- Report distance and pace as estimates derived from accepted data.
+- If route quality was poor, explain why and avoid presenting false precision.
+
+### 28.8 Battery and update cadence
+
+- Request a location quality/accuracy level appropriate for outdoor walking; do not run maximum-frequency raw sensor loops without evidence they improve the final route.
+- Batch persistence writes where safe, but never leave the only copy of recent route points in memory for long periods.
+- Measure battery drain on real devices for screen-on, screen-locked, weak-GNSS and BLE-connected walks.
+- Use system thermal state and battery state to reduce optional work, not to silently reduce essential recording quality.
+- Do not hard-code one universal update interval before controlled field measurements. Platform batching and callback cadence are OS-controlled and may vary.
+
+### 28.9 Route engine implementation gates
+
+Before the route engine is frozen:
+1. Confirm the exact modern Core Location API and availability annotations in the Xcode SDK used for the iOS 26+ build.
+2. Confirm the selected iOS background location session lifecycle and recovery after process termination.
+3. Confirm Android foreground location service type/permission requirements across supported API levels and Play policy.
+4. Test approximate vs precise location, location disabled, stale cache, no fix, indoor start, urban canyon, tree cover and open sky.
+5. Test screen lock, incoming call, audio interruption, app suspension, low battery, thermal pressure and OEM battery saver.
+6. Compare repeated routes against known-distance reference and independent track, recording raw samples and accuracy metadata.
+7. Verify pause/resume, route gaps, duplicate callbacks, out-of-order callbacks and save/recovery.
+8. Measure battery consumption and establish evidence-based sampling/flush cadence.
+
+Research status: public platform background/location behaviour and GNSS failure modes documented. Route thresholds, update cadence and production algorithm remain intentionally unfinalized until controlled field evidence is available.
