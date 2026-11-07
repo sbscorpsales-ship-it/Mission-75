@@ -20,6 +20,7 @@ final class HealthKitManager: ObservableObject {
     private let energyType = HKObjectType.quantityType(forIdentifier: .activeEnergyBurned)!
     private var observer: HKObserverQuery?
     private var refreshAgain = false
+    private var pendingCompletions: [() -> Void] = []
 
     func resumeIfPreviouslyConnected() {
         guard UserDefaults.standard.bool(forKey: connectionRequestedKey) else { return }
@@ -52,6 +53,7 @@ final class HealthKitManager: ObservableObject {
             onComplete?()
             return
         }
+        if let onComplete { pendingCompletions.append(onComplete) }
         guard !isRefreshing else { refreshAgain = true; return }
         isRefreshing = true
         let start = Calendar.current.startOfDay(for: Date())
@@ -62,7 +64,9 @@ final class HealthKitManager: ObservableObject {
                 guard let self else { onComplete?(); return }
                 defer {
                     self.isRefreshing = false
-                    onComplete?()
+                    let completions = self.pendingCompletions
+                    self.pendingCompletions.removeAll()
+                    completions.forEach { $0() }
                     if self.refreshAgain {
                         self.refreshAgain = false
                         self.refreshRecentDays(days: days)
