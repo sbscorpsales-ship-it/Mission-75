@@ -2,8 +2,8 @@ import Foundation
 import HealthKit
 import Combine
 
-/// Read-only HealthKit integration. HealthKit performs source aggregation so
-/// GATIVX does not add overlapping iPhone and wearable step samples itself.
+/// Native, read-only Apple Health daily aggregate.
+/// HealthKit is the authority for the all-source daily total; CoreMotion is never added to it.
 @MainActor
 final class HealthKitManager: ObservableObject {
     @Published private(set) var todaySteps: Int?
@@ -12,218 +12,123 @@ final class HealthKitManager: ObservableObject {
     @Published private(set) var isRefreshing = false
     @Published private(set) var lastRefresh: Date?
     @Published private(set) var statusMessage = "Apple Health is not connected."
-
     var onDailyTotal: ((Date, Int) -> Void)?
 
     private let store = HKHealthStore()
     private let connectionRequestedKey = "gativx.healthkit.connectionRequested"
-    private var stepObserver: HKObserverQuery?
-    private var liveStepsQuery: HKStatisticsCollectionQuery?
-    private var refreshCompletions: [() -> Void] = []
     private let stepType = HKObjectType.quantityType(forIdentifier: .stepCount)!
-    private let activeEnergyType = HKObjectType.quantityType(forIdentifier: .activeEnergyBurned)!
+    private let energyType = HKObjectType.quantityType(forIdentifier: .activeEnergyBurned)!
+    private var observer: HKObserverQuery?
+    private var refreshAgain = false
 
-    /// Call on launch. The app remembers that the user initiated Health access,
-    /// then re-registers its observer after every app restart.
     func resumeIfPreviouslyConnected() {
         guard UserDefaults.standard.bool(forKey: connectionRequestedKey) else { return }
-        guard isAvailable else {
-            statusMessage = "Apple Health is not available on this device."
-            return
-        }
+        guard isAvailable else { statusMessage = "Apple Health is unavailable on this iPhone."; return }
         startObserving()
         refreshRecentDays()
     }
 
     func requestReadAccessAndStart() {
-        guard isAvailable else {
-            statusMessage = "Apple Health is not available on this device."
-            return
-        }
-
-        store.requestAuthorization(toShare: [], read: [stepType, activeEnergyType]) { [weak self] _, error in
+        guard isAvailable else { statusMessage = "Apple Health is unavailable on this iPhone."; return }
+        store.requestAuthorization(toShare: [], read: [stepType, energyType]) { [weak self] _, error in
             Task { @MainActor in
                 guard let self else { return }
                 if let error {
-                    self.statusMessage = "Health access request failed: \(error.localizedDescription)"
+                    self.statusMessage = "Health permission request failed: \(error.localizedDescription)"
                     return
                 }
-                // HealthKit does not reveal whether read access was denied.
+                // HealthKit intentionally does not reveal whether read access was denied.
                 UserDefaults.standard.set(true, forKey: self.connectionRequestedKey)
                 self.startObserving()
                 self.refreshRecentDays()
-                self.statusMessage = "Apple Health connection requested. Waiting for step data."
+                self.statusMessage = "Health access requested. Checking today's measured steps…"
             }
         }
     }
 
-    /// Fetch daily cumulative totals for today and the previous 29 local days.
-    /// Missing samples remain nil; they are never represented as a measured zero.
+    /// Query one local calendar-day cumulative aggregate. Missing data remains nil, never a fabricated zero.
     func refreshRecentDays(days: Int = 30, onComplete: (() -> Void)? = nil) {
-        // Do not query HealthKit until the user has explicitly connected it.
-        // The web/native cloud sign-in flow must not silently trigger health reads.
-        guard UserDefaults.standard.bool(forKey: connectionRequestedKey) else {
+        guard UserDefaults.standard.bool(forKey: connectionRequestedKey), isAvailable else {
             onComplete?()
             return
         }
-        guard isAvailable else { onComplete?(); return }
-        if isRefreshing {
-            if let onComplete { refreshCompletions.append(onComplete) }
-            return
-        }
+        guard !isRefreshing else { refreshAgain = true; return }
         isRefreshing = true
-        if let onComplete { refreshCompletions.append(onComplete) }
-
-        let calendar = Calendar.current
-        let today = calendar.startOfDay(for: Date())
-        guard let end = calendar.date(byAdding: .day, value: 1, to: today),
-              let start = calendar.date(byAdding: .day, value: -(max(1, days) - 1), to: today) else {
-            isRefreshing = false
-            let completions = refreshCompletions
-            refreshCompletions.removeAll()
-            completions.forEach { $0() }
-            return
-        }
-
-        var anchorComponents = calendar.dateComponents([.year, .month, .day], from: today)
-        anchorComponents.hour = 0
-        guard let anchor = calendar.date(from: anchorComponents) else {
-            isRefreshing = false
-            let completions = refreshCompletions
-            refreshCompletions.removeAll()
-            completions.forEach { $0() }
-            return
-        }
-
-        if let liveStepsQuery {
-            store.stop(liveStepsQuery)
-            self.liveStepsQuery = nil
-        }
-        let query = HKStatisticsCollectionQuery(
-            quantityType: stepType,
-            quantitySamplePredicate: HKQuery.predicateForSamples(withStart: start, end: end, options: .strictStartDate),
-            options: .cumulativeSum,
-            anchorDate: anchor,
-            intervalComponents: DateComponents(day: 1)
-        )
-
-        query.statisticsUpdateHandler = { [weak self] _, _, collection, error in
+        let start = Calendar.current.startOfDay(for: Date())
+        let end = min(Date(), Calendar.current.date(byAdding: .day, value: 1, to: start) ?? Date())
+        let predicate = HKQuery.predicateForSamples(withStart: start, end: end, options: .strictStartDate)
+        let query = HKStatisticsQuery(quantityType: stepType, quantitySamplePredicate: predicate, options: .cumulativeSum) { [weak self] _, statistics, error in
             Task { @MainActor in
-                guard let self else { return }
-                guard error == nil, let collection else { return }
-                let day = Calendar.current.startOfDay(for: Date())
-                guard let quantity = collection.statistics(for: day)?.sumQuantity() else { return }
-                let total = max(0, Int(quantity.doubleValue(for: .count())))
-                self.todaySteps = total
-                self.lastRefresh = Date()
-                self.statusMessage = "Apple Health live step updates received."
-                self.onDailyTotal?(day, total)
-            }
-        }
-
-        query.initialResultsHandler = { [weak self] _, collection, error in
-            Task { @MainActor in
-                guard let self else { return }
+                guard let self else { onComplete?(); return }
                 defer {
                     self.isRefreshing = false
-                    self.lastRefresh = Date()
-                    let completions = self.refreshCompletions
-                    self.refreshCompletions.removeAll()
-                    completions.forEach { $0() }
-                }
-                if let error {
-                    self.statusMessage = "Could not read Apple Health steps: \(error.localizedDescription)"
-                    return
-                }
-                guard let collection else {
-                    self.todaySteps = nil
-                    self.statusMessage = "Apple Health returned no step summary."
-                    return
-                }
-
-                self.todaySteps = nil
-                var foundToday = false
-                collection.enumerateStatistics(from: start, to: end) { statistics, _ in
-                    let day = calendar.startOfDay(for: statistics.startDate)
-                    guard let quantity = statistics.sumQuantity() else { return }
-                    let total = max(0, Int(quantity.doubleValue(for: .count())))
-                    self.onDailyTotal?(day, total)
-                    if calendar.isDateInToday(day) {
-                        foundToday = true
-                        self.todaySteps = total
+                    onComplete?()
+                    if self.refreshAgain {
+                        self.refreshAgain = false
+                        self.refreshRecentDays(days: days)
                     }
                 }
-                self.statusMessage = foundToday
-                    ? "Apple Health step totals refreshed."
-                    : "No step samples returned. Check Health access and device data; no zero has been assumed."
-            }
-        }
-        liveStepsQuery = query
-        store.execute(query)
-        refreshTodayActiveEnergy()
-    }
-
-    /// Reads Apple's measured active energy only. This is not total daily energy expenditure.
-    private func refreshTodayActiveEnergy() {
-        let start = Calendar.current.startOfDay(for: Date())
-        let predicate = HKQuery.predicateForSamples(withStart: start, end: Date(), options: .strictStartDate)
-        let query = HKStatisticsQuery(quantityType: activeEnergyType, quantitySamplePredicate: predicate, options: .cumulativeSum) { [weak self] _, statistics, error in
-            Task { @MainActor in
-                guard let self else { return }
-                guard error == nil, let quantity = statistics?.sumQuantity() else {
-                    self.todayActiveEnergyKcal = nil
+                if let error {
+                    self.statusMessage = "Apple Health read failed: \(error.localizedDescription)"
                     return
                 }
-                self.todayActiveEnergyKcal = max(0, Int(quantity.doubleValue(for: .kilocalorie()).rounded()))
+                guard let quantity = statistics?.sumQuantity() else {
+                    self.todaySteps = nil
+                    self.lastRefresh = Date()
+                    self.statusMessage = "No step samples returned for today. No zero has been assumed."
+                    return
+                }
+                let total = max(0, Int(quantity.doubleValue(for: .count()).rounded()))
+                self.todaySteps = total
+                self.lastRefresh = Date()
+                self.statusMessage = "Apple Health daily aggregate refreshed."
+                self.onDailyTotal?(start, total)
+                self.refreshTodayEnergy()
             }
         }
         store.execute(query)
     }
 
-    /// iOS background delivery is best-effort and not a real-time guarantee.
-    func startObserving() {
-        guard stepObserver == nil, isAvailable else { return }
-
-        let observer = HKObserverQuery(sampleType: stepType, predicate: nil) { [weak self] _, completion, error in
-            guard let self else {
-                completion()
-                return
-            }
-            if error != nil {
-                completion()
-                return
-            }
+    private func refreshTodayEnergy() {
+        let start = Calendar.current.startOfDay(for: Date())
+        let predicate = HKQuery.predicateForSamples(withStart: start, end: Date(), options: .strictStartDate)
+        let query = HKStatisticsQuery(quantityType: energyType, quantitySamplePredicate: predicate, options: .cumulativeSum) { [weak self] _, statistics, _ in
             Task { @MainActor in
-                self.refreshRecentDays(days: 30, onComplete: completion)
-            }
-        }
-        stepObserver = observer
-        store.execute(observer)
-
-        store.enableBackgroundDelivery(for: stepType, frequency: .hourly) { [weak self] success, error in
-            Task { @MainActor in
-                if let error {
-                    self?.statusMessage = "Background refresh unavailable: \(error.localizedDescription)"
-                } else if success {
-                    self?.statusMessage = "Apple Health background updates enabled where iOS permits."
+                guard let self else { return }
+                self.todayActiveEnergyKcal = statistics?.sumQuantity().map {
+                    max(0, Int($0.doubleValue(for: .kilocalorie()).rounded()))
                 }
             }
         }
+        store.execute(query)
     }
 
-    func refreshOnForeground() {
-        refreshRecentDays()
+    func startObserving() {
+        guard observer == nil, isAvailable else { return }
+        let query = HKObserverQuery(sampleType: stepType, predicate: nil) { [weak self] _, completion, error in
+            guard let self else { completion(); return }
+            guard error == nil else { completion(); return }
+            Task { @MainActor in self.refreshRecentDays(onComplete: completion) }
+        }
+        observer = query
+        store.execute(query)
+        store.enableBackgroundDelivery(for: stepType, frequency: .hourly) { [weak self] success, error in
+            Task { @MainActor in
+                if let error { self?.statusMessage = "Background Health refresh unavailable: \(error.localizedDescription)" }
+                else if success { self?.statusMessage = "Apple Health background updates enabled where iOS permits." }
+            }
+        }
     }
+
+    func refreshOnForeground() { refreshRecentDays() }
 
     func disconnect() {
         UserDefaults.standard.removeObject(forKey: connectionRequestedKey)
-        if let stepObserver {
-            store.stop(stepObserver)
-            self.stepObserver = nil
-        }
+        if let observer { store.stop(observer); self.observer = nil }
         store.disableBackgroundDelivery(for: stepType) { _, _ in }
         todaySteps = nil
         todayActiveEnergyKcal = nil
-        statusMessage = "Apple Health connection stopped in GATIVX."
+        lastRefresh = nil
+        statusMessage = "Apple Health disconnected in GATIVX."
     }
 }
