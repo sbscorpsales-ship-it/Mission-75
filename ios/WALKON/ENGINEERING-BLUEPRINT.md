@@ -3,7 +3,7 @@
 Status: Research draft — NOT final architecture approval
 Date: 2026-11-07
 Product: WALKON (temporary six-letter product name)
-Platform in first release: Native iPhone app (SwiftUI, iOS 17+)
+Platform in first release: Native iPhone app (SwiftUI, iOS 26.0+)
 Principle: Measurement accuracy and recoverability before design, social features or monetisation.
 
 ## 1. Product objective
@@ -298,7 +298,7 @@ Official source:
 
 ### Platform target decision
 
-The current XcodeGen spec says iOS 17. That target must be re-evaluated before implementation. Apple's WWDC25 video describes the newer iPhone/iPad workout-session experience; the exact deployment availability of the required iPhone-specific APIs must be checked against the SDK's availability annotations and Apple's current sample project. Do not assume that every WWDC25 capability works on iOS 17. The final deployment target should be selected only after this availability audit. The user's current iPhone model and installed iOS version must be included in the device test matrix.
+Historical note: this paragraph was superseded by the completed iOS 26 availability audit in Section 14. The final first-release deployment target is iOS 26.0+; the iOS 17 setting remains a prototype defect to correct during implementation.
 
 ### Important sensor distinction
 
@@ -1273,3 +1273,125 @@ Before adding a WALKON algorithm, answer:
 6. How will we validate that calculation against real observations?
 
 Only implement custom signal processing for the gap that remains after using Apple's native service. This is the central engineering principle for WALKON.
+
+
+## 24. Reference-app logic study and WALKON capability orchestration
+
+Research update: 2026-11-07. This section studies publicly documented behaviour and maps it to WALKON's own use of native iPhone capabilities. It does not claim access to private app source code, proprietary algorithms, or undocumented sensor-fusion logic.
+
+### 24.1 Apple Fitness — native iPhone movement and Health ecosystem
+
+**Publicly documented behaviour**
+- iPhone motion sensors track steps, walking distance and flights climbed when the phone is carried.
+- Fitness presents daily activity, trends, completed workouts and awards. With Apple Watch, additional Exercise and Stand measurements are available.
+- Health stores data from iPhone, Apple Watch, compatible third-party apps and accessories. Users can inspect and reorder sources for a data type.
+- Compatible third-party workouts can contribute to Fitness activity progress.
+
+**What this tells WALKON**
+- The iPhone already produces useful passive movement data without WALKON running a continuous foreground sensor loop. WALKON should read the HealthKit daily aggregate rather than try to duplicate the phone's passive step pipeline.
+- HealthKit is the interoperability layer. WALKON should save its own explicitly recorded workout and route into HealthKit, then read the user's permitted daily aggregate for the dashboard.
+- Source priority and aggregation belong to Apple's Health ecosystem. WALKON must not invent its own sum of overlapping iPhone, Watch and third-party step streams.
+- Fitness's rings and trends are a presentation/motivation model; they are not a reason to recreate Apple's private calculation logic.
+
+**Unknown / not to assume**
+- Apple's public user guides do not reveal the exact proprietary step-detection classifier, sensor-fusion weights, calorie model or all Fitness app internals.
+- The Health app's displayed total and an individual app's live session counter may differ because their sources, update cadence and aggregation windows differ.
+
+Sources:
+- https://support.apple.com/en-in/guide/iphone/iph4c34a8a95/27/ios
+- https://support.apple.com/guide/iphone/iphbb8259c61/ios
+- https://support.apple.com/en-in/108779
+- https://developer.apple.com/documentation/healthkit
+
+### 24.2 Strava — explicit outdoor recording and route workflow
+
+**Publicly documented behaviour**
+- User starts a recording, can pause/resume, then finishes and saves or discards the activity.
+- Strava documents auto-pause behaviour using GPS movement and/or phone accelerometer for some activity modes; it also documents false pause/resume cases when GPS is obstructed.
+- The recording flow exposes GPS-based activity data and a saved activity record. Public help content explains user-visible behaviour, not the complete proprietary route-quality algorithm.
+
+**What this tells WALKON**
+- A workout is an explicit user-owned session with a clear start, pause, resume, finish, save and discard lifecycle.
+- Manual pause must always be available. WALKON v1 should default auto-pause off until slow-walking and GPS-obstruction cases have been validated.
+- GPS quality and interruptions must be visible. A missing location interval must remain a gap, not become an invented straight-line route.
+- Live metrics are provisional; final summary must be computed from the durable accepted samples and persisted session boundaries.
+- Discard must be an intentional destructive action with confirmation; a saved workout must remain recoverable locally if HealthKit writing fails.
+
+**Unknown / not to assume**
+- Strava's private filtering thresholds, smoothing, server-side corrections, map matching and exact auto-pause classifier are not public.
+- Matching Strava's distance exactly is not a correctness criterion. WALKON must be internally consistent, explainable and validated against repeated known routes.
+
+Sources:
+- https://support.strava.com/en-us/articles/15402137-how-do-i-record-an-activity-in-strava
+- https://support.strava.com/en-us/articles/15401970-how-to-use-auto-pause-on-ios
+- https://developers.strava.com/docs/reference/
+
+### 24.3 Nike Run Club — coaching layered over a reliable recorder
+
+**Publicly documented behaviour**
+- NRC advertises GPS route, pace and distance tracking, workout history, guided audio runs, training plans and challenges.
+- Nike states that NRC can sync with Apple Health and supported wearable devices, and can upload activities to Strava.
+- Guided audio is an experience layered over a workout, not a substitute for the motion/location measurement system.
+
+**What this tells WALKON**
+- Keep measurement and coaching separate. A coach/audio module must consume the active workout state and approved metrics; it must not own or restart the GPS or pedometer.
+- Audio cues should use AVAudioSession correctly, respect audio interruptions and Bluetooth route changes, and never compromise the recorder's state.
+- Training plans and challenges should be consumers of completed, trusted workout records. They should not write competing step counts or alter route samples.
+- Integrations should exchange records through supported HealthKit or documented partner APIs, not scrape another app's local data.
+
+**Unknown / not to assume**
+- Nike does not publicly disclose NRC's complete GPS smoothing, step detection, pace estimation or internal data model.
+- App Store feature descriptions establish advertised capabilities, not the exact internal implementation.
+
+Sources:
+- https://apps.apple.com/in/app/nike-run-club-running-coach/id387771637
+- https://about.nike.com/en/newsroom/releases/nike-run-club-app-new-features
+
+### 24.4 WALKON's command-to-capability model
+
+WALKON should act as a coordinator. Each native capability is a bounded service with a single responsibility, an explicit activation condition, a defined output contract and a defined stop condition. No service should silently start another service or write the same metric.
+
+| User command / app state | Capability activated | Service output | WALKON responsibility |
+|---|---|---|---|
+| Open dashboard | HealthKit query/observer | Daily cumulative steps and permitted activity data | Display aggregate with source/refresh state; never add session steps |
+| Start outdoor walk | HKWorkoutSession + builder, Core Location, session step provider if needed, SQLite journal | Workout lifecycle, live metrics, timestamped locations, session steps | Create one UUID, start services once, persist state and quality metadata |
+| Pause | Workout session pause; stop route accumulation and pause session accounting | Explicit pause event | Persist pause timestamp; close route segment; do not bridge pause |
+| Resume | Workout session resume; restart location collection and session accounting | New active segment | Persist resume event and create a new route segment |
+| Lock screen | Active workout session and Live Activity | System-managed workout continuity/status surface | Keep UI as a projection of coordinator state; do not create a second recorder |
+| Finish | Workout builder finalization, route finalization, SQLite transaction | Final workout metrics and route association | Save locally first; save HealthKit workout once; associate route; journal each stage |
+| Connect heart-rate strap | CoreBluetooth | Validated BLE heart-rate characteristic samples | Bind accessory identity/provenance to workout; display unavailable when disconnected |
+| Request spoken guidance | AVAudioSession / AVSpeechSynthesizer or approved audio player | Audio output | Read workout state; never own measurement lifecycle |
+| Request haptic cue | Core Haptics / UIKit feedback | Tactile acknowledgement | Trigger only on explicit state/milestone events |
+| Capture a walk photo | AVFoundation | User-initiated image | Attach photo to workout only after explicit capture; no background camera |
+| Record voice note/call | AVAudioSession + AVFoundation | User-initiated audio | Require microphone permission and visible recording state |
+
+**Orchestration invariants**
+1. One WorkoutCoordinator owns the state machine. UI, Live Activity, audio and haptics observe its state; they do not own parallel state machines.
+2. One RouteRecorder owns Core Location updates and route-point quality decisions.
+3. One selected SessionStepProvider supplies session steps. Prefer the native workout builder's valid statistic only after confirming the required quantity is available on the target iPhone; otherwise use CMPedometer. Never add two providers.
+4. HealthKit daily totals and WALKON session steps are different products with different time windows; never combine them.
+5. Every callback is timestamped, tagged with source and associated with the current workout UUID before persistence.
+6. A pause, finish, permission loss, service error or app recovery is an explicit event in the journal.
+7. Optional capabilities (BLE, audio, camera, microphone, haptics) cannot block or corrupt the core walk recorder.
+8. Every service checks availability and authorization when invoked, reports unavailable/denied/error distinctly, and stops when its job is complete.
+9. No always-on camera, microphone, BLE scanning or high-frequency raw motion sampling for ordinary walking.
+10. The app must remain useful if any optional hardware/service is absent.
+
+### 24.5 Research conclusions and unresolved technical checks
+
+**Supported conclusions**
+- Use HealthKit as the daily health-data integration and workout record store.
+- Use Core Motion's system pedometer rather than writing a DIY raw accelerometer step detector.
+- Use Core Location for the outdoor route; preserve accuracy and timestamp metadata.
+- Use the iOS 26+ iPhone workout-session workflow for session lifecycle, live builder data, lock-screen status and recovery.
+- Keep coaching/audio/social functions downstream from the recorder.
+
+**Must be verified before implementation is frozen**
+- Inspect the exact iOS 26 SDK availability and Apple sample code for the iPhone workout session path; confirm the iPhone 12 Pro Max runtime behaviour.
+- Determine which step and distance quantities the iPhone HKLiveWorkoutBuilder actually supplies for the selected walking workout configuration. Do not assume a metric is present merely because the builder supports live statistics.
+- Confirm whether the target iPhone workout session and builder can keep the required services timely during screen lock, and document interruptions/recovery limits.
+- Confirm the exact Core Location background configuration and modern API lifecycle for an explicitly active workout.
+- Determine how HealthKit workout route association can be retried after a crash at each save stage; do not assume a finished route builder can be reopened.
+- Establish battery impact from controlled device measurements before selecting sampling rates or adding extra sensor streams.
+
+This section is a research map, not a claim that these behaviours have been tested on the target iPhone. The next research task is to resolve the listed unknowns from Apple's current SDK documentation and sample code, then freeze service contracts before any implementation change.
