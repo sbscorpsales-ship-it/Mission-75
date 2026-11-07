@@ -134,25 +134,7 @@ jobs:
           grep -A1 '<key>com.apple.developer.healthkit.background-delivery</key>' ios/WALKON/WALKON.entitlements | grep -q '<true/>'
           APP_PRIVACY="build/WALKON-Simulator/Build/Products/Debug-iphonesimulator/WALKON.app/PrivacyInfo.xcprivacy"
           test -f "$APP_PRIVACY"
-          python3 - "$APP_PRIVACY" <<'PY'
-          import plistlib, sys
-          with open(sys.argv[1], "rb") as stream:
-              manifest = plistlib.load(stream)
-          accessed = manifest.get("NSPrivacyAccessedAPITypes", [])
-          assert any(
-              item.get("NSPrivacyAccessedAPIType") == "NSPrivacyAccessedAPICategoryUserDefaults"
-              and "CA92.1" in item.get("NSPrivacyAccessedAPITypeReasons", [])
-              for item in accessed
-          ), "Missing approved UserDefaults API reason"
-          collected = {
-              item.get("NSPrivacyCollectedDataType")
-              for item in manifest.get("NSPrivacyCollectedDataTypes", [])
-          }
-          assert "NSPrivacyCollectedDataTypePreciseLocation" in collected, "Precise location disclosure missing"
-          assert "NSPrivacyCollectedDataTypeHealth" in collected, "Health data disclosure missing"
-          assert "NSPrivacyCollectedDataTypeFitness" in collected, "Fitness data disclosure missing"
-          print("WALKON privacy manifest validated")
-          PY
+          python3 -c 'import plistlib,sys; m=plistlib.load(open(sys.argv[1],"rb")); a=m.get("NSPrivacyAccessedAPITypes",[]); d={x.get("NSPrivacyCollectedDataType") for x in m.get("NSPrivacyCollectedDataTypes",[])}; assert any(x.get("NSPrivacyAccessedAPIType")=="NSPrivacyAccessedAPICategoryUserDefaults" and "CA92.1" in x.get("NSPrivacyAccessedAPITypeReasons",[]) for x in a); assert {"NSPrivacyCollectedDataTypePreciseLocation","NSPrivacyCollectedDataTypeHealth","NSPrivacyCollectedDataTypeFitness"}.issubset(d)' "$APP_PRIVACY"
 
       - name: Upload simulator build
         uses: actions/upload-artifact@v4
