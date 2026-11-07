@@ -1,3 +1,63 @@
+# WALKON — PROJECT CONTINUITY REGISTER
+> **Read this register before every continuation.** It is the operational checkpoint; the engineering sections below are the detailed evidence base. Update this register after every completed research section or verified implementation milestone. Never restart from the roadmap or repeat completed sections.
+
+## Current project state
+- **Product:** WALKON — fresh native fitness app with fresh data. Do not resume or import GATIVX/Mission-75 app implementation or data.
+- **Repository:** `sbscorpsales-ship-it/Mission-75`, branch `main`.
+- **Blueprint:** `ios/WALKON/ENGINEERING-BLUEPRINT.md`.
+- **Phase:** Research and engineering specification only. **App building is not authorized yet.**
+- **Current completed research:** Sections 1–30 exist below. Latest research section: **30 — Motion sensing, pedometer and activity recognition**.
+- **Exact next task:** **Section 31 — Heart-rate science and metrics.** Research physical measurement (PPG vs ECG), optical sensor limitations, phone vs watch vs chest strap, HR sampling/latency, resting HR, workout HR, zones, recovery/HRV boundaries, HealthKit/Health Connect data semantics, permissions, source attribution, gaps, accuracy validation and battery. Do not drift into unrelated feature design.
+- **After Section 31:** update this register's latest-completed and exact-next-task fields before proceeding to Section 32 (wearables and Bluetooth).
+- **No user device testing or screenshot requests** until the research/architecture blueprint is sufficiently complete and a coherent buildable test plan is ready.
+
+## Non-negotiable working rules
+1. **Research before implementation.** Do not write app code, build, deploy, or ask the user to test until the research and architecture gates are explicitly closed.
+2. **One research domain at a time.** Complete the domain, document evidence, implications, unresolved questions and validation gates; then move to the next exact task.
+3. **No repeated recaps.** Do not re-explain completed sections unless a new finding changes them. Refer to section numbers and continue from the exact next task.
+4. **No circular instructions.** Never ask the user to repeat known context, re-run completed steps, or perform research the assistant can do.
+5. **Audit before changing.** Fetch the current GitHub file and SHA before every write. Never overwrite a newer version. After each write, fetch again and verify the new section and register.
+6. **Evidence discipline.** Distinguish official API guarantees, vendor descriptions, independent research, engineering proposals and untested assumptions. Cite current sources in the section.
+7. **No invented verification.** A documented capability is not a tested device result. A saved blueprint is not an implemented app.
+8. **Preserve continuity after each milestone.** Update this register with completed section, exact next action, open questions and latest commit/blob SHA. The next session starts by reading this register, not by generating a fresh roadmap.
+9. **Keep the existing single blueprint.** Do not scatter duplicate planning documents or create a second competing source of truth.
+10. **User priority:** reliability and accuracy first; design and optional features later.
+
+## Completed research index
+- **Sections 1–12:** Product objective, data rules, proposed architecture, GPS logic, recording state machine, Android direction, reference-app checklist, acceptance tests, deferred features/decisions, prototype gaps and references.
+- **Sections 13–22:** WWDC25 workout research, iOS platform decision, build specification, implementation sequence, SQLite/HealthKit recovery, prototype audit, database schema, service contracts, iOS background location, reference-app architecture.
+- **Section 23:** iPhone hardware-first study.
+- **Section 24:** Reference-app logic and capability orchestration.
+- **Section 25:** Cross-platform market study.
+- **Section 26:** Deeper product/platform/customer findings.
+- **Section 27:** Android sensor pipeline and cross-platform app behaviour.
+- **Section 28:** GPS/location engine on iOS and Android.
+- **Section 29:** Elevation, altitude and barometric measurement.
+- **Section 30:** Motion sensing, pedometer and activity recognition.
+
+## Open research queue (ordered)
+31. Heart-rate science and metrics.
+32. Wearables and Bluetooth sensor interoperability.
+33. Workout lifecycle, interruptions, crash recovery and exactly-once save.
+34. HealthKit and Health Connect semantics, permissions, sync and reconciliation.
+35. Calories and energy expenditure validity.
+36. Battery, thermal management and long-session behaviour.
+37. Offline-first storage, sync, conflict handling and export.
+38. Maps, route display, map matching and location privacy.
+39. Privacy, security, consent, retention and deletion.
+40. Accessibility, gait diversity and inclusive measurement.
+41. Test strategy, reference instruments, acceptance thresholds and release gates.
+After these: consolidate contradictions, close architecture decisions, produce a single implementation-ready specification and explicit go/no-go checklist. Only then ask for authorization to build.
+
+## Last verified checkpoint
+- **Latest completed section:** 30.
+- **Latest commit:** `457b601053ce7660c42f24eb2454f90389c8d406`.
+- **Latest blueprint blob SHA:** `8f0bb4c6cd31fb870930085c67a38c999d4045fd`.
+- **Next action:** research Section 31 — heart-rate science and metrics.
+- **Verification note:** these identifiers describe the checkpoint before this continuity-register update; refresh them after committing this register.
+
+---
+
 # WALKON — Engineering Blueprint (Research Draft)
 
 Status: Research draft — NOT final architecture approval
