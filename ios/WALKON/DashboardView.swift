@@ -24,6 +24,7 @@ struct DashboardView: View {
         }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { health.refresh() }
+            if phase == .background, tracker.isTracking { tracker.checkpointNow() }
 
         }
     }
@@ -90,7 +91,7 @@ struct DashboardView: View {
                 Image(systemName: "figure.walk.motion").font(.system(size: 64)).foregroundStyle(.mint)
                 Text(tracker.isTracking ? "Walk in progress" : "Ready when you are").font(.title2.bold())
                 HStack(spacing: 28) {
-                    metric("SESSION STEPS", value: tracker.liveSteps.formatted(), icon: "shoe")
+                    metric("SESSION STEPS", value: tracker.liveSteps.formatted(), icon: "figure.walk")
                     metric("DISTANCE", value: String(format: "%.2f km", tracker.distanceMeters / 1000), icon: "location")
                 }
                 if let accuracy = tracker.gpsAccuracy {
