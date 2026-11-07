@@ -155,7 +155,18 @@ final class SupabaseRESTClient: ObservableObject {
         }
     }
     func syncActivitySessionRoute(id: UUID, startedAt: Date, finishedAt: Date, points: [GATIVXRoutePoint], retryAfterRefresh: Bool = true) async {
-        guard !points.isEmpty, points.count <= 20_000 else { return }
+        guard !points.isEmpty else { return }
+        // The database RPC caps payloads at 20,000 points. Preserve the full
+        // local recording, but uniformly thin oversized cloud payloads while
+        // retaining both endpoints and the overall route shape.
+        let cloudPoints: [GATIVXRoutePoint]
+        if points.count > 20_000 {
+            cloudPoints = (0..<20_000).map { index in
+                points[index * (points.count - 1) / 19_999]
+            }
+        } else {
+            cloudPoints = points
+        }
         do {
             guard let token = accessToken else { throw ClientError.notSignedIn }
             let formatter = ISO8601DateFormatter()
@@ -165,7 +176,7 @@ final class SupabaseRESTClient: ObservableObject {
             // when pedometer steps were unavailable, preventing the walk_sessions
             // write below. The walk RPC is the canonical route-history writer.
             // Mirror native GPS routes into walk_sessions, which the web dashboard reads.
-            let coordinates = points.map { CLLocation(latitude: $0.latitude, longitude: $0.longitude) }
+            let coordinates = cloudPoints.map { CLLocation(latitude: $0.latitude, longitude: $0.longitude) }
             var distanceMeters = 0.0
             if coordinates.count > 1 {
                 for index in 1..<coordinates.count {
@@ -183,7 +194,7 @@ final class SupabaseRESTClient: ObservableObject {
                 "p_finished_at": formatter.string(from: finishedAt),
                 "p_duration_seconds": max(0, min(86400, Int(finishedAt.timeIntervalSince(startedAt)))),
                 "p_distance_m": distanceMeters,
-                "p_route_points": points.map { $0.cloudValue }
+                "p_route_points": cloudPoints.map { $0.cloudValue }
             ])
             let (walkData, walkResponse) = try await URLSession.shared.data(for: walkRequest)
             guard let walkHTTP = walkResponse as? HTTPURLResponse else { throw ClientError.invalidResponse }
