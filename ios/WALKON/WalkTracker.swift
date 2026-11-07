@@ -80,7 +80,7 @@ final class WalkTracker: NSObject, ObservableObject, CLLocationManagerDelegate {
                 self.pedometer.startUpdates(from: snapshot.startedAt) { [weak self] data, error in
                     Task { @MainActor in
                         guard let self, self.isTracking else { return }
-                        if let count = data?.numberOfSteps.intValue { self.liveSteps = max(count, 0) }
+                        if let count = data?.numberOfSteps.intValue { self.liveSteps = max(count, self.liveSteps) }
                         if let error { self.locationStatus = "Step sensor issue: \(error.localizedDescription)" }
                         self.checkpoint()
                     }
@@ -139,7 +139,7 @@ final class WalkTracker: NSObject, ObservableObject, CLLocationManagerDelegate {
                         return
                     }
                     if let count = data?.numberOfSteps.intValue {
-                        self.liveSteps = max(count, 0)
+                        self.liveSteps = max(count, self.liveSteps)
                         self.checkpoint()
                     }
                 }
@@ -170,7 +170,7 @@ final class WalkTracker: NSObject, ObservableObject, CLLocationManagerDelegate {
             return
         }
         pedometer.queryPedometerData(from: started, to: ended) { [weak self] data, _ in
-            let finalSteps = max(data?.numberOfSteps.intValue ?? fallbackSteps, 0)
+            let finalSteps = max(data?.numberOfSteps.intValue ?? fallbackSteps, fallbackSteps, 0)
             Task { @MainActor in
                 guard let self else { return }
                 self.liveSteps = finalSteps
