@@ -18,6 +18,8 @@ struct ContentView: View {
     @State private var sessionStatus = "Start a session to count steps."
     @State private var liveMotionSteps: Int?
     @State private var liveMotionDistanceMeters: Double?
+    @State private var lastMotionCloudSyncAt: Date?
+    @State private var lastMotionCloudSteps: Int = -1
 
     /// Foreground live sensor feed. This is shown separately from HealthKit's
     /// deduplicated all-source daily total; never add the two together.
@@ -28,8 +30,27 @@ struct ContentView: View {
         livePedometer.startUpdates(from: start) { data, error in
             DispatchQueue.main.async {
                 guard error == nil, let data else { return }
-                self.liveMotionSteps = data.numberOfSteps.intValue
-                self.liveMotionDistanceMeters = data.distance?.doubleValue
+                let steps = data.numberOfSteps.intValue
+                let distance = data.distance?.doubleValue
+                self.liveMotionSteps = steps
+                self.liveMotionDistanceMeters = distance
+
+                // Persist a separate iPhone-only observation. Throttle writes
+                // to avoid sending every sensor callback to Supabase.
+                let now = Date()
+                let enoughTime = self.lastMotionCloudSyncAt.map { now.timeIntervalSince($0) >= 60 } ?? true
+                let meaningfulChange = self.lastMotionCloudSteps < 0 || steps - self.lastMotionCloudSteps >= 100
+                if self.cloud.isSignedIn && (enoughTime || meaningfulChange) {
+                    self.lastMotionCloudSyncAt = now
+                    self.lastMotionCloudSteps = steps
+                    Task {
+                        await self.cloud.syncMotionDailySteps(
+                            date: now,
+                            steps: steps,
+                            distanceMeters: distance
+                        )
+                    }
+                }
             }
         }
     }
