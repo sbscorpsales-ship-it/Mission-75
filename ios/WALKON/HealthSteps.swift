@@ -33,9 +33,12 @@ final class HealthSteps: ObservableObject {
         }
     }
 
-    func refresh() {
+    func refresh() { refresh(completion: nil) }
+
+    private func refresh(completion: (() -> Void)?) {
         guard HKHealthStore.isHealthDataAvailable() else {
             status = "Apple Health is unavailable"
+            completion?()
             return
         }
         let now = Date()
@@ -60,11 +63,13 @@ final class HealthSteps: ObservableObject {
                     self.steps = nil
                     self.status = "No step total is available for today"
                     self.lastUpdated = Date()
+                    completion?()
                     return
                 }
                 self.steps = max(Int(quantity.doubleValue(for: .count()).rounded()), 0)
                 self.lastUpdated = Date()
                 self.status = "Apple Health total updated"
+                completion?()
             }
         }
         store.execute(query)
@@ -74,10 +79,11 @@ final class HealthSteps: ObservableObject {
         guard !observerInstalled else { return }
         observerInstalled = true
         let query = HKObserverQuery(sampleType: stepType, predicate: nil) { [weak self] _, completion, error in
-            if error == nil {
-                Task { @MainActor in self?.refresh() }
+            guard error == nil else { completion(); return }
+            Task { @MainActor in
+                guard let self else { completion(); return }
+                self.refresh(completion: completion)
             }
-            completion()
         }
         store.execute(query)
         store.enableBackgroundDelivery(for: stepType, frequency: .hourly) { [weak self] success, _ in
