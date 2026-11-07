@@ -151,6 +151,8 @@ final class HealthStepsSimulatorTests: XCTestCase {
         let health = HealthSteps()
         health.requestAccessAndRefresh()
         XCTAssertTrue(health.status.contains("physical iPhone"))
+        health.refresh()
+        XCTAssertTrue(health.status.contains("physical iPhone"))
         XCTAssertNil(health.steps)
     }
 }
