@@ -13,6 +13,10 @@ final class HealthSteps: ObservableObject {
     private var observerInstalled = false
 
     func requestAccessAndRefresh() {
+        #if targetEnvironment(simulator)
+        status = "Apple Health step access requires a physical iPhone"
+        return
+        #endif
         guard HKHealthStore.isHealthDataAvailable() else {
             status = "Apple Health is unavailable on this device"
             return
