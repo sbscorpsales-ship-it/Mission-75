@@ -68,8 +68,10 @@ final class ActivityStore: ObservableObject {
         let snapshot = ActiveWalkSnapshot(startedAt: startedAt, savedAt: Date(), steps: max(steps, 0),
                                           distanceMeters: max(distanceMeters, 0), route: route)
         do {
+            guard let url = activeStorageURL else { throw CocoaError(.fileNoSuchFile) }
+            try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
             let data = try encoder.encode(snapshot)
-            try data.write(to: activeStorageURL, options: [.atomic, .completeFileProtectionUnlessOpen])
+            try data.write(to: url, options: [.atomic, .completeFileProtectionUnlessOpen])
         } catch {
             storageStatus = "Active walk checkpoint failed: \(error.localizedDescription)"
         }
