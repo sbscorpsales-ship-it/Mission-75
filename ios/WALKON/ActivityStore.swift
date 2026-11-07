@@ -1,5 +1,6 @@
 import Foundation
 import Combine
+import CoreLocation
 
 struct ActiveWalkSnapshot: Codable {
     let startedAt: Date
@@ -25,6 +26,19 @@ struct WalkSession: Identifiable, Codable {
     let route: [RoutePoint]
 
     var duration: TimeInterval { max(endedAt.timeIntervalSince(startedAt), 0) }
+
+    static func acceptedDistance(from previous: RoutePoint, to next: RoutePoint) -> Double? {
+        guard previous.timestamp < next.timestamp,
+              previous.horizontalAccuracy >= 0, previous.horizontalAccuracy <= 35,
+              next.horizontalAccuracy >= 0, next.horizontalAccuracy <= 35 else { return nil }
+        let elapsed = next.timestamp.timeIntervalSince(previous.timestamp)
+        guard elapsed <= 30 else { return nil }
+        let oldLocation = CLLocation(latitude: previous.latitude, longitude: previous.longitude)
+        let newLocation = CLLocation(latitude: next.latitude, longitude: next.longitude)
+        let distance = newLocation.distance(from: oldLocation)
+        guard distance.isFinite, distance >= 0, distance / elapsed <= 8 else { return nil }
+        return distance
+    }
 }
 
 @MainActor
@@ -83,7 +97,7 @@ final class ActivityStore: ObservableObject {
         do {
             let data = try Data(contentsOf: url)
             let snapshot = try decoder.decode(ActiveWalkSnapshot.self, from: data)
-            guard snapshot.startedAt <= Date(), snapshot.savedAt <= Date(),
+            guard snapshot.startedAt <= Date(), snapshot.savedAt <= Date(), snapshot.savedAt >= snapshot.startedAt,
                   Date().timeIntervalSince(snapshot.savedAt) < 24 * 60 * 60 else {
                 try? FileManager.default.removeItem(at: url)
                 return nil
