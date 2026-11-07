@@ -8,7 +8,7 @@
 - **Phase:** Research and engineering specification only. **App building is not authorized yet.**
 - **Current completed research:** Sections 1–31 exist below. Latest research section: **31 — Heart-rate science and metrics**.
 - **Exact next task:** **Section 32 — Wearables and Bluetooth interoperability.** Research BLE GATT and Heart Rate Service, pairing/bonding, permissions, scanning/connection lifecycle, background restrictions, reconnects, multiple sensors, source selection, Apple Watch integration boundaries, Android Wear OS/Health Connect, device compatibility, battery and security. Do not drift into unrelated feature design.
-- **After Section 31:** update this register's latest-completed and exact-next-task fields before proceeding to Section 32 (wearables and Bluetooth).
+- **After Section 32:** update this register's latest-completed and exact-next-task fields before proceeding to Section 33 (workout lifecycle and recovery).
 - **No user device testing or screenshot requests** until the research/architecture blueprint is sufficiently complete and a coherent buildable test plan is ready.
 
 ## Non-negotiable working rules
@@ -51,8 +51,9 @@ After these: consolidate contradictions, close architecture decisions, produce a
 
 ## Last verified checkpoint
 - **Latest completed section:** 31.
+- **Latest section-31 commit:** `7368bb402eec9947af083191c3873fec805970a3`.
+- **Latest section-31 blob SHA:** `3270deff835f0cc6b3f7aebc87b0e5953ba9f8fb`.
 - **Next action:** research Section 32 — wearables and Bluetooth interoperability.
-- **Verification note:** refresh commit and blob identifiers after this update is committed and fetched.
 
 ---
 
