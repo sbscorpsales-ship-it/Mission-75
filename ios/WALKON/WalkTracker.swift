@@ -40,8 +40,13 @@ final class WalkTracker: NSObject, ObservableObject, CLLocationManagerDelegate {
             locationStatus = "Recovered walk; Always location is needed for locked-screen GPS"
             location.startUpdatingLocation()
             requestAlwaysIfNeeded()
-        default:
-            locationStatus = "Recovered walk; enable location to continue GPS recording"
+        case .notDetermined:
+            locationStatus = "Recovered walk; location permission is needed to resume GPS"
+            location.requestWhenInUseAuthorization()
+        case .denied, .restricted:
+            locationStatus = "Recovered walk; location access is off — enable it in Settings"
+        @unknown default:
+            locationStatus = "Recovered walk; location permission status is unknown"
         }
         guard CMPedometer.isStepCountingAvailable() else { checkpoint(); return }
         pedometer.queryPedometerData(from: snapshot.startedAt, to: Date()) { [weak self] data, _ in
