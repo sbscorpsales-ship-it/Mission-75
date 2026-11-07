@@ -9,7 +9,7 @@ WALKON is a native iOS app. Its simulator build is for compile and automated-tes
    `brew install xcodegen`
    `xcodegen generate --spec ios/project.yml --project ios`
 3. Open `ios/WALKON.xcodeproj` in Xcode.
-4. Select the WALKON target and set your Apple Developer team under **Signing & Capabilities**. Enable the HealthKit capability and retain the location and motion usage descriptions.
+4. Select the WALKON target and set your Apple Developer team under **Signing & Capabilities**. Enable **HealthKit** and its **Background Delivery** option. The project includes both required HealthKit entitlements; retain them when configuring signing. Keep the location and motion usage descriptions.
 5. Connect the iPhone, select it as the run destination, then build and run.
 6. Approve Health access for Steps and allow the location permissions requested while starting a walk. For locked-screen route recording, iOS must grant **Always** location access.
 
