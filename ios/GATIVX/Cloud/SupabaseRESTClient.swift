@@ -113,6 +113,33 @@ final class SupabaseRESTClient: ObservableObject {
             status = "Activity saved on this iPhone; cloud sync pending: " + error.localizedDescription
         }
     }
+    func syncActivitySessionRoute(id: UUID, points: [GATIVXRoutePoint], retryAfterRefresh: Bool = true) async {
+        guard !points.isEmpty, points.count <= 20_000 else { return }
+        do {
+            guard let token = accessToken else { throw ClientError.notSignedIn }
+            var request = URLRequest(url: baseURL.appendingPathComponent("rest/v1/rpc/sync_activity_session_route"))
+            request.httpMethod = "POST"
+            request.setValue(publishableKey, forHTTPHeaderField: "apikey")
+            request.setValue("Bearer " + token, forHTTPHeaderField: "Authorization")
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.httpBody = try JSONSerialization.data(withJSONObject: [
+                "p_session_id": id.uuidString,
+                "p_route_points": points.map { $0.cloudValue }
+            ])
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let http = response as? HTTPURLResponse else { throw ClientError.invalidResponse }
+            if http.statusCode == 401 && retryAfterRefresh {
+                try await refreshSession()
+                await syncActivitySessionRoute(id: id, points: points, retryAfterRefresh: false)
+                return
+            }
+            guard (200..<300).contains(http.statusCode) else { throw Self.serverError(data) }
+            status = "Activity steps and GPS route synced to your GATIVX account."
+        } catch {
+            status = "GPS route saved on this iPhone; cloud sync pending: " + error.localizedDescription
+        }
+    }
+
     private func refreshSession() async throws {
         guard let refreshToken else { throw ClientError.notSignedIn }
         var request = URLRequest(url: baseURL.appendingPathComponent("auth/v1/token").appending(queryItems: [URLQueryItem(name: "grant_type", value: "refresh_token")]))

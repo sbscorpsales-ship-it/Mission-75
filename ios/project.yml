@@ -11,6 +11,10 @@ targets:
     platform: iOS
     sources:
       - path: GATIVX
+    info:
+      properties:
+        UIBackgroundModes:
+          - location
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.paramitsolutions.gativx
@@ -20,7 +24,8 @@ targets:
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_KEY_NSHealthShareUsageDescription: "GATIVX reads your daily step count and active energy burned to show your activity progress."
         INFOPLIST_KEY_NSMotionUsageDescription: "GATIVX counts steps during an activity session using the iPhone motion sensor."
-        INFOPLIST_KEY_NSLocationWhenInUseUsageDescription: "GATIVX uses your location only when you start a GPS walk."
+        INFOPLIST_KEY_NSLocationWhenInUseUsageDescription: "GATIVX records your route only during an activity you start."
+        INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription: "GATIVX needs location access to continue recording your route while your phone is locked during an active walk."
         CODE_SIGN_ENTITLEMENTS: GATIVX/GATIVX.entitlements
         SUPPORTS_MACCATALYST: NO
     scheme:
