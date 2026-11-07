@@ -51,7 +51,7 @@ const ids = ["vSteps", "vHeartPoints", "vActiveMinutes", "vDistance", "vWater", 
 for (const id of ids) if (!html.includes('id="' + id + '"')) fail("Dashboard metric missing: " + id);
 if (ids.every(id => html.includes('id="' + id + '"'))) pass("Six activity dashboard metric elements are present");
 
-if (!html.includes("x.steps==null?'—':fmt(x.steps)") || !html.includes("x.distance==null?'—':Number(x.distance).toFixed(2)+' km'")) fail("Missing activity data must not display as zero");
+if (!html.includes("displaySteps==null?'—':fmt(displaySteps)") || !html.includes("x.distance==null?'—':Number(x.distance).toFixed(2)+' km'")) fail("Missing activity data must not display as zero");
 else pass("Missing step and distance values remain unknown, not zero");
 
 if (!html.includes("gativx.brandIntro.seen.v1")) fail("First-visit intro flag missing");
