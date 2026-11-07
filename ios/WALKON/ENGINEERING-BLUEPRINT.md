@@ -765,3 +765,199 @@ A session metric must carry value, unit, source, sample interval and availabilit
 7. No test target or signed device build evidence exists.
 
 These are code defects and missing capabilities, not user setup problems. Do not ask the user to repair them manually.
+
+
+## 19. SQLite schema — v1 normative specification
+
+The following is the logical v1 schema. Use SQLite INTEGER for UTC epoch milliseconds, REAL for coordinates/measurements, TEXT for UUIDs/enums/JSON metadata. All writes use prepared statements and bound parameters. Enable `PRAGMA foreign_keys=ON`, `journal_mode=WAL`, `synchronous=FULL`, and a bounded `busy_timeout`. Use one serialized database writer; readers may use separate read-only connections.
+
+```sql
+CREATE TABLE schema_migrations (
+  version INTEGER PRIMARY KEY,
+  applied_at_ms INTEGER NOT NULL
+);
+
+CREATE TABLE workouts (
+  id TEXT PRIMARY KEY NOT NULL,
+  activity_type TEXT NOT NULL CHECK (activity_type = 'walking'),
+  state TEXT NOT NULL CHECK (state IN (
+    'draft','recording','paused','finishing','workout_saved',
+    'route_finalizing','completed','recoverable_failure','discarded'
+  )),
+  started_at_ms INTEGER NOT NULL,
+  ended_at_ms INTEGER,
+  elapsed_seconds REAL,
+  moving_seconds REAL,
+  distance_m REAL NOT NULL DEFAULT 0 CHECK (distance_m >= 0),
+  session_steps INTEGER CHECK (session_steps IS NULL OR session_steps >= 0),
+  session_steps_source TEXT,
+  elevation_gain_m REAL,
+  algorithm_version TEXT NOT NULL,
+  healthkit_workout_uuid TEXT UNIQUE,
+  healthkit_route_uuid TEXT UNIQUE,
+  healthkit_workout_state TEXT NOT NULL DEFAULT 'not_started',
+  healthkit_route_state TEXT NOT NULL DEFAULT 'not_started',
+  last_error_domain TEXT,
+  last_error_code INTEGER,
+  last_error_message TEXT,
+  created_at_ms INTEGER NOT NULL,
+  updated_at_ms INTEGER NOT NULL
+);
+
+CREATE TABLE route_segments (
+  id TEXT PRIMARY KEY NOT NULL,
+  workout_id TEXT NOT NULL REFERENCES workouts(id) ON DELETE CASCADE,
+  sequence INTEGER NOT NULL CHECK (sequence >= 0),
+  started_at_ms INTEGER NOT NULL,
+  ended_at_ms INTEGER,
+  close_reason TEXT CHECK (close_reason IN (
+    'pause','gps_gap','finish','interruption','recovery'
+  )),
+  UNIQUE(workout_id, sequence)
+);
+
+CREATE TABLE route_points (
+  id TEXT PRIMARY KEY NOT NULL,
+  workout_id TEXT NOT NULL REFERENCES workouts(id) ON DELETE CASCADE,
+  segment_id TEXT NOT NULL REFERENCES route_segments(id) ON DELETE CASCADE,
+  sequence INTEGER NOT NULL CHECK (sequence >= 0),
+  timestamp_ms INTEGER NOT NULL,
+  latitude REAL NOT NULL CHECK (latitude BETWEEN -90 AND 90),
+  longitude REAL NOT NULL CHECK (longitude BETWEEN -180 AND 180),
+  horizontal_accuracy_m REAL NOT NULL,
+  altitude_m REAL,
+  vertical_accuracy_m REAL,
+  speed_mps REAL,
+  course_degrees REAL,
+  source TEXT NOT NULL DEFAULT 'core_location',
+  accepted INTEGER NOT NULL CHECK (accepted IN (0,1)),
+  rejection_reason TEXT,
+  UNIQUE(segment_id, sequence)
+);
+
+CREATE TABLE workout_events (
+  id TEXT PRIMARY KEY NOT NULL,
+  workout_id TEXT NOT NULL REFERENCES workouts(id) ON DELETE CASCADE,
+  idempotency_key TEXT NOT NULL UNIQUE,
+  sequence INTEGER NOT NULL,
+  event_type TEXT NOT NULL,
+  occurred_at_ms INTEGER NOT NULL,
+  payload_json TEXT NOT NULL DEFAULT '{}',
+  UNIQUE(workout_id, sequence)
+);
+
+CREATE TABLE metric_samples (
+  id TEXT PRIMARY KEY NOT NULL,
+  workout_id TEXT NOT NULL REFERENCES workouts(id) ON DELETE CASCADE,
+  metric_type TEXT NOT NULL,
+  value REAL NOT NULL,
+  unit TEXT NOT NULL,
+  source TEXT NOT NULL,
+  start_at_ms INTEGER,
+  end_at_ms INTEGER,
+  availability TEXT NOT NULL CHECK (availability IN ('available','estimated')),
+  UNIQUE(workout_id, metric_type, source, start_at_ms, end_at_ms)
+);
+
+CREATE INDEX idx_workouts_started ON workouts(started_at_ms DESC);
+CREATE INDEX idx_workouts_state ON workouts(state);
+CREATE INDEX idx_route_segments_workout ON route_segments(workout_id, sequence);
+CREATE INDEX idx_route_points_workout_time ON route_points(workout_id, timestamp_ms);
+CREATE INDEX idx_route_points_segment_sequence ON route_points(segment_id, sequence);
+CREATE INDEX idx_workout_events_workout_sequence ON workout_events(workout_id, sequence);
+CREATE INDEX idx_metric_samples_workout_type ON metric_samples(workout_id, metric_type);
+```
+
+### Schema invariants
+
+- A workout row is created before any sensors start.
+- Route points are written in batches with monotonically increasing segment sequence numbers.
+- The same event idempotency key can be committed only once.
+- A route point belongs to exactly one segment and one workout.
+- No segment is allowed to connect across pause or a declared GPS gap.
+- Completed rows are immutable except for explicit metadata edits and a retryable HealthKit route-save state transition.
+- Deleting a local workout cascades only local records; it never silently deletes HealthKit data.
+- Persisted errors are diagnostic, user-safe summaries; never store access tokens or sensitive raw HealthKit payloads.
+- Use a database transaction for workout state change + event journal insertion + final metrics update.
+- Do not store an entire route as JSON in one row.
+
+### Route batch commit contract
+
+Input: workout UUID, segment UUID, batch UUID/idempotency key, ordered validated CLLocation-derived point records, cumulative distance delta, and algorithm version.
+
+Transaction:
+1. Check whether batch idempotency key already exists.
+2. If it exists, return the prior commit result without inserting points or adding distance again.
+3. Insert all route points and their source accuracy metadata.
+4. Update workout distance and last committed route sequence.
+5. Insert a `route_batch_committed` journal event with the batch key.
+6. Commit atomically.
+
+If any step fails, roll back all of it. The in-memory recorder must retain uncommitted points and retry; it must not acknowledge a batch before commit.
+
+### Retention and privacy
+
+- No server sync in v1.
+- Route points are private local workout data.
+- Provide an explicit delete-history operation with confirmation.
+- HealthKit records are independent; local deletion must explain that it does not delete the corresponding Apple Health workout/route.
+- No advertising identifiers, background location collection outside an active recording, or route upload.
+
+## 20. Service interface contracts — v1
+
+These are behavioural contracts; exact Swift signatures can be adjusted to match the SDK's concurrency annotations, but ownership and semantics must remain fixed.
+
+### WorkoutCoordinator
+Owns one HealthKit workout session and one associated live builder.
+- `startWalking()`: async; creates local draft first, then HealthKit session/builder, then starts collection; returns only after platform start is accepted.
+- `pause()`: async; requests pause and waits for delegate state confirmation before reporting paused.
+- `resume()`: async; requests resume and waits for delegate state confirmation.
+- `finish()`: async; single-flight operation; freezes final route sequence, stops capture, ends collection, saves workout once, then delegates route finalization.
+- `discard()`: async; only for an unsaved draft; stops session, calls builder discard, closes route capture, deletes local draft transactionally.
+- `recover(session:)`: async; reattaches delegates and new live data source, reconciles session state against local journal, resumes route capture only when state permits.
+- Publishes typed workout state, available metric values, errors and save state. Never exposes mutable HK objects to the UI.
+
+### RouteRecorder
+- `requestAuthorizationIfNeeded()`: async; resolves authorization and accuracy state before starting location.
+- `begin(workoutID:segmentID:)`: starts Core Location only for the active workout.
+- `append(locations:)`: validates timestamps, accuracy, coordinates and plausibility; records accepted and rejected sample diagnostics; emits gap events when continuity is unsafe.
+- `pause(reason:)`: stops accumulating route distance and closes the current segment.
+- `resume()`: opens a new segment; no connection to the previous segment.
+- `finish()`: stops updates, flushes pending durable batches and returns the final accepted route sequence.
+- `recover(workoutID:)`: restores local segment sequence and starts a new segment; never fabricates the missing interval.
+- Maintains a strong reference to the HealthKit route series builder owned by the active workout service; serializes insert calls and awaits completion.
+
+### HealthKitDailyStepsService
+- `requestReadAccess()`: requests only step-count read access.
+- `refreshToday()`: executes a cumulative statistics collection query for the current local calendar day.
+- `startObserving()`: registers an observer query and background delivery when supported; observer callback triggers aggregate refresh and calls the completion handler promptly.
+- `stopObserving()`: stops observation when app lifecycle or authorization requires it.
+- `handleCalendarChange()`: recalculates day boundaries and refreshes.
+- Publishes `unavailable`, `loading`, `noSamples`, `available(value,lastUpdated)`, or `queryError`. It must not infer read authorization from the requestAuthorization completion Boolean.
+
+### SQLiteWorkoutRepository
+- `createDraft(id,start,algorithmVersion)`
+- `appendRouteBatch(batch)`
+- `appendEvent(event)`
+- `transitionWorkout(id,expectedState,newState,event)`
+- `recordWorkoutSaved(id,healthKitUUID,finalMetrics)`
+- `recordRouteSaved(id,healthKitRouteUUID)`
+- `loadRecoverableDrafts()`
+- `loadWorkoutHistory(limit,offset)`
+- `deleteLocalWorkout(id)`
+All state transitions use compare-and-set semantics: update only if the stored current state matches the expected state. A failed precondition returns a typed conflict, not a silent overwrite.
+
+### HealthKit route save ordering
+
+1. Keep the `HKWorkoutRouteBuilder` created by `workoutBuilder.seriesBuilder(for: HKSeriesType.workoutRoute())` strongly retained.
+2. Insert filtered CLLocation batches during recording and await each insertion completion before marking the corresponding route batch as delivered to HealthKit.
+3. Stop route capture and flush pending local batches.
+4. End workout collection and call `finishWorkout`; persist the returned workout UUID.
+5. Call `finishRoute(with:metadata:completion:)` on the retained route builder using that exact workout.
+6. Persist the returned route UUID and completed state.
+7. If the process crashes between steps 4 and 6, recover the active or saved workout state, inspect local journal and HealthKit records, and never create a duplicate workout. A route that cannot be safely resumed from the retained builder is rebuilt only from the durable local route points using a new valid route builder associated with the already-saved workout, if HealthKit permits it; otherwise preserve local route and report HealthKit route failure.
+
+Apple references:
+- https://developer.apple.com/documentation/healthkit/hkworkoutroutebuilder
+- https://developer.apple.com/videos/play/wwdc2025/322/
+- https://developer.apple.com/documentation/healthkit/hkhealthstore/recoveractiveworkoutsession(completion:)
