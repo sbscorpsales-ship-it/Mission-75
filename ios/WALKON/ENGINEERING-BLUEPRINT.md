@@ -2177,3 +2177,129 @@ Compare against a surveyed/known vertical reference where possible. Record error
 - What confidence threshold is required before displaying ascent/descent?
 
 Research status: physical measurement principles and public iOS/Android APIs documented. WALKON fusion algorithm, thresholds, calibration policy and device capability matrix remain open pending controlled field validation. No app implementation is authorized by this section.
+
+
+## 30. Motion sensing, pedometer and activity recognition — hardware-first research
+
+Research update: 2026-11-07. This section defines the roles of accelerometer, gyroscope, sensor fusion, system pedometer and activity recognition. The core principle is that WALKON should consume the highest-level reliable system service for a task and use raw sensors only when a measured requirement cannot be met by that service.
+
+### 30.1 Physical sensors and what they actually measure
+
+- **Accelerometer:** measures specific force along three device axes, including gravity. It does not directly measure steps, walking distance or calories.
+- **Gyroscope:** measures angular velocity around device axes. It detects rotation, not translation or distance.
+- **Magnetometer:** measures local magnetic field. It can help estimate heading but is disturbed by steel structures, magnets and electrical equipment.
+- **Sensor-fusion output:** combines accelerometer, gyroscope and sometimes magnetometer data to estimate device attitude, gravity direction and user acceleration. It is still an estimate and can drift or be disturbed.
+- **Pedometer / step counter:** a higher-level system service that classifies walking steps, often using a low-power motion processor or system algorithms. Its exact classifier and hardware path are proprietary and should not be reverse-engineered or assumed.
+- **Activity recognition:** estimates a broad activity class such as walking, running, cycling, still or in vehicle. It is probabilistic classification, not proof that a workout is active.
+
+### 30.2 iOS public APIs and constraints
+
+**Core Motion** provides raw accelerometer and gyroscope values as well as processed `CMDeviceMotion` output. Apple's documentation explains that device-motion processing can separate gravity from user acceleration and provide attitude/rotation estimates. Apple also advises creating only one `CMMotionManager` instance per app because multiple instances can affect sensor delivery rates.
+
+**CMPedometer** is the preferred first candidate for walking metrics on iPhone. It provides system-generated step counts, estimated distance, floors, pace and cadence where each capability is available. It supports historical queries and live updates; availability must be checked independently for each metric. It requires `NSMotionUsageDescription` and user authorization. Its outputs are system estimates, not a promise of exact ground-truth steps or distance.
+
+WALKON iOS rules:
+- Use `CMPedometer` for session steps/cadence/distance where available and validated; do not simultaneously add HealthKit aggregate steps.
+- If CMPedometer is unavailable, show a clear unsupported/unavailable state until a separately validated fallback is designed. Do not silently invent steps from GPS.
+- Use Core Motion raw accelerometer/gyroscope only for a defined feature that system APIs do not provide and only after accuracy, battery, background and device-placement tests.
+- Check each capability at runtime. A device may support step counting but not all other pedometer metrics.
+- Keep one app-level motion manager and stop each stream when no longer needed.
+
+Sources:
+- https://developer.apple.com/documentation/coremotion
+- https://developer.apple.com/documentation/coremotion/cmpedometer
+- https://developer.apple.com/documentation/coremotion/cmmotionmanager
+- https://developer.apple.com/documentation/coremotion/cmdevicemotion
+
+### 30.3 Android public APIs and constraints
+
+Android exposes standard sensor types through `SensorManager`. The two important step sensors are distinct:
+- `TYPE_STEP_COUNTER` reports a cumulative count since reboot while the sensor is activated. It is hardware-implemented and expected to be low power. The app must remain registered for counting to continue; the event may be delivered after the device wakes.
+- `TYPE_STEP_DETECTOR` emits one event per detected step and is intended for per-step events/dead reckoning. It requires `ACTIVITY_RECOGNITION` on supported Android versions.
+
+Android activity recognition in Google Play services has Transition and Sampling APIs. Google's documentation recommends the Transition API for common use because it is more power efficient and reports activity changes; Sampling is for cases requiring finer-grained control and requires the app to manage more power and filtering complexity.
+
+WALKON Android rules:
+- Query sensor availability at runtime; hardware implementation is not guaranteed on every phone.
+- Prefer the cumulative hardware step counter for continuous step totals where available, persisting boot epoch, last count and event timestamp.
+- Use detector events only when event-level timing is genuinely required and the device's behaviour is validated.
+- Never add counter and detector totals together.
+- Treat activity recognition as contextual evidence, not as the source of workout steps or an automatic substitute for explicit user start.
+- Handle missing permission, absent sensor, process death, reboot/reset, stale events and OEM-specific behaviour distinctly.
+
+Sources:
+- https://developer.android.com/reference/android/hardware/Sensor
+- https://developers.google.com/android/reference/com/google/android/gms/location/ActivityRecognitionClient
+
+### 30.4 Why phone position changes step detection
+
+A phone can be in a trouser pocket, hand, jacket, handbag, backpack, arm band or mounted holder. Each placement changes the acceleration/rotation pattern and signal-to-noise ratio. A phone can be stationary while a user walks (for example, phone left in a bag on a moving trolley), or move while the user is not walking (vehicle vibration, hand gestures, shaking). Therefore raw acceleration magnitude is not a universal step counter.
+
+WALKON must not claim that a single raw accelerometer threshold works across all placements, gait speeds, ages, mobility patterns and devices. Use OS pedometer output as the baseline, then validate placement-specific behaviour on real devices. If the user carries a watch, phone and external tracker, source reconciliation must prevent duplicate steps.
+
+### 30.5 Sensor fusion: what is and is not knowable
+
+Apple publicly documents processed device-motion values and says Core Motion performs sensor fusion. Android exposes sensor events and rotation/linear-acceleration sensor types where implemented. However, platform and OEM fusion weights, classifier models, motion-coprocessor firmware and vendor calibration are not public contracts.
+
+Implications:
+- WALKON can consume processed outputs but cannot assume access to the exact internal Apple/Google/Samsung step algorithm.
+- Do not fuse accelerometer, gyro, pedometer, HealthKit and GPS counts by summing them. They are overlapping observations of the same physical movement.
+- Build a source-selection/reconciliation layer that selects one authoritative source per metric and interval, preserving other sources as comparison/diagnostic observations only.
+- Record provider, device, time interval, metric semantics, quality and algorithm version so disagreements can be explained.
+
+### 30.6 Walking, running, vehicle and stillness classification
+
+Activity recognition is useful for context: detecting a likely transition from still to walking, suppressing obviously implausible GPS movement, or suggesting that a user may have forgotten to stop. It should not silently start/stop or rewrite a workout without a clear product policy.
+
+Proposed WALKON policy:
+- Explicit user start remains the authority for a workout.
+- Recognition may label segments as likely walking/running/vehicle/still with confidence and timestamp.
+- Low confidence remains `unknown`; do not force a classification.
+- A likely vehicle segment may trigger a gentle warning, but must not delete distance or pause automatically in v1.
+- Manual pause/resume always wins over inferred activity.
+- Auto-pause/auto-resume is deferred until false-positive/false-negative rates are measured across devices and user populations.
+
+### 30.7 Battery, sampling and background behaviour
+
+- Prefer system pedometer and activity-transition APIs for low-power classification rather than continuous high-rate raw sensor streams.
+- Avoid polling sensors on a tight timer; use callbacks/events and the lowest sampling rate that meets a validated requirement.
+- Do not create duplicate motion managers/listeners or leave sensors active after workout completion.
+- Android step counter can continue counting in hardware while the application processor sleeps only while the app remains registered; validate process lifecycle and reboot recovery on target OEMs.
+- Measure power for phone idle/passive step tracking separately from active GPS workout tracking. Do not assume the battery cost of one represents the other.
+
+### 30.8 Data contract and deduplication
+
+Every motion observation should include source API/sensor type, device identifier, event timestamp, receipt timestamp, units, interval semantics, permission state, capability state, quality/confidence if supplied, boot/session epoch where relevant, raw-vs-derived designation and algorithm version.
+
+Step values must be typed distinctly:
+- cumulative hardware counter since boot;
+- per-step detector event;
+- interval pedometer count;
+- HealthKit/Health Connect aggregate;
+- workout-session total.
+
+These types cannot be interchanged or summed without an explicit interval and reconciliation rule. Persist counter reset/reboot boundaries and avoid subtracting values across epochs.
+
+### 30.9 Validation matrix before sensor architecture freeze
+
+On target iPhone and a representative Android matrix, test:
+- phone held, front/back trouser pocket, jacket, handbag/backpack and arm band;
+- slow walk, normal walk, brisk walk, running, stairs, uneven ground and stop/start;
+- walking while pushing a trolley/stroller and carrying objects;
+- vehicle, bus/train, bicycle and stationary phone movement;
+- phone screen locked, app backgrounded, app suspended, process killed and device rebooted;
+- low-power mode, battery saver and thermal pressure;
+- motion permission denied/revoked and sensor unavailable;
+- simultaneous phone + watch + Health platform data to detect duplicate sources.
+
+Use manually counted video/observer counts and a validated reference device for repeated trials. Measure step-count bias, missed/false steps, cadence latency, interval delay, placement sensitivity, background continuity, reboot recovery and battery cost. Do not tune an algorithm on one person's walk and generalize it to all users.
+
+### 30.10 Open decisions
+
+- Confirm actual CMPedometer behaviour and metric availability on the target iPhone/iOS build.
+- Confirm the iPhone's passive motion-coprocessor behaviour and delivery during locked/background conditions through field tests; public API documentation does not promise every lifecycle case.
+- Build an Android OEM/API-level matrix for step counter/detector presence, registration lifecycle and accuracy.
+- Decide whether WALKON needs any raw sensor processing beyond system pedometer and activity recognition.
+- Establish validated thresholds and acceptance limits from a multi-placement test corpus.
+
+Research status: physical sensor roles and public APIs documented. Internal fusion algorithms remain proprietary; device-specific accuracy, background behaviour and battery performance require controlled testing. No app implementation is authorized by this section.
