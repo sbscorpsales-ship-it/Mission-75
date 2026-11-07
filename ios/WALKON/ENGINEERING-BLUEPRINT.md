@@ -556,3 +556,88 @@ The blueprint is considered ready for implementation when:
 - implementation slices, test matrix and release gates are documented.
 
 The blueprint does not mean the app is already built, signed, installed or validated. Those are subsequent engineering and release milestones.
+
+
+## 17. Final architecture decisions — persistence and save recovery
+
+### 17.1 Route builder construction and lifetime
+
+- Obtain the HealthKit route builder through the workout builder's `seriesBuilder(for: HKSeriesType.workoutRoute())` API where supported by the SDK; do not directly instantiate `HKWorkoutRouteBuilder` as the primary path.
+- Retain the route builder strongly for the entire recording and finalization lifecycle.
+- Insert accepted Core Location samples incrementally; batch inserts to avoid excessive callback overhead.
+- After the workout has been successfully saved, call `finishRoute(with:metadata:)` and await completion.
+- If route finalization fails, do not attempt to associate the same route builder with a different workout. Retain the local route and report the HealthKit route failure. Retry only where the HealthKit builder lifecycle explicitly permits it; otherwise preserve local route and provide a safe retry strategy that creates a new route builder from retained points.
+- Never release the route builder before finalization completes.
+
+Apple API reference: https://developer.apple.com/documentation/healthkit/hkworkoutroutebuilder
+
+### 17.2 Local database decision
+
+**Decision: use SQLite as the local source of truth for the first release, not UserDefaults and not an unbounded SwiftData route array.**
+
+Rationale:
+- Route points are append-heavy time-series records and need indexed queries by workout, segment and timestamp.
+- WAL transactions allow durable batched writes while the workout continues.
+- The event journal and save-state transitions must commit atomically with the related workout state.
+- SQLite gives explicit control over schema migrations, uniqueness constraints, foreign keys, WAL checkpoints and recovery diagnostics.
+- Use Apple's system SQLite3 module directly initially; avoid adding a third-party database dependency until there is a demonstrated need.
+
+Required database configuration and constraints:
+- Enable foreign keys and WAL mode.
+- Use a busy timeout and bounded write batches.
+- Add unique constraints for workout UUID and event idempotency key.
+- Store route points in append-only rows, with a monotonically increasing sequence per route segment.
+- Commit each route batch and its last acknowledged sequence in one transaction.
+- Use database migrations with a schema version table.
+- Run integrity checks in diagnostics and tests; never delete a recoverable draft automatically after an error.
+
+### 17.3 Two-phase workout finalization
+
+Model finish as a durable state machine:
+- recording → finishing → workoutSaved → routeFinalizing → completed
+- any stage may transition to a recoverable failure state with a stored error code and retry eligibility.
+
+Before external HealthKit operations, persist a finish-intent event and freeze the session's final metrics/route-point sequence. Save the HealthKit workout once and persist its identifier. Then finalise the route against that exact saved workout. The local record remains authoritative for recovery if the app terminates between stages.
+
+Idempotency rules:
+- A repeated Finish tap returns the existing finalization task/result.
+- A repeated workout-save attempt first reconciles against the persisted HealthKit workout UUID/metadata and must not create a duplicate.
+- Route finalization is tracked independently from workout saving.
+- A route failure must never trigger a second workout save.
+- A local commit failure must not be represented as success even if HealthKit has saved a workout; recovery reconciles HealthKit and local journal on next launch.
+
+### 17.4 HealthKit metrics and step-count boundary
+
+The live workout builder is the workout lifecycle and live statistics source, but it must not be assumed to provide every metric on every device or configuration. At runtime:
+- Query the builder's available statistics by quantity type.
+- Treat absent metrics as unavailable, not zero.
+- Daily steps remain the HealthKit cumulative daily aggregate.
+- If the live builder supplies a valid session step statistic, use it as the session step value.
+- If it does not, validate CMPedometer as the session-only source on device. Do not sum both.
+- Do not create or write step samples from the same walking session merely to make daily totals appear to match.
+- Preserve metric provenance and unit in the local workout record.
+
+### 17.5 Strava behaviour translated into WALKON requirements
+
+Strava's public recording workflow supports switching between map and stats, manual pause, finish/save, activity title/privacy, GPS quality indication, and optional audio cues. Its current guidance specifically recommends disabling auto-pause for walks/hikes because slower movement can cause repeated pauses or failure to resume.
+
+WALKON v1 therefore adopts:
+- Map/stats display switch.
+- Visible GPS quality indicator.
+- Manual pause/resume as primary controls.
+- Auto-pause disabled by default for walking.
+- Explicit save/discard confirmation and recoverable local draft.
+- Privacy set to private by default.
+- Audio cues and Live Activity as later features, not prerequisites.
+
+Sources:
+- https://support.strava.com/en-us/articles/15402137-how-do-i-record-an-activity-in-strava
+- https://support.strava.com/en-us/articles/15401874-how-do-i-fix-autopause-issues
+
+### 17.6 Android platform decision
+
+If/when Android is approved, use Health Connect for aggregated step reading and app-priority-aware data access. Do not begin a new integration against Google Fit APIs: Google states those APIs are supported only through the end of 2026 and recommends Health Connect for mobile step tracking.
+
+Source: https://developer.android.com/health-and-fitness/health-connect/migration/fit
+
+Android implementation is not part of the iPhone v1 delivery.
