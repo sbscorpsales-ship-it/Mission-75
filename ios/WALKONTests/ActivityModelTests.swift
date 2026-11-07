@@ -55,4 +55,40 @@ final class ActivityModelTests: XCTestCase {
         XCTAssertEqual(decoded.distanceMeters, 310, accuracy: 0.001)
         XCTAssertEqual(decoded.route.count, 1)
     }
+    func testRouteDistanceAcceptsPlausibleWalkingMovement() {
+        let start = Date(timeIntervalSince1970: 1_800_000_000)
+        let previous = WalkSession.RoutePoint(latitude: 15.85, longitude: 74.50,
+                                              timestamp: start, horizontalAccuracy: 5)
+        let next = WalkSession.RoutePoint(latitude: 15.85, longitude: 74.5001,
+                                          timestamp: start.addingTimeInterval(5),
+                                          horizontalAccuracy: 7)
+        let distance = WalkSession.acceptedDistance(from: previous, to: next)
+        XCTAssertNotNil(distance)
+        XCTAssertGreaterThan(distance ?? 0, 0)
+    }
+
+    func testRouteDistanceRejectsLongGpsGapAndImplausibleJump() {
+        let start = Date(timeIntervalSince1970: 1_800_000_000)
+        let previous = WalkSession.RoutePoint(latitude: 15.85, longitude: 74.50,
+                                              timestamp: start, horizontalAccuracy: 5)
+        let longGap = WalkSession.RoutePoint(latitude: 15.85, longitude: 74.5001,
+                                             timestamp: start.addingTimeInterval(31),
+                                             horizontalAccuracy: 5)
+        let fastJump = WalkSession.RoutePoint(latitude: 15.85, longitude: 74.501,
+                                              timestamp: start.addingTimeInterval(5),
+                                              horizontalAccuracy: 5)
+        XCTAssertNil(WalkSession.acceptedDistance(from: previous, to: longGap))
+        XCTAssertNil(WalkSession.acceptedDistance(from: previous, to: fastJump))
+    }
+
+    func testRouteDistanceRejectsPoorGpsAccuracy() {
+        let start = Date(timeIntervalSince1970: 1_800_000_000)
+        let previous = WalkSession.RoutePoint(latitude: 15.85, longitude: 74.50,
+                                              timestamp: start, horizontalAccuracy: 5)
+        let inaccurate = WalkSession.RoutePoint(latitude: 15.85, longitude: 74.5001,
+                                                timestamp: start.addingTimeInterval(5),
+                                                horizontalAccuracy: 50)
+        XCTAssertNil(WalkSession.acceptedDistance(from: previous, to: inaccurate))
+    }
+
 }
