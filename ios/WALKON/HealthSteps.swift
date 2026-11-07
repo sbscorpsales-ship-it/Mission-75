@@ -57,6 +57,7 @@ final class HealthSteps: ObservableObject {
                 guard let self else { return }
                 if let error {
                     self.status = "Could not read Apple Health: \(error.localizedDescription)"
+                    completion?()
                     return
                 }
                 guard let quantity = result?.sumQuantity() else {
