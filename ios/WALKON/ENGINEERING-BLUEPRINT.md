@@ -6,9 +6,9 @@
 - **Repository:** `sbscorpsales-ship-it/Mission-75`, branch `main`.
 - **Blueprint:** `ios/WALKON/ENGINEERING-BLUEPRINT.md`.
 - **Phase:** Research and engineering specification only. **App building is not authorized yet.**
-- **Current completed research:** Sections 1–34 exist below. Latest research section: **34 — HealthKit and Health Connect semantics, permissions, sync and reconciliation**.
-- **Exact next task:** **Section 35 — Calories and energy expenditure validity.** Research basal/resting versus active/total energy, estimation inputs, sensor and wearable sources, walking energy models, HealthKit/Health Connect semantics, uncertainty, calibration and user-facing claims. Do not drift into unrelated feature design.
-- **After Section 35:** update this register's latest-completed and exact-next-task fields before proceeding to Section 36 (battery, thermal management and long-session behaviour).
+- **Current completed research:** Sections 1–35 exist below. Latest research section: **35 — Calories and energy expenditure validity**.
+- **Exact next task:** **Section 36 — Battery, thermal management and long-session behaviour.** Research iOS/Android background execution, GPS and sensor power draw, location batching, CPU wakeups, thermal states, low-power modes, battery measurement methodology and long-session degradation. Do not drift into unrelated feature design.
+- **After Section 36:** update this register's latest-completed and exact-next-task fields before proceeding to Section 37 (offline-first storage, sync, conflict handling and export).
 - **No user device testing or screenshot requests** until the research/architecture blueprint is sufficiently complete and a coherent buildable test plan is ready.
 
 ## Non-negotiable working rules
@@ -38,9 +38,9 @@
 - **Section 32:** BLE Heart Rate Service, Core Bluetooth, Android BLE, Apple Watch and Wear OS integration boundaries.
 - **Section 33:** Workout state machine, crash recovery, HealthKit route finalization, Android exercise ownership and exactly-once reconciliation.
 - **Section 34:** HealthKit/Health Connect permission semantics, aggregate versus raw reads, provenance, incremental changes, deletion, source reconciliation, privacy and acceptance tests.
+- **Section 35:** Active, resting/basal, gross and total energy semantics; HealthKit/Health Connect calorie records; walking-model limits; wearable error; WALKON validation policy.
 
 ## Open research queue (ordered)
-35. Calories and energy expenditure validity.
 36. Battery, thermal management and long-session behaviour.
 37. Offline-first storage, sync, conflict handling and export.
 38. Maps, route display, map matching and location privacy.
@@ -50,12 +50,11 @@
 After these: consolidate contradictions, close architecture decisions, produce a single implementation-ready specification and explicit go/no-go checklist. Only then ask for authorization to build.
 
 ## Last verified checkpoint
-- **Latest completed section:** 34.
-- **Latest research update:** Section 34 — HealthKit and Health Connect semantics, permissions, sync and reconciliation.
-- **Section-34 commit:** 10b2ed8720dd838dd0b0694c4540d25f7c4dd955.
-- **Current blueprint blob SHA:** 1d147e1e4a1e1294e18713fd5868d7860d2fdb42.
-- **Next action:** research Section 35 — calories and energy expenditure validity.
-- **After Section 35:** Section 36 — battery, thermal management and long-session behaviour.
+- **Latest completed section:** 35.
+- **Latest research update:** Section 35 — calories and energy expenditure validity.
+- **Section-35 commit/blob:** to be recorded from the successful GitHub update and verification.
+- **Next action:** research Section 36 — battery, thermal management and long-session behaviour.
+- **After Section 36:** Section 37 — offline-first storage, sync, conflict handling and export.
 
 ---
 
@@ -3042,4 +3041,161 @@ Research complete for Section 34 at documentation level. Implementation, SDK-ver
 - [G6] Android, Metadata API reference: https://developer.android.com/reference/androidx/health/connect/client/records/metadata/Metadata
 - [G7] Android, Health Connect integration Codelab — differential changes: https://developer.android.com/codelabs/health-connect
 - [G8] Android, Changes API example and token-expiry handling: https://developer.android.com/codelabs/health-connect?authuser=00
+
+
+
+## 35. Calories and energy expenditure validity
+
+Status: physiological and platform semantics researched; all WALKON estimates remain unvalidated until compared with indirect calorimetry or another defensible reference method.
+
+### 35.1 Define the quantity before displaying it
+
+“Calories burned” is ambiguous. WALKON must distinguish:
+- **Resting/basal energy:** energy used to sustain normal physiological function at rest. Basal metabolic rate (BMR) and resting metabolic rate (RMR) are related but not identical measurement protocols; do not label an estimate of one as a measured value of the other.
+- **Active energy:** energy attributable to physical activity above rest, under the platform's definition.
+- **Gross exercise energy:** total energy expended during the workout interval, including the resting energy that would have been expended during that same time.
+- **Total daily energy:** resting/basal plus active and other components as defined by the source. Do not add active energy to a total that already includes it.
+- **Food energy intake:** energy consumed, a different data domain and never inferred from exercise output.
+
+Use kilocalories (kcal) in user-facing fitness UI, while preserving source units and conversion metadata. In nutrition contexts “Calories” commonly means kcal; label units clearly.
+
+### 35.2 Apple HealthKit semantics
+
+HealthKit exposes distinct quantity types for activeEnergyBurned and basalEnergyBurned. Apple defines active energy as energy burned due to physical activity and says it should not include resting energy during the same interval. Basal energy represents resting energy used for normal body function. Apple Watch automatically records active-energy samples.
+
+For workouts, Apple documents splitTotalEnergy to divide a workout's total energy into active and resting portions and save each separately. WALKON must not write the same gross workout energy into both active and basal streams, or add an already-gross workout value to daily active energy.
+
+HealthKit samples are cumulative quantity samples and can be condensed/coalesced. Query daily totals with the appropriate cumulative statistics option and interval. Preserve source/device attribution; do not assume an iPhone-only WALKON estimate has Apple Watch's measurement inputs or provenance.
+
+Sources: [A1, A2, A3].
+
+### 35.3 Android Health Connect semantics
+
+Health Connect has distinct interval record types for ActiveCaloriesBurnedRecord and TotalCaloriesBurnedRecord, and an instantaneous BasalMetabolicRateRecord. Its Aggregate API exposes ACTIVE_CALORIES_TOTAL, ENERGY_TOTAL and BASAL_CALORIES_TOTAL for the corresponding records.
+
+These are different records/metrics, not interchangeable names for one “calories” number. Use aggregate reads for daily totals and raw interval records for provenance/workout details. Follow Section 34 source-priority and deduplication rules. Do not sum total energy and active energy together; do not infer total daily energy by adding independently sourced totals without checking interval overlap and record semantics.
+
+Sources: [G4, G5].
+
+### 35.4 Physiological estimation inputs and uncertainty
+
+Energy expenditure is not directly measured by a phone's step counter or GPS. Laboratory reference methods include indirect calorimetry (oxygen uptake and carbon dioxide production) and doubly labelled water for longer-term free-living energy expenditure. Consumer trackers infer energy from proxy signals and model assumptions.
+
+Potential predictors for walking include:
+- body mass at or near the activity date;
+- height/leg length and gait characteristics;
+- walking speed and duration;
+- grade/elevation and terrain;
+- carried load;
+- age and sex variables where a selected validated model requires them;
+- heart rate, when a reliable sensor is actually connected;
+- fitness/metabolic calibration data, if legitimately available.
+
+No single input set removes individual variation. Heart rate is not a direct calorie meter: heat, stress, hydration, medication, illness, sensor fit and cardiovascular drift can change heart rate independently of mechanical work. Phone-only GPS and accelerometer data cannot measure oxygen consumption.
+
+A systematic review reports that energy-expenditure estimates remain among the least accurate common wearable metrics; a recent review reports substantial errors even in modern devices. Reported ranges vary by device, activity and validation method. Treat any consumer-device calorie value as an estimate, not a precise physiological measurement.
+
+Sources: [R1, R2].
+
+### 35.5 Walking equations: useful but bounded
+
+The ACSM walking metabolic equation estimates oxygen uptake from speed and grade under defined steady-state walking conditions:
+VO2 (mL/kg/min) = 3.5 + 0.1 × speed(m/min) + 1.8 × speed(m/min) × grade(decimal).
+
+The equation is a population model, not a personal measurement. It assumes walking conditions compatible with the model and should not be applied blindly to stop-start urban walking, very slow/fast speeds outside its validated domain, irregular trails, stairs, load carriage, or steep grades. Grade input is especially sensitive to noisy elevation; do not feed raw GPS altitude noise into a calorie calculation.
+
+Research has proposed alternative models incorporating height, speed, body mass and grade. One level-walking model found prediction error materially improved when a two-component model was used rather than a single-component speed relationship. A separate meta-regression model has been validated across a broader set of standing/walking conditions in healthy military-age adults, but that population and protocol do not automatically generalize to all WALKON users.
+
+A study in Asian adults developed and cross-validated a body-weight- and sex-based walking/running energy equation, but its own scope and standard error limit universal use. WALKON should not select an equation solely because it was published or fits a demographic label; it must validate the model against the intended user population, device sensors and real-world walking conditions.
+
+Sources: [R3, R4, R5, R6].
+
+### 35.6 Gross versus net energy: avoid double counting
+
+An exercise estimate can represent gross energy during the session or net/active energy above rest. The distinction must be explicit.
+
+If a model returns gross energy, the resting component for the same interval must be separated before writing an active-energy record. If it returns net/active energy, do not subtract resting energy a second time. If the app reads platform daily active energy, do not add the session estimate again when the platform has already incorporated the same workout.
+
+Canonical internal record fields:
+- estimate kind: active/net, gross exercise, resting/basal, or total daily;
+- value and unit;
+- interval start/end;
+- model name/version and parameter set;
+- body-mass/height input values and their effective dates;
+- sensor inputs and data quality;
+- source/provenance and whether imported or WALKON-estimated;
+- uncertainty band or quality label;
+- platform export state and external ID.
+
+### 35.7 WALKON product policy
+
+1. Never display a calorie number as exact or medically authoritative.
+2. Separate active session energy from daily total energy.
+3. Prefer a platform-provided aggregate for a platform daily dashboard; retain its source identity and definition.
+4. For WALKON session estimates, use one documented model version and clearly identify the value as an estimate.
+5. Use a fresh, user-confirmed body mass when available; never silently rely on stale profile weight. Missing required inputs should lower confidence or suppress the estimate.
+6. Do not invent calorie burn from steps alone. Steps may support activity classification but are not sufficient to determine energy expenditure reliably.
+7. Treat HR as an optional model input only when sensor source, quality, sampling coverage and time alignment are adequate. Do not infer HR from a watch pairing state or from sparse historical averages.
+8. Do not claim GPS elevation makes calories accurate. Grade estimation uncertainty propagates into the energy estimate.
+9. Show “not available” rather than a fabricated zero when required inputs are absent.
+10. Never use calorie estimates to make a food allowance, weight-loss promise or health diagnosis.
+
+### 35.8 Calibration and validation plan
+
+Before shipping any WALKON-generated calorie estimate:
+- Compare walking estimates with indirect calorimetry under controlled treadmill conditions across several speeds and grades.
+- Include flat outdoor routes, inclines, declines, stairs, stop-start walking, varied phone placement and different walking aids/gaits.
+- Include diverse age, sex, body-size and fitness groups; avoid tuning only to one developer or one phone.
+- Test with phone-only inputs separately from phone plus external HR and wearable-derived energy.
+- Validate gross and net energy separately; confirm resting-energy subtraction and daily aggregation.
+- Evaluate bias, mean absolute error, percentage error, limits of agreement and individual error distribution, not correlation alone.
+- Use held-out participants/devices/routes; prevent model leakage from repeated samples of the same person.
+- Set product acceptance thresholds before looking at final test results; suppress or label estimates that fail.
+- Re-test after model changes, OS updates, sensor changes and major platform-source changes.
+
+A user-specific calibration feature is a later option, not an assumption for v1.
+
+### 35.9 Acceptance and fault-injection tests
+
+1. HealthKit active and basal energy are shown separately; active excludes resting energy by definition.
+2. A HealthKit workout split into active and resting samples does not create duplicate energy totals.
+3. Health Connect ActiveCaloriesBurnedRecord and TotalCaloriesBurnedRecord remain separate in reads, aggregates and UI.
+4. A day with overlapping watch, phone and third-party sources is not double-counted by WALKON.
+5. A workout spanning midnight is attributed to the correct interval and local calendar days.
+6. Missing, stale or changed body mass is surfaced and cannot silently reuse an unqualified input.
+7. Missing GPS grade, unreliable elevation, sparse HR and sensor disconnection reduce confidence or suppress affected model inputs.
+8. Gross energy is never written as active energy without subtracting the rest component.
+9. Platform daily aggregate and WALKON session estimate are never added together if they overlap.
+10. Test low walking speed, high speed, incline, decline, stairs, stops and unusual gait against reference measurements.
+11. Verify kcal/kJ conversion, rounding, zero/negative/overflow validation and unit display.
+12. Ensure retrying HealthKit/Health Connect export cannot create duplicate energy samples.
+
+### 35.10 Open decisions and evidence gaps
+
+- Select the v1 WALKON calorie experience: platform-only daily totals, or platform totals plus a clearly labelled WALKON session estimate. Safest default is platform daily totals and no app-generated calorie claim until validated.
+- Choose the model only after deciding the supported activity/speed/grade envelope and testing the target population.
+- Define how profile mass changes are timestamped and which value applies to each workout.
+- Define how uncertainty is communicated without implying unsupported statistical confidence.
+- Confirm exact platform write requirements and source-priority behaviour for any future calorie export.
+- Determine whether the first release should omit calories entirely until validation; omission is preferable to false precision.
+
+### 35.11 Section conclusion
+
+Energy expenditure is a model estimate unless obtained by a suitable physiological reference method. HealthKit and Health Connect distinguish active, resting/basal and total energy, and WALKON must preserve those distinctions. A phone's steps, GPS and optional heart rate are predictors, not direct calorimetry. The recommended v1 default is to display platform-provided daily energy aggregates with provenance and to defer WALKON-generated calorie estimates until they pass controlled validation.
+
+Research complete for Section 35 at documentation level. No calorie algorithm is selected or implemented; model choice and acceptance thresholds remain open. No app code/build is authorized by this section.
+
+#### Section 35 references
+
+- [A1] Apple, activeEnergyBurned: https://developer.apple.com/documentation/healthkit/hkquantitytypeidentifier/activeenergyburned
+- [A2] Apple, basalEnergyBurned: https://developer.apple.com/documentation/healthkit/hkquantitytypeidentifier/basalenergyburned
+- [A3] Apple, HealthKit workout energy and splitting guidance: https://developer.apple.com/documentation/healthkit/running-workout-sessions
+- [G4] Android, Health Connect aggregate data types: https://developer.android.com/health-and-fitness/health-connect/aggregate-data
+- [G5] Android, Health Connect data types and calorie records: https://developer.android.com/health-and-fitness/health-connect/data-types
+- [R1] Systematic review, wrist-worn tracker measurement accuracy: https://pubmed.ncbi.nlm.nih.gov/42698643/
+- [R2] Living umbrella review of consumer wearable accuracy: https://pubmed.ncbi.nlm.nih.gov/39080098/
+- [R3] ACSM walking equation and predictive-model review: https://journals.physiology.org/doi/full/10.1152/japplphysiol.00864.2015
+- [R4] Looney et al., walking metabolic-rate meta-regression: https://doi.org/10.1249/mss.0000000000001779
+- [R5] Prediction and cross-validation of an energy expenditure equation in Asian adults: https://pmc.ncbi.nlm.nih.gov/articles/PMC8439706/
+- [R6] Cadence-based metabolic equation for walking: https://pmc.ncbi.nlm.nih.gov/articles/PMC7896743/
 
