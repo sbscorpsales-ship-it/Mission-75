@@ -16,6 +16,50 @@ final class WalkTracker: NSObject, ObservableObject, CLLocationManagerDelegate {
     private let pedometer = CMPedometer()
     private var startDate: Date?
     private var requestedAlways = false
+    var onCheckpoint: ((Date, Int, Double, [WalkSession.RoutePoint]) -> Void)?
+
+    private func checkpoint() {
+        guard let startDate else { return }
+        onCheckpoint?(startDate, liveSteps, distanceMeters, route)
+    }
+
+    func restore(_ snapshot: ActiveWalkSnapshot) {
+        guard !isTracking else { return }
+        isTracking = true
+        startDate = snapshot.startedAt
+        liveSteps = snapshot.steps
+        distanceMeters = snapshot.distanceMeters
+        route = snapshot.route
+        gpsAccuracy = snapshot.route.last?.horizontalAccuracy
+        locationStatus = "Recovered interrupted walk — recording resumed"
+        switch location.authorizationStatus {
+        case .authorizedAlways:
+            configureBackgroundLocation()
+            location.startUpdatingLocation()
+        case .authorizedWhenInUse:
+            locationStatus = "Recovered walk; Always location is needed for locked-screen GPS"
+            location.startUpdatingLocation()
+            requestAlwaysIfNeeded()
+        default:
+            locationStatus = "Recovered walk; enable location to continue GPS recording"
+        }
+        guard CMPedometer.isStepCountingAvailable() else { checkpoint(); return }
+        pedometer.queryPedometerData(from: snapshot.startedAt, to: Date()) { [weak self] data, _ in
+            Task { @MainActor in
+                guard let self, self.isTracking else { return }
+                self.liveSteps = max(data?.numberOfSteps.intValue ?? snapshot.steps, snapshot.steps)
+                self.checkpoint()
+                self.pedometer.startUpdates(from: snapshot.startedAt) { [weak self] data, error in
+                    Task { @MainActor in
+                        guard let self, self.isTracking else { return }
+                        if let count = data?.numberOfSteps.intValue { self.liveSteps = max(count, 0) }
+                        if let error { self.locationStatus = "Step sensor issue: \\(error.localizedDescription)" }
+                        self.checkpoint()
+                    }
+                }
+            }
+        }
+    }
 
     override init() {
         super.init()
@@ -36,6 +80,7 @@ final class WalkTracker: NSObject, ObservableObject, CLLocationManagerDelegate {
         route = []
         liveSteps = 0
         gpsAccuracy = nil
+        checkpoint()
 
         switch location.authorizationStatus {
         case .authorizedAlways:
@@ -64,6 +109,7 @@ final class WalkTracker: NSObject, ObservableObject, CLLocationManagerDelegate {
                     }
                     if let count = data?.numberOfSteps.intValue {
                         self.liveSteps = max(count, 0)
+                        self.checkpoint()
                     }
                 }
             }
@@ -161,6 +207,7 @@ final class WalkTracker: NSObject, ObservableObject, CLLocationManagerDelegate {
             ))
             gpsAccuracy = point.horizontalAccuracy
         }
+        checkpoint()
         if gpsAccuracy == nil { locationStatus = "Waiting for a reliable GPS fix" }
     }
 
