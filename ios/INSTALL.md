@@ -11,7 +11,7 @@ WALKON is a native iOS app. Its simulator build is for compile and automated-tes
 3. Open `ios/WALKON.xcodeproj` in Xcode.
 4. Select the WALKON target and set your Apple Developer team under **Signing & Capabilities**. Enable **HealthKit** and its **Background Delivery** option. The project includes both required HealthKit entitlements; retain them when configuring signing. Keep the location and motion usage descriptions.
 5. Connect the iPhone, select it as the run destination, then build and run.
-6. Sign in with the email address already registered to the cloud account. Enter the six-digit code sent to that inbox; native sign-in does not create new accounts. Approve Health access for Steps and allow the location permissions requested while starting a walk. For locked-screen route recording, iOS must grant **Always** location access.
+6. In Supabase Auth → Email Templates, ensure the Magic Link template includes the six-digit `{{ .Token }}` value so the app can verify an email OTP. Then sign in with the email address already registered to the cloud account; native sign-in does not create new accounts. Approve Health access for Steps and allow the location permissions requested while starting a walk. For locked-screen route recording, iOS must grant **Always** location access.
 
 ## Build through GitHub Actions
 
