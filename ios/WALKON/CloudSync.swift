@@ -82,8 +82,8 @@ final class CloudSyncStore: ObservableObject {
 
     func syncHealthKitSteps(_ steps: Int, measuredAt: Date = Date()) async {
         guard isSignedIn else { return }
-        guard steps >= 0 else {
-            status = "Invalid Apple Health step total; not uploaded"
+        guard (0...200_000).contains(steps) else {
+            status = "Apple Health step total is outside the supported range; not uploaded"
             return
         }
         let params = HealthKitStepSyncParams(
