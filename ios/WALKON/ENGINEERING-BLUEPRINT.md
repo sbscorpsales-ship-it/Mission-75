@@ -40,7 +40,6 @@
 - **Section 34:** HealthKit/Health Connect permission semantics, aggregate versus raw reads, provenance, incremental changes, deletion, source reconciliation, privacy and acceptance tests.
 
 ## Open research queue (ordered)
-34. HealthKit and Health Connect semantics, permissions, sync and reconciliation.
 35. Calories and energy expenditure validity.
 36. Battery, thermal management and long-session behaviour.
 37. Offline-first storage, sync, conflict handling and export.
@@ -53,7 +52,8 @@ After these: consolidate contradictions, close architecture decisions, produce a
 ## Last verified checkpoint
 - **Latest completed section:** 34.
 - **Latest research update:** Section 34 — HealthKit and Health Connect semantics, permissions, sync and reconciliation.
-- **Latest commit/blob:** to be filled from the successful GitHub update response and post-write verification.
+- **Section-34 commit:** 10b2ed8720dd838dd0b0694c4540d25f7c4dd955.
+- **Current blueprint blob SHA:** 1d147e1e4a1e1294e18713fd5868d7860d2fdb42.
 - **Next action:** research Section 35 — calories and energy expenditure validity.
 - **After Section 35:** Section 36 — battery, thermal management and long-session behaviour.
 
