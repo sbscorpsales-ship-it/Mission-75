@@ -23,6 +23,8 @@ final class WalkTracker: NSObject, ObservableObject, CLLocationManagerDelegate {
         onCheckpoint?(startDate, liveSteps, distanceMeters, route)
     }
 
+    func checkpointNow() { checkpoint() }
+
     func restore(_ snapshot: ActiveWalkSnapshot) {
         guard !isTracking else { return }
         isTracking = true
