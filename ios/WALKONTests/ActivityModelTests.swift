@@ -111,7 +111,7 @@ final class ActivityStorePersistenceTests: XCTestCase {
         let reloaded = ActivityStore(storageDirectory: directory)
         XCTAssertEqual(reloaded.sessions.count, 1)
         XCTAssertEqual(reloaded.sessions.first?.id, session.id)
-        XCTAssertEqual(reloaded.sessions.first?.steps, 250)
+        XCTAssertEqual(reloaded.sessions.first?.steps ?? -1, 250)
     }
 
     func testActiveWalkCheckpointCanBeRecovered() {
