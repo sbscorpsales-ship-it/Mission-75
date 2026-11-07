@@ -92,6 +92,24 @@ final class ActivityModelTests: XCTestCase {
     }
 
 
+    func testRouteDistanceRejectsInvalidCoordinatesAndNonFiniteAccuracy() {
+        let start = Date(timeIntervalSince1970: 1_800_000_000)
+        let valid = WalkSession.RoutePoint(latitude: 15.85, longitude: 74.50,
+                                           timestamp: start, horizontalAccuracy: 5)
+        let invalidLatitude = WalkSession.RoutePoint(latitude: 91, longitude: 74.5001,
+                                                     timestamp: start.addingTimeInterval(5),
+                                                     horizontalAccuracy: 5)
+        let invalidLongitude = WalkSession.RoutePoint(latitude: 15.85, longitude: 181,
+                                                      timestamp: start.addingTimeInterval(5),
+                                                      horizontalAccuracy: 5)
+        let nonFiniteAccuracy = WalkSession.RoutePoint(latitude: 15.85, longitude: 74.5001,
+                                                       timestamp: start.addingTimeInterval(5),
+                                                       horizontalAccuracy: .infinity)
+        XCTAssertNil(WalkSession.acceptedDistance(from: valid, to: invalidLatitude))
+        XCTAssertNil(WalkSession.acceptedDistance(from: valid, to: invalidLongitude))
+        XCTAssertNil(WalkSession.acceptedDistance(from: valid, to: nonFiniteAccuracy))
+    }
+
     @MainActor func testExpiredActiveWalkCheckpointIsDiscarded() {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("WALKON-expired-tests-\(UUID().uuidString)", isDirectory: true)
