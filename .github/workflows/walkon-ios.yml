@@ -26,6 +26,7 @@ permissions:
 jobs:
   build-ios:
     runs-on: macos-15
+    timeout-minutes: 20
     steps:
       - name: Check out source
         uses: actions/checkout@v4
@@ -49,8 +50,30 @@ jobs:
             -destination "platform=iOS Simulator,id=$DEVICE_ID" \
             -configuration Debug \
             -derivedDataPath build/WALKON-Tests \
+            -resultBundlePath build/WALKON-Tests.xcresult \
+            -parallel-testing-enabled NO \
             CODE_SIGNING_ALLOWED=NO \
             test
+
+      - name: Upload WALKON test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: WALKON-iOS-Test-Results
+          path: build/WALKON-Tests.xcresult
+          if-no-files-found: ignore
+
+      - name: Compile WALKON for generic iPhone device
+        run: |
+          xcodebuild \
+            -project ios/WALKON.xcodeproj \
+            -scheme WALKON \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -configuration Debug \
+            -derivedDataPath build/WALKON-Device \
+            CODE_SIGNING_ALLOWED=NO \
+            build
 
       - name: Compile WALKON for iPhone Simulator
         run: |
