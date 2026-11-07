@@ -5,10 +5,50 @@ struct DashboardView: View {
     @StateObject private var health = HealthSteps()
     @StateObject private var tracker = WalkTracker()
     @StateObject private var store = ActivityStore()
+    @StateObject private var cloud = CloudSyncStore()
     private let goal = 8000
     private let background = Color(red: 0.035, green: 0.055, blue: 0.07)
 
     var body: some View {
+        Group {
+            if !cloud.hasResolvedAuth {
+                VStack(spacing: 14) {
+                    ProgressView()
+                    Text("Restoring your secure account session")
+                        .font(.subheadline).foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(background)
+            } else if !cloud.isSignedIn {
+                SignInView(cloud: cloud)
+            } else {
+                mainTabs
+            }
+        }
+        .onChange(of: health.steps) { _, steps in
+            guard let steps else { return }
+            Task { await cloud.syncHealthKitSteps(steps, measuredAt: health.lastUpdated ?? Date()) }
+        }
+        .onChange(of: cloud.isSignedIn) { _, signedIn in
+            guard signedIn else { return }
+            Task {
+                await cloud.syncPendingWalks(from: store)
+                if let steps = health.steps {
+                    await cloud.syncHealthKitSteps(steps, measuredAt: health.lastUpdated ?? Date())
+                }
+            }
+        }
+        .onChange(of: scenePhase) { _, phase in
+            guard cloud.isSignedIn else { return }
+            if phase == .active {
+                health.refresh()
+                Task { await cloud.syncPendingWalks(from: store) }
+            }
+            if phase == .background, tracker.isTracking { tracker.checkpointNow() }
+        }
+    }
+
+    private var mainTabs: some View {
         TabView {
             today.tabItem { Label("Today", systemImage: "sun.max.fill") }
             activity.tabItem { Label("Walk", systemImage: "figure.walk") }
@@ -21,11 +61,7 @@ struct DashboardView: View {
                 store.checkpoint(startedAt: started, steps: steps, distanceMeters: distance, route: route)
             }
             if let interrupted = store.recoverActiveWalk() { tracker.restore(interrupted) }
-        }
-        .onChange(of: scenePhase) { _, phase in
-            if phase == .active { health.refresh() }
-            if phase == .background, tracker.isTracking { tracker.checkpointNow() }
-
+            Task { await cloud.syncPendingWalks(from: store) }
         }
     }
 
@@ -70,10 +106,31 @@ struct DashboardView: View {
                         metric("WALKS", value: "\(store.sessions.count)", icon: "figure.walk")
                         metric("DISTANCE", value: String(format: "%.2f km", store.sessions.reduce(0) { $0 + $1.distanceMeters } / 1000), icon: "point.topleft.down.to.point.bottomright.curvepath")
                     }
-                    Text(store.storageStatus).font(.caption).foregroundStyle(.secondary)
+                    VStack(alignment: .leading, spacing: 10) {
+                        HStack {
+                            Label(cloud.status, systemImage: "icloud")
+                                .font(.caption).foregroundStyle(.secondary)
+                            Spacer()
+                            Button("Sign out") {
+                                Task {
+                                    do { try await cloud.signOut() }
+                                    catch { }
+                                }
+                            }
+                            .font(.caption.weight(.semibold))
+                            .buttonStyle(.bordered)
+                            .tint(.secondary)
+                        }
+                        if let email = cloud.email {
+                            Text(email).font(.caption2).foregroundStyle(.tertiary)
+                        }
+                        Text(store.storageStatus).font(.caption2).foregroundStyle(.tertiary)
+                    }
+                    .padding(16)
+                    .background(Color.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 18))
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Your next step").font(.headline)
-                        Text("Start a walk to record live steps, distance and your GPS route. Your walks stay on this iPhone.")
+                        Text("Start a walk to record live steps, distance and your GPS route. Walks are saved on this iPhone and backed up when cloud sync is available.")
                             .font(.subheadline).foregroundStyle(.secondary)
                     }
                     .padding(18).frame(maxWidth: .infinity, alignment: .leading)
@@ -101,7 +158,10 @@ struct DashboardView: View {
                 Button {
                     if tracker.isTracking {
                         tracker.finish { session in
-                            if let session, store.save(session) { store.clearActiveWalkCheckpoint() }
+                            if let session, store.save(session) {
+                                store.clearActiveWalkCheckpoint()
+                                Task { await cloud.syncPendingWalks(from: store) }
+                            }
                         }
                     } else {
                         tracker.start()
