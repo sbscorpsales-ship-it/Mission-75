@@ -4,7 +4,7 @@ import Combine
 
 @MainActor
 final class CloudSyncStore: ObservableObject {
-    @Published private(set) var hasResolvedAuth = false
+    @Published private(set) var hasResolvedAuth = UserDefaults.standard.bool(forKey: "walkon.offline-mode")
     @Published private(set) var isSignedIn = false
     @Published private(set) var isOfflineMode = UserDefaults.standard.bool(forKey: "walkon.offline-mode")
     @Published private(set) var email: String?
