@@ -55,6 +55,46 @@ final class SupabaseRESTClient: ObservableObject {
         }
     }
 
+    /// Store the iPhone-only CoreMotion total separately from Apple's
+    /// aggregated HealthKit total. These two sources must never overwrite or
+    /// be added together in daily_logs.
+    func syncMotionDailySteps(date: Date, steps: Int, distanceMeters: Double?, retryAfterRefresh: Bool = true) async {
+        guard steps >= 0 else { return }
+        do {
+            guard let token = accessToken else { throw ClientError.notSignedIn }
+            var request = URLRequest(url: baseURL.appendingPathComponent("rest/v1/rpc/sync_motion_daily_steps"))
+            request.httpMethod = "POST"
+            request.setValue(publishableKey, forHTTPHeaderField: "apikey")
+            request.setValue("Bearer " + token, forHTTPHeaderField: "Authorization")
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            let day = DateFormatter()
+            day.locale = Locale(identifier: "en_US_POSIX")
+            day.timeZone = TimeZone.current
+            day.dateFormat = "yyyy-MM-dd"
+            let updated = ISO8601DateFormatter().string(from: Date())
+            var body: [String: Any] = [
+                "p_log_date": day.string(from: date),
+                "p_steps": steps,
+                "p_updated_at": updated
+            ]
+            if let distanceMeters, distanceMeters.isFinite, distanceMeters >= 0 {
+                body["p_distance_m"] = distanceMeters
+            }
+            request.httpBody = try JSONSerialization.data(withJSONObject: body)
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let http = response as? HTTPURLResponse else { throw ClientError.invalidResponse }
+            if http.statusCode == 401 && retryAfterRefresh {
+                try await refreshSession()
+                await syncMotionDailySteps(date: date, steps: steps, distanceMeters: distanceMeters, retryAfterRefresh: false)
+                return
+            }
+            guard (200..<300).contains(http.statusCode) else { throw Self.serverError(data) }
+            status = "iPhone motion steps synced separately from Apple Health."
+        } catch {
+            status = "Motion sync pending: " + error.localizedDescription
+        }
+    }
+
     private func performStepSync(date: Date, steps: Int, retryAfterRefresh: Bool) async throws {
         guard let token = accessToken else { throw ClientError.notSignedIn }
         var request = URLRequest(url: baseURL.appendingPathComponent("rest/v1/rpc/sync_healthkit_daily_steps"))
