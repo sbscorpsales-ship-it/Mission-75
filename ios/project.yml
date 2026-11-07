@@ -1,30 +1,27 @@
-name: GATIVX
+name: WALKON
 options:
   bundleIdPrefix: com.paramitsolutions
   deploymentTarget:
     iOS: "17.0"
   createIntermediateGroups: true
-
 targets:
-  GATIVX:
+  WALKON:
     type: application
     platform: iOS
     sources:
-      - path: GATIVX
+      - path: WALKON
     info:
-      path: GATIVX/Info.plist
+      path: WALKON/Info.plist
+    entitlements:
+      path: WALKON/WALKON.entitlements
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.paramitsolutions.gativx
-        PRODUCT_NAME: GATIVX
+        PRODUCT_BUNDLE_IDENTIFIER: com.paramitsolutions.walkon
+        PRODUCT_NAME: WALKON
         SWIFT_VERSION: "5.0"
         TARGETED_DEVICE_FAMILY: "1"
         GENERATE_INFOPLIST_FILE: YES
-        INFOPLIST_KEY_NSHealthShareUsageDescription: "GATIVX reads your daily step count and active energy burned to show your activity progress."
-        INFOPLIST_KEY_NSMotionUsageDescription: "GATIVX counts steps during an activity session using the iPhone motion sensor."
-        INFOPLIST_KEY_NSLocationWhenInUseUsageDescription: "GATIVX records your route only during an activity you start."
-        INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription: "GATIVX needs location access to continue recording your route while your phone is locked during an active walk."
-        CODE_SIGN_ENTITLEMENTS: GATIVX/GATIVX.entitlements
+        CODE_SIGN_ENTITLEMENTS: WALKON/WALKON.entitlements
         SUPPORTS_MACCATALYST: NO
     scheme:
       gatherCoverageData: false
