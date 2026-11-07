@@ -44,6 +44,8 @@ struct ContentView: View {
         let finishedAt = Date()
         let activity = selectedActivity
         pedometer.stopUpdates()
+        routeRecorder.stop()
+        let routePoints = routeRecorder.points
         // Query the complete interval after stopping live updates so the final
         // motion samples are included even if the last callback was delayed.
         pedometer.queryPedometerData(from: start, to: finishedAt) { data, _ in
