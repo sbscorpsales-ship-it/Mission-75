@@ -10,18 +10,17 @@ final class HealthSteps: ObservableObject {
 
     #if targetEnvironment(simulator)
     private let store: HKHealthStore? = nil
+    private var unavailableStatus: String { "Apple Health step access requires a physical iPhone" }
     #else
     private let store: HKHealthStore? = HKHealthStore()
+    private var unavailableStatus: String { "Apple Health is unavailable on this device" }
     #endif
     private let stepType = HKObjectType.quantityType(forIdentifier: .stepCount)!
     private var observerInstalled = false
 
     func requestAccessAndRefresh() {
-        #if targetEnvironment(simulator)
-        status = "Apple Health step access requires a physical iPhone"
-        #else
         guard HKHealthStore.isHealthDataAvailable(), let store else {
-            status = "Apple Health is unavailable on this device"
+            status = unavailableStatus
             return
         }
         status = "Requesting Apple Health access"
@@ -38,19 +37,13 @@ final class HealthSteps: ObservableObject {
                 self.refresh()
             }
         }
-        #endif
     }
 
     func refresh() { refresh(completion: nil) }
 
     private func refresh(completion: (() -> Void)?) {
-        #if targetEnvironment(simulator)
-        status = "Apple Health step access requires a physical iPhone"
-        completion?()
-        return
-        #else
         guard HKHealthStore.isHealthDataAvailable(), let store else {
-            status = "Apple Health is unavailable on this device"
+            status = unavailableStatus
             completion?()
             return
         }
@@ -87,7 +80,6 @@ final class HealthSteps: ObservableObject {
             }
         }
         store.execute(query)
-        #endif
     }
 
     private func installObserverIfNeeded() {
