@@ -6,9 +6,9 @@
 - **Repository:** `sbscorpsales-ship-it/Mission-75`, branch `main`.
 - **Blueprint:** `ios/WALKON/ENGINEERING-BLUEPRINT.md`.
 - **Phase:** Research and engineering specification only. **App building is not authorized yet.**
-- **Current completed research:** Sections 1–32 exist below. Latest research section: **32 — Wearables and Bluetooth interoperability**.
-- **Exact next task:** **Section 33 — Workout lifecycle, interruptions and crash recovery.** Research workout state ownership, start/pause/resume/finish, process termination, OS suspension, phone/watch handover, durable local persistence, exactly-once save, HealthKit workout/route association recovery, Android persistence, duplicate prevention and offline/partial-failure reconciliation. Do not drift into unrelated feature design.
-- **After Section 33:** update this register's latest-completed and exact-next-task fields before proceeding to Section 34 (HealthKit and Health Connect).
+- **Current completed research:** Sections 1–33 exist below. Latest research section: **33 — Workout lifecycle, interruptions and crash recovery**.
+- **Exact next task:** **Section 34 — HealthKit and Health Connect semantics, permissions, sync and reconciliation.** Research data types, read/write permissions, aggregate versus raw samples, background/history access, source attribution, deletion, deduplication, incremental sync, platform differences and privacy constraints. Do not drift into unrelated feature design.
+- **After Section 34:** update this register's latest-completed and exact-next-task fields before proceeding to Section 35 (calories and energy expenditure).
 - **No user device testing or screenshot requests** until the research/architecture blueprint is sufficiently complete and a coherent buildable test plan is ready.
 
 ## Non-negotiable working rules
@@ -36,9 +36,9 @@
 - **Section 30:** Motion sensing, pedometer and activity recognition.
 - **Section 31:** Heart-rate science, PPG/ECG, HealthKit/Health Connect semantics, HRV and validation.
 - **Section 32:** BLE Heart Rate Service, Core Bluetooth, Android BLE, Apple Watch and Wear OS integration boundaries.
+- **Section 33:** Workout state machine, crash recovery, HealthKit route finalization, Android exercise ownership and exactly-once reconciliation.
 
 ## Open research queue (ordered)
-33. Workout lifecycle, interruptions, crash recovery and exactly-once save.
 34. HealthKit and Health Connect semantics, permissions, sync and reconciliation.
 35. Calories and energy expenditure validity.
 36. Battery, thermal management and long-session behaviour.
@@ -2695,3 +2695,165 @@ Measure discovery time, connection success, time to first valid sample, sample c
 - What minimum device identity can be retained without collecting unnecessary persistent hardware identifiers?
 
 Research status: BLE Heart Rate Service, iOS Core Bluetooth lifecycle, Android permissions/background paths, Apple Watch and Wear OS boundaries documented. Accessory compatibility, target-device background reliability and latency/battery thresholds remain untested. No app implementation is authorized by this section.
+
+## 33. Workout lifecycle, interruptions and crash recovery — reliability research
+
+Research update: 2026-11-07. A workout is a durable user-owned transaction spanning sensors, operating-system sessions, local storage and optional health-platform writes. The screen is only a view; it is never the owner of the workout.
+
+### 33.1 Durable lifecycle and state ownership
+
+Persist explicit states: created/preparing, recording, paused, resuming, stopping/finalizing, locally committed, health-export-pending, partially exported, exported, interrupted/recoverable and explicitly discarded. Allocate a stable workout UUID and commit the local record before starting sensors.
+
+Button taps are commands, not proof that a platform transition succeeded. Render state from the workout coordinator and durable event journal, and wait for platform callbacks/state confirmation. Duplicate finish requests must resolve to one logical finish.
+
+### 33.2 Event journal and deterministic transitions
+
+Persist append-only events for workout creation, prepare/start, pause/resume requests and confirmations, segment boundaries, sensor connection/disconnection, source handover, permission loss, platform termination, interruption/recovery, finish, local commit, external export and discard.
+
+Each event needs a stable event UUID, workout UUID, monotonically increasing per-workout sequence, event time, receipt time, source and schema version. Replay must be idempotent. Duplicate events must not double-apply steps, distance, duration or samples. Reject impossible transitions and preserve actual platform callbacks when they disagree with user commands.
+
+### 33.3 Time and pause semantics
+
+- Use monotonic time for elapsed intervals and wall-clock timestamps for history. Clock/timezone changes must not alter elapsed duration.
+- Keep elapsed, paused and active duration separate.
+- Do not depend on callback frequency to advance a timer; derive duration from timestamps and monotonic anchors.
+- Pause closes the current route/movement segment; resume opens a new segment.
+- Sensor availability and workout state are separate. A disconnected HR strap does not necessarily mean the workout is paused.
+- Finish is one logical transition even if button taps or OS callbacks repeat.
+
+### 33.4 iOS HealthKit session lifecycle and recovery
+
+HealthKit workout sessions expose prepare, start activity, pause, resume, stop activity and end operations. The associated live workout builder collects and saves workout data. The app must observe session/delegate transitions rather than assuming a method call means the transition completed.
+
+Apple documents active-workout recovery for a watchOS workout: after relaunch, the extension's recovery handler calls HealthKit's recover-active-workout-session method, then reattaches the builder data source and delegates. This is a platform-specific recovery path; it is not proof that every arbitrary iPhone process death restores every Core Location callback or route-builder object.
+
+WALKON iOS requirements:
+- Persist local workout UUID and event journal independently of HealthKit object instances.
+- Persist enough state to identify the active workout before calling platform start APIs.
+- On relaunch, inspect local state and recover the HealthKit active session only where the selected platform lifecycle supports it.
+- Recreate delegates/data sources and verify session state before accepting new samples.
+- Reconcile local journal with platform state; preserve both facts when they conflict.
+- Never create a second HealthKit workout just because the app relaunched.
+- Distinguish a recovered active workout from a local partial workout whose platform session cannot be recovered.
+- Verify exact iPhone versus watchOS recovery APIs and availability against the chosen iOS 26+ SDK and target hardware.
+
+Sources:
+- https://developer.apple.com/documentation/healthkit/hkworkoutsession
+- https://developer.apple.com/documentation/healthkit/running-workout-sessions
+- https://developer.apple.com/documentation/healthkit/hkhealthstore/recoveractiveworkoutsession(completion:)
+- https://developer.apple.com/documentation/healthkit/hkworkoutbuilder
+
+### 33.5 HealthKit workout save and route finalization are separate operations
+
+Apple documents that the route builder's finish-route operation creates, saves and associates a route with a workout that must already be saved. The builder must be finalized before deallocation; otherwise route data added to it is lost. Finalization invalidates the builder. Workout save and route save are therefore not one atomic transaction.
+
+Required two-phase export:
+1. Commit workout summary, route observations and samples locally first.
+2. Save the HealthKit workout and immediately persist its external identifier.
+3. Mark export state workout-saved / route-pending.
+4. Finalize the route against that saved workout and persist route success/failure.
+5. If route export fails, retain local route data. Never create a second workout to repair the route.
+6. After an uncertain completion, query HealthKit for an existing workout/route association before retrying.
+7. Never claim a deallocated or invalidated route builder can be resumed after arbitrary process death.
+
+Open risk: a crash after route-builder insertion but before route finalization may leave no recoverable HealthKit route builder. The local route remains authoritative. Exact retry behaviour needs a controlled prototype and API confirmation.
+
+Sources:
+- https://developer.apple.com/documentation/healthkit/hkworkoutroutebuilder/finishroute(with:metadata:completion:)
+- https://developer.apple.com/documentation/healthkit/hkworkoutroutebuilder
+- https://developer.apple.com/documentation/healthkit/creating-a-workout-route
+
+### 33.6 Android Health Services lifecycle and recovery
+
+Google's exercise guidance recommends:
+- A foreground service with ExerciseClient to manage workout state, sensors and ongoing activity when the screen turns off or the user navigates away.
+- Room for workout data and WorkManager for upload.
+- Runtime exercise capability and permission checks before prepare/start.
+- Query getCurrentExerciseInfoAsync on startup. It can identify an exercise owned by this app, no active exercise, or an exercise owned by another app.
+- If the process was killed but the exercise remains active and owned by the app, register a new callback and resume receiving updates; Health Services caches updates generated while no callback was active.
+- Another app can take over the single active Health Services exercise. Save partial progress and explain that tracking ended.
+- Permission loss can end the exercise; preserve partial data and record the end reason.
+- Screen-off updates may be batched; never drive a chronometer from callback frequency.
+
+WALKON Android requirements:
+- Persist local workout state before requesting Health Services start.
+- Use foreground service with correct health/location service types and current API-level permissions.
+- Reconnect to the owned exercise and re-register callbacks after process recreation.
+- Treat other-app takeover, permission loss, service stop, Bluetooth loss and location loss as distinct interruption causes.
+- Keep uploads separate from recording; network failure must not stop or corrupt an active workout.
+- Test OEM restrictions. A foreground service is not immunity from force-stop, reboot or user termination.
+
+Sources:
+- https://developer.android.com/health-and-fitness/health-services/active-data
+- https://developer.android.com/health-and-fitness/health-services
+- https://developer.android.com/develop/background-work/services/fgs/service-types
+
+### 33.7 Local-first persistence and crash consistency
+
+The local database is authoritative until external export is verified:
+- Commit workout UUID and initial state before sensor activation.
+- Persist route points and metric batches frequently enough to bound loss; never keep the only copy in memory.
+- Use transactions for logical batches and state transitions, foreign keys, versioned migrations and a write-ahead log with appropriate durability.
+- Keep the event journal append-only; summaries are rebuildable derived views.
+- Each external export has an outbox record, idempotency key, attempt count, last error and retry eligibility.
+- Never perform network calls inside the local database transaction.
+- On restart, replay unapplied journal events, validate open segments and reconcile state against platform session evidence.
+- If storage is full or a write fails, surface a critical recording warning; do not claim the workout is safely recording.
+
+This is a design requirement, not a claim that SQLite protects against every power-loss or filesystem failure. Fault injection is required.
+
+### 33.8 Exactly-once semantics across independent stores
+
+There is no atomic transaction spanning SQLite, HealthKit/Health Connect, route builder and cloud backend. WALKON must use at-least-once attempts with idempotent effects and reconciliation, not pretend to have a distributed exactly-once transaction.
+
+- Stable local workout UUID is canonical.
+- Keep a unique export job per platform/object type.
+- Persist external identifiers after successful creation.
+- Before retrying an uncertain operation, query for a matching external record using available metadata/time/device/workout identity; do not blindly recreate.
+- If the external API lacks idempotency keys or reliable lookup, mark outcome uncertain and reconcile rather than claiming automatic retry is safe.
+- Test crash-before-request, request-in-flight, external-success-before-local-ack and local-ack-before-next-step.
+
+### 33.9 Phone/watch ownership and handover
+
+- Assign one logical workout UUID and one owner epoch (phone or watch).
+- Only current owner advances authoritative lifecycle state; companion devices send sequenced commands/events.
+- Handover protocol: request, acknowledge, record last committed sequence, increment owner epoch, confirm new owner, then close old owner.
+- During disconnection, the active recording device continues locally if supported; later sync merges by stable event IDs, not by summing overlapping summaries.
+- If both devices recorded the same interval, preserve both raw streams and select one authoritative interval; never double count.
+- If ownership cannot be resolved, preserve candidates and flag a reconciliation conflict.
+
+### 33.10 Interruption taxonomy and recovery UX
+
+Distinguish app background/suspension, process death, user force-quit, OS/platform termination, permission revocation, location disabled, Bluetooth disconnection, phone/watch link loss, reboot, low storage/database error, health-platform export failure and network outage.
+
+Recovery UI must state whether recording is active, paused, ended, or locally saved but not exported. Never show a live timer when the underlying platform workout ended. Preserve partial work and offer recovery/save/discard where appropriate.
+
+### 33.11 Fault-injection acceptance matrix
+
+Test failures at each durable boundary:
+1. Kill app before/after local workout creation.
+2. Kill during sensor startup, immediately after platform start and during recording.
+3. Lock screen, background app, switch apps and receive calls/audio interruptions.
+4. Terminate process while HealthKit/Health Services session is active; relaunch and verify ownership/recovery.
+5. Trigger another workout app takeover on Android.
+6. Revoke motion, health, location and Bluetooth permissions mid-session.
+7. Disable GPS/Bluetooth; disconnect and reconnect sensors.
+8. Pause/resume repeatedly; deliver duplicate/out-of-order callbacks.
+9. Crash during route batch commit, HealthKit workout save, route finalization and local export acknowledgement.
+10. Simulate offline mode, backend outage, retry, duplicate sync and reboot.
+11. Fill storage and simulate database write errors.
+12. Start on watch, disconnect phone, finish on watch, reconnect and verify one logical workout.
+
+Acceptance evidence: no duplicate workouts, no fabricated route bridging, bounded loss no greater than the last uncommitted local batch, recovery where platform supports it, correct partial workout on platform termination, idempotent retries and auditable event/export journal. Set numeric loss, battery and latency limits from tests, not guesses.
+
+### 33.12 Open decisions
+
+- Which recovery APIs apply to the iPhone-only iOS 26+ release versus a later watchOS companion?
+- Can the chosen Core Location background session be re-established after each relevant process termination, and which events are queued/delivered?
+- What route-builder recovery is guaranteed after a crash before route finalization?
+- Which Android devices/API versions cache and replay Health Services updates after process death, and for what window?
+- How resolve platform-active/local-finishing state conflicts?
+- What is the maximum acceptable uncommitted data-loss window under power loss/storage failure?
+- What metadata/query strategy safely reconciles an external save whose completion callback was lost?
+
+Research status: platform lifecycle, HealthKit route-finalization constraints, Android exercise ownership/recovery and local-first transaction design documented. Arbitrary iOS route-builder recovery, device-specific Android retention and crash-loss bounds remain open for targeted prototype/fault-injection tests. No app implementation is authorized by this section.
