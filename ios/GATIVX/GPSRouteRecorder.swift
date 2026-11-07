@@ -31,6 +31,13 @@ final class GPSRouteRecorder: NSObject, ObservableObject, CLLocationManagerDeleg
 
     private let manager = CLLocationManager()
     private let draftKey = "gativx.activeRouteDraft.v1"
+    private var draftURL: URL? {
+        guard let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else { return nil }
+        let directory = support.appendingPathComponent("GATIVX", isDirectory: true)
+        do { try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true) }
+        catch { return nil }
+        return directory.appendingPathComponent("active-route-draft.json", isDirectory: false)
+    }
     private(set) var isRecording = false
     private var pendingStartAfterAuthorization = false
     private var activeStartedAt: Date?
@@ -141,6 +148,7 @@ final class GPSRouteRecorder: NSObject, ObservableObject, CLLocationManagerDeleg
 
     func clearDraft() {
         UserDefaults.standard.removeObject(forKey: draftKey)
+        if let url = draftURL { try? FileManager.default.removeItem(at: url) }
         points.removeAll()
         activeStartedAt = nil
         activeActivity = "Walking"
