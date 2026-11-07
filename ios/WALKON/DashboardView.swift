@@ -15,9 +15,16 @@ struct DashboardView: View {
             history.tabItem { Label("History", systemImage: "clock.arrow.circlepath") }
         }
         .tint(Color(red: 0.72, green: 1.0, blue: 0.22))
-        .onAppear { health.requestAccessAndRefresh() }
+        .onAppear {
+            health.requestAccessAndRefresh()
+            tracker.onCheckpoint = { started, steps, distance, route in
+                store.checkpoint(startedAt: started, steps: steps, distanceMeters: distance, route: route)
+            }
+            if let interrupted = store.recoverActiveWalk() { tracker.restore(interrupted) }
+        }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { health.refresh() }
+
         }
     }
 
@@ -93,7 +100,7 @@ struct DashboardView: View {
                 Button {
                     if tracker.isTracking {
                         tracker.finish { session in
-                            if let session { _ = store.save(session) }
+                            if let session, store.save(session) { store.clearActiveWalkCheckpoint() }
                         }
                     } else {
                         tracker.start()
