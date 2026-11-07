@@ -48,6 +48,7 @@ final class ActivityStore: ObservableObject {
 
     private let fileName = "walkon-activities-v1.json"
     private let activeFileName = "walkon-active-walk-v1.json"
+    private let directoryURL: URL?
     private let encoder: JSONEncoder = {
         let value = JSONEncoder()
         value.dateEncodingStrategy = .iso8601
@@ -60,7 +61,15 @@ final class ActivityStore: ObservableObject {
         return value
     }()
 
-    init() { load() }
+    init(storageDirectory: URL? = nil) {
+        if let storageDirectory {
+            self.directoryURL = storageDirectory
+        } else {
+            self.directoryURL = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)
+                .first?.appendingPathComponent("WALKON", isDirectory: true)
+        }
+        load()
+    }
 
     @discardableResult
     func save(_ session: WalkSession) -> Bool {
@@ -116,15 +125,11 @@ final class ActivityStore: ObservableObject {
     }
 
     private var activeStorageURL: URL? {
-        FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first?
-            .appendingPathComponent("WALKON", isDirectory: true)
-            .appendingPathComponent(activeFileName, isDirectory: false)
+        directoryURL?.appendingPathComponent(activeFileName, isDirectory: false)
     }
 
     private var storageURL: URL? {
-        FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)
-            .first?.appendingPathComponent("WALKON", isDirectory: true)
-            .appendingPathComponent(fileName, isDirectory: false)
+        directoryURL?.appendingPathComponent(fileName, isDirectory: false)
     }
 
     private func load() {
