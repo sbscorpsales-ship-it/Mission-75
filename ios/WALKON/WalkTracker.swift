@@ -196,22 +196,20 @@ final class WalkTracker: NSObject, ObservableObject, CLLocationManagerDelegate {
         guard isTracking else { return }
         for point in locations.sorted(by: { $0.timestamp < $1.timestamp }) {
             guard point.horizontalAccuracy >= 0, point.horizontalAccuracy <= 35 else { continue }
-            if let previous = route.last {
-                guard point.timestamp > previous.timestamp else { continue }
-                let old = CLLocation(latitude: previous.latitude, longitude: previous.longitude)
-                let delta = point.distance(from: old)
-                let elapsed = point.timestamp.timeIntervalSince(previous.timestamp)
-                // Do not bridge long GPS gaps or accept implausible walking jumps.
-                if elapsed > 0, elapsed <= 30, delta >= 0, delta / elapsed <= 8 {
-                    distanceMeters += delta
-                }
-            }
-            route.append(WalkSession.RoutePoint(
+            let nextPoint = WalkSession.RoutePoint(
                 latitude: point.coordinate.latitude,
                 longitude: point.coordinate.longitude,
                 timestamp: point.timestamp,
                 horizontalAccuracy: point.horizontalAccuracy
-            ))
+            )
+            if let previous = route.last {
+                guard point.timestamp > previous.timestamp else { continue }
+                // Do not bridge long GPS gaps or accept implausible walking jumps.
+                if let increment = WalkSession.acceptedDistance(from: previous, to: nextPoint) {
+                    distanceMeters += increment
+                }
+            }
+            route.append(nextPoint)
             gpsAccuracy = point.horizontalAccuracy
         }
         checkpoint()
