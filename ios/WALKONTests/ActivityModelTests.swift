@@ -142,3 +142,16 @@ final class ActivityStorePersistenceTests: XCTestCase {
         XCTAssertEqual(recovered?.distanceMeters ?? -1, 75, accuracy: 0.001)
     }
 }
+
+
+#if targetEnvironment(simulator)
+@MainActor
+final class HealthStepsSimulatorTests: XCTestCase {
+    func testSimulatorClearlyReportsThatAppleHealthRequiresPhysicalIPhone() {
+        let health = HealthSteps()
+        health.requestAccessAndRefresh()
+        XCTAssertTrue(health.status.contains("physical iPhone"))
+        XCTAssertNil(health.steps)
+    }
+}
+#endif
