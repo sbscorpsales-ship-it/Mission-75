@@ -38,9 +38,13 @@ final class CloudSyncStore: ObservableObject {
                     UserDefaults.standard.set(false, forKey: "walkon.offline-mode")
                 }
                 self.email = session?.user.email
-                self.status = session == nil
-                    ? "Sign in to back up steps and walks"
-                    : "Cloud account connected"
+                if session != nil {
+                    self.status = "Cloud account connected"
+                } else if self.isOfflineMode {
+                    self.status = "Offline mode — walks stay on this iPhone"
+                } else {
+                    self.status = "Sign in to back up steps and walks"
+                }
             }
         }
     }
