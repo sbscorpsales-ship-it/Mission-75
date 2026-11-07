@@ -10,7 +10,7 @@ targets:
     type: application
     platform: iOS
     sources:
-      - path: GATIVX
+      - path: GATIVX/**/*.swift
     info:
       properties:
         UIBackgroundModes:
