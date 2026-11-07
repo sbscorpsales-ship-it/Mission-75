@@ -141,6 +141,43 @@ final class ActivityStorePersistenceTests: XCTestCase {
         XCTAssertEqual(recovered?.steps, 90)
         XCTAssertEqual(recovered?.distanceMeters ?? -1, 75, accuracy: 0.001)
     }
+    @MainActor func testCloudSyncMarkerPersistsAcrossReload() {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("WALKON-cloud-sync-tests-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let store = ActivityStore(storageDirectory: directory)
+        let start = Date().addingTimeInterval(-60)
+        let session = WalkSession(id: UUID(), startedAt: start,
+                                  endedAt: start.addingTimeInterval(60),
+                                  steps: 100, distanceMeters: 80, route: [])
+        XCTAssertTrue(store.save(session))
+        XCTAssertNil(store.sessions.first?.cloudSyncedAt)
+
+        store.markCloudSynced(session.id)
+        let reloaded = ActivityStore(storageDirectory: directory)
+        XCTAssertNotNil(reloaded.sessions.first?.cloudSyncedAt)
+    }
+
+    func testLegacyWalkSessionWithoutCloudMarkerStillDecodes() throws {
+        let start = Date(timeIntervalSince1970: 1_800_000_000)
+        let session = WalkSession(id: UUID(), startedAt: start,
+                                  endedAt: start.addingTimeInterval(30),
+                                  steps: 20, distanceMeters: 15, route: [])
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        var object = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: encoder.encode(session)) as? [String: Any]
+        )
+        object.removeValue(forKey: "cloudSyncedAt")
+        let legacyData = try JSONSerialization.data(withJSONObject: object)
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        let decoded = try decoder.decode(WalkSession.self, from: legacyData)
+        XCTAssertNil(decoded.cloudSyncedAt)
+        XCTAssertEqual(decoded.id, session.id)
+    }
+
 }
 
 
