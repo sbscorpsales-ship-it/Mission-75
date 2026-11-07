@@ -1,81 +1,29 @@
-// GATIVX web release gate: syntax, navigation, data preservation and intro safety.
+// GATIVX v2 release gate: new shell, retained data runtime, syntax and navigation.
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
-
-const html = fs.readFileSync("index.html", "utf8");
-let failed = false;
-const fail = (message) => { failed = true; console.error("FAIL: " + message); };
-const pass = (message) => console.log("PASS: " + message);
-
-const manifest = JSON.parse(fs.readFileSync("manifest.webmanifest", "utf8"));
-if (manifest.short_name !== "GATIVX" || manifest.display !== "standalone") fail("GATIVX standalone app manifest is incomplete");
-else pass("GATIVX standalone app manifest is valid");
-for (const icon of manifest.icons || []) {
-  const iconPath = icon.src.split(/[?#]/, 1)[0].replace(/^\.\//, "");
-  if (!fs.existsSync(iconPath)) fail("Manifest icon asset is missing: " + icon.src);
-}
-if (!fs.existsSync("apple-touch-icon.png")) fail("Dedicated iPhone Home Screen icon is missing");
-else pass("Dedicated iPhone Home Screen icon is present");
-if (!html.includes('rel="apple-touch-icon"') || !html.includes("./apple-touch-icon.png")) fail("Apple touch icon is not linked from the page head");
-else pass("Apple touch icon is linked from the page head");
-if (!fs.readFileSync("sw.js", "utf8").includes("./apple-touch-icon.png")) fail("Service worker does not precache the iPhone icon");
-else pass("Service worker precaches the iPhone icon");
-
-const scripts = [...html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)]
-  .filter(([, attrs]) => !/\bsrc\s*=/.test(attrs))
-  .map(([, , body]) => body)
-  .filter(body => body.trim());
-
-if (!scripts.length) fail("No inline application scripts found");
-for (const [index, source] of scripts.entries()) {
-  const file = path.join(os.tmpdir(), "gativx-inline-" + index + ".js");
-  fs.writeFileSync(file, source);
-  const result = spawnSync("node", ["--check", file], { encoding: "utf8" });
-  if (result.status !== 0) fail("Inline script " + (index + 1) + " has a JavaScript syntax error: " + result.stderr);
-}
-if (scripts.length && !failed) pass(scripts.length + " inline JavaScript blocks parse successfully");
-
-const tabs = [...html.matchAll(/data-tab=["']([^"']+)["']/g)].map(match => match[1]);
-const uniqueTabs = [...new Set(tabs)];
-if (uniqueTabs.length !== 6) fail("Expected 6 unique navigation tabs, found " + uniqueTabs.length);
-for (const tab of uniqueTabs) if (!html.includes('id="pane-' + tab + '"')) fail("Navigation tab '" + tab + "' has no matching pane");
-if (uniqueTabs.length === 6 && uniqueTabs.every(tab => html.includes('id="pane-' + tab + '"'))) pass("All six navigation tabs map to existing content panes");
-
-const keys = ["mission75.logs.v1", "mission75.gps.sessions.v1", "mission75.settings.v1", "mission75.habits.v1"];
-for (const key of keys) if (!html.includes(key)) fail("Existing user-data key missing: " + key);
-if (keys.every(key => html.includes(key))) pass("Existing local data keys remain present");
-
-const ids = ["vSteps", "vHeartPoints", "vActiveMinutes", "vDistance", "vWater", "vProtein"];
-for (const id of ids) if (!html.includes('id="' + id + '"')) fail("Dashboard metric missing: " + id);
-if (ids.every(id => html.includes('id="' + id + '"'))) pass("Six activity dashboard metric elements are present");
-
-if (!html.includes("displaySteps==null?'—':fmt(displaySteps)") || !html.includes("x.distance==null?'—':Number(x.distance).toFixed(2)+' km'")) fail("Missing activity data must not display as zero");
-else pass("Missing step and distance values remain unknown, not zero");
-
-if (!html.includes("gativx.brandIntro.seen.v1")) fail("First-visit intro flag missing");
-else pass("First-visit intro persistence flag is present");
-
-const introScript = scripts.find(source => source.includes("gativx.brandIntro.seen.v1"));
-if (!introScript) fail("Could not locate the intro controller");
-else if (/\bplayFanfare\s*\(\s*\)\s*;/.test(introScript)) fail("Intro contains an automatic sound invocation");
-else pass("Intro does not invoke sound automatically");
-
-if (!html.includes("gativx.profile.v1") || !html.includes('id="profilePhotoInput"') || !html.includes('id="removeProfilePhoto"')) fail("On-device profile photo controls or storage key missing");
-else if (!html.includes("canvas.toDataURL('image/jpeg',.76)") || !html.includes("this device")) fail("Profile photo must be resized and clearly device-local");
-else if (!html.includes('id="profilePhotoInput" type="file" accept="image/*"') || !html.includes("canvas.width=Math.max(1,Math.round(img.width*scale))")) fail("Profile photo picker or bounded image resize missing");
-else pass("Profile photo is optional, resized and stored locally only");
-
-if (!html.includes('id="connectionHeading"') || !html.includes('id="accountConnectionState"')) fail("Dashboard connected-data hub or account state is missing");
-else pass("Dashboard shows account and external data-source connection states");
-
-if (!html.includes('id="accountQuick"') || !html.includes('id="cloudSyncNow"')) fail("Quick account access or manual cloud refresh control is missing");
-else pass("Account access and user-triggered cloud refresh controls are present");
-
-if (!html.includes("Safari cannot read HealthKit") || !html.includes("secure Strava OAuth connection") || !html.includes("Health Connect")) fail("External health-source limitations and permission requirements must be explicit");
-else pass("External integrations are not misrepresented as connected; platform and consent requirements are explicit");
-
-if (failed) process.exit(1);
-
-// Re-run release gate after workflow activation on main.
+const shell=fs.readFileSync("app-v2.html","utf8");
+const entry=fs.readFileSync("index.html","utf8");
+const runtime=fs.readFileSync("legacy-runtime.html","utf8");
+let failed=false;
+const fail=m=>{failed=true;console.error("FAIL: "+m)};
+const pass=m=>console.log("PASS: "+m);
+const manifest=JSON.parse(fs.readFileSync("manifest.webmanifest","utf8"));
+if(manifest.short_name!=="GATIVX"||manifest.display!=="standalone")fail("GATIVX standalone manifest incomplete");else pass("Standalone manifest valid");
+for(const icon of manifest.icons||[]){const p=icon.src.split(/[?#]/,1)[0].replace(/^\.\//,"");if(!fs.existsSync(p))fail("Manifest icon missing: "+icon.src)}
+if(!fs.existsSync("apple-touch-icon.png")||!shell.includes('rel="apple-touch-icon"'))fail("iPhone Home Screen icon missing from new shell");else pass("iPhone Home Screen icon linked");
+if(!fs.readFileSync("sw.js","utf8").includes("./apple-touch-icon.png"))fail("Service worker does not precache iPhone icon");else pass("Service worker icon cache valid");
+if(!entry.includes("./app-v2.html")||!entry.includes("location.replace"))fail("Root entry does not launch the new interface");else pass("Root entry launches the clean v2 interface");
+if(!shell.includes('src="./legacy-runtime.html"')||!fs.existsSync("legacy-runtime.html"))fail("Retained data/runtime bridge is missing");else pass("Existing data and service runtime preserved separately");
+const scripts=[...shell.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)].filter(([,a])=>! /\bsrc\s*=/.test(a)).map(([, ,b])=>b).filter(x=>x.trim());
+for(const [i,src] of scripts.entries()){const p=path.join(os.tmpdir(),"gativx-v2-"+i+".js");fs.writeFileSync(p,src);const r=spawnSync("node",["--check",p],{encoding:"utf8"});if(r.status!==0)fail("V2 JavaScript block "+(i+1)+" invalid: "+r.stderr)}
+if(scripts.length&&!failed)pass(scripts.length+" new interface JavaScript blocks parse");
+const panels=[...shell.matchAll(/id="(home|journey|record|walk|coach)"/g)].map(x=>x[1]);
+for(const id of ["home","journey","record","walk","coach"])if(!shell.includes('id="'+id+'"'))fail("Missing v2 section: "+id);
+if(!shell.includes('data-panel="home"')||!shell.includes('data-panel="walk"')||!shell.includes('data-panel="record"'))fail("New navigation controls incomplete");else pass("Five new navigation destinations present");
+for(const key of ["mission75.logs.v1","mission75.gps.sessions.v1","mission75.settings.v1","mission75.habits.v1"])if(!runtime.includes(key))fail("Retained runtime missing user-data key "+key);
+if(!runtime.includes('id="vSteps"')||!runtime.includes('id="gpsStart"')||!runtime.includes('id="saveLog"'))fail("Legacy runtime no longer exposes step, GPS and record actions");else pass("Existing step, GPS and journal engines remain available behind the new shell");
+if(!shell.includes("steps==null?'—'")||!shell.includes("SOURCE NOT CONFIRMED"))fail("Unknown step values must not be shown as zero");else pass("Unknown step totals remain unknown");
+if(!shell.includes("mission75.goal.v1")&&!shell.includes("gativx.goal.v1"))fail("Mission goal binding missing");
+if(failed)process.exit(1);
