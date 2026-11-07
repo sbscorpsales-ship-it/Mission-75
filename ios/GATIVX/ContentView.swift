@@ -96,7 +96,7 @@ struct ContentView: View {
     private func startActivitySession() {
         guard CMPedometer.isStepCountingAvailable() else { sessionStatus = "Step counting is unavailable."; return }
         let start = Date(); sessionStarted = start; sessionSteps = 0
-        routeRecorder.start()
+        routeRecorder.start(activity: selectedActivity)
         sessionStatus = "Counting steps for " + selectedActivity.lowercased() + "…"
         pedometer.startUpdates(from: start) { data, error in
             DispatchQueue.main.async {
@@ -121,6 +121,7 @@ struct ContentView: View {
                 var history = (try? JSONDecoder().decode([ActivitySessionRecord].self, from: UserDefaults.standard.data(forKey: "gativx.activitySessions.v1") ?? Data())) ?? []
                 history.insert(record, at: 0)
                 UserDefaults.standard.set(try? JSONEncoder().encode(history), forKey: "gativx.activitySessions.v1")
+                self.routeRecorder.clearDraft()
                 self.sessionSteps = finalSteps
                 self.sessionStatus = activity + " saved · " + (finalSteps?.formatted() ?? "step count unavailable") + " steps"
                 self.sessionStarted = nil
@@ -190,6 +191,28 @@ struct ContentView: View {
                     Text(sessionStatus).font(.caption).foregroundStyle(.secondary)
                     Text(routeRecorder.status + " · " + routeRecorder.points.count.formatted() + " GPS points").font(.caption2).foregroundStyle(.secondary)
                     if sessionStarted == nil {
+                        if let recoveredStart = routeRecorder.recoveredStartedAt {
+                            Text("An unfinished activity from \\(recoveredStart.formatted(date: .abbreviated, time: .shortened)) was recovered. Its GPS points are stored on this iPhone.")
+                                .font(.caption).foregroundStyle(.orange)
+                            Button("Resume recovered activity") {
+                                selectedActivity = routeRecorder.recoveredActivity ?? "Walking"
+                                sessionStarted = recoveredStart
+                                sessionSteps = nil
+                                routeRecorder.resumeRecovered()
+                                pedometer.startUpdates(from: recoveredStart) { data, error in
+                                    DispatchQueue.main.async {
+                                        if error == nil { self.sessionSteps = data?.numberOfSteps.intValue }
+                                    }
+                                }
+                                sessionStatus = "Recovered activity resumed. Finish to save the route."
+                            }.buttonStyle(.borderedProminent).tint(.orange)
+                            Button("Save recovered route now") {
+                                selectedActivity = routeRecorder.recoveredActivity ?? "Walking"
+                                sessionStarted = recoveredStart
+                                sessionSteps = nil
+                                finishActivitySession()
+                            }.buttonStyle(.bordered)
+                        }
                         Button("Start activity") { startActivitySession() }.buttonStyle(.borderedProminent).tint(.green)
                             .disabled(!CMPedometer.isStepCountingAvailable())
                     } else {
@@ -255,6 +278,10 @@ struct ContentView: View {
                 startLiveMotionMonitor()
                 // A Keychain-restored session is already signed in before onChange fires.
                 if cloud.isSignedIn { syncSavedActivitySessions() }
+                if let recoveredStart = routeRecorder.recoveredStartedAt {
+                    selectedActivity = routeRecorder.recoveredActivity ?? "Walking"
+                    sessionStatus = "Unfinished activity recovered from \\(recoveredStart.formatted(date: .abbreviated, time: .shortened))."
+                }
             }
             .onChange(of: cloud.isSignedIn) { _, signedIn in
                 if signedIn {
