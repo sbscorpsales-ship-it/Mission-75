@@ -342,3 +342,12 @@ Implementation implications:
 **Compatibility trade-off:** choosing iOS 26+ excludes older iPhones that cannot run iOS 26. This is an explicit product reach decision, not an incidental code setting. The current user's iPhone 12 Pro Max must be checked against the supported iOS version and then tested on-device before committing to the target. If that device cannot run iOS 26, we must choose between a legacy fallback engine for older iOS and a newer-device-only release; do not silently downgrade the architecture.
 
 The iOS 17 value in `ios/project.yml` remains unchanged until the user reviews the device compatibility and approves the deployment decision.
+
+
+### Device compatibility check
+
+Apple's current iOS 26 compatibility list explicitly includes iPhone 12 Pro Max:
+- https://support.apple.com/en-in/123705
+- https://support.apple.com/en-in/guide/iphone/iphe3fa5df43/ios
+
+Therefore the user's iPhone 12 Pro Max is eligible for the iOS 26+ native workout-session architecture. The user-reported installed iOS 27.0.1 is newer than the minimum API generation. Actual device build, entitlements, Health permissions and field behaviour still require testing; model compatibility alone does not prove runtime success.
