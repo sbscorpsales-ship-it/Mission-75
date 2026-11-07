@@ -16,6 +16,7 @@ on:
       - "walkon/**"
     paths:
       - "ios/WALKON/**"
+      - "ios/WALKONTests/**"
       - "ios/project.yml"
       - ".github/workflows/walkon-ios.yml"
 
