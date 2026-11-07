@@ -276,3 +276,45 @@ The first WALKON Swift prototype is a scaffold, not a release candidate:
 
 ---
 This document is intentionally a research draft. User screen recordings and further product research may change the proposed architecture before implementation.
+
+
+## 13. Research update — native iPhone HealthKit workout sessions (WWDC25)
+
+Research finding added 2026-11-07:
+Apple's WWDC25 session documents a full HealthKit workout-session workflow on iPhone and iPad, including a live workout builder, lock-screen data access prompt, Live Activities, Siri workout controls and crash recovery. This is a major architecture improvement over the prototype's simple Core Motion timer.
+
+Official source:
+- https://developer.apple.com/videos/play/wwdc2025/322/
+- https://developer.apple.com/documentation/healthkit/hkworkoutsession
+- https://developer.apple.com/documentation/healthkit/building-a-workout-app-for-iphone-and-ipad
+
+### Updated proposed recording architecture
+
+1. Use HKWorkoutSession + HKLiveWorkoutBuilder as the authoritative lifecycle for a user-started iPhone workout (prepare, start, pause, resume, stop, finish).
+2. Use HKLiveWorkoutBuilder delegate updates for live workout statistics and final HealthKit workout persistence; do not poll HealthKit repeatedly to redraw the live workout screen.
+3. Use Core Location for outdoor GPS route points. HealthKit's HKWorkoutRouteBuilder remains responsible for associating the filtered route with the saved workout.
+4. Keep Core Motion as a dedicated sensor input only if field tests show it provides a session step measure not already supplied appropriately by the live workout builder. Never add overlapping step sources.
+5. Implement iPhone workout crash recovery using the scene connection recovery option and HKHealthStore.recoverActiveWorkoutSession, restoring the session, builder delegate and data source.
+6. Use ActivityKit Live Activities for a minimal lock-screen workout display, and App Intents / Siri intents for start, pause, resume and end only after the core lifecycle is stable.
+7. Handle lock-screen health-data privacy explicitly: metrics may be unavailable while locked unless the user accepts the system's workout data access prompt. Show duration or a clear unavailable state instead of fabricated zeros.
+
+### Platform target decision
+
+The current XcodeGen spec says iOS 17. That target must be re-evaluated before implementation. Apple's WWDC25 video describes the newer iPhone/iPad workout-session experience; the exact deployment availability of the required iPhone-specific APIs must be checked against the SDK's availability annotations and Apple's current sample project. Do not assume that every WWDC25 capability works on iOS 17. The final deployment target should be selected only after this availability audit. The user's current iPhone model and installed iOS version must be included in the device test matrix.
+
+### Important sensor distinction
+
+HKLiveWorkoutBuilder supplies workout metrics and manages the workout's HealthKit lifecycle. Core Location still supplies the route coordinates. These are complementary roles, not competing GPS providers. The route must be filtered, inserted into HKWorkoutRouteBuilder during the workout, and finalized only after the workout is saved. Apple notes that route points can be noisy and recommends filtering; its sample guidance rejects horizontal accuracy worse than 50 metres and aims for location updates about every three seconds.
+
+### Updated acceptance gate
+
+- Start a native HKWorkoutSession on the actual iPhone.
+- Lock the device and verify workout continues and the user-facing lock-screen experience behaves correctly.
+- Confirm live builder metrics update without polling loops.
+- Pause/resume and verify route segments do not bridge pauses.
+- Force-crash/relaunch in a controlled test and verify HealthKit session recovery.
+- Save workout first, then finish and associate the route.
+- Verify one workout and one route appear in Apple Health/Fitness, with no duplicate step samples.
+- Verify local activity still exists if route finalization or a HealthKit write fails.
+
+This update supersedes the earlier assumption that a Core Motion-only custom session timer should be the main workout lifecycle. It remains a research proposal pending the exact iOS API availability audit and device tests.
