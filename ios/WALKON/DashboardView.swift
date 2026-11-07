@@ -133,9 +133,6 @@ struct DashboardView: View {
                                     .tint(.mint)
                             }
                         }
-                        if let email = cloud.email {
-                            Text(email).font(.caption2).foregroundStyle(.tertiary)
-                        }
                         Text(store.storageStatus).font(.caption2).foregroundStyle(.tertiary)
                     }
                     .padding(16)
