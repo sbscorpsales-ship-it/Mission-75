@@ -6,6 +6,7 @@ import Supabase
 final class CloudSyncStore: ObservableObject {
     @Published private(set) var hasResolvedAuth = false
     @Published private(set) var isSignedIn = false
+    @Published private(set) var isOfflineMode = UserDefaults.standard.bool(forKey: "walkon.offline-mode")
     @Published private(set) var email: String?
     @Published private(set) var status = "Checking secure cloud session"
 
@@ -32,6 +33,10 @@ final class CloudSyncStore: ObservableObject {
             for await (_, session) in events {
                 self.hasResolvedAuth = true
                 self.isSignedIn = session != nil
+                if session != nil {
+                    self.isOfflineMode = false
+                    UserDefaults.standard.set(false, forKey: "walkon.offline-mode")
+                }
                 self.email = session?.user.email
                 self.status = session == nil
                     ? "Sign in to back up steps and walks"
@@ -68,16 +73,33 @@ final class CloudSyncStore: ObservableObject {
             type: .email
         )
         isSignedIn = true
+        isOfflineMode = false
+        UserDefaults.standard.set(false, forKey: "walkon.offline-mode")
         hasResolvedAuth = true
         email = response.user.email
         status = "Signed in — cloud backup is ready"
     }
 
+    func continueOffline() {
+        hasResolvedAuth = true
+        isOfflineMode = true
+        UserDefaults.standard.set(true, forKey: "walkon.offline-mode")
+        status = "Offline mode — walks stay on this iPhone"
+    }
+
+    func connectAccount() {
+        isOfflineMode = false
+        UserDefaults.standard.set(false, forKey: "walkon.offline-mode")
+        status = "Sign in to enable cloud backup"
+    }
+
     func signOut() async throws {
         try await client.auth.signOut()
         isSignedIn = false
+        isOfflineMode = true
+        UserDefaults.standard.set(true, forKey: "walkon.offline-mode")
         email = nil
-        status = "Signed out"
+        status = "Signed out — local-only mode is active"
     }
 
     func syncHealthKitSteps(_ steps: Int, measuredAt: Date = Date()) async {
