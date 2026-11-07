@@ -39,13 +39,46 @@ jobs:
             -scheme GATIVX \
             -sdk iphonesimulator \
             -configuration Debug \
-            -derivedDataPath build/DerivedData \
+            -derivedDataPath build/SimulatorDerivedData \
             CODE_SIGNING_ALLOWED=NO \
             build
+
+      - name: Compile a separate unsigned iPhone test build (CoreMotion test)
+        run: |
+          xcodebuild \
+            -project ios/GATIVX.xcodeproj \
+            -scheme GATIVX \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -configuration Debug \
+            -derivedDataPath build/DeviceDerivedData \
+            PRODUCT_BUNDLE_IDENTIFIER=com.paramitsolutions.gativx.freetest \
+            CODE_SIGN_ENTITLEMENTS= \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            build
+
+      - name: Package unsigned iPhone IPA for local signing
+        run: |
+          APP_PATH="build/DeviceDerivedData/Build/Products/Debug-iphoneos/GATIVX.app"
+          test -d "$APP_PATH"
+          mkdir -p build/ipa/Payload
+          cp -R "$APP_PATH" build/ipa/Payload/GATIVX.app
+          cd build/ipa
+          /usr/bin/zip -qr ../../GATIVX-Free-Test-Unsigned.ipa Payload
+          test -s ../../GATIVX-Free-Test-Unsigned.ipa
+
+      - name: Upload unsigned iPhone IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: GATIVX-Free-Test-Unsigned-IPA
+          path: GATIVX-Free-Test-Unsigned.ipa
+          if-no-files-found: error
 
       - name: Upload simulator app bundle
         uses: actions/upload-artifact@v4
         with:
           name: GATIVX-iOS-Simulator
-          path: build/DerivedData/Build/Products/Debug-iphonesimulator/GATIVX.app
+          path: build/SimulatorDerivedData/Build/Products/Debug-iphonesimulator/GATIVX.app
           if-no-files-found: error
