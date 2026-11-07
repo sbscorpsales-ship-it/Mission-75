@@ -51,8 +51,9 @@ After these: consolidate contradictions, close architecture decisions, produce a
 
 ## Last verified checkpoint
 - **Latest completed section:** 31.
-- **Latest section-31 commit:** `7368bb402eec9947af083191c3873fec805970a3`.
-- **Latest section-31 blob SHA:** `3270deff835f0cc6b3f7aebc87b0e5953ba9f8fb`.
+- **Section-31 research commit:** `7368bb402eec9947af083191c3873fec805970a3`.
+- **Latest continuity-register commit:** `56b1723ddcd1ef23b79e6f1bb1cfb37857252fb8`.
+- **Current blueprint blob SHA before this checkpoint refresh:** `54f3863bf9b6247df205bb21510f74e726781aa6`.
 - **Next action:** research Section 32 — wearables and Bluetooth interoperability.
 
 ---
