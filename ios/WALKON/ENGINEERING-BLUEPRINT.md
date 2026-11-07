@@ -6,9 +6,9 @@
 - **Repository:** `sbscorpsales-ship-it/Mission-75`, branch `main`.
 - **Blueprint:** `ios/WALKON/ENGINEERING-BLUEPRINT.md`.
 - **Phase:** Research and engineering specification only. **App building is not authorized yet.**
-- **Current completed research:** Sections 1–35 exist below. Latest research section: **35 — Calories and energy expenditure validity**.
-- **Exact next task:** **Section 36 — Battery, thermal management and long-session behaviour.** Research iOS/Android background execution, GPS and sensor power draw, location batching, CPU wakeups, thermal states, low-power modes, battery measurement methodology and long-session degradation. Do not drift into unrelated feature design.
-- **After Section 36:** update this register's latest-completed and exact-next-task fields before proceeding to Section 37 (offline-first storage, sync, conflict handling and export).
+- **Current completed research:** Sections 1–36 exist below. Latest research section: **36 — Battery, thermal management and long-session behaviour**.
+- **Exact next task:** **Section 37 — Offline-first storage, sync, conflict handling and export.** Research durable local writes, outbox/inbox patterns, idempotency, retry/backoff, ordering, conflict policy, deletion propagation, health-store export, route upload, network transitions and recovery. Do not drift into unrelated feature design.
+- **After Section 37:** update this register's latest-completed and exact-next-task fields before proceeding to Section 38 (maps, route display, map matching and location privacy).
 - **No user device testing or screenshot requests** until the research/architecture blueprint is sufficiently complete and a coherent buildable test plan is ready.
 
 ## Non-negotiable working rules
@@ -39,6 +39,7 @@
 - **Section 33:** Workout state machine, crash recovery, HealthKit route finalization, Android exercise ownership and exactly-once reconciliation.
 - **Section 34:** HealthKit/Health Connect permission semantics, aggregate versus raw reads, provenance, incremental changes, deletion, source reconciliation, privacy and acceptance tests.
 - **Section 35:** Active, resting/basal, gross and total energy semantics; HealthKit/Health Connect calorie records; walking-model limits; wearable error; WALKON validation policy.
+- **Section 36:** iOS/Android location power efficiency, background execution, batching, thermal and Low Power Mode responses, sensor/CPU/network duty cycle, battery measurement, long-session degradation and validation gates.
 
 ## Open research queue (ordered)
 36. Battery, thermal management and long-session behaviour.
@@ -50,12 +51,12 @@
 After these: consolidate contradictions, close architecture decisions, produce a single implementation-ready specification and explicit go/no-go checklist. Only then ask for authorization to build.
 
 ## Last verified checkpoint
-- **Latest completed section:** 35.
-- **Latest research update:** Section 35 — calories and energy expenditure validity.
-- **Section-35 commit:** 8e48fc8e6aa445ac373d69bcd7a8998409f9aa61.
-- **Section-35 research blob:** 037fac2378d3a0f6d9bc48fa331ad92d7561bb7e.
-- **Next action:** research Section 36 — battery, thermal management and long-session behaviour.
-- **After Section 36:** Section 37 — offline-first storage, sync, conflict handling and export.
+- **Latest completed section:** 36.
+- **Latest research update:** Section 36 — battery, thermal management and long-session behaviour.
+- **Section-36 commit:** pending verification after this write.
+- **Section-36 research blob:** pending verification after this write.
+- **Next action:** research Section 37 — offline-first storage, sync, conflict handling and export.
+- **After Section 37:** Section 38 — maps, route display, map matching and location privacy.
 
 ---
 
@@ -3200,3 +3201,167 @@ Research complete for Section 35 at documentation level. No calorie algorithm is
 - [R5] Prediction and cross-validation of an energy expenditure equation in Asian adults: https://pmc.ncbi.nlm.nih.gov/articles/PMC8439706/
 - [R6] Cadence-based metabolic equation for walking: https://pmc.ncbi.nlm.nih.gov/articles/PMC7896743/
 
+
+
+## 36. Battery, thermal management and long-session behaviour
+
+Status: platform behaviour and energy-management APIs researched; WALKON has no measured battery baseline yet. All thresholds below are proposed engineering policies, not claims of measured device performance.
+
+### 36.1 The core engineering trade-off
+
+A route recorder must continue collecting enough location data to produce a useful track while the screen is locked, but continuous high-accuracy location, frequent CPU wakeups, radios and a bright always-on display can consume substantial energy. There is no universal “battery percentage per hour” figure: consumption varies with handset, battery age, ambient temperature, cellular signal, GPS visibility, screen brightness, OS version, sensor use, route environment and other running apps.
+
+WALKON must therefore optimize for **minimum work that preserves route quality**, not simply minimize location samples or maximize update frequency. A low-power route with large unobserved gaps is not a successful fitness recording. Conversely, an app that records every raw sensor event, redraws the map continuously and uploads every point immediately wastes energy without necessarily improving the saved route.
+
+### 36.2 iOS: background execution and location
+
+Apple documents that most iOS apps are suspended shortly after entering the background. While suspended, they do not execute ordinary code or receive live location callbacks; Core Location may queue updates and deliver them when the app runs again. A fitness route that requires timely background points must use the supported location background capability and the appropriate Core Location background session/authorization model. This is a specific, user-visible activity, not permission for indefinite background tracking.
+
+Apple's current location-efficiency guidance recommends minimizing location update frequency, stopping location services when no longer needed, and using the newer location update APIs where appropriate. High desired accuracy can engage multiple subsystems (GPS, Wi-Fi, Bluetooth, cellular and other hardware). Use a distance filter suited to walking and the system's stationary indication where supported; do not poll GPS on a fixed tight timer when the system already manages location delivery.
+
+**WALKON policy:**
+- Start high-quality location only after the user explicitly starts a walk; stop it promptly on finish/discard.
+- Keep a clear recording indicator and persistent session state. Do not use silent audio, fake activity, repeated notifications or unrelated background modes to keep the process alive.
+- Use the supported background-location mode only for an active recording. Request only the authorization level needed for the promised locked-screen route experience and explain why.
+- Prefer modern Core Location update streams/session APIs when the selected deployment target and SDK support them; retain a tested compatibility path if required.
+- Treat queued/delayed location callbacks as possible. Every point carries its original timestamp; sort and validate by event time, not callback arrival time.
+- If location accuracy is not improving or the device reports a stationary condition, avoid repeated aggressive requests. Show GPS quality honestly and preserve a gap marker rather than fabricating a straight line.
+- A background session is not a guarantee against force-quit, device shutdown, exhausted battery, permission revocation or all system interruptions.
+
+Sources: [A1, A2, A3].
+
+### 36.3 iOS: Low Power Mode and thermal states
+
+Apple exposes Low Power Mode through ProcessInfo and power-state notifications. Apple advises pausing optional work, reducing display updates/animations and reducing network activity when Low Power Mode is enabled. Apple also exposes thermal-state notifications and four broad states: nominal, fair, serious and critical. Apple's guidance is to defer non-urgent work at fair, reduce networking/location/display activity at serious, and reduce or stop power-intensive work at critical.
+
+WALKON must not silently change a user's recorded route into a low-quality route without disclosure. Apply a priority hierarchy:
+1. Preserve the active workout's durable local journal and accepted location samples.
+2. Keep the minimum location service required for an explicitly active route, subject to OS thermal safety and user-visible status.
+3. Defer map rendering, animations, nonessential analytics, cloud uploads, thumbnails and other optional work.
+4. Reduce UI refresh cadence and avoid per-point full-screen redraws.
+5. At serious/critical thermal conditions, display a clear degraded/paused recording status and follow platform safety constraints; never claim uninterrupted capture if the OS or hardware prevents it.
+
+Low Power Mode is a constraint signal, not a reason to discard the session or assert that GPS is disabled. Test the actual location behaviour on target devices with Low Power Mode enabled. Record the state transition and any observed route gap for diagnostics.
+
+Sources: [A4, A5].
+
+### 36.4 Android: foreground tracking, batching and thermal response
+
+For a user-visible walk that continues when the screen is off or another app is in front, Android's location guidance recommends a foreground service with a persistent notification. High-accuracy updates at a few-second interval can be appropriate for an actively recorded route, but Android explicitly cautions against sustained high-accuracy background requests where they are not needed. Fused Location Provider supports priority, requested interval and maximum update delay. A sufficiently large batching window may let the system deliver several timestamped locations together, reducing app wakeups; batching is device-dependent and not guaranteed.
+
+A route recorder has a different latency need from passive background location. WALKON should use a foreground service for an active workout, request an interval/priority calibrated for walking, and enable batching only when the accepted route-quality envelope remains satisfied. Persist each delivered batch promptly; process timestamps in event-time order. Do not hold a continuous partial wake lock just to wait for GPS callbacks. Android's current battery guidance specifically recommends avoiding redundant wake locks for location callbacks and using local persistence plus WorkManager for deferred processing/upload.
+
+Android exposes thermal status APIs on supported versions. Thermal status ranges from none/light/moderate through severe/critical/emergency/shutdown; device support and implementation vary. WALKON should observe status changes and reduce nonessential CPU/GPU/network work as thermal severity increases. Do not assume thermal headroom is universally available or poll it too frequently.
+
+Sources: [G1, G2, G3, G4].
+
+### 36.5 Sensor and compute duty cycle
+
+- **Steps:** Prefer platform-pedometer summaries or event APIs over continuously sampling raw accelerometer/gyroscope data in the app when raw signals are not required. Core Motion and Android sensor frameworks provide processed motion/pedometer capabilities; do not build an always-on high-rate sensor loop merely to duplicate OS step counting.
+- **GPS:** Use one authoritative location pipeline per active session. Avoid parallel CLLocationManager/FusedLocation requests for the same purpose, repeated start/stop thrashing, and multiple independent timers.
+- **Heart rate/Bluetooth:** Scan/connect only when the user has selected a compatible sensor or a feature genuinely needs it. Avoid continuous BLE scanning when already connected; use the sensor's supported connection lifecycle.
+- **Map/UI:** Keep the route model append-only and update the visible polyline at a throttled cadence. Do not redraw the full map or recompute every historical segment for every new point. Preserve raw accepted points and derive simplified display geometry separately.
+- **Persistence:** Batch database transactions in modest bounded groups, but commit often enough that process termination cannot lose a long interval of route data. Avoid per-point synchronous disk flushes and avoid holding a large uncommitted in-memory buffer.
+- **Networking:** Do not upload each GPS point individually. Persist locally and upload in bounded batches after a session milestone or when connectivity is suitable. Network retries use exponential backoff with jitter and a cap; no tight retry loop.
+- **Timers/wakeups:** No one-second background timer for metrics that can be derived from timestamps or updated when an event arrives. A foreground display timer may update elapsed time while visible; the persisted clock remains based on monotonic/absolute timestamps, not timer tick count.
+
+These are design recommendations. Exact sampling, batching, commit and UI intervals must be tuned against route error and measured energy on representative hardware.
+
+### 36.6 Long-session reliability and degradation
+
+A two-hour walk exposes failures that a short demo does not: memory growth, route-buffer accumulation, SQLite transaction contention, stale timers, duplicate callbacks, clock changes, network reconnect storms, OS suspension, thermal throttling and partial saves.
+
+Required behaviour:
+- Persist a recoverable session header and append-only route-point journal; route data must not live only in RAM or UserDefaults.
+- Store timestamps, accuracy and sequence/segment identifiers. Make duplicate callbacks harmless through stable event identity or deterministic de-duplication.
+- Use bounded in-memory queues and bounded batch sizes. Memory use should remain approximately flat as route duration grows.
+- Separate the route capture path from cloud sync, map rendering and analytics. A failed upload must never block local capture.
+- Maintain a monotonic elapsed-time basis during a session; retain wall-clock timestamps for display and external interoperability. Detect clock/time-zone changes without changing elapsed duration.
+- On pause/resume, create distinct segments and do not bridge the gap. On thermal or OS interruption, record the interruption and resume only through supported lifecycle recovery.
+- Finish must atomically commit the local session summary and route journal before optional platform/cloud exports.
+- Battery exhaustion or process death must leave the last committed route recoverable. A partially recorded route is better than a lost entire walk, but the UI must mark it incomplete.
+- Avoid expensive route simplification, elevation analysis, calorie calculation, map tile prefetch and cloud sync during the active capture critical path.
+
+### 36.7 Battery and thermal measurement methodology
+
+No source supplies a universally valid battery-per-hour acceptance threshold for WALKON. Establish a reproducible baseline rather than selecting an arbitrary percentage.
+
+**Test matrix (minimum):**
+- At least three representative iPhone generations and three Android device tiers, including an older supported device; record OS/build, battery health/capacity where available and device temperature context.
+- Matched routes and durations: 30 minutes, 60 minutes and a 2-hour endurance session; include open sky, urban canyon/tree cover, intermittent GPS and indoor/no-fix control.
+- Screen off/locked after starting, screen continuously on, and screen intermittently checked.
+- Normal power and Low Power/Battery Saver modes.
+- Strong cellular signal versus weak/no service; Wi-Fi on/off; Bluetooth sensor connected/disconnected.
+- WALKON active recording versus a matched baseline with no recording; where useful, compare GPS-only and GPS-plus-sensor variants.
+- Repeat each condition at least three times after similar starting battery levels and thermal conditions; randomize order where practical and allow the device to cool between runs.
+
+**Measure and retain:**
+- Battery percentage before/after and elapsed wall time; report percentage points per hour, not a universal mAh claim when actual battery capacity/telemetry is unavailable.
+- OS per-app battery attribution (iOS Settings > Battery app activity; Android system battery statistics) as supporting evidence, not the sole measure.
+- Thermal state transitions and, where available, device temperature/headroom diagnostics.
+- Route completeness, accepted point count, timestamp gaps, horizontal accuracy distribution, distance deviation against a measured reference, and session save/recovery success.
+- CPU time, wakeups, memory high-water mark, disk writes and network bytes using platform profiling/diagnostics.
+- Battery health, ambient temperature, cellular signal and background app load as confounders.
+- On iOS, use Instruments/Energy Log during controlled development tests and MetricKit's current metric-reporting APIs for aggregated field diagnostics; MetricKit reports are delayed/aggregated and are not a live per-session battery meter.
+- On Android, use Android Studio Profiler/system tracing and Battery Historian or equivalent platform diagnostics where available; correlate app activity with OS battery statistics.
+
+A test is invalid if the phone is charging, starting battery/thermal conditions differ materially, the route differs, or unrelated foreground/background activity dominates the run. Do not infer battery savings from fewer callbacks alone; verify both energy and route quality.
+
+### 36.8 Proposed WALKON energy policy
+
+1. **Idle:** no continuous GPS, high-rate motion sampling, BLE scanning, polling timer or background network loop.
+2. **Preparing:** obtain a recent location fix using the least expensive approach that meets the start-screen requirement; show GPS readiness/accuracy and allow the user to start with an explicit quality warning rather than waiting indefinitely.
+3. **Active recording:** use the platform-supported active-workout background mechanism; collect only required route and session metrics; persist locally; keep the screen optional.
+4. **Low Power/Battery Saver:** defer optional work, reduce map/UI refresh and network activity; preserve core route capture if the OS still permits it. Display the changed operating mode.
+5. **Thermal serious/severe:** defer optional compute, reduce rendering and noncritical sensor/network work; do not falsify metrics or silently discard points.
+6. **Thermal critical/emergency:** prioritize platform safety; stop/reduce intensive work if required and record an interruption/degraded state.
+7. **Paused/finished/discarded:** stop location and sensor services immediately; flush and close local writes; release BLE and other resources. Upload later through a durable queue.
+8. **No connectivity:** no repeated wakeups; local recording continues and sync is deferred.
+
+### 36.9 Acceptance and fault-injection tests
+
+1. Start a walk, lock the screen and record for 30, 60 and 120 minutes; compare route completeness and battery use with the controlled baseline.
+2. Repeat with Low Power Mode/Battery Saver enabled before start and toggled mid-session; confirm truthful status and no silent data-source switch.
+3. Inject or induce thermal-state changes; confirm optional work backs off, core local capture behaves as designed, and interruptions are surfaced.
+4. Test open sky, urban canyon, tree cover, tunnels/bridges and long GPS no-fix periods; verify no fabricated distance over gaps.
+5. Test weak/no cellular service, Wi-Fi changes and repeated connectivity restoration; local capture must not block or enter retry storms.
+6. Verify location batches preserve original timestamps and are ordered/de-duplicated before distance calculation.
+7. Test pause/resume, phone call, notification interruption, app backgrounding, app process termination where platform permits, force-quit and device reboot separately; document which cases are recoverable versus explicitly unsupported.
+8. Confirm no continuous wake lock, silent audio, one-second background timer, duplicate location pipeline or idle GPS operation.
+9. Verify memory remains bounded during a two-hour route; inspect queue depth, DB file growth, transaction latency and CPU time.
+10. Force local storage pressure/write errors and verify the app reports a recoverable failure without falsely showing “saved”.
+11. Confirm finishing stops GPS, sensors, BLE and timers promptly; verify no lingering background energy use.
+12. Reconcile battery/thermal metrics with route quality; no battery optimization is accepted if it causes route loss beyond the thresholds later defined in Section 41.
+13. Run repeated endurance trials on the minimum supported iOS and Android devices, with battery health and OS build recorded.
+
+### 36.10 Open decisions and evidence gaps
+
+- Freeze the iOS minimum version and Core Location API path before selecting the exact background session implementation; the current draft targets iOS 26+, but the implementation must be verified against the actual SDK.
+- Select Android minimum API, foreground-service type/permissions and Play policy declarations at implementation time.
+- Establish measured energy budgets per device tier only after baseline trials; do not promise a fixed percentage/hour across phones.
+- Define route-quality thresholds and maximum tolerable gap durations in Section 41 using controlled reference routes.
+- Decide the exact low-battery warning threshold and whether the user can continue recording after the warning; preserve user control and clearly state the risk.
+- Confirm availability and interpretation of MetricKit and Android thermal/battery diagnostics on the actual supported device matrix.
+- Validate whether the chosen location APIs provide acceptable point cadence and route accuracy under Low Power/Battery Saver modes on real devices.
+
+### 36.11 Section conclusion
+
+The correct design is event-driven, local-first and adaptive: run high-quality location only during an explicitly active walk; use OS-managed location delivery and batching where compatible with route quality; avoid unnecessary sensor loops, wake locks, timers, rendering and network activity; respond to Low Power and thermal signals by shedding optional work before critical capture work; and make the session recoverable through durable incremental persistence. Neither iOS nor Android guarantees uninterrupted recording under every force-quit, shutdown, thermal, permission or battery-exhaustion condition. Battery efficiency must be measured together with route completeness and accuracy.
+
+Research complete for Section 36 at documentation/specification level. No battery baseline has been measured on a WALKON build and no implementation is claimed. Section 37 is next.
+
+#### Section 36 references
+
+- [A1] Apple, Accessing the device's location efficiently: https://developer.apple.com/documentation/xcode/accessing-the-device-s-location-efficiently
+- [A2] Apple, Handling location updates in the background: https://developer.apple.com/documentation/corelocation/handling-location-updates-in-the-background
+- [A3] Apple, Core Location framework: https://developer.apple.com/documentation/corelocation
+- [A4] Apple, Responding to power notifications (Low Power Mode and thermal states): https://developer.apple.com/documentation/xcode/responding-to-power-notifications
+- [A5] Apple, ProcessInfo isLowPowerModeEnabled and thermalState: https://developer.apple.com/documentation/foundation/processinfo
+- [A6] Apple, MetricKit performance, power and diagnostic reports: https://developer.apple.com/documentation/metrickit
+- [A7] Apple Support, iPhone battery usage and background activity: https://support.apple.com/guide/iphone/understand-iphone-battery-usage-health-iphd453d043a/27/ios/27
+- [G1] Android, Optimize location use for real-world scenarios: https://developer.android.com/develop/sensors-and-location/location/battery/scenarios
+- [G2] Google Play services, LocationRequest batching: https://developers.google.com/android/reference/com/google/android/gms/location/LocationRequest
+- [G3] Android, Thermal mitigation: https://source.android.com/docs/core/power/thermal-mitigation
+- [G4] Android, Thermal API and thermal status: https://developer.android.com/games/optimize/adpf/thermal
+- [G5] Android Developers, Battery technical quality and wake-lock guidance: https://android-developers.googleblog.com/2026/03/battery-technical-quality-enforcement.html
+- [G6] Android, Fused Location Provider and battery-efficient location: https://developers.google.com/location-context/fused-location-provider
