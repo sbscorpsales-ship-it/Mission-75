@@ -38,6 +38,15 @@ final class GPSRouteRecorder: NSObject, ObservableObject, CLLocationManagerDeleg
         catch { return nil }
         return directory.appendingPathComponent("active-route-draft.json", isDirectory: false)
     }
+    var routeDistanceMeters: Double {
+        guard points.count > 1 else { return 0 }
+        return zip(points, points.dropFirst()).reduce(0.0) { total, pair in
+            let a = CLLocation(latitude: pair.0.latitude, longitude: pair.0.longitude)
+            let b = CLLocation(latitude: pair.1.latitude, longitude: pair.1.longitude)
+            return total + b.distance(from: a)
+        }
+    }
+
     private(set) var isRecording = false
     private var pendingStartAfterAuthorization = false
     private var activeStartedAt: Date?
