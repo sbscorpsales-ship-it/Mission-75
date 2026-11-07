@@ -26,8 +26,11 @@ jobs:
         run: brew install xcodegen
 
       - name: Generate Xcode project
-        working-directory: ios
-        run: xcodegen generate --spec project.yml
+        run: |
+          test -f ios/project.yml
+          test -f ios/GATIVX/Info.plist
+          test -d ios/GATIVX
+          xcodegen generate --spec ios/project.yml --project ios
 
       - name: Compile for iPhone Simulator (no signing)
         run: |
