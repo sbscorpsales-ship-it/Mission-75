@@ -20,6 +20,10 @@ on:
       - "ios/project.yml"
       - ".github/workflows/walkon-ios.yml"
 
+concurrency:
+  group: walkon-ios-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
