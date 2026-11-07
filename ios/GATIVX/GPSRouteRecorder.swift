@@ -84,6 +84,15 @@ final class GPSRouteRecorder: NSObject, ObservableObject, CLLocationManagerDeleg
         requestAndBegin()
     }
 
+    func requestBackgroundLocationAccess() {
+        guard manager.authorizationStatus == .authorizedWhenInUse else {
+            status = "Start a walk and allow While Using first. Then enable Always access in iPhone Settings."
+            return
+        }
+        manager.requestAlwaysAuthorization()
+        status = "Requested Always location access. Choose Allow Always if iOS presents the option."
+    }
+
     private func requestAndBegin() {
         guard CLLocationManager.locationServicesEnabled() else {
             status = "Location Services are turned off. Enable them in iPhone Settings."
