@@ -190,6 +190,12 @@ struct ContentView: View {
                     }
                     Text(sessionStatus).font(.caption).foregroundStyle(.secondary)
                     Text(routeRecorder.status + " · " + routeRecorder.points.count.formatted() + " GPS points").font(.caption2).foregroundStyle(.secondary)
+                    if routeRecorder.authorization == .authorizedWhenInUse {
+                        Button("Enable background GPS (Always location)") {
+                            routeRecorder.requestBackgroundLocationAccess()
+                        }
+                        .font(.caption)
+                    }
                     if sessionStarted == nil {
                         if let recoveredStart = routeRecorder.recoveredStartedAt {
                             Text("An unfinished activity from \\(recoveredStart.formatted(date: .abbreviated, time: .shortened)) was recovered. Its GPS points are stored on this iPhone.")
@@ -297,6 +303,10 @@ struct ContentView: View {
                 if phase == .active {
                     health.refreshOnForeground()
                     startLiveMotionMonitor()
+                    if cloud.isSignedIn {
+                        syncCurrentMotionSnapshotToCloud()
+                        syncSavedActivitySessions()
+                    }
                 } else {
                     livePedometer.stopUpdates()
                 }
