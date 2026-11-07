@@ -23,7 +23,7 @@ struct ContentView: View {
             for record in history {
                 guard let steps = record.steps else { continue }
                 await cloud.syncActivitySession(id: record.id, activity: record.activity, startedAt: record.startedAt, finishedAt: record.finishedAt, steps: steps)
-                if let points = record.routePoints, !points.isEmpty { await cloud.syncActivitySessionRoute(id: record.id, points: points) }
+                if let points = record.routePoints, !points.isEmpty { await cloud.syncActivitySessionRoute(id: record.id, startedAt: record.startedAt, finishedAt: record.finishedAt, points: points) }
             }
         }
     }
