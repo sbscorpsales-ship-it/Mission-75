@@ -8,6 +8,7 @@ on:
   pull_request:
     paths:
       - "ios/WALKON/**"
+      - "ios/WALKONTests/**"
       - "ios/project.yml"
       - ".github/workflows/walkon-ios.yml"
   push:
@@ -36,6 +37,19 @@ jobs:
 
       - name: Generate WALKON project
         run: xcodegen generate --spec ios/project.yml --project ios
+
+      - name: Run WALKON unit tests on an available iPhone Simulator
+        run: |
+          DEVICE_ID=$(xcrun simctl list devices available | awk -F '[()]' '/iPhone/ {print $2; exit}')
+          test -n "$DEVICE_ID"
+          xcodebuild \\
+            -project ios/WALKON.xcodeproj \\
+            -scheme WALKON \\
+            -destination "platform=iOS Simulator,id=$DEVICE_ID" \\
+            -configuration Debug \\
+            -derivedDataPath build/WALKON-Tests \\
+            CODE_SIGNING_ALLOWED=NO \\
+            test
 
       - name: Compile WALKON for iPhone Simulator
         run: |
