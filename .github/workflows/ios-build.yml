@@ -1,15 +1,13 @@
 name: GATIVX iOS build check
 
+# Retired legacy build pipeline. The standalone WALKON workflow owns native iOS validation.
+# Keep this file inert so it cannot report misleading failures for the current app.
 on:
-  workflow_dispatch:
   pull_request:
     paths:
-      - "ios/**"
       - ".github/workflows/ios-build.yml"
-      - "README.md"
   push:
     paths:
-      - "ios/**"
       - ".github/workflows/ios-build.yml"
 
 jobs:
