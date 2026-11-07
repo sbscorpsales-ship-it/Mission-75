@@ -1001,3 +1001,130 @@ Important platform distinction:
 - `allowsBackgroundLocationUpdates = true` with `UIBackgroundModes=location` is the established CLLocationManager approach and remains a fallback if the modern service-session implementation is not supported by the SDK/device.
 - Do not run both modern and legacy location pipelines simultaneously; that would duplicate route points.
 - Choose one route update API per build configuration and cover it with route recorder tests.
+
+
+## 22. Reference-app architecture investigation — public evidence only
+
+Purpose: learn the engineering patterns behind established fitness platforms and reproduce the underlying quality outcomes using documented APIs and independent WALKON implementation. This is not a reverse-engineering attempt to obtain private source code, bypass app protections, inspect private endpoints, or copy proprietary algorithms/design.
+
+Evidence labels used below:
+- **Documented:** explicitly stated in public platform/vendor documentation.
+- **Observed:** behaviour visible in a user-operated app or screen recording; implementation mechanism is not thereby known.
+- **Inferred:** plausible engineering explanation consistent with documented behaviour; must not be represented as fact.
+- **Unknown/private:** vendor implementation details not publicly established.
+
+### 22.1 Strava — recording product and likely system architecture
+
+**Documented / publicly observable**
+- User-facing recording flow includes activity type, GPS acquisition/quality, start, pause/resume, finish/save, route and activity summary.
+- Strava support explains recording and auto-pause behaviour. Slow walking/hiking can cause false auto-pause behaviour; its support guidance recommends turning auto-pause off for those activity types.
+- Strava offers public APIs for authorised access to activity summaries and streams, but those APIs are not a specification of the private mobile recorder.
+
+**Architecture hypotheses to test (not claims about Strava internals)**
+- A live recorder likely separates sensor acquisition, location-quality evaluation, activity state, metric aggregation, persistence and post-save upload.
+- Route geometry and distance likely use a quality-control stage rather than blindly summing every GPS point.
+- A robust app must distinguish GPS fix quality from workout state; recording can be active while GPS is weak.
+- Pause/resume should create separate movement segments or otherwise exclude paused time and distance.
+- Activity summary values may be recomputed after recording from retained samples, rather than relying only on the live display accumulator.
+
+**WALKON learning plan**
+- Screen-record the visible workflow: GPS wait, start, map/stats switch, pause/resume, screen lock, finish, save and activity detail.
+- Compare live distance/pace with saved summary after the app has processed the activity.
+- Compare Strava's route shape and timing against Apple Fitness for the same physical walk.
+- Use the official Strava API only for the user's own authorised activity data, where available; do not assume API streams expose the raw private recording pipeline.
+
+Public references:
+- https://support.strava.com/en-us/articles/15402137-how-do-i-record-an-activity-in-strava
+- https://support.strava.com/en-us/articles/15401874-how-do-i-fix-autopause-issues
+- https://developers.strava.com/docs/reference/
+
+### 22.2 Apple Fitness / Health — platform architecture we can actually use
+
+**Documented**
+- HealthKit is Apple's permission-controlled central health/fitness data store. It supports sharing and reading data from multiple apps and devices.
+- Apple's developer guidance positions Core Motion for motion/step information, Core Location for outdoor route capture, and HealthKit for sharing workout and health records.
+- Apple's WWDC25 workout session material describes the iPhone/iPad workout lifecycle using HKWorkoutSession and HKLiveWorkoutBuilder, live metric callbacks, lock-screen data access considerations and active workout recovery.
+- A workout route is a separate HealthKit series associated with a saved workout.
+
+**Important distinction**
+Apple's public developer APIs describe what third-party apps can do. They do not reveal every private implementation detail of Apple's Fitness app. We must not claim to know its proprietary fusion, filtering or UI algorithms.
+
+**WALKON learning plan**
+- Inspect user-visible source attribution and daily step totals in Health.
+- Compare a recorded outdoor walk's live metrics, saved workout, route and source details.
+- Use HealthKit public APIs for WALKON's own implementation; don't scrape private Fitness databases or infer hidden ranking rules.
+
+Public references:
+- https://developer.apple.com/documentation/healthkit
+- https://developer.apple.com/health-fitness/
+- https://developer.apple.com/videos/play/wwdc2025/322/
+- https://developer.apple.com/documentation/healthkit/hkworkoutroutebuilder
+
+### 22.3 Google Fit and Health Connect — aggregation model
+
+**Documented Google Fit behaviour**
+- Google Fit's legacy platform merged step streams from multiple sources; its FAQ describes prioritising watch data over phone data and filtering activities such as cycling, driving or public transport from step totals.
+- Reading a merged data type can therefore produce a different result from reading only one source.
+- Google Fit APIs are deprecated in 2026; Google directs mobile-first Android step tracking toward Health Connect.
+
+**Documented Health Connect behaviour**
+- Use aggregate APIs for cumulative data such as steps rather than summing overlapping raw records.
+- Health Connect manages aggregation and source priority, including the user's data-source priority choices.
+- On-device step tracking uses Android's low-power TYPE_STEP_COUNTER sensor and writes step data in batches, typically no more frequently than once per minute.
+- This is a platform aggregate, not a guaranteed second-by-second live pedometer feed.
+
+**WALKON learning**
+- Keep the future Android integration on Health Connect.
+- Use aggregate APIs for daily totals; preserve source attribution where available.
+- Never sum all raw device streams without deduplication.
+- Treat delayed/batched daily totals separately from live workout session metrics.
+
+Public references:
+- https://developers.google.com/fit/faq
+- https://developers.google.com/fit/rest
+- https://developer.android.com/health-and-fitness/health-connect/read-data
+- https://developer.android.com/health-and-fitness/health-connect/features/steps
+- https://support.google.com/android/answer/16786157
+
+### 22.4 Cross-app architecture pattern — what WALKON should learn
+
+Across the public platform documentation, the consistent architecture pattern is separation of concerns:
+
+1. **Sensor acquisition:** Core Motion / platform step sensor, Core Location / GNSS, optional wearable sensors.
+2. **Session orchestration:** explicit workout state machine with pause/resume/finish and interruption handling.
+3. **Data quality:** timestamps, accuracy metadata, deduplication, outlier rejection and explicit gaps.
+4. **Metric computation:** live estimates separated from final reconciled workout summaries.
+5. **Persistence:** durable local session journal and time-series route samples.
+6. **Health platform integration:** read aggregate daily totals; save the app's own workout and route once.
+7. **Presentation:** live metrics and route quality are visible but never treated as the source of truth.
+8. **Sync/sharing:** later layer, only after local recording and HealthKit integration pass.
+
+This separation is the architectural lesson. It is not evidence that Strava, Apple or Google use the exact same internal classes or algorithms.
+
+### 22.5 Investigation evidence ledger
+
+For every observation from the user's future recordings, record:
+- app and version / operating system version
+- activity type and permission state
+- screen and action sequence
+- displayed metric and timestamp
+- GPS quality indicator, if shown
+- whether value is live, paused, saved or post-processed
+- comparison with WALKON / Apple Health / other app
+- classification: documented, observed, inferred or unknown
+- confidence and follow-up test
+
+Do not infer the private mechanism from one screen. Example: a distance jump after saving may be post-processing, delayed samples or a different start/end boundary; the recording alone cannot establish which.
+
+### 22.6 Architecture acceptance lesson
+
+WALKON must not aim to make every number identical across apps. It must:
+- expose which subsystem/source produced each metric;
+- use platform aggregate totals for daily activity;
+- use one selected session-step source;
+- retain route timestamps and accuracy;
+- make live values provisional when appropriate;
+- calculate and persist a final summary deterministically;
+- explain differences caused by source timing, aggregation, GPS quality and activity boundaries.
+
+No copying of Strava/Apple/Google branding, screen layouts, private source, proprietary assets, undocumented endpoints, or proprietary algorithms.
