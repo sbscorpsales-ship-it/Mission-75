@@ -2048,3 +2048,132 @@ Before the route engine is frozen:
 8. Measure battery consumption and establish evidence-based sampling/flush cadence.
 
 Research status: public platform background/location behaviour and GNSS failure modes documented. Route thresholds, update cadence and production algorithm remain intentionally unfinalized until controlled field evidence is available.
+
+
+## 29. Elevation, altitude and barometric measurement — hardware-first research
+
+Research update: 2026-11-07. This section distinguishes absolute altitude, relative altitude, pressure-derived height and accumulated ascent. These are different quantities and must not be conflated in WALKON.
+
+### 29.1 Four different elevation concepts
+
+- **Absolute altitude/elevation:** height relative to a defined vertical datum (for example, mean sea level/geoid or a reference ellipsoid). Values from different datums are not directly interchangeable without conversion.
+- **Relative altitude change:** change from a chosen baseline. This is often more useful for a single walk than a perfectly accurate sea-level elevation.
+- **Cumulative ascent (elevation gain):** sum of accepted positive changes along a route after noise filtering. It is not simply final altitude minus starting altitude.
+- **Cumulative descent:** corresponding sum of accepted negative changes. It must be computed separately from ascent.
+
+A route that climbs 30 m and descends 30 m can finish near its starting altitude while still having approximately 30 m of ascent and 30 m of descent. Conversely, summing every tiny noisy upward fluctuation can greatly exaggerate ascent.
+
+### 29.2 Physical barometer: what it measures
+
+A barometer measures atmospheric pressure, not height. Pressure generally falls as altitude increases, but it also changes with weather systems, temperature and local atmospheric conditions. Therefore:
+- Short-term pressure change can be a useful indicator of relative vertical movement.
+- Absolute altitude requires a reference sea-level pressure or another calibration source.
+- Weather-related pressure drift can look like climbing or descending if treated as terrain movement.
+- Android's public sensor documentation identifies the pressure sensor as a continuous, non-wake-up sensor reporting hPa, with temperature and factory bias/scale compensation; it explicitly notes that sea-level pressure is needed for absolute elevation.
+
+Sources:
+- https://source.android.com/docs/core/interaction/sensors/sensor-types
+- https://developer.android.com/reference/android/hardware/SensorManager#getAltitude(float,float)
+
+### 29.3 iPhone altimeter access
+
+Apple exposes altitude-related changes through Core Motion `CMAltimeter`:
+- Check `isRelativeAltitudeAvailable()` and `isAbsoluteAltitudeAvailable()` at runtime; never assume every device supports both.
+- Relative altitude updates are the likely primary barometric input for ascent tracking during a workout.
+- Absolute altitude is a separate capability and must not be assumed equivalent to Core Location's altitude.
+- Motion usage description (`NSMotionUsageDescription`) is required before accessing these motion services; missing it can crash the app.
+- Start updates only when needed and stop them when the workout ends or the feature is no longer required.
+
+Core Location altitude is separately documented as orthometric height approximating mean sea level using a geoid model; it is valid only when `verticalAccuracy` is positive. Apple describes vertical accuracy as an estimated uncertainty of roughly one standard deviation (about 68% coverage), not a guarantee.
+
+Sources:
+- https://developer.apple.com/documentation/coremotion/cmaltimeter
+- https://developer.apple.com/documentation/corelocation/cllocation/altitude
+- https://developer.apple.com/documentation/corelocation/cllocation/verticalaccuracy
+- https://developer.apple.com/documentation/corelocation/cllocation/ellipsoidalaltitude
+
+### 29.4 Android barometer and GNSS altitude
+
+- Android's optional `Sensor.TYPE_PRESSURE` reports pressure in hectopascals. The sensor may be absent; check `getDefaultSensor(TYPE_PRESSURE)` and record capability.
+- `SensorManager.getAltitude()` estimates altitude from measured pressure and a supplied sea-level pressure. Standard-atmosphere pressure is only an approximation for absolute height; Android notes that pressure differences can still be used for altitude differences.
+- Android `Location.getAltitude()` is height above the WGS84 reference ellipsoid. `getVerticalAccuracyMeters()` is a separate estimate and is only valid when `hasVerticalAccuracy()` is true (API 26+).
+- Do not compare Android ellipsoidal altitude directly with iOS mean-sea-level altitude without a geoid/datum transformation.
+- Sensor availability and quality differ by handset; barometer must remain an optional capability, not a core app dependency.
+
+Sources:
+- https://source.android.com/docs/core/interaction/sensors/sensor-types
+- https://developer.android.com/reference/android/hardware/SensorManager
+- https://developer.android.com/reference/android/location/Location
+
+### 29.5 GNSS vertical error versus barometer drift
+
+GNSS altitude is typically less stable than horizontal positioning, particularly in obstructed environments. A barometer can resolve short-term vertical changes more smoothly, but it is vulnerable to atmospheric pressure changes and sensor/environment effects. Neither source alone is a universally correct elevation truth.
+
+A comparative study of 202 mountain efforts found substantial elevation-gain errors across GPS watches, barometric watches and smartphones; in that study the barometric device tended to overestimate and GPS devices tended to underestimate. Post-processing using secondary information materially improved the estimates. This is evidence against choosing a sensor label as a substitute for validation; it is not a universal error rate for all phones or routes.
+
+Source:
+- https://journals.sagepub.com/doi/10.1177/1754337120918975
+
+### 29.6 WALKON elevation-source hierarchy — proposed, pending device tests
+
+Do not hard-code one source for all devices. Record capabilities and select a documented policy per platform/device:
+1. If a supported barometer is available and validated, use its relative pressure-derived changes as the primary short-term vertical-change stream during an outdoor workout.
+2. Use GNSS/location altitude and its vertical accuracy as a secondary consistency signal and for geospatial context, not as an unquestioned source of ascent.
+3. Use a trusted elevation model or map-derived terrain height only as an optional post-processing/reference layer if data coverage, licence, resolution, datum and offline behaviour are acceptable.
+4. If barometer is unavailable, use a conservative GNSS-only ascent estimate with stricter quality gating, or show elevation gain as unavailable/low-confidence rather than inventing precision.
+5. Never fuse two altitude streams by simply adding their changes. A fusion algorithm must be explicitly specified, versioned, testable and evaluated against known routes.
+
+This hierarchy is a research proposal, not yet a frozen implementation decision. Device tests must decide whether barometric data is available and useful on the target iPhone and representative Android models.
+
+### 29.7 Ascent calculation: proposed processing stages
+
+1. **Capability and permission check:** record whether barometer/relative altitude is available and authorized; do not infer hardware from device name alone.
+2. **Baseline:** establish a workout-relative baseline after sensor startup stabilizes; retain the baseline event and source.
+3. **Timestamp alignment:** preserve source timestamps and monotonic ordering; align pressure and location observations without pretending their delivery cadence is identical.
+4. **Noise control:** use a documented low-pass/robust filter and a minimum meaningful vertical-change threshold derived from validation data, not an arbitrary universal number.
+5. **Movement confirmation:** use route context and motion state to distinguish sustained vertical movement from stationary pressure drift where possible.
+6. **Ascent/descent accumulation:** accumulate accepted positive/negative changes separately; ignore oscillations inside the validated noise band.
+7. **Drift handling:** identify slow baseline drift and recalibrate only under a documented rule. Do not silently subtract drift in a way that erases real long gradual climbs.
+8. **Quality and provenance:** retain raw samples, filtered values, source, calibration events, rejection reasons and algorithm version.
+9. **Presentation:** round conservatively and expose low-confidence/unavailable states; avoid decimal-place precision unsupported by the sensors.
+
+### 29.8 Data model additions
+
+Each altitude observation should carry:
+- workout UUID and timestamp (event + received);
+- source type: Core Motion relative, Core Motion absolute, Core Location orthometric, Core Location ellipsoidal, Android pressure, Android GNSS, or external accessory;
+- raw value and unit (hPa, metres, or other explicitly identified unit);
+- vertical accuracy/uncertainty when provided;
+- altitude datum/reference (MSL/geoid, WGS84 ellipsoid, workout-relative, unknown);
+- baseline/calibration identifier and event;
+- device capability and permission state;
+- raw/filtered/derived classification;
+- quality state, rejection reason and algorithm version.
+
+Workout summary should distinguish `ascent_m`, `descent_m`, `start_altitude_m`, `end_altitude_m`, `altitude_source`, `altitude_quality` and whether the figure is measured, fused or terrain-model-derived.
+
+### 29.9 Field-validation protocol before implementation freeze
+
+Test the target iPhone and representative Android devices on:
+- a stationary 30–60 minute session to quantify pressure drift/noise;
+- repeated known stair flights with known floor/height reference;
+- a measured hill route with sustained ascent and descent;
+- a flat loop to quantify false positive elevation gain;
+- indoor/outdoor transitions and temperature changes;
+- phone in hand, pocket, arm band and bag where sensor exposure differs;
+- barometer absent/disabled and GNSS weak/no-fix conditions;
+- screen locked and background workout operation;
+- repeated same-route trials at different times/weather conditions.
+
+Compare against a surveyed/known vertical reference where possible. Record error distribution, bias, repeatability, false ascent on flat routes, missed ascent on climbs, drift per hour, battery cost and recovery after interruption. A single successful walk is not sufficient validation.
+
+### 29.10 Open decisions — do not guess
+
+- Is CMAltimeter relative altitude available and stable on the exact target iPhone model/OS combination used by WALKON?
+- What is the actual pressure sensor hardware and availability across target Android models?
+- Which filter and minimum-change threshold minimize false ascent without erasing real short climbs?
+- How should pressure drift be corrected during long walks with changing weather?
+- Is an elevation-model correction worth the network, licensing, privacy and offline complexity?
+- What confidence threshold is required before displaying ascent/descent?
+
+Research status: physical measurement principles and public iOS/Android APIs documented. WALKON fusion algorithm, thresholds, calibration policy and device capability matrix remain open pending controlled field validation. No app implementation is authorized by this section.
