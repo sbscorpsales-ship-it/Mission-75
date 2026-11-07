@@ -44,10 +44,13 @@ jobs:
         run: |
           DEVICE_ID=$(xcrun simctl list devices available | awk -F '[()]' '/iPhone/ {print $2; exit}')
           test -n "$DEVICE_ID"
+          xcrun simctl boot "$DEVICE_ID" 2>/dev/null || true
+          xcrun simctl bootstatus "$DEVICE_ID" -b
           xcodebuild \
             -project ios/WALKON.xcodeproj \
             -scheme WALKON \
             -destination "platform=iOS Simulator,id=$DEVICE_ID" \
+            -destination-timeout 120 \
             -configuration Debug \
             -derivedDataPath build/WALKON-Tests \
             -resultBundlePath build/WALKON-Tests.xcresult \
