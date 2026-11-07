@@ -26,6 +26,7 @@ final class GPSRouteRecorder: NSObject, ObservableObject, CLLocationManagerDeleg
 
     private let manager = CLLocationManager()
     private(set) var isRecording = false
+    private var pendingStartAfterAuthorization = false
 
     override init() {
         super.init()
@@ -45,8 +46,10 @@ final class GPSRouteRecorder: NSObject, ObservableObject, CLLocationManagerDeleg
         points.removeAll()
         switch manager.authorizationStatus {
         case .notDetermined:
+            // Keep the activity start request pending while iOS asks for permission.
+            pendingStartAfterAuthorization = true
             manager.requestWhenInUseAuthorization()
-            status = "Allow location access, then tap Start activity again."
+            status = "Waiting for location permission…"
         case .denied, .restricted:
             status = "Location access is blocked. Enable it in Settings > Privacy & Security > Location Services."
         case .authorizedWhenInUse:
@@ -67,6 +70,7 @@ final class GPSRouteRecorder: NSObject, ObservableObject, CLLocationManagerDeleg
         }
         // iOS requires the app to have the matching background location
         // capability and authorization before background updates are enabled.
+        pendingStartAfterAuthorization = false
         manager.allowsBackgroundLocationUpdates = allowsBackground
         manager.showsBackgroundLocationIndicator = allowsBackground
         isRecording = true
@@ -81,15 +85,21 @@ final class GPSRouteRecorder: NSObject, ObservableObject, CLLocationManagerDeleg
         manager.allowsBackgroundLocationUpdates = false
         manager.showsBackgroundLocationIndicator = false
         isRecording = false
+        pendingStartAfterAuthorization = false
         status = points.isEmpty ? "No GPS points recorded. Check location permission and signal." : "GPS route saved locally."
     }
 
     func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
         authorization = manager.authorizationStatus
         if manager.authorizationStatus == .authorizedWhenInUse || manager.authorizationStatus == .authorizedAlways {
-            status = "Location permission granted. Tap Start activity to record GPS."
+            if pendingStartAfterAuthorization {
+                beginUpdates(allowsBackground: manager.authorizationStatus == .authorizedAlways)
+            } else {
+                status = "Location permission granted. Tap Start activity to record GPS."
+            }
         } else if manager.authorizationStatus == .denied || manager.authorizationStatus == .restricted {
-            status = "Location permission denied."
+            pendingStartAfterAuthorization = false
+            status = "Location permission denied. Enable it in iPhone Settings."
         }
     }
 
