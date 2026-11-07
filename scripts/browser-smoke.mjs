@@ -31,10 +31,12 @@ for (const tab of ["today", "trends", "log", "coach", "walk", "data"]) {
   await page.locator('[data-tab="' + tab + '"]').click();
   assert(await page.locator("#pane-" + tab).isVisible(), "Navigation failed for " + tab);
 }
-await page.locator("#accountQuick").click();
-assert(await page.locator("#pane-data").isVisible(), "Quick account control did not open account settings");
+await page.locator('[data-tab="data"]').click();
+assert(await page.locator("#pane-data").isVisible(), "You / Profile tab did not open");
 assert(await page.locator("#connectionHeading").isVisible(), "Connected-data hub is not visible in You / Profile");
 assert(await page.locator("#gxProgressCard").isVisible(), "Personal progress report is missing from You / Profile");
+await page.locator("#accountQuick").click();
+assert(await page.locator("#pane-data").isVisible(), "Quick account control did not open account settings");
 assert(await page.locator("#cloudEmail").count() === 1, "Email sign-in field is missing");
 assert(await page.locator("#cloudPassword").count() === 1, "Password sign-in field is missing");
 assert(await page.locator("#cloudSignIn").count() === 1, "Sign-in action is missing");
