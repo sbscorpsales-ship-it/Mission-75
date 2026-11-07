@@ -15,6 +15,22 @@ struct ContentView: View {
     @State private var sessionSteps: Int?
     @State private var sessionStarted: Date?
     @State private var sessionStatus = "Start a session to count steps."
+    @State private var liveMotionSteps: Int?
+    @State private var liveMotionDistanceMeters: Double?
+
+    /// Foreground live sensor feed. This is shown separately from HealthKit's
+    /// deduplicated all-source daily total; never add the two together.
+    private func startLiveMotionMonitor() {
+        guard CMPedometer.isStepCountingAvailable() else { return }
+        let start = Calendar.current.startOfDay(for: Date())
+        pedometer.startUpdates(from: start) { data, error in
+            DispatchQueue.main.async {
+                guard error == nil, let data else { return }
+                self.liveMotionSteps = data.numberOfSteps.intValue
+                self.liveMotionDistanceMeters = data.distance?.doubleValue
+            }
+        }
+    }
 
     private func syncSavedActivitySessions() {
         guard cloud.isSignedIn else { return }
@@ -85,6 +101,17 @@ struct ContentView: View {
                         .font(.caption).foregroundStyle(.secondary)
                     Text("Steps are read from Apple Health, which can combine supported iPhone and wearable sources.")
                         .font(.caption2).foregroundStyle(.secondary).multilineTextAlignment(.center)
+                    HStack {
+                        Label("Live iPhone motion", systemImage: "figure.walk")
+                        Spacer()
+                        Text(liveMotionSteps?.formatted() ?? "Waiting…")
+                            .monospacedDigit().fontWeight(.semibold)
+                    }
+                    .font(.caption)
+                    if let meters = liveMotionDistanceMeters {
+                        Text("Motion distance · \(String(format: "%.2f", meters / 1000)) km")
+                            .font(.caption2).foregroundStyle(.secondary)
+                    }
                 }
                 .padding().frame(maxWidth: .infinity)
                 .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 20))
@@ -163,6 +190,7 @@ struct ContentView: View {
                 }
                 health.resumeIfPreviouslyConnected()
                 health.refreshOnForeground()
+                startLiveMotionMonitor()
                 // A Keychain-restored session is already signed in before onChange fires.
                 if cloud.isSignedIn { syncSavedActivitySessions() }
             }
@@ -178,6 +206,9 @@ struct ContentView: View {
             .onChange(of: scenePhase) { _, phase in
                 if phase == .active {
                     health.refreshOnForeground()
+                    startLiveMotionMonitor()
+                } else {
+                    pedometer.stopUpdates()
                 }
             }
         }
