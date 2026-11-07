@@ -1,4 +1,8 @@
 name: WALKON
+packages:
+  Supabase:
+    url: https://github.com/supabase/supabase-swift
+    exactVersion: 2.55.6
 options:
   bundleIdPrefix: com.paramitsolutions
   deploymentTarget:
@@ -10,6 +14,9 @@ targets:
     platform: iOS
     sources:
       - path: WALKON
+    dependencies:
+      - package: Supabase
+        product: Supabase
     info:
       path: WALKON/Info.plist
       properties:
