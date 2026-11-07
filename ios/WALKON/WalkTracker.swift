@@ -239,7 +239,10 @@ final class WalkTracker: NSObject, ObservableObject, CLLocationManagerDelegate {
     private func processLocationSamples(_ samples: [WalkLocationSample]) {
         guard isTracking else { return }
         for sample in samples.sorted(by: { $0.timestamp < $1.timestamp }) {
-            guard sample.horizontalAccuracy >= 0, sample.horizontalAccuracy <= 35 else { continue }
+            guard sample.latitude.isFinite, sample.latitude >= -90, sample.latitude <= 90,
+                  sample.longitude.isFinite, sample.longitude >= -180, sample.longitude <= 180,
+                  sample.horizontalAccuracy.isFinite,
+                  sample.horizontalAccuracy >= 0, sample.horizontalAccuracy <= 35 else { continue }
             let nextPoint = WalkSession.RoutePoint(
                 latitude: sample.latitude,
                 longitude: sample.longitude,
