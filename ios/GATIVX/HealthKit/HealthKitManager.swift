@@ -89,6 +89,10 @@ final class HealthKitManager: ObservableObject {
             return
         }
 
+        if let liveStepsQuery {
+            store.stop(liveStepsQuery)
+            self.liveStepsQuery = nil
+        }
         let query = HKStatisticsCollectionQuery(
             quantityType: stepType,
             quantitySamplePredicate: HKQuery.predicateForSamples(withStart: start, end: end, options: .strictStartDate),
