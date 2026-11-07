@@ -351,3 +351,152 @@ Apple's current iOS 26 compatibility list explicitly includes iPhone 12 Pro Max:
 - https://support.apple.com/en-in/guide/iphone/iphe3fa5df43/ios
 
 Therefore the user's iPhone 12 Pro Max is eligible for the iOS 26+ native workout-session architecture. The user-reported installed iOS 27.0.1 is newer than the minimum API generation. Actual device build, entitlements, Health permissions and field behaviour still require testing; model compatibility alone does not prove runtime success.
+
+
+## 15. Build specification — recording engine
+
+This section converts the research findings into an implementation contract. It is the build plan; it is not a claim that the app has been implemented or passed device tests.
+
+### 15.1 Authoritative ownership by subsystem
+
+| Concern | Owner | Must not do |
+|---|---|---|
+| Workout lifecycle and HealthKit workout metrics | HKWorkoutSession + HKLiveWorkoutBuilder | Run a competing timer/state machine as the source of workout truth |
+| GPS coordinates and route quality | Core Location route recorder | Invent coordinates across GPS gaps |
+| Daily all-source steps | HealthKit cumulative statistics query | Add session pedometer values |
+| Optional session-only step display | CMPedometer, only after validation | Write duplicate step samples or add to daily total |
+| Durable local history | Transactional local database | Store unbounded route arrays in UserDefaults |
+| HealthKit route association | HKWorkoutRouteBuilder | Treat a local polyline as a saved HealthKit route |
+| Lock-screen workout summary | ActivityKit | Expose unavailable/private health values |
+
+### 15.2 Session start sequence
+
+1. User taps Start.
+2. Validate HealthKit availability and required authorization; request only relevant types.
+3. Validate Core Location permission and accuracy authorization. Explain why location is needed.
+4. Create a new local workout UUID and durable draft record before sensors start.
+5. Create outdoor walking HKWorkoutConfiguration, HKWorkoutSession, associated builder and HKLiveWorkoutDataSource; attach delegates.
+6. Create HKWorkoutRouteBuilder and configure Core Location for workout recording.
+7. Call prepare; show a short ready/countdown state. Do not wait indefinitely for a perfect GPS fix.
+8. Start the workout and builder collection at the same timestamp; mark the local session recording.
+9. Start ActivityKit only after the core lifecycle is running.
+10. Show GPS quality separately from workout state: acquiring / good / weak / unavailable.
+
+If HealthKit workout authorization or service is unavailable, show a clear blocker or a deliberately designed local-only fallback. Never silently claim that an Apple Health workout will be saved when it will not.
+
+### 15.3 Live collection
+
+- Workout state transitions come from HKWorkoutSessionDelegate, not UI button optimism.
+- Live metric updates come from HKLiveWorkoutBuilderDelegate.
+- Route samples come from CLLocationManager and are independently timestamped.
+- Persist route points incrementally in bounded batches; retain a recoverable draft after every batch.
+- Keep elapsed time distinct from moving time.
+- Derive distance only from accepted route segments. A GPS gap is a gap, not a straight-line shortcut.
+- Pace is unavailable until enough valid distance/time exists; suppress unstable instantaneous values.
+- No heart-rate value is displayed unless a paired sensor provides it.
+- No calorie or elevation estimate is labelled measured unless its source and method are clear.
+
+### 15.4 Pause and resume
+
+- Manual pause is mandatory and authoritative.
+- On pause, pause the HealthKit workout session and close the current route segment. Keep the workout draft.
+- On resume, resume the session and start a new route segment; never connect across the paused interval.
+- Auto-pause is OFF by default for walking. Strava's current support guidance warns that slow walking and obscured GPS can cause false pause/resume behaviour. If added later, it must be opt-in, have conservative thresholds, and be separately field-tested.
+- Pause/resume transitions must be idempotent; repeated taps cannot create duplicate transitions.
+
+### 15.5 Finish and save transaction
+
+1. Enter finishing state; disable duplicate finish actions.
+2. Stop Core Location capture and flush accepted route points.
+3. Stop the HealthKit workout session and wait for its stopped transition.
+4. End builder collection and finish the HealthKit workout using the documented builder lifecycle.
+5. Commit the completed local workout and route in a database transaction.
+6. Finish the HealthKit route builder against the saved workout, associating exactly one route.
+7. Persist HealthKit workout/route identifiers and per-stage save outcomes.
+8. If HealthKit workout save fails, keep the local activity and show retry.
+9. If route association fails after workout save, keep both the local route and HealthKit workout, show route-save failure, and allow an idempotent retry where supported.
+10. Never repeat the workout save simply because route finalization failed.
+
+### 15.6 Crash and interruption recovery
+
+- Implement the iOS scene connection recovery path shown in Apple's WWDC25 sample: inspect `shouldHandleActiveWorkoutRecovery`, call `recoverActiveWorkoutSession`, restore the session and associated builder, reattach delegates and recreate the live data source.
+- Restore WALKON's local draft by UUID and reconcile it with the recovered HealthKit session.
+- Store a durable event journal for start, pause, resume, location batches, finish intent, HealthKit save result and route save result.
+- On recovery, detect missing intervals and represent them as gaps; never fabricate elapsed route or steps.
+- Handle phone calls, audio interruptions, permission revocation, low storage and location-service shutdown as explicit interruption states.
+- Background location must be configured for the active workout only, with the required usage description and background mode. Explain that iOS scheduling and GPS reception cannot be guaranteed in every condition.
+
+### 15.7 Local persistence
+
+Use SwiftData or SQLite only after a small spike verifies migration, crash consistency and route-volume performance. Preferred logical entities:
+- Workout(id, type, state, start/end, elapsed/moving time, distance, metrics, algorithmVersion)
+- RouteSegment(id, workoutId, sequence, start/end)
+- RoutePoint(id, segmentId, timestamp, latitude, longitude, horizontalAccuracy, altitude, verticalAccuracy, speed)
+- WorkoutEvent(id, workoutId, timestamp, eventType, payload)
+- HealthKitLink(workoutId, healthKitWorkoutUUID, routeUUID, saveState)
+
+Store route points in append-only batches and index by workout/segment/time. Keep raw accepted points and derived summaries separate. No cloud dependency in v1.
+
+### 15.8 Daily step service
+
+- Use HKStatisticsCollectionQuery with cumulative sum and local-day calendar boundaries for the dashboard.
+- Register an HKObserverQuery and enable background delivery where available/approved; use it to trigger a refresh, not as the step total itself.
+- Re-run the statistics collection query after observer notification and on foreground activation, timezone/day change and permission changes.
+- Display last refreshed time and distinguish unavailable, no samples and query failure. HealthKit read denial may not be directly distinguishable from no data.
+- Do not use a hard-coded offset or source-priority rule to force WALKON to match another app.
+
+### 15.9 Security and privacy
+
+- Request the minimum HealthKit read/share types and location permissions needed for the chosen feature.
+- Provide clear purpose strings for Health and location access.
+- Do not collect location outside an explicitly active recording session.
+- Keep route privacy private by default. No upload, sharing or social exposure in v1.
+- No advertising SDK, analytics SDK, account requirement or cloud sync in the core recorder until privacy disclosures and product need are reviewed.
+- Provide user-controlled deletion of local workout history and explain separately how HealthKit records are managed.
+
+### 15.10 Required project configuration
+
+- Native SwiftUI iOS app; no web wrapper.
+- Deployment target iOS 26.0+ for the new iPhone HealthKit workout-session API path.
+- HealthKit capability and correct entitlement.
+- Background Modes: Location updates only for active workout recording.
+- Usage descriptions for HealthKit and location access.
+- ActivityKit only for the lock-screen workout summary.
+- App Intents / Siri controls are a later layer after core start/pause/resume/end reliability.
+- Latest stable Xcode and SDK compatible with the target iOS.
+- Signing team, bundle identifier and provisioning profile configured for device/TestFlight builds.
+
+### 15.11 Release gates
+
+A release candidate is not deployable until all of these pass:
+
+**Compile and static checks**
+- Clean XcodeGen generation and clean Release build.
+- No missing entitlements, usage descriptions or signing warnings.
+- No unhandled Swift concurrency/data-race warnings in the workout engine.
+
+**Functional tests**
+- HealthKit daily steps refresh correctly and are not combined with session steps.
+- Start, pause, resume, finish, discard and retry are idempotent.
+- GPS route captures timestamped accepted points and preserves gaps.
+- Workout and route each appear once in Apple Health/Fitness.
+- Local workout survives HealthKit failure and app relaunch.
+- Recovery after controlled crash reattaches to the active HealthKit workout.
+- Lock screen shows only data available under the user's privacy authorization.
+- Battery, thermal and storage use are measured during a 2-hour recording.
+
+**Field matrix**
+- iPhone 12 Pro Max on the user's installed iOS version.
+- Open sky, urban canyon, tree cover and indoor/no-GPS cases.
+- Phone in pocket, hand-held and screen locked.
+- Walk at slow, normal and brisk pace.
+- Manual pause/resume, phone call interruption, app crash and low battery.
+- Compare the same route with Apple Fitness and Strava; explain differences from raw GPS and source timing rather than forcing values to match.
+
+**Distribution**
+- Archive a signed Release build.
+- Install and smoke-test the archive on the target iPhone.
+- TestFlight internal distribution and install/update/rollback check.
+- App privacy details, HealthKit disclosure and location usage reviewed before App Store submission.
+
+No simulator-only pass can satisfy the real-device GPS, motion, HealthKit, background or crash-recovery gates.
