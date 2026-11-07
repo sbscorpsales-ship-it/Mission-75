@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>NSHealthShareUsageDescription</key>
+    <string>WALKON reads your daily step count from Apple Health to show your activity progress.</string>
+    <key>NSMotionUsageDescription</key>
+    <string>WALKON uses motion sensors to count steps during a walk you start.</string>
+    <key>NSLocationWhenInUseUsageDescription</key>
+    <string>WALKON records your walking route only during an activity you start.</string>
+    <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+    <string>WALKON uses location during an active walk so route recording can continue when your phone is locked.</string>
+    <key>UIBackgroundModes</key>
+    <array><string>location</string></array>
+</dict>
+</plist>
