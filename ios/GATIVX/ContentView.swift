@@ -129,8 +129,20 @@ struct ContentView: View {
         }
     }
 
+    /// Prefer HealthKit's deduplicated all-source total. Use the iPhone-only
+    /// CoreMotion total only when HealthKit has no value; never add the sources.
+    private var displayedDailySteps: Int? {
+        health.todaySteps ?? liveMotionSteps
+    }
+
+    private var displayedStepSource: String {
+        if health.todaySteps != nil { return "Apple Health · combined supported sources" }
+        if liveMotionSteps != nil { return "iPhone motion · GATIVX fallback" }
+        return "Waiting for step data"
+    }
+
     private var stepProgress: Double {
-        guard let steps = health.todaySteps else { return 0 }
+        guard let steps = displayedDailySteps else { return 0 }
         return min(Double(steps) / 10_000, 1)
     }
 
@@ -142,14 +154,14 @@ struct ContentView: View {
 
                 VStack(spacing: 8) {
                     Text("TODAY'S STEPS").font(.caption.weight(.bold)).foregroundStyle(.secondary)
-                    Text(health.todaySteps?.formatted() ?? "—")
+                    Text(displayedDailySteps?.formatted() ?? "—")
                         .font(.system(size: 48, weight: .bold, design: .rounded))
-                    Text(health.todaySteps == nil ? "Waiting for Apple Health data" : "Goal: 10,000")
+                    Text(displayedStepSource + (displayedDailySteps == nil ? "" : " · Goal: 10,000"))
                         .font(.subheadline).foregroundStyle(.secondary)
                     ProgressView(value: stepProgress).tint(.yellow)
                     Text("Active energy: " + (health.todayActiveEnergyKcal.map { "\($0) kcal" } ?? "—") + " · Apple Health measured active calories, not total calories.")
                         .font(.caption).foregroundStyle(.secondary)
-                    Text("Steps are read from Apple Health, which can combine supported iPhone and wearable sources.")
+                    Text("GATIVX shows Apple Health when available; otherwise it shows the separate iPhone motion total. Sources are never added together.")
                         .font(.caption2).foregroundStyle(.secondary).multilineTextAlignment(.center)
                     HStack {
                         Label("Live iPhone motion", systemImage: "figure.walk")
