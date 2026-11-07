@@ -58,13 +58,40 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             test
 
+      - name: Export readable WALKON test summary
+        if: always()
+        run: |
+          if [ -d build/WALKON-Tests.xcresult ]; then
+            xcrun xcresulttool get test-results summary --path build/WALKON-Tests.xcresult --format json > build/WALKON-test-summary.json || true
+            xcrun xcresulttool get test-results tests --path build/WALKON-Tests.xcresult --format json > build/WALKON-test-details.json || true
+          fi
+
       - name: Upload WALKON test results
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: WALKON-iOS-Test-Results
-          path: build/WALKON-Tests.xcresult
+          path: |
+            build/WALKON-Tests.xcresult
+            build/WALKON-test-summary.json
+            build/WALKON-test-details.json
           if-no-files-found: ignore
+
+  compile-ios:
+    runs-on: macos-15
+    timeout-minutes: 20
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Show Xcode version
+        run: xcodebuild -version
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate WALKON project
+        run: xcodegen generate --spec ios/project.yml --project ios
 
       - name: Compile WALKON for generic iPhone device
         run: |
