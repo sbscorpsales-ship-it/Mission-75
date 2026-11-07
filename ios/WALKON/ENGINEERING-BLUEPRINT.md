@@ -6,8 +6,8 @@
 - **Repository:** `sbscorpsales-ship-it/Mission-75`, branch `main`.
 - **Blueprint:** `ios/WALKON/ENGINEERING-BLUEPRINT.md`.
 - **Phase:** Research and engineering specification only. **App building is not authorized yet.**
-- **Current completed research:** Sections 1–30 exist below. Latest research section: **30 — Motion sensing, pedometer and activity recognition**.
-- **Exact next task:** **Section 31 — Heart-rate science and metrics.** Research physical measurement (PPG vs ECG), optical sensor limitations, phone vs watch vs chest strap, HR sampling/latency, resting HR, workout HR, zones, recovery/HRV boundaries, HealthKit/Health Connect data semantics, permissions, source attribution, gaps, accuracy validation and battery. Do not drift into unrelated feature design.
+- **Current completed research:** Sections 1–31 exist below. Latest research section: **31 — Heart-rate science and metrics**.
+- **Exact next task:** **Section 32 — Wearables and Bluetooth interoperability.** Research BLE GATT and Heart Rate Service, pairing/bonding, permissions, scanning/connection lifecycle, background restrictions, reconnects, multiple sensors, source selection, Apple Watch integration boundaries, Android Wear OS/Health Connect, device compatibility, battery and security. Do not drift into unrelated feature design.
 - **After Section 31:** update this register's latest-completed and exact-next-task fields before proceeding to Section 32 (wearables and Bluetooth).
 - **No user device testing or screenshot requests** until the research/architecture blueprint is sufficiently complete and a coherent buildable test plan is ready.
 
@@ -34,9 +34,9 @@
 - **Section 28:** GPS/location engine on iOS and Android.
 - **Section 29:** Elevation, altitude and barometric measurement.
 - **Section 30:** Motion sensing, pedometer and activity recognition.
+- **Section 31:** Heart-rate science, PPG/ECG, HealthKit/Health Connect semantics, HRV and validation.
 
 ## Open research queue (ordered)
-31. Heart-rate science and metrics.
 32. Wearables and Bluetooth sensor interoperability.
 33. Workout lifecycle, interruptions, crash recovery and exactly-once save.
 34. HealthKit and Health Connect semantics, permissions, sync and reconciliation.
@@ -50,11 +50,9 @@
 After these: consolidate contradictions, close architecture decisions, produce a single implementation-ready specification and explicit go/no-go checklist. Only then ask for authorization to build.
 
 ## Last verified checkpoint
-- **Latest completed section:** 30.
-- **Latest commit:** `457b601053ce7660c42f24eb2454f90389c8d406`.
-- **Latest blueprint blob SHA:** `8f0bb4c6cd31fb870930085c67a38c999d4045fd`.
-- **Next action:** research Section 31 — heart-rate science and metrics.
-- **Verification note:** these identifiers describe the checkpoint before this continuity-register update; refresh them after committing this register.
+- **Latest completed section:** 31.
+- **Next action:** research Section 32 — wearables and Bluetooth interoperability.
+- **Verification note:** refresh commit and blob identifiers after this update is committed and fetched.
 
 ---
 
@@ -2363,3 +2361,158 @@ Use manually counted video/observer counts and a validated reference device for 
 - Establish validated thresholds and acceptance limits from a multi-placement test corpus.
 
 Research status: physical sensor roles and public APIs documented. Internal fusion algorithms remain proprietary; device-specific accuracy, background behaviour and battery performance require controlled testing. No app implementation is authorized by this section.
+
+
+## 31. Heart-rate science and metrics — hardware-first research
+
+Research update: 2026-11-07. This section defines what heart-rate sensors measure, platform access, data semantics, limitations and validation requirements. It does not turn WALKON into a medical diagnostic product.
+
+### 31.1 Heart rate is not the same as electrical rhythm
+
+- **Heart rate (HR):** beats per minute (bpm), usually estimated from pulse timing or electrical cardiac events.
+- **Pulse rate:** peripheral pressure/volume pulses detected at the wrist or another site. It usually tracks heart rate but can differ when pulse transmission is weak or irregular.
+- **ECG:** measures electrical potential differences associated with cardiac depolarization/repolarization. Consumer single-lead ECG is not equivalent to a clinical multi-lead ECG.
+- **PPG:** photoplethysmography measures changes in light absorption/reflection associated with blood-volume changes in tissue. Wrist wearables infer pulse timing and calculate bpm; they do not directly record the heart's electrical signal.
+- **HRV:** variation in intervals between successive normal heartbeats, not the same as average HR and not a direct stress score.
+- **Heart-rate recovery (HRR):** decline in HR after exercise stops, defined only with a documented protocol and measurement window.
+
+### 31.2 Sensor technologies and what WALKON can access
+
+**Wrist optical PPG**
+- Green LEDs and photodiodes detect pulsatile blood-volume changes at the wrist; some devices also use infrared or other wavelengths.
+- Continuous or periodic sampling is performed by the wearable firmware. A phone app generally receives processed HR samples, not raw optical waveforms or proprietary filtering internals.
+- Fit, contact pressure, wrist placement, skin perfusion, cold, tattoos, motion and activity type affect signal quality.
+- Rhythmic walking/running can be easier than irregular arm motion or resistance exercise.
+
+**Electrical ECG / electrode-based sensors**
+- A chest strap commonly detects electrical cardiac activity and can provide beat-to-beat timing. It is a stronger practical reference for field validation than wrist PPG, though not a replacement for clinical ECG.
+- Apple Watch's electrical sensor is used for user-initiated ECG/heart-rate measurement through the Digital Crown circuit; it is not the same as its continuous optical workout stream.
+- iPhone has no built-in optical wrist sensor or ECG electrodes. For live HR during an iPhone workout, an external compatible heart-rate sensor is required.
+
+Sources:
+- https://support.apple.com/en-us/120277
+- https://developer.apple.com/documentation/healthkit/hkworkoutsession
+- https://pubmed.ncbi.nlm.nih.gov/32552580/
+- https://pubmed.ncbi.nlm.nih.gov/28709155/
+
+### 31.3 Evidence on accuracy — activity matters
+
+A systematic review/meta-analysis of 44 studies, 738 effect sizes and 15 brands found small average wrist-PPG differences versus ECG/chest-strap criterion during rest and treadmill walking-to-running, but larger average differences during resistance exercise and cycling. Group-average bias does not guarantee individual accuracy or absence of outliers.
+
+A separate controlled comparison found chest strap agreement with ECG was highest in its tested set; wrist devices varied substantially by model and activity, with some activities producing poor agreement. Apple's own support guidance identifies low skin perfusion/cold, tattoos and motion as factors that can reduce optical readings, and suggests compatible external monitors where wrist readings are inconsistent.
+
+WALKON consequences:
+- Never label consumer wearable HR as clinical-grade or guaranteed accurate.
+- Preserve source and activity context.
+- Do not interpolate long missing intervals as if measured.
+- A plausible bpm value is not proof of a valid pulse signal.
+- Validate walking separately from cycling, strength training and irregular movement.
+- Use an external electrical chest strap as a reference instrument in controlled validation.
+
+### 31.4 iOS and HealthKit access
+
+- HealthKit exposes heart-rate samples using `HKQuantityTypeIdentifier.heartRate`; sample units are count/time and samples may be condensed or coalesced.
+- Apple documents related data types including resting HR, walking HR average, HRV SDNN and one-minute HR recovery. They have different meanings and should remain separate metrics.
+- Heart-rate samples may include motion-context metadata (for example sedentary or active), but not every sample contains it. Missing context must be represented as unknown, not guessed.
+- HealthKit requires fine-grained per-type authorization. Critically, an app cannot reliably distinguish a denied read permission from an empty result; the UI must not claim that the user explicitly denied access based only on no returned samples.
+- An iPhone workout session does not create an optical HR sensor: Apple's HealthKit documentation says iPhone/iPad need a paired external HR sensor for HR collection. Apple Watch workout sessions can generate high-frequency HR samples.
+- iPhone locked-state health-data access has privacy restrictions; workout collection and later HealthKit reading/writing must be designed according to Apple's documented session lifecycle and protected-data behaviour.
+
+Sources:
+- https://developer.apple.com/documentation/healthkit/hkquantitytypeidentifier/heartrate
+- https://developer.apple.com/documentation/healthkit/hkworkoutsession
+- https://developer.apple.com/documentation/healthkit/authorizing-access-to-health-data
+
+### 31.5 Android and Health Connect access
+
+- Health Connect represents HR as a series record (`HeartRateRecord`) containing timestamped bpm samples and start/end times.
+- Read/write permissions are distinct: `READ_HEART_RATE` and `WRITE_HEART_RATE`.
+- Health Connect exposes aggregate average, minimum, maximum and measurement count, but aggregates do not replace the underlying sample timeline when workout analysis needs temporal detail.
+- HRV is a separate RMSSD record in milliseconds and uses its own permission; it is not interchangeable with Apple's SDNN HRV value.
+- Health Connect metadata identifies recording method (manual, automatic, actively recorded, unknown) and device/source information. WALKON must retain this provenance and avoid assuming every sample came from a watch or from the current workout.
+- Background and historical access have additional permission requirements. Ask only for the access the current feature needs.
+
+Sources:
+- https://developer.android.com/health-and-fitness/health-connect/data-types
+- https://developer.android.com/health-and-fitness/health-connect/metadata
+- https://developer.android.com/health-and-fitness/health-connect/write-data
+
+### 31.6 HR sampling, timestamps and missing data
+
+- HR samples are observations at times, not a continuous waveform. Do not imply continuous coverage between samples.
+- Preserve the original event timestamp, ingestion/receipt timestamp, sample interval semantics, source device, recording method and workout association.
+- Sampling frequency is controlled by the sensor, wearable firmware, platform and power policy; it may change with activity or device state. Do not promise a fixed one-second stream unless a specific sensor/API contract and field test support it.
+- Keep gaps visible in charts and summaries. Never fill long gaps with a flat line or synthetic values.
+- Detect stale samples, out-of-order delivery, duplicate records and overlapping sources.
+- For live display, show the sample age and an unavailable/stale state when the last reading is too old; choose threshold from sensor/API behaviour and testing rather than inventing a universal value.
+- Distinguish session HR samples from all-day background HR samples and from historical HealthKit/Health Connect records.
+
+### 31.7 Metric definitions — keep separate
+
+- **Live HR:** most recent valid sample with sample age and source.
+- **Average HR:** time-weighted or sample-weighted only under a documented calculation policy; do not silently mix different methods.
+- **Maximum HR:** highest accepted sample within the session, with quality checks.
+- **Resting HR:** platform-provided resting metric or a separately validated baseline algorithm; not simply the lowest value seen during a workout.
+- **Walking HR average:** distinct HealthKit metric where available; do not rename it as resting HR.
+- **HR zones:** require a chosen zone model and user-specific inputs. Age-predicted maximum HR is an estimate, not an individual's measured maximum. Avoid presenting zone boundaries as medical advice.
+- **HRV:** preserve the measurement method (e.g. SDNN vs RMSSD), units, context and source. Values from different algorithms/windows are not directly comparable.
+- **HR recovery:** requires a standardized post-exercise protocol (peak/finish reference, recovery posture, exact elapsed time and measurement source). Do not calculate it from arbitrary missing or sparse samples.
+- **Calories:** HR may contribute to an energy model but does not independently determine energy expenditure. Defer calorie model design to Section 35.
+
+### 31.8 WALKON source-of-truth and wearable priority proposal
+
+- For iPhone-only recording, WALKON cannot measure HR with the phone itself. Display HR as unavailable unless a compatible external sensor is connected or authorized HealthKit data is available for historical/context views.
+- For Apple Watch, consume workout HR through the supported HealthKit/watch workout data path; do not create a second competing HR recorder on iPhone.
+- For Android, consume a live compatible wearable/sensor stream only through a defined supported adapter; Health Connect is the durable health-data exchange layer, not a guaranteed low-latency live telemetry transport.
+- When multiple devices provide overlapping HR, select one authoritative source for the active workout according to explicit user/device priority and connection state. Retain other observations for diagnostics, not for averaging or summing.
+- If the selected source disconnects, mark the gap and optionally switch source only under an explicit, logged handover policy. Never silently splice sources without preserving the boundary.
+- WALKON is not a medical monitor and must not diagnose arrhythmia, prescribe HR zones or tell users that an anomalous reading is safe.
+
+### 31.9 Proposed heart-rate data contract
+
+Each sample/series should include:
+- workout UUID or explicit null for non-workout/background sample;
+- event timestamp, receipt timestamp, and source interval where applicable;
+- bpm value and unit;
+- sensor modality (PPG, electrical chest strap, ECG-derived, unknown);
+- provider/platform/API and source device identity;
+- recording method (manual, automatic, actively recorded, unknown);
+- sample quality/confidence if supplied by source; never fabricate it;
+- motion/activity context if supplied, otherwise unknown;
+- permission/authorization state as observable (do not infer hidden HealthKit read denial);
+- live/historical/background/session classification;
+- source-selection epoch and handover boundary;
+- raw imported vs transformed/derived designation and algorithm version.
+
+Derived summaries must store the source sample set or query window, aggregation method, gaps, excluded samples and algorithm version.
+
+### 31.10 Battery and privacy requirements
+
+- Do not attempt continuous camera-flash PPG using the iPhone camera as a substitute for a wearable. It is a different, unvalidated product feature with usability, heat, battery, privacy and motion limitations.
+- Prefer a paired wearable's native sensor and low-power Bluetooth protocol for live HR.
+- Avoid repeated broad HealthKit/Health Connect history queries; request incremental or bounded windows according to platform capabilities.
+- Health data is sensitive. Request read access only when the user activates a feature that needs it; explain why; do not upload HR by default.
+- Do not store raw ECG waveforms unless a separately justified, consented feature and security design exists.
+
+### 31.11 Validation protocol before architecture freeze
+
+Use a reference ECG/chest strap and repeated paired trials. Validate:
+- seated rest, standing, slow/normal/brisk walk, uphill walk, jog/run, cycling and resistance/arm-motion activity;
+- cold/warm conditions, different wrist fit/tightness and sensor placement;
+- phone-only (must correctly report no native HR sensor), Apple Watch, at least two Android wearable/sensor paths and a BLE chest strap;
+- connection loss/reconnect, Bluetooth disabled, wearable battery low, phone screen locked and app backgrounded;
+- timestamp delay, missing samples, duplicate/overlapping sources and post-workout sync;
+- HR error (bias and absolute error), outlier rate, valid-sample coverage, latency, gap duration, reconnect time and battery impact.
+
+Acceptance thresholds must be defined per use case from a test protocol before implementation. Do not infer universal pass limits from a study's mean error.
+
+### 31.12 Open decisions — do not guess
+
+- Which live HR path is supported and reliable for Apple Watch with the intended iPhone app architecture?
+- Which BLE heart-rate profile/devices are in the first supported Android/iOS interoperability matrix?
+- How will WALKON distinguish unavailable sensor, disconnected sensor, no recent sample and HealthKit empty/unknown authorization state?
+- Which HR zone model, if any, is appropriate for a general walking companion, and how will it be presented without medical claims?
+- Will HRV and HR recovery be deferred until sufficient device provenance and repeatability are demonstrated?
+- What are the field-tested latency, coverage, accuracy and battery acceptance thresholds?
+
+Research status: physical PPG/ECG distinctions, platform data types, permissions, known limitations and validation design documented. Target-device interoperability, live latency, sampling behaviour and acceptance thresholds remain untested. No app implementation is authorized by this section.
