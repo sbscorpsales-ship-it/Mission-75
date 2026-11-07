@@ -3,6 +3,13 @@ import Combine
 import CoreLocation
 import CoreMotion
 
+private struct WalkLocationSample: Sendable {
+    let latitude: Double
+    let longitude: Double
+    let timestamp: Date
+    let horizontalAccuracy: Double
+}
+
 @MainActor
 final class WalkTracker: NSObject, ObservableObject, CLLocationManagerDelegate {
     @Published private(set) var isTracking = false
@@ -60,7 +67,7 @@ final class WalkTracker: NSObject, ObservableObject, CLLocationManagerDelegate {
                     Task { @MainActor in
                         guard let self, self.isTracking else { return }
                         if let count = data?.numberOfSteps.intValue { self.liveSteps = max(count, 0) }
-                        if let error { self.locationStatus = "Step sensor issue: \\(error.localizedDescription)" }
+                        if let error { self.locationStatus = "Step sensor issue: \(error.localizedDescription)" }
                         self.checkpoint()
                     }
                 }
@@ -172,18 +179,25 @@ final class WalkTracker: NSObject, ObservableObject, CLLocationManagerDelegate {
         location.requestAlwaysAuthorization()
     }
 
-    func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
-        switch manager.authorizationStatus {
+    nonisolated func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            self.handleAuthorizationChange(self.location.authorizationStatus)
+        }
+    }
+
+    private func handleAuthorizationChange(_ status: CLAuthorizationStatus) {
+        switch status {
         case .authorizedAlways:
             configureBackgroundLocation()
-            if isTracking { manager.startUpdatingLocation() }
+            if isTracking { location.startUpdatingLocation() }
         case .authorizedWhenInUse:
-            manager.allowsBackgroundLocationUpdates = false
+            location.allowsBackgroundLocationUpdates = false
             locationStatus = "Foreground GPS active; Always access is needed when screen is locked"
             requestAlwaysIfNeeded()
-            if isTracking { manager.startUpdatingLocation() }
+            if isTracking { location.startUpdatingLocation() }
         case .denied, .restricted:
-            manager.allowsBackgroundLocationUpdates = false
+            location.allowsBackgroundLocationUpdates = false
             locationStatus = "Location access denied — route cannot be recorded"
         case .notDetermined:
             locationStatus = "Waiting for location permission"
@@ -192,31 +206,46 @@ final class WalkTracker: NSObject, ObservableObject, CLLocationManagerDelegate {
         }
     }
 
-    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+    nonisolated func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+        let samples = locations.map {
+            WalkLocationSample(latitude: $0.coordinate.latitude,
+                               longitude: $0.coordinate.longitude,
+                               timestamp: $0.timestamp,
+                               horizontalAccuracy: $0.horizontalAccuracy)
+        }
+        Task { @MainActor [weak self] in
+            self?.processLocationSamples(samples)
+        }
+    }
+
+    private func processLocationSamples(_ samples: [WalkLocationSample]) {
         guard isTracking else { return }
-        for point in locations.sorted(by: { $0.timestamp < $1.timestamp }) {
-            guard point.horizontalAccuracy >= 0, point.horizontalAccuracy <= 35 else { continue }
+        for sample in samples.sorted(by: { $0.timestamp < $1.timestamp }) {
+            guard sample.horizontalAccuracy >= 0, sample.horizontalAccuracy <= 35 else { continue }
             let nextPoint = WalkSession.RoutePoint(
-                latitude: point.coordinate.latitude,
-                longitude: point.coordinate.longitude,
-                timestamp: point.timestamp,
-                horizontalAccuracy: point.horizontalAccuracy
+                latitude: sample.latitude,
+                longitude: sample.longitude,
+                timestamp: sample.timestamp,
+                horizontalAccuracy: sample.horizontalAccuracy
             )
             if let previous = route.last {
-                guard point.timestamp > previous.timestamp else { continue }
+                guard sample.timestamp > previous.timestamp else { continue }
                 // Do not bridge long GPS gaps or accept implausible walking jumps.
                 if let increment = WalkSession.acceptedDistance(from: previous, to: nextPoint) {
                     distanceMeters += increment
                 }
             }
             route.append(nextPoint)
-            gpsAccuracy = point.horizontalAccuracy
+            gpsAccuracy = sample.horizontalAccuracy
         }
         checkpoint()
         if gpsAccuracy == nil { locationStatus = "Waiting for a reliable GPS fix" }
     }
 
-    func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
-        locationStatus = "GPS issue: \(error.localizedDescription)"
+    nonisolated func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
+        let message = error.localizedDescription
+        Task { @MainActor [weak self] in
+            self?.locationStatus = "GPS issue: \(message)"
+        }
     }
 }
