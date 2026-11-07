@@ -118,6 +118,8 @@ final class SupabaseRESTClient: ObservableObject {
         guard !points.isEmpty, points.count <= 20_000 else { return }
         do {
             guard let token = accessToken else { throw ClientError.notSignedIn }
+            let formatter = ISO8601DateFormatter()
+            formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
             var request = URLRequest(url: baseURL.appendingPathComponent("rest/v1/rpc/sync_activity_session_route"))
             request.httpMethod = "POST"
             request.setValue(publishableKey, forHTTPHeaderField: "apikey")
