@@ -18,7 +18,7 @@ await page.goto(fileUrl, { waitUntil: "domcontentloaded" });
 await page.waitForTimeout(6500);
 
 const assert = (condition, message) => { if (!condition) throw new Error(message); };
-assert(await page.locator("#connectionHeading").isVisible(), "Connected-data hub is not visible");
+assert(await page.locator("#connectionHeading").count() === 1, "Connected-data hub is missing from the profile");
 assert(await page.locator(".activity-grid .tile").count() === 6, "Expected six dashboard metrics");
 assert(await page.locator("[data-tab]").count() === 6, "Expected six navigation destinations");
 assert(await page.locator("#accountQuick").isVisible(), "Quick account control is missing");
@@ -29,6 +29,8 @@ for (const tab of ["today", "trends", "log", "coach", "walk", "data"]) {
 }
 await page.locator("#accountQuick").click();
 assert(await page.locator("#pane-data").isVisible(), "Quick account control did not open account settings");
+assert(await page.locator("#connectionHeading").isVisible(), "Connected-data hub is not visible in You / Profile");
+assert(await page.locator("#gxProgressCard").isVisible(), "Personal progress report is missing from You / Profile");
 assert(await page.locator("#cloudEmail").count() === 1, "Email sign-in field is missing");
 assert(await page.locator("#cloudPassword").count() === 1, "Password sign-in field is missing");
 assert(await page.locator("#cloudSignIn").count() === 1, "Sign-in action is missing");
@@ -60,7 +62,8 @@ assert(gpsResult.sessions[0].distanceMeters > 0, "Saved GPS session has no measu
 assert(Object.values(gpsResult.logs).some(row => Number(row.distance) > 0 && row.workout === "Walk"), "GPS distance was not added to today's daily activity log");
 assert(errors.length === 0, "Browser runtime errors: " + errors.join("; "));
 
-console.log("PASS: mobile dashboard renders six activity metrics and connected-data hub");
+console.log("PASS: mobile dashboard renders six activity metric slots; inactive metrics are hidden");
+console.log("PASS: connected-data hub and personal progress report appear in You / Profile");
 console.log("PASS: all six navigation destinations and quick account access work");
 console.log("PASS: sign-in, sign-up and manual cloud-sync controls are present");
 console.log("PASS: no uncaught browser runtime errors");
