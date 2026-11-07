@@ -1128,3 +1128,148 @@ WALKON must not aim to make every number identical across apps. It must:
 - explain differences caused by source timing, aggregation, GPS quality and activity boundaries.
 
 No copying of Strava/Apple/Google branding, screen layouts, private source, proprietary assets, undocumented endpoints, or proprietary algorithms.
+
+
+## 23. iPhone hardware-first study — physical components, natural signals and Swift access
+
+This is the guiding hardware-first principle for WALKON: understand the physical component, what it measures or emits, the operating-system service that interprets it, the public Swift API, its permission/background/battery limits, and only then decide whether to use it. The app must not try to recreate a capability that iOS already exposes as a reliable processed service.
+
+### 23.1 Sensor and component inventory
+
+| Physical component / subsystem | Natural function | Public iOS access path | Potential WALKON use | Constraints / decision |
+|---|---|---|---|---|
+| 3-axis accelerometer | Measures linear acceleration plus gravity along device axes | Core Motion: CMMotionManager, CMAccelerometerData, CMDeviceMotion | Understand movement patterns; research step/motion classification; detect phone movement context | Raw acceleration is not a ready-made step count. Prefer CMPedometer / HealthKit for steps; raw signal is research/validation only |
+| Gyroscope | Measures angular rotation rate | Core Motion: CMGyroData, CMDeviceMotion.rotationRate | Device orientation/context, motion fusion, distinguish device rotation from translation | Rotation alone cannot measure walking distance |
+| Magnetometer / compass | Measures magnetic field and supports heading/orientation | Core Motion calibrated magnetic field; Core Location heading | Compass arrow/map orientation; contextual heading | Magnetic interference near vehicles/buildings; course over ground from GPS is often better while moving |
+| Motion coprocessor / pedometer pipeline | System processes motion data into pedestrian events/steps/distance where supported | Core Motion CMPedometer; HealthKit aggregates | Live session steps and retrospective step/distance values | System-derived values are preferred over a hand-written accelerometer peak counter; check availability and data latency |
+| GNSS receiver (GPS and supported satellite systems) | Estimates position/time from satellite signals | Core Location CLLocation / CLLocationUpdate | Outdoor route coordinates, speed/course estimates, timestamps | Satellite visibility, multipath, urban canyon and battery affect quality; iOS may fuse other sources |
+| Wi-Fi, cellular and Bluetooth radios | Provide radio observations and connectivity; can assist system location estimation | Core Location provides fused location; CoreBluetooth for BLE accessory communication | Location support through system; connect external sensors | Do not independently scan or fingerprint radios to reconstruct location; use authorized Core Location output |
+| Barometer | Measures air pressure; pressure change can indicate relative altitude change | Core Motion CMAltimeter | Hill/climb context and relative elevation trend | Weather/pressure drift and device availability; calibrate and validate before elevation gain is shown |
+| Camera system (wide/ultra-wide/telephoto/front, device-dependent) | Captures images/video and depth/visual data | AVFoundation capture APIs; Vision / ARKit for supported analysis | Later: walk photos, form/posture coaching only with explicit opt-in | Not needed for pedometer/GPS. Camera is privacy-sensitive and power-intensive; never capture in background for walking |
+| Microphones | Convert sound pressure into audio signal | AVAudioSession, AVAudioEngine, AVAudioRecorder / AVFoundation | Voice coaching, spoken notes, trainer calls, optional audio cues input | Recording requires microphone permission and clear user action; no always-on listening |
+| Speakers / receiver | Convert digital audio into sound | AVAudioSession, AVAudioPlayer / AVPlayer | Voice guidance, audio cues, calls, media playback | Audio route may switch to wired/Bluetooth/AirPlay devices; respect other apps' playback and interruptions |
+| Taptic Engine / haptic actuator | Produces tactile feedback | Core Haptics; UIKit feedback generators | Start/pause/goal milestone confirmations without looking at screen | Haptic support varies; avoid excessive vibration and test with battery/thermal impact |
+| Proximity sensor | Detects nearby objects, commonly to disable touch during calls | Limited UIKit proximity state via UIDevice where exposed; no general-purpose distance measurement stream | No core walking use | Not a general-purpose obstacle or distance sensor; do not rely on it for fitness measurement |
+| Ambient light sensor | Measures surrounding light for automatic display brightness | No general public raw ambient-light sensor API for ordinary apps | No v1 use | Do not invent a sensor API or infer exact lux from screen brightness |
+| Face ID / TrueDepth / LiDAR (model-dependent) | Secure face authentication, depth and scene sensing | LocalAuthentication; ARKit / AVFoundation depth APIs when supported | Future accessibility, form coaching or spatial features | Not required for walking recorder; biometric data must never be collected by WALKON |
+| NFC controller | Short-range tag communication and secure system transactions | CoreNFC for supported tag-reading workflows | Optional future check-in at walking tracks/events or equipment | Requires capability/entitlement, user-started scan and supported tag formats; not a continuous sensor |
+| Bluetooth LE | Wireless communication with accessories | CoreBluetooth | External heart-rate straps, cadence sensors, foot pods, compatible wearables | Pairing/connection lifecycle, battery and background limits; sensor provenance required |
+| Battery and power state | Reports charge level and charging state | UIDevice battery monitoring | Warn before a long walk; diagnose battery drain | Battery percentage is not remaining recording time; do not promise an exact duration |
+| Thermal sensors / thermal management | System monitors device temperature and performance pressure | ProcessInfo.thermalState | Reduce optional processing when thermal state is serious/critical | App cannot read raw internal temperature; respond to system thermal state, not guessed degrees |
+| Barometric/GNSS/motion sensor fusion | System combines multiple sensor signals into useful estimates | Core Location and Core Motion processed outputs | Use fused location/heading and system pedestrian metrics | Apple does not expose all internal fusion weights or proprietary sensor-fusion internals |
+
+Primary Apple references:
+- Core Motion: https://developer.apple.com/documentation/coremotion/
+- Device sensor overview: https://developer.apple.com/documentation/technologyoverviews/device-sensors
+- Core Location: https://developer.apple.com/documentation/corelocation
+- CMDeviceMotion: https://developer.apple.com/documentation/coremotion/cmdevicemotion
+- CMAltimeter: https://developer.apple.com/documentation/coremotion/cmaltimeter
+- AVFoundation capture: https://developer.apple.com/documentation/avfoundation/capture-setup
+- AVAudioSession: https://developer.apple.com/documentation/avfaudio/avaudiosession
+- Core Haptics: https://developer.apple.com/documentation/corehaptics
+- Core Bluetooth: https://developer.apple.com/documentation/corebluetooth
+- Core NFC: https://developer.apple.com/documentation/corenfc
+- UIDevice battery: https://developer.apple.com/documentation/uikit/uidevice/batterylevel
+
+### 23.2 What is hardware, what is a system service, and what is our code?
+
+For every feature, keep three layers distinct:
+
+1. **Physical hardware:** accelerometer, gyro, GNSS, barometer, microphone, speaker, camera, radio, haptic actuator, etc.
+2. **iOS service/framework:** Core Motion, Core Location, HealthKit, AVFoundation, AVFAudio, CoreBluetooth, CoreHaptics, CoreNFC, UIKit, ProcessInfo.
+3. **WALKON logic:** session orchestration, quality checks, metric presentation, storage, recovery and product experience.
+
+Example — walking steps:
+- Hardware senses acceleration.
+- Apple's motion processing interprets pedestrian patterns.
+- CMPedometer provides system-generated pedestrian metrics.
+- HealthKit provides an aggregated daily step total from authorized sources.
+- WALKON chooses the correct source for the screen and stores its provenance.
+- WALKON must not invent a second step detector and add its count to the system total.
+
+Example — walking distance:
+- GNSS and other location sources contribute to system location estimates.
+- Core Location provides timestamped locations, accuracy, speed and course.
+- WALKON validates samples, segments gaps and calculates route distance.
+- HealthKit route builder associates the route with the workout.
+- WALKON must not confuse Core Location's reported speed with a guaranteed exact speed measurement.
+
+### 23.3 iPhone hardware-first investigation order
+
+1. **Motion subsystem:** accelerometer, gyroscope, magnetometer, sensor fusion, motion coprocessor, CMPedometer, activity classification.
+2. **Location subsystem:** GNSS, Wi-Fi/cellular/Bluetooth assistance, Core Location fusion, horizontal/vertical accuracy, speed/course, background delivery.
+3. **Altitude subsystem:** barometer, relative altitude, absolute altitude, pressure drift and elevation smoothing.
+4. **Health subsystem:** HealthKit permissions, aggregate statistics, workout session, live builder, route series, source attribution.
+5. **Power and thermal subsystem:** battery state, low-power behaviour, thermal state, sensor sampling rate and battery-cost tests.
+6. **Audio subsystem:** speakers, microphones, AVAudioSession, audio focus/interruption, Bluetooth audio routing, spoken coaching.
+7. **External sensor subsystem:** BLE heart-rate monitors, cadence/foot pods, Apple Watch and other wearable integration through supported public frameworks.
+8. **Camera and vision subsystem:** camera capture, Vision/ARKit capabilities and privacy; later coaching features only.
+9. **Haptics, NFC and proximity:** useful interaction/context components, not core fitness measurement sources.
+
+### 23.4 Hardware use priority for WALKON
+
+**Core v1**
+- Motion coprocessor / CMPedometer where validated.
+- HealthKit daily step aggregation and native workout lifecycle.
+- GNSS + Core Location for route.
+- Barometer only after elevation validation.
+- Battery/thermal state for diagnostics and responsible workload management.
+
+**Useful v1.1 / later**
+- Bluetooth LE external heart-rate sensor and cadence accessories.
+- AVAudioSession audio cues and spoken coaching.
+- Core Haptics for non-visual status feedback.
+- Apple Watch / supported wearable data through HealthKit.
+
+**Optional future product features**
+- Camera/Vision form coaching, user-captured walk photos.
+- Microphone voice notes and trainer calls.
+- NFC event/track check-ins.
+- Accessibility and hands-free interactions.
+
+**Not to build**
+- A custom step counter from raw accelerometer data as the main source.
+- A DIY GPS engine using raw radio scans.
+- Background camera/microphone monitoring.
+- Private API access to proximity/ambient light/raw sensor fusion.
+- Any feature that consumes battery without a clear user benefit.
+
+### 23.5 Hardware capability and API discovery at runtime
+
+WALKON must check service availability at runtime rather than assume a sensor exists:
+- Core Motion availability flags for accelerometer, gyro, magnetometer, device motion, pedometer and altimeter.
+- Core Location authorization, accuracy authorization, services enabled and diagnostic update state.
+- HealthKit availability and the actual returned metric statistics.
+- CoreBluetooth manager state and discovered service/characteristic support for external sensors.
+- AVFoundation capture device discovery and permission status only when the user invokes camera/microphone features.
+- Core Haptics hardware support before attempting custom haptics.
+- UIDevice battery monitoring and ProcessInfo thermal state where needed.
+
+No feature may fail the entire app merely because an optional sensor is absent. Show capability as unsupported/unavailable and degrade gracefully.
+
+### 23.6 Programming language mapping — Swift is the integration layer
+
+Swift is not expected to speak directly to every chip. Apple's frameworks abstract the hardware and provide typed interfaces. WALKON's Swift code should:
+- create framework managers/services;
+- check hardware/service availability;
+- request user authorization only when a feature is invoked;
+- consume asynchronous callbacks/updates;
+- normalize units and timestamps;
+- attach provenance and quality;
+- pass immutable samples to the domain layer;
+- persist data transactionally;
+- stop services when the activity ends.
+
+Keep raw sensor processing off the main UI thread. Use actors or serial queues for sensor ownership and persistence. Use bounded sampling and batching to avoid excessive battery consumption. Record diagnostics (sampling rate, callback gaps, errors, thermal state) without collecting unnecessary personal data.
+
+### 23.7 Hardware-first rule
+
+Before adding a WALKON algorithm, answer:
+1. Which physical component naturally produces the signal?
+2. Which Apple framework exposes it?
+3. Does iOS already provide a processed answer?
+4. What accuracy, latency, permission, background and battery limits apply?
+5. What additional calculation is genuinely missing?
+6. How will we validate that calculation against real observations?
+
+Only implement custom signal processing for the gap that remains after using Apple's native service. This is the central engineering principle for WALKON.
