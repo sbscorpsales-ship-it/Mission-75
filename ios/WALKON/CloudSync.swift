@@ -15,13 +15,19 @@ final class CloudSyncStore: ObservableObject {
         supabaseURL: URL(string: "https://crarbbsvcczwmtvxyrxo.supabase.co")!,
         supabaseKey: "sb_publishable_XAGRFtrWrFqJ-SfXh2WbRQ_jCcPnr-6",
         options: SupabaseClientOptions(
-            auth: .init(storage: SimulatorAuthStorage())
+            auth: .init(
+                storage: SimulatorAuthStorage(),
+                emitLocalSessionAsInitialSession: true
+            )
         )
     )
     #else
     private let client = SupabaseClient(
         supabaseURL: URL(string: "https://crarbbsvcczwmtvxyrxo.supabase.co")!,
-        supabaseKey: "sb_publishable_XAGRFtrWrFqJ-SfXh2WbRQ_jCcPnr-6"
+        supabaseKey: "sb_publishable_XAGRFtrWrFqJ-SfXh2WbRQ_jCcPnr-6",
+        options: SupabaseClientOptions(
+            auth: .init(emitLocalSessionAsInitialSession: true)
+        )
     )
     #endif
     private var authEventsTask: Task<Void, Never>?
