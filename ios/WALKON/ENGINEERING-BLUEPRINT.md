@@ -1715,3 +1715,163 @@ The following requirements are promoted from market observations into WALKON des
 - Remaining research: obtain a broader, reproducible cross-platform review sample for Strava, Pacer, StepsApp, Samsung Health, Fitbit/Google Health, adidas Running and Hevy; compare recent release regressions and accessibility/offline/privacy details; complete Android device/OEM variation research; verify all proposed iOS/Android API capabilities against current SDK documentation.
 
 Research status: deeper second pass documented. This is a durable design reference, not a claim of exhaustive market coverage or successful WALKON field implementation.
+
+
+## 27. Android sensor pipeline and cross-platform app behaviour — detailed research
+
+Research update: 2026-11-07. This section records Android's documented motion sensor semantics and the lessons from Fitbit/Google Health, Samsung Health, adidas Running and Hevy. It defines platform-specific behaviour WALKON must respect.
+
+### 27.1 Android step sensors — exact semantics
+
+Android exposes two distinct step sensor types through SensorManager:
+- TYPE_STEP_COUNTER: cumulative number of steps since the last reboot while the sensor has been activated. It is a hardware-implemented, low-power sensor where supported. It reports an aggregate count, not one callback per footfall.
+- TYPE_STEP_DETECTOR: emits an event for each detected step; the event value is 1.0. It is intended for individual step events / dead reckoning, not as the preferred aggregate counter.
+- Android documentation says the counter may have latency up to 10 seconds, while the detector's expected latency is below 2 seconds.
+- Both require ACTIVITY_RECOGNITION permission on Android 10 / API 29 and later.
+- The step counter only counts while an app has registered/activated the sensor. Android recommends keeping it registered for continuous tracking and retrieving values in a battery-conscious way.
+
+WALKON implementation rules:
+1. Check getDefaultSensor(TYPE_STEP_COUNTER) at runtime. If absent, report unsupported; do not silently substitute a raw accelerometer peak counter.
+2. Request ACTIVITY_RECOGNITION just in time and explain the purpose.
+3. Treat counter values as a monotonic device counter within one boot epoch, not as today's count. Persist the last observed counter and timestamp; detect reboot/reset (counter drops) and begin a new epoch.
+4. Derive an interval delta only when the same boot epoch is established and values are monotonic. Never subtract across reboot, missing baseline or corrupted timestamps.
+5. The step detector can support a low-latency session display if required, but it is a separate stream; never add its event count to the step-counter delta.
+6. Health Connect's on-device step data is aggregated/batched, generally no more frequently than once per minute. It is appropriate for daily totals and history, not a guaranteed live session display.
+7. The Android session adapter must document latency and distinguish provisional live values from final reconciled interval values.
+
+Sources:
+- https://developer.android.com/reference/android/hardware/Sensor
+- https://developer.android.com/develop/sensors-and-location/sensors/sensors_motion
+- https://developer.android.com/health-and-fitness/health-connect/features/steps
+
+### 27.2 Android daily step architecture — Health Connect vs direct sensor
+
+Health Connect:
+- Supplies an aggregate health-data integration and supports on-device step tracking.
+- On-device step tracking uses TYPE_STEP_COUNTER and writes records in batches; its activation is tied to an app having Health Connect READ_STEPS permission.
+- Its source attribution changed in June 2026 to a device-specific source package name (SPN), so source identifiers must not be hard-coded as a fixed Android package.
+- For daily totals, prefer Health Connect aggregate reads and preserve returned source metadata.
+
+Direct SensorManager:
+- Can support a live WALKON session step stream with a device counter baseline, subject to permission, sensor availability and registration lifecycle.
+- Must not be added to Health Connect's daily aggregate as a second copy.
+- If WALKON writes its own exercise records to Health Connect, use stable record identity / deduplication strategy and do not write overlapping step samples unless there is a deliberate, tested reason.
+
+WALKON source-of-truth policy:
+- Daily dashboard: Health Connect aggregate, if available and authorized.
+- Live recorded session: one selected session provider, such as direct TYPE_STEP_COUNTER delta or TYPE_STEP_DETECTOR event stream where device tests justify it.
+- Final workout: persist the session's own step result and provenance; do not sum it with Health Connect's daily total.
+- A delayed Health Connect update must not freeze the live session display or cause the same steps to be counted twice.
+
+### 27.3 Samsung Health — phone and wearable aggregation caveats
+
+Samsung's official support documentation says:
+- The phone's built-in acceleration sensor is used for step tracking.
+- Distance is estimated using step count and stride length; stride length is estimated from profile/height and cadence.
+- Phone position and movement context can affect estimates.
+- Connected phone and Galaxy Watch data can be shown together; users can choose an all-steps view, and device-specific views may not always be available.
+- Supported Galaxy wearables expose additional metrics depending on model and sensor set.
+
+WALKON implications:
+- Distance derived from steps is an estimate, not a GPS route distance. Keep estimated_stride_distance distinct from gps_route_distance.
+- A watch and phone can both detect the same walk. Use Health Connect/HealthKit aggregation and source metadata rather than summing both raw streams.
+- Never promise heart rate, sleep, SpO2 or other wearable-only measurements from a phone that lacks the required sensor.
+- Device capability discovery must be per device/model and per connected accessory, not a single Android-supports-this flag.
+
+Sources:
+- https://www.samsung.com/in/support/mobile-devices/view-your-step-count-in-samsung-health/
+- https://www.samsung.com/in/apps/samsung-health/
+
+### 27.4 Fitbit / Google Health — phone GPS, wearable GPS and activity recognition
+
+Google's current help documentation describes several distinct GPS paths:
+- A wearable with built-in GPS can record its own route.
+- A wearable without GPS can use the connected phone's GPS through a connected-GPS path.
+- The Google Health app requires appropriate background/location permissions for phone GPS capture and background connectivity.
+- Some Fitbit/Pixel Watch devices automatically detect and save activities; users can review, confirm, edit or delete detected activities. Detection support differs by model.
+
+WALKON implications:
+- Distinguish phone-GPS recording from watch-GPS recording; store the actual location source on each activity.
+- If the watch has no GPS, the phone is the route provider; if the phone is left behind, route continuity cannot be assumed.
+- Auto-detected activity is not equivalent to an explicitly started WALKON workout. Keep passive recognition as a separate optional feature after the core recorder.
+- User confirmation/edit/delete is important when activity recognition guesses the wrong activity.
+- Do not claim every Fitbit feature is available on every wearable or region.
+
+Sources:
+- https://support.google.com/googlehealth/answer/14225688
+- https://support.google.com/googlehealth/answer/14237206
+- https://support.google.com/googlehealth/answer/14236510
+
+### 27.5 adidas Running — guided plans, voice coach and challenge loop
+
+The official adidas Running listing describes GPS tracking across walking, running, cycling, swimming and 90+ activities; live pace/distance/time/calorie metrics; wearable sync; personalised training plans; voice coaching; global challenges and rewards.
+
+WALKON implications:
+- Activity taxonomy and coaching plans should be metadata-driven, not hard-coded into the GPS recorder.
+- Voice coaching consumes the current workout metrics and plan milestones; it must not create another location or step pipeline.
+- Challenges and rewards should consume completed validated workouts with clear eligibility rules, not raw live callbacks.
+- Reward systems must be transparent and not encourage unsafe exercise or fabricated activity.
+- Broad sports support is a later product layer; first make walking reliable.
+
+Sources:
+- https://apps.apple.com/in/app/adidas-running-gps-tracker/id336599882
+- https://www.adidas.com/us/running-app
+
+### 27.6 Hevy — structured strength-training domain, not a sensor-counting shortcut
+
+Hevy's current App Store and Google Play listings describe:
+- Routines and exercise library with instructional videos.
+- Sets, reps, weights, warm-up/drop/failure/superset classifications.
+- Rest timers, one-rep-max and volume/progression graphs.
+- Friend activity and shared routines.
+- Wear OS workout tracking with live sync to the phone and reconnect save behaviour.
+- HealthKit export on iOS.
+- User export of workout and measurement history.
+
+WALKON implications:
+- Strength sessions need their own domain entities: exercise, set, rep, load, rest, routine, and personal record.
+- Do not attempt to infer every strength repetition or load from the phone accelerometer; user input and compatible equipment/wearables are the authoritative sources unless a validated sensor workflow exists.
+- A watch-to-phone live session must survive temporary disconnect and reconcile after reconnect without duplicate sets/workouts.
+- Exercise video/coaching is a separate media capability; the workout log remains durable and usable offline.
+- Data export should be supported from the start of the strength module.
+
+Sources:
+- https://apps.apple.com/in/app/hevy-gym-tracker-workout-log/id1458862350
+- https://play.google.com/store/apps/details?id=com.hevy
+- https://help.hevyapp.com/hc/en-us/articles/43708290987415-Exporting-Your-Data-from-Hevy
+
+### 27.7 Revised cross-platform metric contract
+
+Every metric event consumed by the domain layer must carry:
+- metric_type (steps, distance, pace, elevation, heart_rate, active_energy, cadence, etc.)
+- value and canonical unit
+- sample_start / sample_end or event timestamp
+- source_platform and source_identifier where available
+- source_device / accessory identifier where available
+- measurement_kind (platform_aggregate, sensor_counter, sensor_event, GPS-derived, wearable sample, user-entered)
+- activity_id and segment ID when session-scoped
+- quality_state and quality metadata
+- permission_state / availability state
+- received_at and last-successful-sync time
+- algorithm_version for WALKON-derived metrics
+
+Do not normalize away important distinctions. In particular:
+- GPS route distance is not step-derived stride distance.
+- A counter delta is not the same as a per-step event stream.
+- Health Connect/HealthKit daily aggregate is not a live workout metric.
+- Phone GPS is not watch GPS.
+- User-entered strength reps are not motion-sensor rep detections.
+
+### 27.8 Updated Android implementation gates (for later build)
+
+Before Android code is approved:
+1. Build a device capability matrix across at least two OEM families and representative Android API levels.
+2. Verify TYPE_STEP_COUNTER and TYPE_STEP_DETECTOR presence, permission, latency, reboot reset and background registration.
+3. Confirm Health Connect read/write permissions, aggregate behaviour, on-device step activation and source attribution.
+4. Verify location foreground-service requirements and OEM battery restrictions on screen lock.
+5. Verify phone-GPS vs wearable-GPS ownership and reconnect recovery.
+6. Verify duplicate prevention when both phone and watch provide steps/workouts.
+7. Measure battery impact under passive steps, active GPS recording and optional BLE sensor connection.
+8. Verify local save, export and retry after offline periods.
+
+Research status: detailed Android step semantics and four additional app/product workflows documented. No Android implementation has been written or device-tested.
