@@ -11,6 +11,7 @@ struct ContentView: View {
     @State private var email = ""
     @State private var password = ""
     @State private var pedometer = CMPedometer()
+    @State private var livePedometer = CMPedometer()
     @State private var selectedActivity = "Walking"
     @State private var sessionSteps: Int?
     @State private var sessionStarted: Date?
@@ -23,7 +24,8 @@ struct ContentView: View {
     private func startLiveMotionMonitor() {
         guard CMPedometer.isStepCountingAvailable() else { return }
         let start = Calendar.current.startOfDay(for: Date())
-        pedometer.startUpdates(from: start) { data, error in
+        livePedometer.stopUpdates()
+        livePedometer.startUpdates(from: start) { data, error in
             DispatchQueue.main.async {
                 guard error == nil, let data else { return }
                 self.liveMotionSteps = data.numberOfSteps.intValue
@@ -208,7 +210,7 @@ struct ContentView: View {
                     health.refreshOnForeground()
                     startLiveMotionMonitor()
                 } else {
-                    pedometer.stopUpdates()
+                    livePedometer.stopUpdates()
                 }
             }
         }
