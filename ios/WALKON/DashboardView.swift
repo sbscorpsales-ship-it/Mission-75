@@ -42,7 +42,12 @@ struct DashboardView: View {
             guard cloud.isSignedIn else { return }
             if phase == .active {
                 health.refresh()
-                Task { await cloud.syncPendingWalks(from: store) }
+                Task {
+                    await cloud.syncPendingWalks(from: store)
+                    if let steps = health.steps {
+                        await cloud.syncHealthKitSteps(steps, measuredAt: health.lastUpdated ?? Date())
+                    }
+                }
             }
             if phase == .background, tracker.isTracking { tracker.checkpointNow() }
         }
