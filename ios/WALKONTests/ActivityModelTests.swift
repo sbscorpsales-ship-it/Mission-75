@@ -91,6 +91,20 @@ final class ActivityModelTests: XCTestCase {
         XCTAssertNil(WalkSession.acceptedDistance(from: previous, to: inaccurate))
     }
 
+
+    @MainActor func testExpiredActiveWalkCheckpointIsDiscarded() {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("WALKON-expired-tests-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let store = ActivityStore(storageDirectory: directory)
+        store.checkpoint(startedAt: Date().addingTimeInterval(-60),
+                         steps: 90, distanceMeters: 75, route: [])
+
+        let expiredTime = Date().addingTimeInterval(24 * 60 * 60 + 1)
+        XCTAssertNil(store.recoverActiveWalk(now: expiredTime))
+    }
+
 }
 
 
