@@ -500,3 +500,59 @@ A release candidate is not deployable until all of these pass:
 - App privacy details, HealthKit disclosure and location usage reviewed before App Store submission.
 
 No simulator-only pass can satisfy the real-device GPS, motion, HealthKit, background or crash-recovery gates.
+
+
+## 16. Implementation sequence and handoff definition
+
+The build should proceed in controlled vertical slices. Each slice must compile and have its own test evidence before the next slice is merged.
+
+1. **Foundation and project configuration**
+   - Align XcodeGen deployment target to iOS 26.0.
+   - Verify HealthKit entitlement, Info.plist purpose strings, background location capability and app lifecycle delegates.
+   - Establish Swift concurrency boundaries and a single WorkoutCoordinator actor/owner for session transitions.
+2. **Persistence first**
+   - Implement local database schema, migrations, draft journal and append-only route storage.
+   - Add idempotency keys and recovery tests before enabling live recording.
+3. **HealthKit workout lifecycle**
+   - Port the Apple sample lifecycle into a WALKON service, adapted for outdoor walking.
+   - Implement builder metrics, delegate state, pause/resume, finish and iPhone crash recovery.
+4. **GPS route recorder**
+   - Implement Core Location permission/accuracy states, route segment model, filtering, gap detection, distance calculation and incremental route builder insertion.
+5. **Daily steps**
+   - Implement HealthKit daily cumulative statistics and observer-triggered refresh.
+   - Validate daily total independently from any live workout/session steps.
+6. **Dashboard and recording UI**
+   - Build the final user interface only against stable service contracts.
+   - Clearly show recording, paused, GPS quality, save progress, failure and recovery states.
+7. **HealthKit route association and history**
+   - Save workout once, finalize route association, persist identifiers and render saved activity detail.
+8. **Device validation**
+   - Execute the full release gates on the iPhone 12 Pro Max. Capture logs and compare matching walks with Apple Fitness and Strava.
+9. **Release**
+   - Configure signing, archive, install, TestFlight, privacy disclosures and rollback plan.
+
+### Files to replace or add in the current scaffold
+
+Replace the prototype implementations rather than layering more logic into them:
+- `HealthSteps.swift` → HealthKit daily summary service with statistics collection + observer.
+- `WalkTracker.swift` → split into WorkoutCoordinator (HealthKit lifecycle) and RouteRecorder (Core Location).
+- `ActivityStore.swift` → transactional persistence repository and recovery journal.
+- `DashboardView.swift` → UI built after service state models stabilize.
+- `WALKONApp.swift` → app/scene delegate integration for HealthKit crash recovery.
+- Add focused test targets for state transitions, distance/filter logic, persistence idempotency and recovery reconciliation.
+
+### Build/deploy environment requirement
+
+The current GitHub Actions workflow uses a macOS 15 runner and the existing project spec still says iOS 17. Both are prototype-era settings and must be updated before the first implementation build. The implementation workflow must select a GitHub-hosted macOS runner that has Xcode 26 installed, verify the selected Xcode version in CI, generate the project from XcodeGen, build Debug and Release simulator targets, run unit tests, and produce a signed device archive only in a signing-enabled release job. Never assume a runner label guarantees a particular Xcode version; assert it in the workflow and fail early if the SDK is missing.
+
+### Handoff definition: “blueprint ready to build”
+
+The blueprint is considered ready for implementation when:
+- subsystem ownership and data boundaries are fixed;
+- the iOS minimum and device compatibility are explicit;
+- every lifecycle transition and failure path is specified;
+- persistence/recovery and HealthKit save ordering are defined;
+- privacy, permissions and background execution are specified;
+- implementation slices, test matrix and release gates are documented.
+
+The blueprint does not mean the app is already built, signed, installed or validated. Those are subsequent engineering and release milestones.
