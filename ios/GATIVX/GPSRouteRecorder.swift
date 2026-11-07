@@ -9,13 +9,16 @@ struct GATIVXRoutePoint: Codable {
     let horizontalAccuracy: Double
 
     var cloudValue: [String: Any] {
-        [
-            "latitude": latitude,
-            "longitude": longitude,
-            "timestamp": Int64(timestamp.timeIntervalSince1970 * 1000),
-            "accuracy": horizontalAccuracy
-        ]
+        ["latitude": latitude, "longitude": longitude,
+         "timestamp": Int64(timestamp.timeIntervalSince1970 * 1000),
+         "accuracy": horizontalAccuracy]
     }
+}
+
+private struct GATIVXActiveRouteDraft: Codable {
+    let startedAt: Date
+    let activity: String
+    var points: [GATIVXRoutePoint]
 }
 
 @MainActor
@@ -23,10 +26,15 @@ final class GPSRouteRecorder: NSObject, ObservableObject, CLLocationManagerDeleg
     @Published private(set) var points: [GATIVXRoutePoint] = []
     @Published private(set) var status = "GPS ready."
     @Published private(set) var authorization: CLAuthorizationStatus = .notDetermined
+    @Published private(set) var recoveredStartedAt: Date?
+    @Published private(set) var recoveredActivity: String?
 
     private let manager = CLLocationManager()
+    private let draftKey = "gativx.activeRouteDraft.v1"
     private(set) var isRecording = false
     private var pendingStartAfterAuthorization = false
+    private var activeStartedAt: Date?
+    private var activeActivity = "Walking"
 
     override init() {
         super.init()
@@ -36,25 +44,59 @@ final class GPSRouteRecorder: NSObject, ObservableObject, CLLocationManagerDeleg
         manager.activityType = .fitness
         manager.pausesLocationUpdatesAutomatically = false
         authorization = manager.authorizationStatus
+        restoreDraft()
     }
 
-    func start() {
+    private func restoreDraft() {
+        guard let data = UserDefaults.standard.data(forKey: draftKey),
+              let draft = try? JSONDecoder().decode(GATIVXActiveRouteDraft.self, from: data) else { return }
+        points = draft.points
+        recoveredStartedAt = draft.startedAt
+        recoveredActivity = draft.activity
+        activeStartedAt = draft.startedAt
+        activeActivity = draft.activity
+        status = "Recovered unfinished activity · \(points.count) GPS points. Resume or finish to save it."
+    }
+
+    private func persistDraft() {
+        guard let startedAt = activeStartedAt else { return }
+        let draft = GATIVXActiveRouteDraft(startedAt: startedAt, activity: activeActivity, points: points)
+        guard let data = try? JSONEncoder().encode(draft) else {
+            status = "Could not persist the active route safely."
+            return
+        }
+        UserDefaults.standard.set(data, forKey: draftKey)
+    }
+
+    func start(activity: String) {
+        guard !isRecording else { return }
+        points.removeAll()
+        activeStartedAt = Date()
+        activeActivity = activity
+        recoveredStartedAt = nil
+        recoveredActivity = nil
+        persistDraft()
+        requestAndBegin()
+    }
+
+    func resumeRecovered() {
+        guard activeStartedAt != nil else { return }
+        requestAndBegin()
+    }
+
+    private func requestAndBegin() {
         guard CLLocationManager.locationServicesEnabled() else {
             status = "Location Services are turned off. Enable them in iPhone Settings."
             return
         }
-        points.removeAll()
         switch manager.authorizationStatus {
         case .notDetermined:
-            // Keep the activity start request pending while iOS asks for permission.
             pendingStartAfterAuthorization = true
             manager.requestWhenInUseAuthorization()
             status = "Waiting for location permission…"
         case .denied, .restricted:
             status = "Location access is blocked. Enable it in Settings > Privacy & Security > Location Services."
         case .authorizedWhenInUse:
-            // Foreground-only permission: record while GATIVX is open.
-            // Do not enable background location updates without Always access.
             beginUpdates(allowsBackground: false)
         case .authorizedAlways:
             beginUpdates(allowsBackground: true)
@@ -68,8 +110,6 @@ final class GPSRouteRecorder: NSObject, ObservableObject, CLLocationManagerDeleg
             status = "Location Services are turned off."
             return
         }
-        // iOS requires the app to have the matching background location
-        // capability and authorization before background updates are enabled.
         pendingStartAfterAuthorization = false
         manager.allowsBackgroundLocationUpdates = allowsBackground
         manager.showsBackgroundLocationIndicator = allowsBackground
@@ -86,7 +126,17 @@ final class GPSRouteRecorder: NSObject, ObservableObject, CLLocationManagerDeleg
         manager.showsBackgroundLocationIndicator = false
         isRecording = false
         pendingStartAfterAuthorization = false
-        status = points.isEmpty ? "No GPS points recorded. Check location permission and signal." : "GPS route saved locally."
+        persistDraft()
+        status = points.isEmpty ? "No GPS points recorded. Check location permission and signal." : "Route paused and safely stored on this iPhone."
+    }
+
+    func clearDraft() {
+        UserDefaults.standard.removeObject(forKey: draftKey)
+        points.removeAll()
+        activeStartedAt = nil
+        activeActivity = "Walking"
+        recoveredStartedAt = nil
+        recoveredActivity = nil
     }
 
     func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
@@ -104,20 +154,24 @@ final class GPSRouteRecorder: NSObject, ObservableObject, CLLocationManagerDeleg
     }
 
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+        var changed = false
         for location in locations {
             guard location.horizontalAccuracy >= 0,
                   location.horizontalAccuracy <= 50,
                   abs(location.timestamp.timeIntervalSinceNow) < 30 else { continue }
             if let last = points.last, location.timestamp <= last.timestamp { continue }
-            let point = GATIVXRoutePoint(
-                latitude: location.coordinate.latitude,
-                longitude: location.coordinate.longitude,
-                timestamp: location.timestamp,
-                horizontalAccuracy: location.horizontalAccuracy
-            )
-            points.append(point)
+            points.append(GATIVXRoutePoint(latitude: location.coordinate.latitude,
+                                           longitude: location.coordinate.longitude,
+                                           timestamp: location.timestamp,
+                                           horizontalAccuracy: location.horizontalAccuracy))
+            changed = true
         }
-        if !points.isEmpty { status = "Recording GPS route · \(points.count) points" }
+        if changed {
+            // Persist each accepted batch, not just when the user presses Finish.
+            // This allows recovery after app termination or a device restart.
+            persistDraft()
+            status = "Recording GPS route · \(points.count) points"
+        }
     }
 
     func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
