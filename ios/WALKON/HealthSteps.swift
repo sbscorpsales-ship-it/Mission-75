@@ -8,16 +8,19 @@ final class HealthSteps: ObservableObject {
     @Published private(set) var status = "Apple Health has not been checked"
     @Published private(set) var lastUpdated: Date?
 
-    private let store = HKHealthStore()
+    #if targetEnvironment(simulator)
+    private let store: HKHealthStore? = nil
+    #else
+    private let store: HKHealthStore? = HKHealthStore()
+    #endif
     private let stepType = HKObjectType.quantityType(forIdentifier: .stepCount)!
     private var observerInstalled = false
 
     func requestAccessAndRefresh() {
         #if targetEnvironment(simulator)
         status = "Apple Health step access requires a physical iPhone"
-        return
-        #endif
-        guard HKHealthStore.isHealthDataAvailable() else {
+        #else
+        guard HKHealthStore.isHealthDataAvailable(), let store else {
             status = "Apple Health is unavailable on this device"
             return
         }
@@ -35,13 +38,14 @@ final class HealthSteps: ObservableObject {
                 self.refresh()
             }
         }
+        #endif
     }
 
     func refresh() { refresh(completion: nil) }
 
     private func refresh(completion: (() -> Void)?) {
-        guard HKHealthStore.isHealthDataAvailable() else {
-            status = "Apple Health is unavailable"
+        guard HKHealthStore.isHealthDataAvailable(), let store else {
+            status = "Apple Health is unavailable on this device"
             completion?()
             return
         }
@@ -81,7 +85,7 @@ final class HealthSteps: ObservableObject {
     }
 
     private func installObserverIfNeeded() {
-        guard !observerInstalled else { return }
+        guard !observerInstalled, let store else { return }
         observerInstalled = true
         let query = HKObserverQuery(sampleType: stepType, predicate: nil) { [weak self] _, completion, error in
             guard error == nil else { completion(); return }
