@@ -497,8 +497,16 @@ function importAppleHealthShortcutSteps(){
   window.history.replaceState({},'',clean);return;
  }
  const stamp=new Date().toISOString(),prior=logs[date]||{};
+ // Keep the shortcut reading as a timestamped source observation. It replaces
+ // only this day's step field; every other daily metric remains untouched.
  logs[date]={...prior,steps:n,stepsSource:'apple_health_shortcuts',stepsUpdatedAt:stamp};
  localStorage.setItem(KEY,JSON.stringify(logs));
+ // Retain a small local audit trail so a stale reading, repeated import, or
+ // cloud-sync failure can be diagnosed without guessing from the dashboard.
+ const importKey='gativx.steps.importHistory.v1';
+ const history=safeParse(localStorage.getItem(importKey),[]);
+ history.unshift({date,steps:n,source:'apple_health_shortcuts',receivedAt:stamp});
+ localStorage.setItem(importKey,JSON.stringify(history.slice(0,30)));
  selectedDate=date;
  if($('logDate'))$('logDate').value=date;
  loadForm();renderSummary();
@@ -506,7 +514,13 @@ function importAppleHealthShortcutSteps(){
  const clean=window.location.pathname+(params.toString()?'?'+params.toString():'')+window.location.hash;
  window.history.replaceState({},'',clean);
  toast('Apple Health steps imported: '+fmt(n));
- if(cloudUser)cloudSync();
+ if(cloudUser){
+  cloudMsg('Steps imported locally. Verifying cloud backup…');
+  cloudSync();
+ }else{
+  cloudMsg('Steps imported on this device. Sign in to back them up to your GATIVX account.');
+ }
+ window.dispatchEvent(new CustomEvent('gativx:steps-imported',{detail:{date,steps:n,source:'apple_health_shortcuts',receivedAt:stamp}}));
 }
 importAppleHealthShortcutSteps();
 })();
