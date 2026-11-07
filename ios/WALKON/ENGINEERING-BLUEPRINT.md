@@ -98,7 +98,7 @@ Proposed completed activity record:
 - sync state (future; local-first in initial release)
 - algorithm version
 
-Use a local transactional database for durable activity records; do not treat a single UserDefaults JSON blob as the long-term route database. Choose SwiftData or SQLite after testing migrations, crash recovery and route volume. Initial app data namespace must be WALKON-only and must not import legacy app records.
+Use SQLite as the local source of truth for durable activity records, route points and the recovery journal. Use append-only route-point rows, indexed by workout/segment/time, WAL mode, foreign keys and versioned migrations. Do not use UserDefaults for route history. Initial app data namespace must be WALKON-only and must not import legacy app records.
 
 ### E. HealthKit workout and route write
 After validating the activity locally:
@@ -242,16 +242,14 @@ No feature is called production-ready until all applicable gates pass on the act
 
 These are product opportunities, not prerequisites for accurate pedometer and GPS recording. Music should use platform-supported playback controls / Now Playing integration rather than attempting to embed or copy third-party music catalogues.
 
-## 10. Open decisions for user review
+## 10. Decisions intentionally deferred until reference-app review
 
-Do not lock these until the reference-app recordings are reviewed:
-- Whether WALKON should record a workout in HealthKit automatically or ask at finish.
-- Whether auto-pause is enabled by default for walking.
-- Which metrics belong on the live screen.
-- Whether music, audio cues or coaching are first-release features.
-- Whether routes are private by default and what sharing controls are required.
-- Whether a future Android app is in scope and when.
+The core engineering decisions are specified in later sections. These product choices remain open:
+- Exact live-screen metric layout and map/stats presentation.
+- Whether music controls, audio cues or coaching belong in the first release.
+- Whether and when a future Android app is in scope.
 - Final visual identity and permanent app name.
+- Fine-grained activity editing and sharing controls beyond private-by-default.
 
 ## 11. Current prototype gap list
 
@@ -324,7 +322,7 @@ This update supersedes the earlier assumption that a Core Motion-only custom ses
 
 Audit completed 2026-11-07 against Apple's iOS 26 release notes and WWDC25 sample documentation.
 
-**Decision: the first native iPhone release must target iOS 26.0 or later if it uses the new iPhone-native workout-session workflow.** Apple's iOS 26 release notes explicitly state that `HKWorkoutSession` and `HKLiveWorkoutBuilder` workout-session APIs are now available on iOS and iPadOS. This is not an iOS 17 capability. The existing iOS 17 deployment setting is therefore incompatible with the proposed single-path workout engine.
+**Final platform decision: the first native iPhone release targets iOS 26.0 or later and uses the new iPhone-native workout-session workflow.** Apple's iOS 26 release notes explicitly state that `HKWorkoutSession` and `HKLiveWorkoutBuilder` workout-session APIs are now available on iOS and iPadOS. This is not an iOS 17 capability. The existing iOS 17 deployment setting is therefore incompatible with the proposed single-path workout engine.
 
 Official confirmation:
 - https://developer.apple.com/documentation/ios-ipados-release-notes/ios-ipados-26-release-notes
@@ -339,9 +337,9 @@ Implementation implications:
 - Keep CMPedometer as a separately validated step sensor/fallback only; do not add its count to HealthKit's daily aggregate or duplicate HealthKit workout metrics.
 - The WWDC25 Apple sample is the implementation reference. It requires the latest Xcode and a physical device for meaningful live sensor tests; simulator success alone is not acceptance.
 
-**Compatibility trade-off:** choosing iOS 26+ excludes older iPhones that cannot run iOS 26. This is an explicit product reach decision, not an incidental code setting. The current user's iPhone 12 Pro Max must be checked against the supported iOS version and then tested on-device before committing to the target. If that device cannot run iOS 26, we must choose between a legacy fallback engine for older iOS and a newer-device-only release; do not silently downgrade the architecture.
+**Compatibility trade-off:** choosing iOS 26+ excludes older iPhones that cannot run iOS 26. The iPhone 12 Pro Max is included in Apple's iOS 26 compatibility list. A physical-device build and runtime test are still required; model compatibility alone does not prove the app works.
 
-The iOS 17 value in `ios/project.yml` remains unchanged until the user reviews the device compatibility and approves the deployment decision.
+The existing iOS 17 value in `ios/project.yml` is now a known prototype configuration defect. Change it to iOS 26.0 in the implementation configuration before building the production workout engine.
 
 
 ### Device compatibility check
@@ -428,7 +426,7 @@ If HealthKit workout authorization or service is unavailable, show a clear block
 
 ### 15.7 Local persistence
 
-Use SwiftData or SQLite only after a small spike verifies migration, crash consistency and route-volume performance. Preferred logical entities:
+Use SQLite with the schema and transaction rules in Section 17. Preferred logical entities:
 - Workout(id, type, state, start/end, elapsed/moving time, distance, metrics, algorithmVersion)
 - RouteSegment(id, workoutId, sequence, start/end)
 - RoutePoint(id, segmentId, timestamp, latitude, longitude, horizontalAccuracy, altitude, verticalAccuracy, speed)
