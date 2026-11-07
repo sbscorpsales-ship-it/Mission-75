@@ -25,3 +25,19 @@ targets:
         SUPPORTS_MACCATALYST: NO
     scheme:
       gatherCoverageData: false
+      test:
+        targets:
+          - WALKONTests
+  WALKONTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: WALKONTests
+    dependencies:
+      - target: WALKON
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.paramitsolutions.walkon.tests
+        SWIFT_VERSION: "5.0"
+        GENERATE_INFOPLIST_FILE: YES
+        TARGETED_DEVICE_FAMILY: "1"
