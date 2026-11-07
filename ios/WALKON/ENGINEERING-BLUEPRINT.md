@@ -6,9 +6,9 @@
 - **Repository:** `sbscorpsales-ship-it/Mission-75`, branch `main`.
 - **Blueprint:** `ios/WALKON/ENGINEERING-BLUEPRINT.md`.
 - **Phase:** Research and engineering specification only. **App building is not authorized yet.**
-- **Current completed research:** Sections 1–33 exist below. Latest research section: **33 — Workout lifecycle, interruptions and crash recovery**.
-- **Exact next task:** **Section 34 — HealthKit and Health Connect semantics, permissions, sync and reconciliation.** Research data types, read/write permissions, aggregate versus raw samples, background/history access, source attribution, deletion, deduplication, incremental sync, platform differences and privacy constraints. Do not drift into unrelated feature design.
-- **After Section 34:** update this register's latest-completed and exact-next-task fields before proceeding to Section 35 (calories and energy expenditure).
+- **Current completed research:** Sections 1–34 exist below. Latest research section: **34 — HealthKit and Health Connect semantics, permissions, sync and reconciliation**.
+- **Exact next task:** **Section 35 — Calories and energy expenditure validity.** Research basal/resting versus active/total energy, estimation inputs, sensor and wearable sources, walking energy models, HealthKit/Health Connect semantics, uncertainty, calibration and user-facing claims. Do not drift into unrelated feature design.
+- **After Section 35:** update this register's latest-completed and exact-next-task fields before proceeding to Section 36 (battery, thermal management and long-session behaviour).
 - **No user device testing or screenshot requests** until the research/architecture blueprint is sufficiently complete and a coherent buildable test plan is ready.
 
 ## Non-negotiable working rules
@@ -37,6 +37,7 @@
 - **Section 31:** Heart-rate science, PPG/ECG, HealthKit/Health Connect semantics, HRV and validation.
 - **Section 32:** BLE Heart Rate Service, Core Bluetooth, Android BLE, Apple Watch and Wear OS integration boundaries.
 - **Section 33:** Workout state machine, crash recovery, HealthKit route finalization, Android exercise ownership and exactly-once reconciliation.
+- **Section 34:** HealthKit/Health Connect permission semantics, aggregate versus raw reads, provenance, incremental changes, deletion, source reconciliation, privacy and acceptance tests.
 
 ## Open research queue (ordered)
 34. HealthKit and Health Connect semantics, permissions, sync and reconciliation.
@@ -50,11 +51,11 @@
 After these: consolidate contradictions, close architecture decisions, produce a single implementation-ready specification and explicit go/no-go checklist. Only then ask for authorization to build.
 
 ## Last verified checkpoint
-- **Latest completed section:** 31.
-- **Section-31 research commit:** `7368bb402eec9947af083191c3873fec805970a3`.
-- **Latest continuity-register commit:** `56b1723ddcd1ef23b79e6f1bb1cfb37857252fb8`.
-- **Current blueprint blob SHA before this checkpoint refresh:** `54f3863bf9b6247df205bb21510f74e726781aa6`.
-- **Next action:** research Section 32 — wearables and Bluetooth interoperability.
+- **Latest completed section:** 34.
+- **Latest research update:** Section 34 — HealthKit and Health Connect semantics, permissions, sync and reconciliation.
+- **Latest commit/blob:** to be filled from the successful GitHub update response and post-write verification.
+- **Next action:** research Section 35 — calories and energy expenditure validity.
+- **After Section 35:** Section 36 — battery, thermal management and long-session behaviour.
 
 ---
 
@@ -2857,3 +2858,188 @@ Acceptance evidence: no duplicate workouts, no fabricated route bridging, bounde
 - What metadata/query strategy safely reconciles an external save whose completion callback was lost?
 
 Research status: platform lifecycle, HealthKit route-finalization constraints, Android exercise ownership/recovery and local-first transaction design documented. Arbitrary iOS route-builder recovery, device-specific Android retention and crash-loss bounds remain open for targeted prototype/fault-injection tests. No app implementation is authorized by this section.
+
+
+## 34. HealthKit and Health Connect semantics, permissions, sync and reconciliation
+
+Status: platform documentation reviewed; WALKON policies below are engineering proposals pending implementation and device validation.
+
+### 34.1 Scope and governing rule
+
+HealthKit and Health Connect are user-controlled health-data stores, not interchangeable sensor APIs and not a guarantee of a single globally correct value. WALKON must distinguish live session measurements owned by the active WALKON recording pipeline; daily or historical aggregates calculated by the health platform; raw samples imported for detail, provenance or reconciliation; and records WALKON itself exported to the platform.
+
+Never add a platform aggregate to raw records that contributed to it. Never combine overlapping provider streams merely because they have different source names. Store provenance and the aggregation method alongside every imported value.
+
+### 34.2 Apple HealthKit: permission semantics
+
+HealthKit uses per-type read and share authorization. Request only the data types required by a feature, at the moment the user invokes that feature; explain the purpose before the system prompt. Read and write/share permissions are separate.
+
+Critical privacy limitation: an app cannot determine whether a user denied read access to a type. A query may return only records the app itself saved, making denied access indistinguishable from no external samples. HealthKit can also restrict the earliest date available for reading. The app must not infer “permission denied” or “zero activity” from an empty result.
+
+WALKON states should therefore include: HealthKit unavailable on device; permission request not yet made / share authorization state where queryable; data available; no matching data returned (reason may be unknown); database temporarily inaccessible (for example, while the device is locked); query failed / retryable; and data access window limited, where the earliest permitted sample date is exposed.
+
+Do not display a false “Connected” or “Permission denied” assertion for read access. Provide a route to Health settings and a neutral explanation that no readable records were returned.
+
+Sources: Apple authorization and query guidance [A1, A2].
+
+### 34.3 HealthKit: aggregate versus raw data
+
+For daily step totals and other cumulative quantity dashboards, use the HealthKit statistics APIs with the correct cumulative-sum option and a local-calendar interval. A statistics query calculates a value over matching samples; a statistics collection query partitions samples into intervals and can return updates. By default, HealthKit merges matching sources before calculating statistics. HKStatisticsOptionSeparateBySource is available when source-level statistics are required.
+
+For raw provenance, audit, workouts, route detail or sample-level reconciliation, use sample queries or anchored object queries as appropriate. Do not recreate the Health app's merged total by summing source totals: sources can overlap and HealthKit's default aggregation is already merged. Statistics collection queries apply to quantity samples; workouts and correlations require their appropriate query types and app-side processing.
+
+Local day boundaries must be calculated from the user's calendar and time zone, including daylight-saving transitions where applicable. Do not assume a day is always a fixed 86,400 seconds. Persist the exact interval boundaries and time-zone/calendar context used for each derived daily result.
+
+Sources: [A3, A4, A5].
+
+### 34.4 HealthKit: incremental updates, background delivery and deletion
+
+Use an anchored object query as the durable incremental mechanism for sample-level imports. The initial query returns the matching snapshot; subsequent queries with the saved anchor return new and deleted objects since that anchor. Persist the returned objects and the new anchor atomically in WALKON's local database: commit imported changes and anchor advancement in one local transaction, or replay safely after a crash.
+
+Observer queries can notify the app that matching HealthKit data changed and may be registered for background delivery. The observer notification is a wake-up signal, not a complete change feed. On notification, run the anchored query to obtain additions and deletions, then call the observer completion handler after processing. Background delivery is opportunistic and must not be treated as a real-time guarantee.
+
+Deleted objects are temporary. Apple states they may be purged to reclaim storage. Register for observer background delivery and promptly drain anchored deletions. A deleted object provides the deleted sample UUID; only sync identifier/version metadata is retained in its metadata. Use UUID to remove the corresponding imported copy. If WALKON misses the deletion window or loses its anchor, perform a bounded resnapshot/reconciliation rather than assuming the old local cache is authoritative.
+
+HealthKit allows an app to delete only objects it previously saved, and only while the relevant share authorization permits it. Users can delete any data in Health. Never delete or rewrite third-party samples as part of WALKON cleanup.
+
+Sources: [A6, A7, A8].
+
+### 34.5 HealthKit: provenance and stable identity
+
+For each imported HealthKit sample, preserve its HealthKit UUID, sample type, start/end dates, value/unit, source revision (originating app and version), device metadata when present, and relevant metadata keys. Preserve the distinction between the app that wrote a sample and the hardware device that generated it; either may be absent or different.
+
+For WALKON-created exports, assign stable sync identifiers and monotonically increasing sync versions where supported. Keep a local mapping from WALKON's canonical workout/session UUID to every external HealthKit object UUID. Do not assume timestamps and values form a unique key. Do not infer source priority from app names or device models.
+
+### 34.6 Android Health Connect: permissions and access windows
+
+Health Connect permissions are granular by record type and read/write direction. Declare required permissions in the manifest, request only those the user-facing feature needs, and re-check current grants before each operation because users can revoke them at any time.
+
+Background reads require the additional READ_HEALTH_DATA_IN_BACKGROUND permission and supported feature availability. Historical reads beyond the default 30-day window require READ_HEALTH_DATA_HISTORY and feature availability. Without history permission, reads older than 30 days before the first grant can fail; uninstalling the app revokes permissions, and reinstalling resets the default access window. Android version and Health Connect feature availability affect behaviour.
+
+The permission model is not equivalent to HealthKit's privacy model. WALKON must expose platform-specific permission states and never map them into a falsely identical cross-platform “all health permissions granted” flag.
+
+Sources: [G1, G2, G3].
+
+### 34.7 Health Connect: raw records versus aggregate API
+
+Use readRecords for record-level detail, provenance, workout sessions and incremental reconciliation. For cumulative quantities such as steps, use the Aggregate API rather than summing raw records from all sources. Google explicitly recommends aggregation for cumulative types to avoid duplicate counting.
+
+Health Connect aggregate results apply user-selected app priorities for supported Activity and Sleep data types; duplicate step or distance records can be deduplicated according to user priorities. This deduplication is not universal across all record types: for other types, aggregate results may combine records from all writing apps. Never assume every aggregate is globally deduplicated. Keep aggregate values separate from raw imported rows and retain the query interval and metric identity.
+
+Health Connect records carry metadata including a Health Connect-assigned ID, last-modified time, data origin (package name), device information where supplied, client record ID/version where supplied, and recording method. Recording method distinguishes actively recorded, automatically recorded and manual-entry data. Preserve these fields in the normalized provenance record.
+
+Sources: [G4, G5, G6].
+
+### 34.8 Health Connect: differential changes and deletion
+
+Use the Changes API for incremental synchronization. Obtain a changes token for the specific record types, persist it, then retrieve upsertion and deletion changes and continue through all pages until no more changes remain. Google documents that changes tokens are valid for 30 days; if a token expires, rebuild the relevant local view using a fresh token and a full/bounded read, then resume incremental changes.
+
+Changes API deletion entries expose the record ID but not its type. Either request changes separately per record type or maintain a durable ID-to-type mapping. This mapping is required to correctly remove the corresponding local object.
+
+The documented differential-changes flow is foreground-only; do not assume background reads permission makes the Changes API a background sync channel. Background record reads and foreground differential change tracking are distinct capabilities. Use a foreground reconciliation when the app becomes active, and use background reads only when explicitly authorized and supported for a justified feature.
+
+Sources: [G7, G8].
+
+### 34.9 Cross-platform normalized model
+
+Keep platform-specific raw identity and semantics intact. A normalized observation should contain at least: canonical local row ID and canonical workout/session ID when applicable; platform (HealthKit / Health Connect / WALKON sensor); external record ID and external record type; source app/package or HealthKit source revision; device identity/type where available; measurement type, numeric value, canonical unit and original unit; sample start/end instants and any supplied zone offsets; recording method (manual, active, automatic, unknown); raw versus aggregate designation and aggregate metric/window; created/modified timestamps where available; permission/access state and import timestamp; sync cursor/anchor or token checkpoint separately from the observation; and deletion/tombstone status and reconciliation status.
+
+Keep native source payloads or a lossless representation for fields needed later. Never discard source timestamps, offsets, original units, IDs or recording method during normalization.
+
+### 34.10 Deduplication and source reconciliation policy
+
+1. Session ownership wins for live WALKON recording. The active WALKON sensor/provider selected for the session is the sole live authority for that metric. Platform daily totals remain a separate dashboard value.
+2. Platform aggregate wins for platform daily dashboard. Display HealthKit cumulative statistics or Health Connect aggregate results for the selected day. Do not add imported raw samples to that result.
+3. Stable external IDs first. Deduplicate imported records by platform + record type + platform external ID. For WALKON exports, use stable app-generated client/sync identifiers where supported.
+4. No timestamp-only dedupe. Two valid records may share timestamps and values; timestamp/value similarity is a candidate conflict, not proof of identity.
+5. No cross-platform auto-merge by default. A HealthKit sample and a Health Connect record are not assumed to be the same event. If later linking is needed, retain both source identities and record the matching rationale.
+6. Overlapping activity records. Preserve both records and their origins. For aggregate display, defer to the platform's documented aggregation/deduplication behaviour. For WALKON session metrics, use the session owner and explicit workout interval, not a sum of platform records.
+7. Manual records remain visible as manual. Do not silently promote user-entered steps, distance or workouts to sensor-verified data.
+8. Deletion is a first-class change. Apply tombstones to imported copies; never resurrect a deleted record from a stale cache during retry.
+9. Idempotent import/export. Each import batch and external write has a durable operation ID. Retry safely only where the platform's IDs/sync identifiers make the effect idempotent; otherwise mark uncertain and reconcile before retrying.
+10. Permission revocation stops access. Stop future reads/writes for revoked types, preserve only data WALKON is entitled to retain under its privacy policy, and offer deletion controls.
+
+These are WALKON policy proposals, not platform guarantees.
+
+### 34.11 Time, units and day-boundary rules
+
+Use absolute instants internally for ordering and interval intersection. Retain original zone offsets where the platform provides them. For daily views, derive boundaries using the user's current local calendar/time zone, and recompute the displayed day when the time zone or calendar changes. A workout crossing midnight remains one workout with a time interval spanning two local days; daily aggregates may allocate its samples across days according to the platform's own rules.
+
+Convert to canonical units only while preserving the original unit/value and conversion version. Do not assume all records of a metric have identical sampling cadence or interval semantics. Point measurements, interval samples, cumulative counters and aggregate totals are different data shapes.
+
+### 34.12 Privacy, retention and user control
+
+- Request the minimum types and minimum access window needed for a clearly described feature.
+- Keep health data local by default; do not upload raw health records or routes merely because they can be read.
+- If cloud backup/sync is later introduced, separately explain purpose, fields, retention, access, deletion and cross-device implications and obtain appropriate consent.
+- Provide disconnect/revoke guidance and an in-app way to delete WALKON's local copy and WALKON-authored platform records where authorized.
+- Deleting WALKON's local data does not automatically delete platform data, and deleting platform data does not automatically erase WALKON's own copy. Explain these boundaries.
+- Never collect unrelated medical categories for a walking tracker. Do not use health data for advertising or unrelated profiling.
+- Keep audit logs free of sensitive sample values; log IDs/status/error classes where possible.
+- Document retention periods and implement deletion propagation to local caches and any future server copy.
+
+### 34.13 Proposed WALKON synchronization architecture
+
+- Maintain a platform adapter per OS; do not hide important differences behind a lowest-common-denominator interface.
+- Maintain separate pipelines for (a) daily aggregates, (b) raw historical import, (c) incremental change feed, and (d) WALKON-originated export.
+- Persist per-type permission state, access window, last successful query, last anchor/token, and last full reconciliation time.
+- For HealthKit: observer wake-up → anchored query → transactional upsert/tombstone + anchor commit → observer completion.
+- For Health Connect: foreground Changes API token drain → transactional upsert/tombstone + next token commit; full/bounded read on first sync or expired token. Background reads only under separately granted permission and supported feature.
+- After permission changes, app reinstall, anchor/token invalidation, database restore or detected inconsistency, run a scoped reconciliation.
+- Do not block the live workout recording pipeline on health-store availability. Save locally first; platform export remains an independent, retryable outbox operation.
+- Keep daily aggregate refresh independent from workout session export.
+
+### 34.14 Acceptance and fault-injection tests
+
+1. HealthKit read permission denied, limited history, no data, and app-owned-only data all produce truthful non-zero/unknown states, never fabricated zero or false denial.
+2. HealthKit cumulative statistics match Health app daily totals for controlled datasets with overlapping sources; verify source-separated statistics are not summed.
+3. HealthKit observer wake-up followed by anchored additions/deletions is idempotent across process termination before and after local commit.
+4. Delete an imported sample in Health; confirm local tombstone and no resurrection after retry. Test delayed observer delivery and missing anchor recovery.
+5. Device locked/database inaccessible; app retries later without corrupting cursor state.
+6. Health Connect permission revoked between check and read/write; handle failure and update UI state.
+7. Test history reads at and beyond the 30-day boundary, including reinstall and Android/Health Connect feature unavailability.
+8. Health Connect Changes API multi-page response, expired token, deleted record with unknown type, and token persistence across crash.
+9. Verify aggregate step totals with two overlapping source apps and changed user priority; compare aggregate versus raw read to prove no double counting.
+10. Verify manual, active and automatic recording methods remain distinguishable.
+11. Time-zone change, daylight-saving transition, travel across midnight and workout crossing local midnight.
+12. Repeated export, callback loss, retry and local database restore produce no duplicate WALKON-originated platform records.
+13. Delete local WALKON data, delete WALKON-authored platform records where permitted, and confirm third-party records are untouched.
+14. Confirm live session recording continues and local commits succeed while HealthKit/Health Connect is unavailable.
+
+No numeric acceptance thresholds are invented here; define them in Section 41 using controlled datasets and target-device testing.
+
+### 34.15 Open decisions and evidence gaps
+
+- Exact iOS deployment/API availability and query descriptor choice must be frozen against the selected Xcode/SDK during implementation.
+- Verify current Health Connect SDK stable version, feature flags and API-level behaviour at implementation time; the Android Codelab illustrates flows but may lag SDK changes.
+- Determine whether WALKON needs any raw historical import beyond daily aggregates and workout-session reconciliation; default is minimum necessary access.
+- Define exact HealthKit background-delivery frequency/latency expectations only after device testing; no real-time wake guarantee is assumed.
+- Define whether a later cloud service stores any health data; default is no raw health-data upload.
+- Validate source-overlap scenarios with real Apple Health and Health Connect datasets, especially user priority changes and mixed manual/automatic records.
+- Confirm HealthKit anchor invalidation/recovery behaviour and Health Connect token expiry recovery in fault-injection tests.
+
+### 34.16 Section conclusion
+
+Official documentation establishes the core query, permission, aggregation, metadata and change-feed semantics. The platforms differ materially: HealthKit intentionally hides read-denial state and provides anchored queries with deletion objects; Health Connect exposes granular permission types, a 30-day default history window, aggregate deduplication for selected categories, and a foreground Changes API with expiring tokens. WALKON must preserve those differences, use platform aggregates for daily totals, keep session-owned metrics separate, and reconcile changes with durable IDs and tombstones.
+
+Research complete for Section 34 at documentation level. Implementation, SDK-version freeze, permission UX and device-level validation remain outstanding. No app code/build is authorized by this section.
+
+#### Section 34 references
+
+- [A1] Apple, Authorizing access to health data: https://developer.apple.com/documentation/healthkit/authorizing-access-to-health-data
+- [A2] Apple, Reading data from HealthKit: https://developer.apple.com/documentation/healthkit/reading-data-from-healthkit
+- [A3] Apple, Executing Statistics Collection Queries: https://developer.apple.com/documentation/healthkit/executing-statistics-collection-queries
+- [A4] Apple, HKStatistics: https://developer.apple.com/documentation/healthkit/hkstatistics
+- [A5] Apple, HKStatisticsCollectionQuery: https://developer.apple.com/documentation/healthkit/hkstatisticscollectionquery
+- [A6] Apple, HKAnchoredObjectQuery: https://developer.apple.com/documentation/healthkit/hkanchoredobjectquery
+- [A7] Apple, HKDeletedObject: https://developer.apple.com/documentation/healthkit/hkdeletedobject
+- [A8] Apple, HealthKit framework object/source metadata: https://developer.apple.com/documentation/healthkit/about-the-healthkit-framework
+- [G1] Android, Health Connect data types and permissions: https://developer.android.com/health-and-fitness/health-connect/data-types
+- [G2] Android, Read raw data and history limits: https://developer.android.com/health-and-fitness/health-connect/read-data
+- [G3] Android, Health Connect data format and metadata: https://developer.android.com/health-and-fitness/health-connect/data-format
+- [G4] Android, Get started and aggregate cumulative data: https://developer.android.com/health-and-fitness/health-connect/get-started
+- [G5] Android, Read aggregated data and source priorities: https://developer.android.com/health-and-fitness/health-connect/aggregate-data
+- [G6] Android, Metadata API reference: https://developer.android.com/reference/androidx/health/connect/client/records/metadata/Metadata
+- [G7] Android, Health Connect integration Codelab — differential changes: https://developer.android.com/codelabs/health-connect
+- [G8] Android, Changes API example and token-expiry handling: https://developer.android.com/codelabs/health-connect?authuser=00
+
