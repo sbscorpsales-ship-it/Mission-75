@@ -54,7 +54,7 @@ final class HealthSteps: ObservableObject {
             options: .cumulativeSum
         ) { [weak self] _, result, error in
             Task { @MainActor in
-                guard let self else { return }
+                guard let self else { completion?(); return }
                 if let error {
                     self.status = "Could not read Apple Health: \(error.localizedDescription)"
                     completion?()
