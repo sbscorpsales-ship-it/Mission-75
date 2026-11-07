@@ -123,20 +123,15 @@ jobs:
 
       - name: Verify iOS permissions and privacy declarations
         run: |
+          APP="build/WALKON-Simulator/Build/Products/Debug-iphonesimulator/WALKON.app"
+          test -f "$APP/Info.plist"
+          test -f "$APP/PrivacyInfo.xcprivacy"
           python3 - <<'PY'
           import plistlib
           from pathlib import Path
 
           app = Path("build/WALKON-Simulator/Build/Products/Debug-iphonesimulator/WALKON.app")
-          info_path = app / "Info.plist"
-          entitlements_path = Path("ios/WALKON/WALKON.entitlements")
-          privacy_path = app / "PrivacyInfo.xcprivacy"
-
-          for path in (info_path, entitlements_path, privacy_path):
-              if not path.is_file():
-                  raise SystemExit(f"Required plist missing: {path}")
-
-          with info_path.open("rb") as stream:
+          with (app / "Info.plist").open("rb") as stream:
               info = plistlib.load(stream)
           required_usage = (
               "NSHealthShareUsageDescription",
@@ -149,15 +144,8 @@ jobs:
                   raise SystemExit(f"Missing Info.plist usage description: {key}")
           if "location" not in info.get("UIBackgroundModes", []):
               raise SystemExit("Background location mode is not enabled")
-          print("iOS permission usage descriptions validated")
 
-          PY
-          plutil -lint ios/WALKON/WALKON.entitlements
-          grep -A1 '<key>com.apple.developer.healthkit</key>' ios/WALKON/WALKON.entitlements | grep -q '<true/>'
-          grep -A1 '<key>com.apple.developer.healthkit.background-delivery</key>' ios/WALKON/WALKON.entitlements | grep -q '<true/>'
-          python3 -c 'import plistlib,sys; m=plistlib.load(open(sys.argv[1],"rb")); a=m.get("NSPrivacyAccessedAPITypes",[]); d={x.get("NSPrivacyCollectedDataType") for x in m.get("NSPrivacyCollectedDataTypes",[])}; assert any(x.get("NSPrivacyAccessedAPIType")=="NSPrivacyAccessedAPICategoryUserDefaults" and "CA92.1" in x.get("NSPrivacyAccessedAPITypeReasons",[]) for x in a); assert {"NSPrivacyCollectedDataTypePreciseLocation","NSPrivacyCollectedDataTypeHealth","NSPrivacyCollectedDataTypeFitness"}.issubset(d)' "$APP_PRIVACY"
-
-          with privacy_path.open("rb") as stream:
+          with (app / "PrivacyInfo.xcprivacy").open("rb") as stream:
               privacy = plistlib.load(stream)
           accessed = privacy.get("NSPrivacyAccessedAPITypes", [])
           if not any(
@@ -177,8 +165,11 @@ jobs:
           ):
               if data_type not in collected:
                   raise SystemExit(f"Missing privacy data declaration: {data_type}")
-          print("WALKON privacy manifest validated")
+          print("Info.plist and privacy manifest validated")
           PY
+          plutil -lint ios/WALKON/WALKON.entitlements
+          grep -A1 '<key>com.apple.developer.healthkit</key>' ios/WALKON/WALKON.entitlements | grep -q '<true/>'
+          grep -A1 '<key>com.apple.developer.healthkit.background-delivery</key>' ios/WALKON/WALKON.entitlements | grep -q '<true/>'
 
       - name: Upload simulator build
         uses: actions/upload-artifact@v4
