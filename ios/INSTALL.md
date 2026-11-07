@@ -31,6 +31,10 @@ For TestFlight distribution, configure an Apple Distribution certificate, an App
 6. Force-close and reopen the app during a test walk; verify the saved checkpoint is restored. iOS cannot supply tracking samples for time when the app process was terminated.
 7. Repeat with low-power mode and after a normal device restart to observe battery and recovery behavior.
 
+## Privacy declaration
+
+The app privacy manifest declares email/account ID, HealthKit health data, Core Motion fitness data, and precise GPS route data as linked to the account and used only for app functionality. WALKON does not use these data for cross-app tracking or advertising. The manifest also declares the app-only UserDefaults reason required by Apple.
+
 ## Current implementation boundaries
 
 - Apple Health daily steps and live walk-session steps are separate readings. Do not add them together; they can represent overlapping activity.
