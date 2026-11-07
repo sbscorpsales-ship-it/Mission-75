@@ -28,10 +28,10 @@ final class CloudSyncStore: ObservableObject {
     private var isSyncingWalks = false
 
     init() {
-        authEventsTask = Task { [weak self] in
-            guard let self else { return }
-            let events = self.client.auth.authStateChanges
-            for await (_, session) in events {
+        let authClient = client.auth
+        authEventsTask = Task { [weak self, authClient] in
+            for await (_, session) in authClient.authStateChanges {
+                guard let self else { return }
                 self.hasResolvedAuth = true
                 self.isSignedIn = session != nil
                 if session != nil {
