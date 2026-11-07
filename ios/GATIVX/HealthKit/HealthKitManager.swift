@@ -60,6 +60,12 @@ final class HealthKitManager: ObservableObject {
     /// Fetch daily cumulative totals for today and the previous 29 local days.
     /// Missing samples remain nil; they are never represented as a measured zero.
     func refreshRecentDays(days: Int = 30, onComplete: (() -> Void)? = nil) {
+        // Do not query HealthKit until the user has explicitly connected it.
+        // The web/native cloud sign-in flow must not silently trigger health reads.
+        guard UserDefaults.standard.bool(forKey: connectionRequestedKey) else {
+            onComplete?()
+            return
+        }
         guard isAvailable else { onComplete?(); return }
         if isRefreshing {
             if let onComplete { refreshCompletions.append(onComplete) }
