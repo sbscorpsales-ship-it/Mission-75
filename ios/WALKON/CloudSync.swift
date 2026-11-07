@@ -25,6 +25,7 @@ final class CloudSyncStore: ObservableObject {
     )
     #endif
     private var authEventsTask: Task<Void, Never>?
+    private var isSyncingWalks = false
 
     init() {
         authEventsTask = Task { [weak self] in
@@ -126,7 +127,9 @@ final class CloudSyncStore: ObservableObject {
     }
 
     func syncPendingWalks(from store: ActivityStore) async {
-        guard isSignedIn else { return }
+        guard isSignedIn, !isSyncingWalks else { return }
+        isSyncingWalks = true
+        defer { isSyncingWalks = false }
         let pending = store.sessions.filter { $0.cloudSyncedAt == nil }
         guard !pending.isEmpty else { return }
         var syncedCount = 0
