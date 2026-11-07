@@ -126,6 +126,6 @@ final class ActivityStorePersistenceTests: XCTestCase {
         let recovered = ActivityStore(storageDirectory: directory).recoverActiveWalk()
         XCTAssertNotNil(recovered)
         XCTAssertEqual(recovered?.steps, 90)
-        XCTAssertEqual(recovered?.distanceMeters, 75, accuracy: 0.001)
+        XCTAssertEqual(recovered?.distanceMeters ?? -1, 75, accuracy: 0.001)
     }
 }
