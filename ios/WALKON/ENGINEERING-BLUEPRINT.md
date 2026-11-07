@@ -318,3 +318,27 @@ HKLiveWorkoutBuilder supplies workout metrics and manages the workout's HealthKi
 - Verify local activity still exists if route finalization or a HealthKit write fails.
 
 This update supersedes the earlier assumption that a Core Motion-only custom session timer should be the main workout lifecycle. It remains a research proposal pending the exact iOS API availability audit and device tests.
+
+
+## 14. API availability audit — deployment decision
+
+Audit completed 2026-11-07 against Apple's iOS 26 release notes and WWDC25 sample documentation.
+
+**Decision: the first native iPhone release must target iOS 26.0 or later if it uses the new iPhone-native workout-session workflow.** Apple's iOS 26 release notes explicitly state that `HKWorkoutSession` and `HKLiveWorkoutBuilder` workout-session APIs are now available on iOS and iPadOS. This is not an iOS 17 capability. The existing iOS 17 deployment setting is therefore incompatible with the proposed single-path workout engine.
+
+Official confirmation:
+- https://developer.apple.com/documentation/ios-ipados-release-notes/ios-ipados-26-release-notes
+- https://developer.apple.com/videos/play/wwdc2025/322/
+- https://developer.apple.com/documentation/healthkit/building-a-workout-app-for-iphone-and-ipad
+
+Implementation implications:
+- Change the WALKON iOS deployment target to iOS 26.0 when implementation is approved; do not change it prematurely in the current research branch.
+- Use the new `HKWorkoutSession(healthStore:configuration:)` and `HKLiveWorkoutBuilder` APIs for the iPhone workout lifecycle.
+- Do not use iOS 27-only workout-zone APIs as a baseline. Gate any future zone features with availability checks.
+- Keep Core Location route capture and HealthKit route association as distinct cooperating components.
+- Keep CMPedometer as a separately validated step sensor/fallback only; do not add its count to HealthKit's daily aggregate or duplicate HealthKit workout metrics.
+- The WWDC25 Apple sample is the implementation reference. It requires the latest Xcode and a physical device for meaningful live sensor tests; simulator success alone is not acceptance.
+
+**Compatibility trade-off:** choosing iOS 26+ excludes older iPhones that cannot run iOS 26. This is an explicit product reach decision, not an incidental code setting. The current user's iPhone 12 Pro Max must be checked against the supported iOS version and then tested on-device before committing to the target. If that device cannot run iOS 26, we must choose between a legacy fallback engine for older iOS and a newer-device-only release; do not silently downgrade the architecture.
+
+The iOS 17 value in `ios/project.yml` remains unchanged until the user reviews the device compatibility and approves the deployment decision.
