@@ -60,9 +60,25 @@ struct ContentView: View {
         let history = (try? JSONDecoder().decode([ActivitySessionRecord].self, from: UserDefaults.standard.data(forKey: "gativx.activitySessions.v1") ?? Data())) ?? []
         Task {
             for record in history {
-                guard let steps = record.steps else { continue }
-                await cloud.syncActivitySession(id: record.id, activity: record.activity, startedAt: record.startedAt, finishedAt: record.finishedAt, steps: steps)
-                if let points = record.routePoints, !points.isEmpty { await cloud.syncActivitySessionRoute(id: record.id, startedAt: record.startedAt, finishedAt: record.finishedAt, points: points) }
+                // Step data and GPS route are independent deliverables.
+                // Missing pedometer data must never prevent route upload.
+                if let steps = record.steps {
+                    await cloud.syncActivitySession(
+                        id: record.id,
+                        activity: record.activity,
+                        startedAt: record.startedAt,
+                        finishedAt: record.finishedAt,
+                        steps: steps
+                    )
+                }
+                if let points = record.routePoints, !points.isEmpty {
+                    await cloud.syncActivitySessionRoute(
+                        id: record.id,
+                        startedAt: record.startedAt,
+                        finishedAt: record.finishedAt,
+                        points: points
+                    )
+                }
             }
         }
     }
