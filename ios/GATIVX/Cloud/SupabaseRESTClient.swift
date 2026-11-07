@@ -160,24 +160,10 @@ final class SupabaseRESTClient: ObservableObject {
             guard let token = accessToken else { throw ClientError.notSignedIn }
             let formatter = ISO8601DateFormatter()
             formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-            var request = URLRequest(url: baseURL.appendingPathComponent("rest/v1/rpc/sync_activity_session_route"))
-            request.httpMethod = "POST"
-            request.setValue(publishableKey, forHTTPHeaderField: "apikey")
-            request.setValue("Bearer " + token, forHTTPHeaderField: "Authorization")
-            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-            request.httpBody = try JSONSerialization.data(withJSONObject: [
-                "p_session_id": id.uuidString,
-                "p_route_points": points.map { $0.cloudValue }
-            ])
-            let (data, response) = try await URLSession.shared.data(for: request)
-            guard let http = response as? HTTPURLResponse else { throw ClientError.invalidResponse }
-            if http.statusCode == 401 && retryAfterRefresh {
-                try await refreshSession()
-                await syncActivitySessionRoute(id: id, startedAt: startedAt, finishedAt: finishedAt, points: points, retryAfterRefresh: false)
-                return
-            }
-            guard (200..<300).contains(http.statusCode) else { throw Self.serverError(data) }
-
+            // GPS route persistence is independent of step-session persistence.
+            // sync_activity_session_route only UPDATEs activity_sessions and fails
+            // when pedometer steps were unavailable, preventing the walk_sessions
+            // write below. The walk RPC is the canonical route-history writer.
             // Mirror native GPS routes into walk_sessions, which the web dashboard reads.
             let coordinates = points.map { CLLocation(latitude: $0.latitude, longitude: $0.longitude) }
             var distanceMeters = 0.0
@@ -207,7 +193,7 @@ final class SupabaseRESTClient: ObservableObject {
                 return
             }
             guard (200..<300).contains(walkHTTP.statusCode) else { throw Self.serverError(walkData) }
-            status = "Activity route synced to native history and GATIVX walking dashboard."
+            status = "GPS route synced to GATIVX walking history."
         } catch {
             status = "GPS route saved on this iPhone; cloud sync pending: " + error.localizedDescription
         }
