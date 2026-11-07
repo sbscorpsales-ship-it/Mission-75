@@ -1395,3 +1395,180 @@ WALKON should act as a coordinator. Each native capability is a bounded service 
 - Establish battery impact from controlled device measurements before selecting sampling rates or adding extra sensor streams.
 
 This section is a research map, not a claim that these behaviours have been tested on the target iPhone. The next research task is to resolve the listed unknowns from Apple's current SDK documentation and sample code, then freeze service contracts before any implementation change.
+
+
+## 25. Cross-platform market study — customer evidence, product strengths and WALKON decisions
+
+Research update: 2026-11-07. This section combines official product documentation, app-store listings and publicly visible customer-review samples. Ratings and review counts vary by country, device, version and date. Third-party review aggregators use different sampling methods; their percentages are directional signals, not population-wide defect rates. We do not infer private implementation details from user-facing behaviour.
+
+### 25.1 Market shortlist by job-to-be-done
+
+| App | Primary strength / customer job | Evidence-backed capabilities | WALKON lesson |
+|---|---|---|---|
+| Strava (iOS + Android) | Outdoor activity recording, performance, social motivation | GPS recording for many activity types, route/performance analysis, clubs/challenges/social feed | Best reference for activity lifecycle, route presentation and community; do not copy proprietary route algorithms |
+| Nike Run Club (iOS + Android) | Beginner-to-advanced running coaching | Guided audio runs, training plans, pace/distance/elevation, challenges | Strong reference for coaching and audio layered on top of recording |
+| Pacer (iOS + Android) | Everyday walking and habit formation | Automatic steps, distance, goals, challenges/groups, GPS walking routes, plans | Strong reference for walking-first onboarding and inclusive habit goals |
+| StepsApp (iOS + Android) | Clear step counter and quick progress feedback | Passive steps, streaks, widgets, goals, leaderboards, Health integration; some GPS/analytics features paid | Strong reference for glanceable daily activity and widgets; examine feature boundaries carefully |
+| Samsung Health (Android; limited cross-platform service availability) | Broad Samsung/Android health ecosystem | Phone accelerometer-based steps, Galaxy wearable integration, sleep, activity, nutrition, Together challenges and weekly reports | Best reference for Android OEM integration and a broader health dashboard; capabilities vary by device and region |
+| Fitbit / Google Health (iOS + Android) | Everyday activity, sleep, health trends and wearable ecosystem | Step/activity tracking, wearable-derived sleep/heart metrics, daily summaries and device ecosystem | Reference for passive tracking and health insights; do not imply phone-only hardware can measure wearable-only vitals |
+| Garmin Connect (iOS + Android) | Deep training/device data and athlete analytics | Garmin device sync, activity records, training/health metrics and ecosystem integrations | Reference for device interoperability and detailed history; pairing/sync reliability is a major product quality dependency |
+| adidas Running (iOS + Android) | Broad activity tracking, plans and challenges | GPS for 90+ sports, pace/distance/time, voice coaching, goals and community challenges | Reference for broad activity taxonomy and guided plans; keep WALKON's first release narrower |
+| Hevy (iOS + Android) | Strength-training logging and progression | Exercise library/videos, routines, sets/reps/weights, timers, graphs, HealthKit export on iOS | Reference for a future strength module; strength logs are structured user input, not phone motion-sensor measurements |
+| Walkmeter (iOS + Android) | Detailed walking/hiking stats and local data control | Configurable stats, route/pace/splits, export formats and barometric elevation features (platform/device dependent) | Reference for advanced walking metrics and user-owned data/export; validate barometer claims per device |
+
+### 25.2 Customer review signals — what people reward and what breaks trust
+
+**Positive themes repeatedly visible**
+- A simple, fast start to recording and a clear activity summary.
+- Reliable saved history; users value being able to look back over months and years.
+- Progress feedback, streaks, challenges, friends and encouragement.
+- Useful coaching that makes the next workout easier to understand.
+- A free/basic tier that is genuinely useful before asking for payment.
+- Good integration with watches, health platforms and accessories.
+
+**Negative themes repeatedly visible**
+- Lost workouts, missing history or an activity that does not count toward a plan.
+- GPS distance/route anomalies and auto-pause false positives.
+- Broken Bluetooth pairing, wearable sync delays, duplicate or inconsistent health records.
+- Crashes, regressions after updates and slow customer support.
+- Important everyday controls hidden behind a paywall or subscription changes that frustrate existing users.
+- Battery drain, confusing permissions and unclear background tracking behaviour.
+
+**Review evidence examples**
+- Strava's India App Store listing surfaced 4.8/5 from approximately 14k ratings. A separate 2026 third-party sample of 246 recent reviews identified subscription issues, GPS tracking, support, paywalls and bugs among the common negative themes. The sample is small relative to the total installed base and should be treated as qualitative evidence, not a global defect rate.
+- Nike Run Club's India App Store listing surfaced 4.8/5 from approximately 33k ratings and advertises 300+ guided runs/workouts. A third-party review reading highlighted strong audio coaching and plans, but also complaints about GPS loss and watch/plan sync in some cases.
+- Pacer's India App Store listing surfaced 4.9/5 from approximately 36k ratings; its Google Play listing surfaced 4.8/5 from approximately 968k reviews. Public review examples praise ease of use and long-term activity history, while some complain about paywall restrictions on changing goals.
+- StepsApp's India App Store listing surfaced 4.8/5 from approximately 41k ratings. Its listing emphasises passive steps, streaks, challenges, widgets and Health integration, while GPS tracking and advanced analytics are described as Pro features.
+- Samsung's official India product page says its phone step counter uses the built-in acceleration sensor and that distance is estimated using step count and stride length. It also documents Together challenges, sleep coaching, Energy Score and weekly reports, with some features requiring Galaxy wearables or supported devices.
+- Garmin Connect's 2026 review analyses show that users value detailed metrics and device integration, but Bluetooth pairing, crashes and sync/data loss appear in negative feedback. This demonstrates that accessory/device sync is part of the product's core reliability, not a minor add-on.
+- Hevy's India App Store listing surfaced 4.9/5 from approximately 8.7k ratings; reviews praise the clean workout logging, exercise demonstrations and progress graphs. Reviewers also request missing exercise notes and more history in the free tier.
+
+Sources:
+- Strava India App Store: https://apps.apple.com/in/app/strava-run-bike-walk/id426826309
+- Strava recent-review analysis: https://glotier.com/apps/strava-run-bike-walk
+- Nike Run Club India App Store: https://apps.apple.com/in/app/nike-run-club-running-coach/id387771637
+- Nike review analysis: https://inapp.pro/en/rating/run-tracking/nike-run-club-running-coach
+- Pacer India App Store: https://apps.apple.com/in/app/pacer-pedometer-step-counter/id600446812
+- Pacer Google Play: https://play.google.com/store/apps/details?id=cc.pacer.androidapp
+- StepsApp India App Store: https://apps.apple.com/in/app/stepsapp-pedometer/id1037595083
+- Samsung Health India: https://www.samsung.com/in/apps/samsung-health/
+- Garmin review analysis: https://unstar.app/blog/garmin-connect-not-syncing-watch-disconnecting-reviews-2026
+- Hevy India App Store: https://apps.apple.com/in/app/hevy-gym-tracker-workout-log/id1458862350
+
+### 25.3 Platform hardware and API strategy — do not pretend iOS and Android are identical
+
+**iPhone**
+- Daily steps and health summaries: HealthKit queries/observers, subject to user permissions.
+- Passive/session motion: Core Motion CMPedometer; raw accelerometer/gyro only for justified advanced processing or diagnostics.
+- Explicit workout lifecycle: iOS 26+ HKWorkoutSession + HKLiveWorkoutBuilder where available and verified.
+- Outdoor route: Core Location; use documented background location and active-workout lifecycle.
+- Workout and route persistence: HealthKit plus WALKON local durable journal.
+- BLE accessories: CoreBluetooth; validate profiles, permissions and reconnect behaviour.
+- Audio/haptics/camera: AVFAudio/AVFoundation/CoreHaptics only when the user invokes the relevant feature.
+
+**Android**
+- Daily totals and cross-app health exchange: Health Connect aggregate APIs; Android 14+ device step tracking is available through Health Connect when enabled and permitted.
+- On-device step recording: Android's platform step sensor (TYPE_STEP_COUNTER / TYPE_STEP_DETECTOR) where supported; check SensorManager availability and ACTIVITY_RECOGNITION permission. Do not assume all OEMs expose identical behaviour or background guarantees.
+- Google Play services alternative for battery-efficient on-device step/distance/calorie recording: Recording API, but choose one authoritative pipeline and avoid reading/writing the same measurements twice.
+- Outdoor route: Fused Location Provider / platform location APIs with an explicitly active foreground service and visible notification when background location recording is required; obey Android background-location and foreground-service rules for the target OS.
+- Wear OS: Health Services for exercise and sensor capabilities on supported watches; phone and watch data must be deduplicated/attributed.
+- BLE accessories: Android Bluetooth APIs; handle runtime permissions, reconnects and vendor differences.
+- Audio/haptics/camera: Android platform media, audio, vibration and CameraX APIs with explicit user-facing permission and lifecycle.
+
+Official Android sources:
+- https://developer.android.com/health-and-fitness/health-connect
+- https://support.google.com/android/answer/16786157
+- https://developer.android.com/health-and-fitness/recording-api
+- https://developer.android.com/develop/sensors-and-location/sensors/sensors_overview
+- https://developer.android.com/develop/sensors-and-location/location/permissions
+- https://developer.android.com/health-and-fitness/health-services
+
+### 25.4 Product blueprint — what WALKON should take, improve and avoid
+
+**Adopt for WALKON**
+1. Strava's explicit record/pause/resume/save lifecycle and activity history.
+2. Nike Run Club's audio-guided coaching and progressive plans, but keep them separate from the recorder.
+3. Pacer's walking-first goals, streaks, challenges and approachable onboarding.
+4. StepsApp's quick daily step glance, widgets, streaks and simple charts.
+5. Samsung Health/Fitbit's daily and weekly summaries, but only show metrics supported by the actual connected hardware/source.
+6. Garmin's device/source history and accessory integration discipline.
+7. Hevy's structured exercise logging, history, exercise demonstrations and progressive strength tracking when strength training is introduced.
+8. Walkmeter's detailed stats and data export for users who want control of their records.
+
+**Improve beyond common customer complaints**
+- Local-first activity persistence before network sync; an internet outage must not lose a walk.
+- A recovery journal with idempotent save stages; never silently lose or duplicate a completed activity.
+- Clear source labels and timestamps for every metric; show unavailable/permission denied/stale separately from zero.
+- Visible GPS quality and route gaps; no fake straight-line bridges or unexplained distance jumps.
+- Manual pause always available; auto-pause opt-in and disabled until walking-specific validation passes.
+- Sync diagnostics for Health Connect/HealthKit/BLE/wearables, including last successful sync and actionable error state.
+- Permission requests just in time, with a useful explanation and graceful degraded mode.
+- Battery-aware sampling and a visible recording state; never claim uninterrupted tracking after force-quit, power loss or permission revocation.
+- Useful free core: daily steps, reliable recording, history and basic progress should not be held hostage to subscription.
+- Simple navigation and low cognitive load; advanced analytics remain optional.
+
+**Do not copy**
+- Another app's proprietary algorithms, private APIs, design assets, brand identity or undocumented endpoints.
+- A social feed before core activity data is dependable.
+- Continuous raw sensor polling when a platform service already supplies the needed measurement.
+- A single cross-platform sensor implementation; use native platform adapters behind shared domain contracts.
+- Health or performance scores that imply medical certainty or cannot be explained from available data.
+
+### 25.5 Proposed WALKON cross-platform architecture boundary
+
+Keep the product/domain layer shared in concept, not necessarily the low-level sensor code:
+
+- WorkoutDomain: activity identity, state machine, pause/resume, metrics, goals and provenance.
+- PlatformHealthAdapter: HealthKit on iOS; Health Connect on Android.
+- PlatformMotionAdapter: Core Motion on iOS; SensorManager / supported Recording API on Android.
+- PlatformWorkoutAdapter: HKWorkoutSession on iOS 26+; platform-appropriate foreground workout/service lifecycle on Android.
+- PlatformLocationAdapter: Core Location on iOS; Fused Location Provider/platform location on Android.
+- PlatformAccessoryAdapter: CoreBluetooth on iOS; Android Bluetooth APIs on Android.
+- LocalActivityRepository: transactional database and recovery journal on both platforms.
+- CoachingExperience: plans, audio, cues and progression consuming trusted workout records.
+- CommunityExperience: groups, challenges and sharing consuming validated records only.
+
+The shared contract must not erase platform differences. Each adapter declares capabilities, permissions, availability, update cadence, background constraints, source and quality. The domain layer consumes normalized events and measurements, never direct hardware callbacks.
+
+### 25.6 Scope decision — sequence, not feature accumulation
+
+**Phase 0 — research and architecture freeze**
+- Finish hardware/API availability research on both platforms.
+- Resolve open questions from Sections 23 and 24.
+- Define native adapters, domain contracts, error states, privacy and acceptance tests.
+- No new feature implementation while architecture is unsettled.
+
+**Phase 1 — dependable walking engine**
+- Passive daily steps from platform health aggregate.
+- Explicit walking session with one step source.
+- GPS route, timestamps, quality and gap handling.
+- Pause/resume/finish/discard.
+- Local durable history and recovery.
+- Health platform workout/route save.
+- Battery/background and device compatibility verification.
+
+**Phase 2 — walking habit and coaching**
+- Goals, streaks, weekly progress and adaptive walking plans.
+- Optional audio coaching and haptics.
+- Widgets and lock-screen/live status where supported.
+
+**Phase 3 — broader fitness**
+- Strength logging inspired by Hevy.
+- Wearable/BLE integrations and richer training insights.
+- Community groups and challenges.
+
+**Phase 4 — optional ecosystem**
+- User photos, voice notes, trainer sessions, integrations and monetisation only after privacy, reliability and customer value are proven.
+
+### 25.7 Acceptance principles from market evidence
+
+WALKON is not market-ready because it has many features or resembles a highly rated app. It is ready only when:
+- a walk can be started, paused, resumed, finished, recovered and saved without losing or duplicating data;
+- daily steps and session steps remain separate and traceable;
+- route and distance behaviour is explainable across repeatable tests;
+- background operation and battery impact are measured on representative iPhone and Android devices;
+- permissions and missing hardware degrade gracefully;
+- wearable and health-platform sync is observable and recoverable;
+- core functionality remains useful without a paid subscription or network connection.
+
+Research status: market shortlist and product lessons documented. Not a final feature specification and not evidence that WALKON has been implemented or field-tested.
