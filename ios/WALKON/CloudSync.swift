@@ -155,6 +155,7 @@ final class CloudSyncStore: ObservableObject {
                     p_finished_at: iso8601String(session.endedAt),
                     p_duration_seconds: Int(session.duration.rounded()),
                     p_distance_m: session.distanceMeters,
+                    p_steps: session.steps,
                     p_route_points: route
                 )
                 try await client.rpc("sync_walk_session_route", params: params).execute()
@@ -206,6 +207,7 @@ private struct WalkSessionSyncParams: Encodable, Sendable {
     let p_finished_at: String
     let p_duration_seconds: Int
     let p_distance_m: Double
+    let p_steps: Int
     let p_route_points: [CloudRoutePoint]
 }
 
