@@ -170,7 +170,7 @@ final class WalkTracker: NSObject, ObservableObject, CLLocationManagerDelegate {
             return
         }
         pedometer.queryPedometerData(from: started, to: ended) { [weak self] data, _ in
-            let finalSteps = max(data?.numberOfSteps.intValue ?? fallbackSteps, fallbackSteps, 0)
+            let finalSteps = max(max(data?.numberOfSteps.intValue ?? fallbackSteps, fallbackSteps), 0)
             Task { @MainActor in
                 guard let self else { return }
                 self.liveSteps = finalSteps
