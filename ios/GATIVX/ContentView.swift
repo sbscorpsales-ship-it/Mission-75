@@ -189,7 +189,7 @@ struct ContentView: View {
                         Text("steps this session").font(.subheadline).foregroundStyle(.secondary)
                     }
                     Text(sessionStatus).font(.caption).foregroundStyle(.secondary)
-                    Text(routeRecorder.status + " · " + routeRecorder.points.count.formatted() + " GPS points").font(.caption2).foregroundStyle(.secondary)
+                    Text("GPS route distance · " + String(format: "%.2f", routeRecorder.routeDistanceMeters / 1000) + " km · " + routeRecorder.points.count.formatted() + " GPS points").font(.caption2).foregroundStyle(.secondary)
                     if routeRecorder.authorization == .authorizedWhenInUse {
                         Button("Enable background GPS (Always location)") {
                             routeRecorder.requestBackgroundLocationAccess()
