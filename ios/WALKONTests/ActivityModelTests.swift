@@ -92,3 +92,40 @@ final class ActivityModelTests: XCTestCase {
     }
 
 }
+
+
+@MainActor
+final class ActivityStorePersistenceTests: XCTestCase {
+    func testSavedWalkLoadsFromLocalStorage() {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("WALKON-tests-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let store = ActivityStore(storageDirectory: directory)
+        let start = Date().addingTimeInterval(-120)
+        let session = WalkSession(id: UUID(), startedAt: start,
+                                  endedAt: start.addingTimeInterval(120),
+                                  steps: 250, distanceMeters: 180, route: [])
+        XCTAssertTrue(store.save(session))
+
+        let reloaded = ActivityStore(storageDirectory: directory)
+        XCTAssertEqual(reloaded.sessions.count, 1)
+        XCTAssertEqual(reloaded.sessions.first?.id, session.id)
+        XCTAssertEqual(reloaded.sessions.first?.steps, 250)
+    }
+
+    func testActiveWalkCheckpointCanBeRecovered() {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("WALKON-recovery-tests-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let store = ActivityStore(storageDirectory: directory)
+        let start = Date().addingTimeInterval(-60)
+        store.checkpoint(startedAt: start, steps: 90, distanceMeters: 75, route: [])
+
+        let recovered = ActivityStore(storageDirectory: directory).recoverActiveWalk()
+        XCTAssertNotNil(recovered)
+        XCTAssertEqual(recovered?.steps, 90)
+        XCTAssertEqual(recovered?.distanceMeters, 75, accuracy: 0.001)
+    }
+}
