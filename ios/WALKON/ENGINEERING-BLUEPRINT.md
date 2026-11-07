@@ -961,3 +961,43 @@ Apple references:
 - https://developer.apple.com/documentation/healthkit/hkworkoutroutebuilder
 - https://developer.apple.com/videos/play/wwdc2025/322/
 - https://developer.apple.com/documentation/healthkit/hkhealthstore/recoveractiveworkoutsession(completion:)
+
+
+## 21. Background GPS and authorization — final iOS 26+ decision
+
+**Decision: use the modern Core Location background activity model for an active workout, with When In Use authorization as the default. Do not request Always authorization by default.**
+
+Apple documents that a fitness workout is a valid reason for real-time background location. For a modern implementation:
+- Create a `CLServiceSession` with `.whenInUse` authorization requirement while the app is in the foreground.
+- Create and retain a `CLBackgroundActivitySession` for the active user-started workout.
+- Enable the Location updates background mode.
+- Use the modern Core Location update stream for the route recorder, consuming every delivered update and preserving timestamps/accuracy.
+- Recreate the service session immediately when the app is relaunched in the background to process queued updates, where the system delivers them.
+- End both sessions immediately when the workout is paused/finished/discarded, subject to the desired pause semantics; while paused, stop route accumulation and do not collect a path.
+- Display the system location indicator and an in-app active recording indicator.
+- Explain before the permission prompt that location is used only while a WALKON walk is recording, including when the screen is locked.
+
+When In Use is sufficient for continuous background updates while the active location session is running. Always authorization is only needed if WALKON later requires the system to relaunch a terminated app for certain location events; it is not the default requirement for ordinary active workout tracking. If recovery testing proves Always is essential for a specific supported recovery path, request it separately with a clear explanation and explicit user choice.
+
+Do not promise uninterrupted GPS after force-quit, power loss, disabled location services, permission revocation, or every system termination. A missing interval must become a visible route gap.
+
+Apple references:
+- https://developer.apple.com/documentation/corelocation/handling-location-updates-in-the-background
+- https://developer.apple.com/documentation/corelocation/clbackgroundactivitysession
+- https://developer.apple.com/documentation/corelocation/clservicesession
+- https://developer.apple.com/documentation/corelocation/requesting-authorization-to-use-location-services
+
+### Background GPS acceptance cases
+
+- Start a walk in foreground; lock screen; verify location updates continue and the system indicator appears.
+- Move app to background for 30 minutes; confirm timestamp continuity and battery use.
+- Pause while backgrounded using the supported UI/Live Activity path; confirm route points stop accumulating.
+- Resume and confirm a new segment starts.
+- Terminate/crash app in a controlled test; verify HealthKit session recovery and Core Location queued-update handling; represent any unrecoverable interval as a gap.
+- Revoke permission or disable Location Services mid-workout; show a clear degraded state and retain the local workout.
+- Confirm no location updates continue after finish or discard.
+
+Important platform distinction:
+- `allowsBackgroundLocationUpdates = true` with `UIBackgroundModes=location` is the established CLLocationManager approach and remains a fallback if the modern service-session implementation is not supported by the SDK/device.
+- Do not run both modern and legacy location pipelines simultaneously; that would duplicate route points.
+- Choose one route update API per build configuration and cover it with route recorder tests.
