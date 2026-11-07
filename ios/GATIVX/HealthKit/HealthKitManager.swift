@@ -18,6 +18,7 @@ final class HealthKitManager: ObservableObject {
     private let store = HKHealthStore()
     private let connectionRequestedKey = "gativx.healthkit.connectionRequested"
     private var stepObserver: HKObserverQuery?
+    private var liveStepsQuery: HKStatisticsCollectionQuery?
     private var refreshCompletions: [() -> Void] = []
     private let stepType = HKObjectType.quantityType(forIdentifier: .stepCount)!
     private let activeEnergyType = HKObjectType.quantityType(forIdentifier: .activeEnergyBurned)!
@@ -96,6 +97,20 @@ final class HealthKitManager: ObservableObject {
             intervalComponents: DateComponents(day: 1)
         )
 
+        query.statisticsUpdateHandler = { [weak self] _, _, collection, error in
+            Task { @MainActor in
+                guard let self else { return }
+                guard error == nil, let collection else { return }
+                let day = Calendar.current.startOfDay(for: Date())
+                guard let quantity = collection.statistics(for: day)?.sumQuantity() else { return }
+                let total = max(0, Int(quantity.doubleValue(for: .count())))
+                self.todaySteps = total
+                self.lastRefresh = Date()
+                self.statusMessage = "Apple Health live step updates received."
+                self.onDailyTotal?(day, total)
+            }
+        }
+
         query.initialResultsHandler = { [weak self] _, collection, error in
             Task { @MainActor in
                 guard let self else { return }
@@ -133,6 +148,7 @@ final class HealthKitManager: ObservableObject {
                     : "No step samples returned. Check Health access and device data; no zero has been assumed."
             }
         }
+        liveStepsQuery = query
         store.execute(query)
         refreshTodayActiveEnergy()
     }
