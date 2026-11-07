@@ -33,8 +33,8 @@ for (const tab of ["today", "trends", "log", "coach", "walk", "data"]) {
 }
 await page.locator('[data-tab="data"]').click();
 assert(await page.locator("#pane-data").isVisible(), "You / Profile tab did not open");
-assert(await page.locator("#connectionHeading").count() === 1, "Connected-data hub heading is missing from You / Profile");
-assert(await page.locator("#gxProgressCard").count() === 1, "Personal progress report is missing from You / Profile");
+assert(await page.locator("#connectionHeading").isVisible(), "Connected-data hub is not visible in You / Profile");
+assert(await page.locator("#gxProgressCard").isVisible(), "Personal progress report is missing from You / Profile");
 await page.locator("#accountQuick").click();
 assert(await page.locator("#pane-data").isVisible(), "Quick account control did not open account settings");
 assert(await page.locator("#cloudEmail").count() === 1, "Email sign-in field is missing");
