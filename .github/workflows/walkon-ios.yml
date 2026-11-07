@@ -151,15 +151,11 @@ jobs:
               raise SystemExit("Background location mode is not enabled")
           print("iOS permission usage descriptions validated")
 
-          with entitlements_path.open("rb") as stream:
-              entitlements = plistlib.load(stream)
-          for key in (
-              "com.apple.developer.healthkit",
-              "com.apple.developer.healthkit.background-delivery",
-          ):
-              if entitlements.get(key) is not True:
-                  raise SystemExit(f"Missing HealthKit entitlement: {key}")
-          print("HealthKit entitlements validated")
+          PY
+          plutil -lint ios/WALKON/WALKON.entitlements
+          grep -A1 '<key>com.apple.developer.healthkit</key>' ios/WALKON/WALKON.entitlements | grep -q '<true/>'
+          grep -A1 '<key>com.apple.developer.healthkit.background-delivery</key>' ios/WALKON/WALKON.entitlements | grep -q '<true/>'
+          python3 -c 'import plistlib,sys; m=plistlib.load(open(sys.argv[1],"rb")); a=m.get("NSPrivacyAccessedAPITypes",[]); d={x.get("NSPrivacyCollectedDataType") for x in m.get("NSPrivacyCollectedDataTypes",[])}; assert any(x.get("NSPrivacyAccessedAPIType")=="NSPrivacyAccessedAPICategoryUserDefaults" and "CA92.1" in x.get("NSPrivacyAccessedAPITypeReasons",[]) for x in a); assert {"NSPrivacyCollectedDataTypePreciseLocation","NSPrivacyCollectedDataTypeHealth","NSPrivacyCollectedDataTypeFitness"}.issubset(d)' "$APP_PRIVACY"
 
           with privacy_path.open("rb") as stream:
               privacy = plistlib.load(stream)
