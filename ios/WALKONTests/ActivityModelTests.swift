@@ -94,9 +94,8 @@ final class ActivityModelTests: XCTestCase {
 }
 
 
-@MainActor
 final class ActivityStorePersistenceTests: XCTestCase {
-    func testSavedWalkLoadsFromLocalStorage() {
+    @MainActor func testSavedWalkLoadsFromLocalStorage() {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("WALKON-tests-\(UUID().uuidString)", isDirectory: true)
         defer { try? FileManager.default.removeItem(at: directory) }
@@ -114,7 +113,7 @@ final class ActivityStorePersistenceTests: XCTestCase {
         XCTAssertEqual(reloaded.sessions.first?.steps ?? -1, 250)
     }
 
-    func testActiveWalkCheckpointCanBeRecovered() {
+    @MainActor func testActiveWalkCheckpointCanBeRecovered() {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("WALKON-recovery-tests-\(UUID().uuidString)", isDirectory: true)
         defer { try? FileManager.default.removeItem(at: directory) }
