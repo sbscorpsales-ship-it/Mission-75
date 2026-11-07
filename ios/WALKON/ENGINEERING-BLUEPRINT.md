@@ -6,9 +6,9 @@
 - **Repository:** `sbscorpsales-ship-it/Mission-75`, branch `main`.
 - **Blueprint:** `ios/WALKON/ENGINEERING-BLUEPRINT.md`.
 - **Phase:** Research and engineering specification only. **App building is not authorized yet.**
-- **Current completed research:** Sections 1–31 exist below. Latest research section: **31 — Heart-rate science and metrics**.
-- **Exact next task:** **Section 32 — Wearables and Bluetooth interoperability.** Research BLE GATT and Heart Rate Service, pairing/bonding, permissions, scanning/connection lifecycle, background restrictions, reconnects, multiple sensors, source selection, Apple Watch integration boundaries, Android Wear OS/Health Connect, device compatibility, battery and security. Do not drift into unrelated feature design.
-- **After Section 32:** update this register's latest-completed and exact-next-task fields before proceeding to Section 33 (workout lifecycle and recovery).
+- **Current completed research:** Sections 1–32 exist below. Latest research section: **32 — Wearables and Bluetooth interoperability**.
+- **Exact next task:** **Section 33 — Workout lifecycle, interruptions and crash recovery.** Research workout state ownership, start/pause/resume/finish, process termination, OS suspension, phone/watch handover, durable local persistence, exactly-once save, HealthKit workout/route association recovery, Android persistence, duplicate prevention and offline/partial-failure reconciliation. Do not drift into unrelated feature design.
+- **After Section 33:** update this register's latest-completed and exact-next-task fields before proceeding to Section 34 (HealthKit and Health Connect).
 - **No user device testing or screenshot requests** until the research/architecture blueprint is sufficiently complete and a coherent buildable test plan is ready.
 
 ## Non-negotiable working rules
@@ -35,9 +35,9 @@
 - **Section 29:** Elevation, altitude and barometric measurement.
 - **Section 30:** Motion sensing, pedometer and activity recognition.
 - **Section 31:** Heart-rate science, PPG/ECG, HealthKit/Health Connect semantics, HRV and validation.
+- **Section 32:** BLE Heart Rate Service, Core Bluetooth, Android BLE, Apple Watch and Wear OS integration boundaries.
 
 ## Open research queue (ordered)
-32. Wearables and Bluetooth sensor interoperability.
 33. Workout lifecycle, interruptions, crash recovery and exactly-once save.
 34. HealthKit and Health Connect semantics, permissions, sync and reconciliation.
 35. Calories and energy expenditure validity.
@@ -2518,3 +2518,180 @@ Acceptance thresholds must be defined per use case from a test protocol before i
 - What are the field-tested latency, coverage, accuracy and battery acceptance thresholds?
 
 Research status: physical PPG/ECG distinctions, platform data types, permissions, known limitations and validation design documented. Target-device interoperability, live latency, sampling behaviour and acceptance thresholds remain untested. No app implementation is authorized by this section.
+
+## 32. Wearables and Bluetooth interoperability — hardware-first research
+
+Research update: 2026-11-07. This section separates generic BLE accessories from Apple Watch and Wear OS. A watch is not automatically a generic Bluetooth sensor; each ecosystem has its own supported data path.
+
+### 32.1 Three integration paths
+
+1. **Standard BLE accessory:** chest strap, optical armband or cadence sensor exposing documented GATT services. WALKON can connect directly through Core Bluetooth on iOS or Android BLE APIs.
+2. **Apple Watch:** native watchOS workout and HealthKit ecosystem. Do not assume the iPhone can treat Apple Watch as a generic BLE Heart Rate Service peripheral. A full live experience needs a native watchOS companion and coordinated workout ownership.
+3. **Wear OS:** use Health Services on the watch for exercise metrics and Wearable Data Layer for paired Android phone communication. Google's Data Layer is unavailable when the Wear OS watch is paired to an iPhone; cross-phone use needs a separate network/cloud design.
+
+Sources:
+- https://developer.apple.com/documentation/corebluetooth
+- https://developer.apple.com/documentation/healthkit/running-workout-sessions
+- https://developer.android.com/health-and-fitness/health-services
+- https://developer.android.com/training/wearables/data/overview
+
+### 32.2 Bluetooth SIG Heart Rate Service (HRS)
+
+The Bluetooth SIG Heart Rate Service 1.0 is a standard GATT service for fitness heart-rate sensors:
+- Heart Rate Service UUID: 0x180D.
+- Heart Rate Measurement characteristic: 0x2A37, mandatory and delivered through notifications.
+- Client Characteristic Configuration descriptor: 0x2902, used by the client to enable notifications.
+- Body Sensor Location: 0x2A38, optional read-only description.
+- Heart Rate Control Point: 0x2A39, optional control for resetting Energy Expended when supported.
+- Measurement flags specify UINT8 or UINT16 HR encoding and whether Energy Expended and RR-Interval fields are present.
+- RR-Interval values use 1/1024-second units. They are beat interval observations, not an ECG waveform.
+- Typical notifications are approximately once per second, but the sensor controls the interval. A client cannot demand a guaranteed fixed cadence.
+- The standard notification has no measurement timestamp. WALKON must record local receipt time and mark acquisition time as unknown/estimated, not fabricate a precise sensor timestamp.
+- Notifications lost during link loss are not guaranteed to be replayed. Gaps must remain gaps.
+
+The parser must be flag-driven, tolerate both HR integer widths and optional/variable fields, and reject malformed packets safely.
+
+Sources:
+- https://www.bluetooth.com/specifications/specs/heart-rate-service-1-0/
+- https://www.bluetooth.com/wp-content/uploads/Files/Specification/HTML/HRS_v1.0/out/en/index-en.html
+- https://www.bluetooth.com/wp-content/uploads/Files/Specification/HTML/HRP_v1.0/out/en/index-en.html
+
+### 32.3 BLE connection lifecycle
+
+A robust adapter needs explicit states: unavailable, permission required/denied, scanning, discovered, selected, connecting, service discovery, subscribing, streaming, disconnected, reconnecting and forgotten.
+
+Requirements:
+- Scan only during a user connection flow or an explicitly authorized workout reconnect window.
+- Filter by service UUID where possible; avoid continuous broad scanning.
+- Ask the user to select the intended sensor when multiple candidates appear.
+- Discover services and characteristics after every connection; never rely on fixed handles.
+- Enable notifications and confirm subscription before marking the sensor live.
+- Validate packet length, flags, units and plausible values.
+- Stop scanning after selection, cancellation, permission loss or workout completion.
+- Do not assume public HRS characteristics always require BLE bonding; follow the peripheral's actual security requirements and system pairing prompts.
+- Record disconnect cause, last notification time and reconnect attempts.
+
+### 32.4 iOS Core Bluetooth background behaviour
+
+- Core Bluetooth provides BLE central/peripheral APIs; WALKON is a central when connecting to a chest strap.
+- Handle manager state changes, authorization, radio-off state, connection failures, discovery, subscription and disconnect callbacks.
+- iOS background BLE operation is constrained. The bluetooth-central background mode allows certain event-driven work; it does not grant unlimited execution or guarantee a permanently running process.
+- Apple's state preservation/restoration can preserve scans, pending/active connections and notification subscriptions and relaunch the app for events. WALKON must opt in, recreate managers with restoration identifiers and restore state in the delegate callback.
+- Background scans are coalesced/restricted and discovery may take longer than in foreground.
+- Current Core Bluetooth documentation describes additional iOS 26+ background privileges under specific Live Activity conditions. This is not a blanket guarantee for every scan or lifecycle; use only documented conditions and verify on target OS versions.
+- Persist important events promptly; the app can still be terminated.
+- Avoid scanning when no active workout or explicit connection task exists.
+
+Sources:
+- https://developer.apple.com/documentation/CoreBluetooth
+- https://developer.apple.com/library/archive/documentation/NetworkingInternetWeb/Conceptual/CoreBluetooth_concepts/CoreBluetoothBackgroundProcessingForIOSApps/PerformingTasksWhileYourAppIsInTheBackground.html
+- https://developer.apple.com/library/archive/documentation/NetworkingInternetWeb/Conceptual/CoreBluetooth_concepts/
+
+### 32.5 Android BLE permissions and background operation
+
+For Android 12/API 31+:
+- BLUETOOTH_SCAN is required to discover nearby devices.
+- BLUETOOTH_CONNECT is required to communicate with connected devices.
+- BLUETOOTH_ADVERTISE is only needed if WALKON makes the phone discoverable as a peripheral.
+- These are runtime Nearby devices permissions. Request only those needed for the selected action.
+- If scan results are not used to derive physical location, Android permits a neverForLocation assertion; manifest declarations must match actual behaviour.
+- Older Android versions have legacy Bluetooth and location permission rules, requiring API-level handling.
+
+For persistent notification streams:
+- Companion Device Manager provides a system pairing flow and can avoid location permission for that pairing scan, but does not itself provide a continuous data connection.
+- Android documents CompanionDeviceService/presence observation or a foreground service using the connectedDevice type for ongoing BLE notifications while backgrounded.
+- A foreground service has start restrictions and user-visible notification requirements.
+- Reconnect after process termination must be designed explicitly; do not assume a GATT connection survives process death.
+- Handle Bluetooth off, permission revocation, force-stop and OEM battery restrictions distinctly.
+
+Sources:
+- https://developer.android.com/develop/connectivity/bluetooth/bt-permissions
+- https://developer.android.com/develop/connectivity/bluetooth/ble/background
+- https://developer.android.com/develop/connectivity/bluetooth/companion-device-pairing
+
+### 32.6 Apple Watch integration boundary
+
+Apple documents workout sessions running on Apple Watch. During an active watch workout, the system can provide high-frequency HR samples and keep the watch workout app running in the background. The iPhone companion must coordinate start/stop and avoid saving a second inconsistent workout.
+
+WALKON requirements:
+- A robust live Apple Watch experience requires a native watchOS companion; it is not generic BLE pairing.
+- The watch app owns or coordinates the watch workout session and HealthKit builder. Phone and watch share a stable logical workout ID and explicit state transitions.
+- If the watch starts a workout, the iPhone must not independently finish/save a duplicate. If the phone starts it, the watch companion joins the same logical workout under a defined protocol.
+- The watch must be able to continue recording locally during phone disconnection and synchronize later.
+- Define one authoritative workout owner at a time, idempotent save and explicit handover rules.
+- Apple Watch support is a separate development scope and should follow proof of the iPhone recorder.
+
+Sources:
+- https://developer.apple.com/documentation/healthkit/running-workout-sessions
+- https://developer.apple.com/documentation/healthkit/hkworkoutsession
+- https://support.apple.com/en-in/108779
+
+### 32.7 Wear OS integration boundary
+
+- Wear OS 3+ Health Services mediates device sensors and algorithms and can provide HR, distance, calories, elevation, floors, speed and pace.
+- Use Health Services for watch exercise metrics instead of independently reimplementing the watch sensor pipeline without a validated need.
+- Wearable Data Layer supports app-to-app messages and synchronization between Wear OS and paired Android phones. DataItems are synchronization primitives, not the watch's permanent database.
+- Google states the Data Layer is unavailable when a Wear OS watch is paired with an iPhone.
+- A Wear OS watch may have independent Wi-Fi/cellular connectivity; WALKON must not assume a direct BLE path to the phone.
+- Keep durable workout storage on watch and phone independently; reconcile with stable workout IDs and event sequence numbers.
+
+Sources:
+- https://developer.android.com/health-and-fitness/health-services
+- https://developer.android.com/training/wearables/data/overview
+- https://developer.android.com/training/wearables/data/sync
+- https://developer.android.com/training/wearables/data/network-communication
+
+### 32.8 Multiple sensors and source handover
+
+A user may have a chest strap, optical armband, smartwatch and phone producing overlapping observations. Never merge overlapping HR readings by indiscriminate averaging.
+
+Proposed policy:
+1. User selects preferred workout sensor.
+2. WALKON selects one authoritative live HR source per interval.
+3. Other sources remain diagnostics or separate historical observations.
+4. On disconnect, mark the gap and reconnect. If user enabled fallback, switch source with a logged handover event and new source epoch.
+5. Do not silently splice optical and electrical sources into one uninterrupted trace.
+6. On reconnect, reject stale buffered notifications when measurement time cannot be established; standard HRS has no embedded timestamp.
+7. Preserve source identity, connection state and priority.
+
+### 32.9 Security and privacy
+
+- Use platform BLE security and pairing; do not invent custom cryptography over BLE.
+- Do not scan continuously for analytics or retain unnecessary device identifiers.
+- Treat sensor samples and workouts as sensitive health data; no default upload.
+- A nearby BLE advertisement alone is not proof of device identity.
+- Wear OS Data Layer access is restricted by matching app package/signature; cloud-routed traffic may pass through Google infrastructure, so it is not necessarily a purely local channel.
+- Provide disconnect, forget-device and data deletion controls.
+
+### 32.10 WALKON wearable adapter contract
+
+Each adapter should expose: app-scoped logical device ID, display name/class, supported services/capabilities, platform/transport/protocol, permission state, connection state and timestamps, selected source priority, workout ownership, parsed HR/RR/Energy Expended only when present, local receipt timestamp, timestamp quality, disconnect reason, reconnect attempts and battery only if exposed by the accessory.
+
+Optional fields must remain optional. Do not require battery percentage, RR intervals, Body Sensor Location or sensor-quality metadata from every compatible device.
+
+### 32.11 Compatibility and field-validation matrix
+
+Test before claiming support:
+- At least two BLE chest straps from different vendors.
+- One BLE optical armband if included in scope.
+- One sensor with RR intervals and one without.
+- Optional Body Sensor Location/Energy Expended present and absent.
+- Multiple nearby sensors with similar names.
+- iPhone foreground, locked/background, suspension, termination and restoration.
+- Android minimum/latest supported API levels on Pixel, Samsung and another OEM.
+- Permission denial/revocation, Bluetooth off, battery saver, Companion Device pairing and connectedDevice service lifecycle.
+- Apple Watch start/stop/handover/delayed sync as a separate watchOS test track.
+- Wear OS Health Services/Data Layer on paired Android and confirm iPhone-pairing limitation.
+
+Measure discovery time, connection success, time to first valid sample, sample cadence, parser correctness, notification loss, reconnect time, background continuity, battery impact, duplicates and source handover correctness.
+
+### 32.12 Open decisions
+
+- Which BLE HRS accessories are on the supported list?
+- Is direct BLE chest-strap support in the first iPhone release or deferred until the core recorder is proven?
+- Is Apple Watch a later native watchOS companion phase, or does first release only read historical HealthKit data?
+- Which Wear OS devices and Health Services data types are supported?
+- What are acceptable connection latency, coverage, reconnect and battery thresholds?
+- What minimum device identity can be retained without collecting unnecessary persistent hardware identifiers?
+
+Research status: BLE Heart Rate Service, iOS Core Bluetooth lifecycle, Android permissions/background paths, Apple Watch and Wear OS boundaries documented. Accessory compatibility, target-device background reliability and latency/battery thresholds remain untested. No app implementation is authorized by this section.
