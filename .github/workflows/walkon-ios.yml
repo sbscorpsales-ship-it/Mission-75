@@ -1,4 +1,4 @@
-name: WALKON iOS build
+name: WALKON iOS CI
 
 on:
   workflow_dispatch:
@@ -9,7 +9,7 @@ on:
       - ".github/workflows/walkon-ios.yml"
   push:
     branches:
-      - "walkon/**"
+      - main
     paths:
       - "ios/WALKON/**"
       - "ios/project.yml"
@@ -19,7 +19,7 @@ permissions:
   contents: read
 
 jobs:
-  build-ios:
+  build-and-test:
     runs-on: macos-15
     steps:
       - name: Check out source
@@ -34,7 +34,10 @@ jobs:
       - name: Generate WALKON project
         run: xcodegen generate --spec ios/project.yml --project ios
 
-      - name: Compile WALKON for iPhone Simulator
+      - name: Validate project and test scheme
+        run: xcodebuild -list -project ios/WALKON.xcodeproj
+
+      - name: Build WALKON for iPhone Simulator
         run: |
           xcodebuild \
             -project ios/WALKON.xcodeproj \
@@ -45,6 +48,16 @@ jobs:
             -derivedDataPath build/WALKON-Simulator \
             CODE_SIGNING_ALLOWED=NO \
             build
+
+      - name: Run WALKON unit tests
+        run: |
+          xcodebuild \
+            -project ios/WALKON.xcodeproj \
+            -scheme WALKON \
+            -destination 'platform=iOS Simulator,name=iPhone 16' \
+            -derivedDataPath build/WALKON-Tests \
+            CODE_SIGNING_ALLOWED=NO \
+            test
 
       - name: Upload simulator build
         uses: actions/upload-artifact@v4
