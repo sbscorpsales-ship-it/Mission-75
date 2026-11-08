@@ -56,8 +56,8 @@ After these: consolidate contradictions, close architecture decisions, produce a
 ## Last verified checkpoint
 - **Latest completed section:** 39.
 - **Latest research update:** Section 39 — privacy, security, consent, retention and deletion.
-- **Section-39 commit:** pending verification after this write.
-- **Section-39 research blob:** pending verification after this write.
+- **Section-39 commit:** d19c30d2f7eab9cbaee2d200e2c3a5bb72255c39.
+- **Section-39 research blob:** 809acf0b327e2c88a59f1a20c2a853dfe8ec03a2.
 - **Next action:** research Section 40 — backend architecture, API design, identity, tenancy and operational reliability.
 
 ---
