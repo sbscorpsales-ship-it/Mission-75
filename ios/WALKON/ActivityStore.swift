@@ -9,6 +9,8 @@ struct WalkSession: Identifiable, Codable, Equatable {
     var steps: Int
     var distanceMeters: Double
     var route: [Coordinate]
+    /// Separate GPS continuity runs. Nil means a legacy session with no segment metadata.
+    var routeSegments: [[Coordinate]]? = nil
 
     struct Coordinate: Codable, Equatable {
         let latitude: Double
@@ -218,10 +220,17 @@ final class ActivityStore: ObservableObject {
                 throw ActivityStoreError.database("The recoverable walk draft was not found.")
             }
             let points = try routePoints(for: id)
+            let grouped = Dictionary(grouping: points, by: \.segment)
+            let segments = grouped.keys.sorted().compactMap { segment in
+                grouped[segment]?.sorted { $0.sequence < $1.sequence }.map {
+                    WalkSession.Coordinate(latitude: $0.latitude, longitude: $0.longitude)
+                }
+            }.filter { !$0.isEmpty }
+            let flattened = segments.flatMap { $0 }
             let session = WalkSession(
                 id: id, startedAt: draft.startedAt, endedAt: endedAt,
                 steps: draft.steps, distanceMeters: draft.distanceMeters,
-                route: points.map { .init(latitude: $0.latitude, longitude: $0.longitude) }
+                route: flattened, routeSegments: segments
             )
             let payload = try encoder.encode(session)
             try execute("BEGIN IMMEDIATE;")
