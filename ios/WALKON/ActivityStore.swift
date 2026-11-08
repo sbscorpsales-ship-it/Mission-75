@@ -129,6 +129,24 @@ final class ActivityStore: ObservableObject {
                 sqlite3_bind_double(statement, 7, point.horizontalAccuracy)
                 bind(workoutID.uuidString, to: 8, in: statement)
                 guard sqlite3_step(statement) == SQLITE_DONE else { throw ActivityStoreError.database(lastError(database)) }
+                let inserted = sqlite3_changes(database) == 1
+                if !inserted {
+                    // A retry is successful only when this exact workout still exists
+                    // and its sequence was already journaled. A missing draft must fail.
+                    var check: OpaquePointer?
+                    try prepare("""
+                        SELECT EXISTS(SELECT 1 FROM workout_drafts WHERE id = ?)
+                           AND EXISTS(SELECT 1 FROM route_points WHERE workout_id = ? AND sequence = ?);
+                        """, into: &check, database: database)
+                    defer { sqlite3_finalize(check) }
+                    bind(workoutID.uuidString, to: 1, in: check)
+                    bind(workoutID.uuidString, to: 2, in: check)
+                    sqlite3_bind_int64(check, 3, sqlite3_int64(point.sequence))
+                    guard sqlite3_step(check) == SQLITE_ROW,
+                          sqlite3_column_int(check, 0) == 1 else {
+                        throw ActivityStoreError.database("The active walk draft is missing or this route point was not saved.")
+                    }
+                }
                 try execute("COMMIT;")
             } catch {
                 try? execute("ROLLBACK;")
