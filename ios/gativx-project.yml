@@ -1,0 +1,32 @@
+name: GATIVX
+options:
+  bundleIdPrefix: com.paramitsolutions
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+targets:
+  GATIVX:
+    type: application
+    platform: iOS
+    sources:
+      - path: GATIVX
+    info:
+      path: GATIVX/Info.plist
+      properties:
+        NSHealthShareUsageDescription: "GATIVX reads your daily step count and active energy from Apple Health to show your fitness progress."
+        NSMotionUsageDescription: "GATIVX uses motion activity to display live step and walking-distance estimates while you use the app."
+        NSLocationWhenInUseUsageDescription: "GATIVX records your GPS route only while you explicitly start an activity."
+        NSLocationAlwaysAndWhenInUseUsageDescription: "GATIVX uses location during an active walk so route recording can continue when your iPhone screen is locked."
+        UIBackgroundModes:
+          - location
+    entitlements:
+      path: GATIVX/GATIVX.entitlements
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.paramitsolutions.gativx
+        PRODUCT_NAME: GATIVX
+        SWIFT_VERSION: "5.0"
+        TARGETED_DEVICE_FAMILY: "1"
+        GENERATE_INFOPLIST_FILE: YES
+        CODE_SIGN_ENTITLEMENTS: GATIVX/GATIVX.entitlements
+        SUPPORTS_MACCATALYST: NO
