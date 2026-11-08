@@ -1,0 +1,92 @@
+name: GATIVX iOS CI
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "ios/GATIVX/**"
+      - "ios/gativx-project.yml"
+      - ".github/workflows/gativx-ios.yml"
+  push:
+    branches:
+      - main
+      - "fix/gativx/**"
+    paths:
+      - "ios/GATIVX/**"
+      - "ios/gativx-project.yml"
+      - ".github/workflows/gativx-ios.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build-ios:
+    runs-on: macos-26
+    timeout-minutes: 20
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Select Xcode 26
+        run: |
+          sudo xcode-select -s /Applications/Xcode_26.3.app/Contents/Developer
+          xcodebuild -version
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate GATIVX project
+        run: xcodegen generate --spec ios/gativx-project.yml --project ios
+
+      - name: Validate project and scheme
+        run: xcodebuild -list -project ios/GATIVX.xcodeproj
+
+      - name: Build GATIVX for iPhone Simulator
+        run: |
+          xcodebuild \
+            -project ios/GATIVX.xcodeproj \
+            -scheme GATIVX \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            -configuration Debug \
+            -derivedDataPath build/GATIVX-Simulator \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+
+      - name: Verify packaged permissions and HealthKit entitlements
+        run: |
+          APP="build/GATIVX-Simulator/Build/Products/Debug-iphonesimulator/GATIVX.app"
+          test -f "$APP/Info.plist"
+          python3 - <<'PY'
+          import plistlib
+          from pathlib import Path
+
+          app = Path("build/GATIVX-Simulator/Build/Products/Debug-iphonesimulator/GATIVX.app")
+          with (app / "Info.plist").open("rb") as stream:
+              info = plistlib.load(stream)
+          for key in (
+              "NSHealthShareUsageDescription",
+              "NSMotionUsageDescription",
+              "NSLocationWhenInUseUsageDescription",
+              "NSLocationAlwaysAndWhenInUseUsageDescription",
+          ):
+              if not info.get(key):
+                  raise SystemExit(f"Missing permission purpose string: {key}")
+          if "location" not in info.get("UIBackgroundModes", []):
+              raise SystemExit("Background location mode is missing")
+
+          with Path("ios/GATIVX/GATIVX.entitlements").open("rb") as stream:
+              entitlements = plistlib.load(stream)
+          if entitlements.get("com.apple.developer.healthkit") is not True:
+              raise SystemExit("HealthKit entitlement is missing")
+          if entitlements.get("com.apple.developer.healthkit.background-delivery") is not True:
+              raise SystemExit("HealthKit background-delivery entitlement is missing")
+          print("GATIVX permission strings and source entitlements validated")
+          PY
+
+      - name: Upload simulator build
+        uses: actions/upload-artifact@v4
+        with:
+          name: GATIVX-iOS-Simulator
+          path: build/GATIVX-Simulator/Build/Products/Debug-iphonesimulator/GATIVX.app
+          if-no-files-found: error
