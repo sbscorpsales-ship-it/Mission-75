@@ -6,8 +6,8 @@
 - **Repository:** `sbscorpsales-ship-it/Mission-75`, branch `main`.
 - **Blueprint:** `ios/WALKON/ENGINEERING-BLUEPRINT.md`.
 - **Phase:** Research and engineering specification only. **App building is not authorized yet.**
-- **Current completed research:** Sections 1–41 exist below. Latest research section: **41 — Performance engineering, capacity modelling, cost and release observability**.
-- **Exact next task:** **Section 42 — Accessibility, gait diversity and inclusive measurement.** Research accessible interaction, VoiceOver, Dynamic Type, motor/vision/hearing accessibility, diverse gait and mobility patterns, step-count bias, assistive-device compatibility, adaptive goals and inclusive field validation. Do not drift into unrelated feature design.
+- **Current completed research:** Sections 1–42 exist below. Latest research section: **42 — Accessibility, gait diversity and inclusive measurement**.
+- **Exact next task:** **Section 43 — Test strategy, reference instruments, acceptance thresholds and release gates.** Consolidate test layers, reference measurement methods, device/OS matrix, deterministic fixtures, fault injection, accessibility and inclusive gait validation, performance/battery/security/privacy/backend checks, release-blocking criteria and evidence artifacts.
 - **After Section 37:** update this register's latest-completed and exact-next-task fields before proceeding to Section 38 (maps, route display, map matching and location privacy).
 - **No user device testing or screenshot requests** until the research/architecture blueprint is sufficiently complete and a coherent buildable test plan is ready.
 
@@ -45,6 +45,7 @@
 - **Section 39:** Data classification and threat model, iOS file/Keychain protection, API/session security, granular consent, HealthKit restrictions, India DPDP staged commencement, retention, export/deletion, processor controls, backup/restore and incident response.
 - **Section 40:** Modular-monolith backend, provider evaluation, account tenancy, RLS and object authorization, versioned API contracts, idempotent ingestion, route/object storage, durable jobs, observability, CI/CD, backups/restore, quotas and API security testing.
 - **Section 41:** iOS profiling tools, provisional device budgets, battery/thermal methodology, CPU/memory/storage, route-volume formulas, network sync efficiency, backend concurrency, Supabase cost model, privacy-safe dashboards, SLO definitions and release performance gates.
+- **Section 42:** SwiftUI accessibility, VoiceOver/Voice Control/Switch Control, Dynamic Type, contrast/reduced motion, accessible map alternatives, gait diversity, step-count bias with slow gait and mobility aids, inclusive goals, reference procedures and release acceptance gates.
 
 ## Open research queue (ordered)
 - 36. [COMPLETE] Battery, thermal management and long-session behaviour.
@@ -53,22 +54,22 @@
 - 39. [COMPLETE] Privacy, security, consent, retention and deletion.
 - 40. [COMPLETE] Backend architecture, API design, identity, tenancy and operational reliability.
 - 41. [COMPLETE] Performance engineering, capacity modelling, cost and release observability.
-- 42. Accessibility, gait diversity and inclusive measurement.
+- 42. [COMPLETE] Accessibility, gait diversity and inclusive measurement.
 - 43. Test strategy, reference instruments, acceptance thresholds and release gates.
 After these: consolidate contradictions, close architecture decisions, produce a single implementation-ready specification and explicit go/no-go checklist. Then present the build-readiness decision and proceed according to the agreed development authorization.
 
 ## Last verified checkpoint
-- **Latest completed section:** 41.
-- **Latest research update:** Section 41 — performance engineering, capacity modelling, cost and release observability.
-- **Section-41 commit:** 5e035c526827db230002f5300e5bcfc38c95702e.
-- **Section-41 research blob:** cbced20228df49e6ff3acdb04a1b541249c9a5d2.
-- **Next action:** research Section 42 — accessibility, gait diversity and inclusive measurement.
+- **Latest completed section:** 42.
+- **Latest research update:** Section 42 — accessibility, gait diversity and inclusive measurement.
+- **Section-42 commit:** pending verification.
+- **Section-42 research blob:** pending verification.
+- **Next action:** research Section 43 — test strategy, reference instruments, acceptance thresholds and release gates.
 
 ---
 
 # WALKON — Engineering Blueprint (Research Draft)
 
-Status: Research draft — NOT final architecture approval; Section 41 completed 2026-11-08
+Status: Research draft — NOT final architecture approval; Section 42 completed 2026-11-08
 Date: 2026-11-07
 Product: WALKON (temporary six-letter product name)
 Platform in first release: Native iPhone app (SwiftUI, iOS 26.0+)
@@ -4545,3 +4546,121 @@ Research complete for Section 41. Next: Section 42 — Accessibility, gait diver
 - [R5] Supabase, Billing and plan allowances: https://supabase.com/docs/guides/platform/billing-on-supabase
 - [R6] Supabase, Manage Compute usage (updated 2026-10-29): https://supabase.com/docs/guides/platform/manage-your-usage/compute
 - [R7] Supabase, Manage Egress usage: https://supabase.com/docs/guides/platform/manage-your-usage/egress
+
+
+## 42. Accessibility, gait diversity and inclusive measurement
+
+Status: Research complete — design requirements and validation gates documented; no app UI or sensor behaviour has yet been implemented or tested.
+
+### 42.1 Product principle: accessible participation without false measurement claims
+
+WALKON must support people with different vision, hearing, dexterity, cognition, walking speed, gait patterns and mobility aids. Accessibility is a product requirement, not a late visual polish pass. Measurement fairness is equally important: a step counter that systematically misses slow or assisted walking must not label the person inactive, imply failure, or silently present an unreliable number as ground truth.
+
+Keep three concepts separate in the data model and UI:
+- **Measured steps:** steps actually reported by the chosen platform/device source, with source and time window.
+- **Recorded walking activity:** a user-started session with elapsed time, route quality, distance where supportable, and any available step observations.
+- **Other movement / mobility activity:** movement that is meaningful but is not accurately represented as steps by the current sensor pipeline. Do not convert wheelchair propulsion, rolling, transfers, upper-body exercise or other non-step movement into fabricated step counts.
+
+A low or missing step count is not evidence that a person did not move. Never make a medical, fitness-capacity or motivation judgement from a sensor count.
+
+### 42.2 iOS accessibility implementation requirements
+
+Use native SwiftUI accessibility semantics and test actual assistive-technology behaviour. Apple's SwiftUI accessibility guidance describes built-in semantics for standard controls and modifiers such as labels and values; it explicitly recommends testing with VoiceOver, Voice Control and Switch Control, plus feedback from people who use them. Accessibility Inspector audits can flag missing labels, small hit regions, contrast, clipped text, traits and Dynamic Type issues, but passing an audit alone does not prove a usable experience. [R1, R2]
+
+Requirements:
+- **VoiceOver:** every meaningful control has a concise, context-specific label, correct trait, current value and actionable hint only when needed. Group related metric/value/unit logically; do not announce decorative map tiles or duplicate labels. Announce recording state changes and important errors without repeatedly interrupting the user. Provide accessible alternatives to map-only route information.
+- **Dynamic Type:** use scalable system text styles; support the largest accessibility text sizes without clipping, overlap, truncation of critical values or hidden controls. Allow vertical scrolling and adaptive layouts instead of shrinking text to preserve a fixed dashboard grid.
+- **Contrast and colour:** never communicate GPS quality, pause state, error, completion or chart meaning by colour alone. Pair colour with text, shape, icon and/or pattern. Test light/dark appearances and increased contrast.
+- **Motor accessibility:** generous touch targets, spacing between destructive and primary actions, no time-critical gestures, no drag-only interactions, and accessible alternatives for swipe, pinch and map gestures. Support Voice Control and Switch Control traversal. Keep start/pause/finish/discard actions distinct and confirm destructive discard.
+- **Hearing:** no essential instruction or state conveyed only by sound or haptics. Provide visual and accessible announcements for cues; captions/transcripts for any future spoken coaching. Audio/haptic cues are optional and configurable.
+- **Cognitive accessibility:** predictable navigation, plain language, consistent labels, one primary action per state, clear units, short instructions, reversible choices where possible, and explicit distinction between “not available”, “not authorized”, “not yet refreshed” and a true zero.
+- **Map accessibility:** route summary must be available as structured text (start/end context only where privacy permits, distance, duration, route quality and gaps); map interactions cannot be the only way to inspect a workout. Do not force VoiceOver users to traverse hundreds of GPS points.
+- **Reduced motion:** avoid unnecessary animated progress, pulsing GPS indicators and map camera movement; respect system Reduce Motion and provide stable state changes.
+- **Localization and units:** use locale-aware numbers, date/time, decimal separators and unit preferences; avoid embedding English-only text in images. Validate long translations and right-to-left layout before adding further locales.
+
+### 42.3 Measurement limits across gait and mobility diversity
+
+Published evidence shows material variability in consumer step counters. In one study of 43 older adults (mean age about 87), accuracy differed by device and assistive-device use; none of the tested devices reached 97% accuracy among participants using a cane, wheeled walker or rollator, and devices were not accurate at extremely slow gait speeds below 0.08 m/s. [R3] A separate study of 30 older adults found only 5 participants had all four tested bands within ±20% of observed steps; no tested band met that tolerance for participants using walkers or walking sticks. [R4] A systematic review also found that slower walking and impaired ambulation reduced agreement, with some devices tending to overestimate in free-living conditions. [R5]
+
+These studies are not direct validation of Apple's Core Motion or HealthKit algorithms and must not be used to predict an individual's error. They establish a design risk: device, wear location, arm movement, gait speed, interruptions and assistive-device use can affect observed counts. HealthKit's daily aggregate is a platform-provided total, not a guarantee of equal measurement validity for every gait pattern.
+
+Engineering implications:
+- Preserve the source and provenance of platform totals. Do not claim WALKON independently measured or validated the entire daily total when it is displaying HealthKit aggregate data.
+- Keep daily HealthKit steps and WALKON session pedometer observations separate as specified in Sections 2 and 34. Do not add them together.
+- A phone carried in a bag, held in a mobility aid, placed in a wheelchair pouch or left stationary may not produce equivalent motion signals. Do not promise universal accuracy for every carrying position.
+- Do not apply a single walking-speed threshold that suppresses slow steps or auto-pauses a slow walker. Manual pause remains available and mandatory; any future auto-pause must be opt-in, conservative, transparent and validated across slower and interrupted gait.
+- Do not infer gait speed, disability, fall risk, health status or assistive-device use from step data for profiling, ranking or advertising.
+- Do not create a “corrected” personal step count using an unvalidated multiplier or a hidden algorithm.
+- Where data quality is uncertain, show “steps may be undercounted” or “step data unavailable” with a clear source explanation rather than a falsely precise figure.
+- Allow users to record a walk by elapsed time and route even when step count is unavailable or unreliable. Never block a session because a pedometer cannot detect steps.
+
+### 42.4 Inclusive activity and goal model
+
+The initial product is a walking recorder, not a universal clinical mobility instrument. Still, its data and goal model must not equate human activity with a single daily step target.
+
+For the first release:
+- Keep a user-defined walking goal optional; do not impose a universal 10,000-step target or punitive streak.
+- Permit goals based on walking duration or number of sessions as alternatives to steps. Explain that these are different measures and must not be combined into one pseudo-score.
+- Support “goal not set”, “not measured”, “measurement unavailable” and “goal completed” as distinct states.
+- Do not treat a rest day, low sensor count, disability-related limitation or missed measurement as failure.
+- Avoid leaderboards and comparisons that rank people by raw steps without context; social/ranking features are deferred.
+- Provide an activity type and notes field only if the core implementation can represent them accessibly and privately; do not force users to disclose a diagnosis or disability.
+- Wheelchair propulsion and other non-step movement are not step counts. If future wheelchair-specific activity recording is introduced, design and validate a separate measurement model with wheelchair users; do not relabel pushes as steps or estimate distance from generic walking GPS logic.
+
+### 42.5 Inclusive validation cohort and reference method
+
+The test plan must include diverse real-world walking patterns without treating participants as diagnostic categories. Recruit volunteers who can safely and voluntarily participate, compensate fairly where practical, obtain informed consent, and allow withdrawal without losing access to core app functions.
+
+Include, where feasible:
+- different self-selected walking speeds and step lengths;
+- continuous and interrupted walking, starts/stops and turns;
+- use and non-use of cane, crutches, walker/rollator or other mobility aids;
+- phone carried in hand, trouser pocket, jacket pocket, bag and mobility-aid pouch;
+- one-handed use, limited dexterity, VoiceOver, Dynamic Type and Voice Control users;
+- outdoor open-sky, urban-canyon, indoor/no-GPS and mixed-surface routes;
+- participants with different ages, heights and body sizes, without assuming demographic traits predict an individual's performance.
+
+Reference procedure:
+1. Use a synchronized, consented video/manual observer tally or validated research-grade reference device for short controlled walking trials. Define exactly what constitutes a step and how disagreements are adjudicated.
+2. Record device model, OS, app build, carry position, mobility aid if voluntarily disclosed, trial duration, interruption pattern and environmental conditions. Keep identity and sensitive notes out of telemetry.
+3. Compare absolute error, percentage error where denominator is meaningful, undercount/overcount direction, repeatability and missing-data rate. Report per-condition distributions and confidence intervals; do not rely on one pooled average.
+4. Include very low step counts and very slow walking carefully: percentage error can become unstable or misleading when the reference count is near zero. Report absolute difference and explain denominator limitations.
+5. Compare HealthKit aggregate and Core Motion session results as separate systems; do not use Apple Health as the sole ground truth for the same underlying sensor stream.
+6. Do not publish an accuracy claim for an untested population, carry position, OS release or activity type. Treat findings as cohort- and device-specific.
+
+### 42.6 Accessibility and measurement acceptance gates
+
+Before a public release:
+- All primary workflows (onboarding, permission states, dashboard, start, pause, resume, finish, save, history, route summary, settings and errors) are navigable with VoiceOver.
+- All interactive controls are operable with Voice Control and Switch Control; no essential action requires a gesture without an accessible alternative.
+- Dynamic Type is tested through the largest accessibility sizes on every primary screen; no critical value, action or error is clipped or hidden.
+- Accessibility Inspector audits are run for each workflow screen; all high-severity findings are fixed or explicitly reviewed with rationale. Automated audit success is necessary but not sufficient.
+- Text contrast, non-colour status cues, reduced motion, captions/transcripts for any audio content and accessible map alternatives are verified.
+- Testers can distinguish zero steps, missing samples, unavailable sensor, denied/unavailable HealthKit data and stale data.
+- Controlled gait tests include slower walking, interrupted walking and mobility-aid use where participants are available and willing. Results are reported by condition, not collapsed into a single accuracy percentage.
+- No false claim of universal step accuracy; no hidden correction; no activity is discarded solely because steps are unavailable.
+- Goal UI supports time/session alternatives and does not shame, penalize or label a person inactive based only on a step total.
+- Accessibility defects and measurement bias are release-blocking when they prevent core task completion or materially misrepresent activity.
+
+### 42.7 Open decisions and evidence gaps
+
+- The first-release minimum supported iPhone/device cohort is not finalized; validate Core Motion and accessibility behaviour on each supported OS/device family.
+- Apple does not publish a universal accuracy guarantee for Core Motion step counting across gait speeds, mobility aids and phone placements. Real-device testing is mandatory.
+- Determine whether the first release exposes only walking-duration goals alongside steps or includes another explicitly supported activity type; do not broaden scope without a validated measurement model.
+- Decide exact touch-target dimensions and contrast thresholds against current Apple design guidance during UI implementation; test actual rendered screens.
+- Recruitment feasibility and sample size for inclusive field validation must be set before any broad accuracy claim.
+- Accessibility and gait diversity are requirements for the implementation and test plan, not proof of compliance or measurement accuracy.
+
+### 42.8 Section conclusion
+
+WALKON must be usable with assistive technologies and honest about the limits of its measurements. Native SwiftUI semantics, VoiceOver/Voice Control/Switch Control testing, Dynamic Type, contrast, reduced motion and accessible route summaries are release requirements. Step counts must remain source-labelled and separate from other activity measures; slower gait, interrupted walking, phone placement and mobility aids require explicit field validation. A person must still be able to record a walk when step measurement is absent or unreliable. No accessibility audit, literature review or platform aggregate alone certifies universal accuracy.
+
+Research complete for Section 42. Next: Section 43 — test strategy, reference instruments, acceptance thresholds and release gates.
+
+#### Section 42 references
+
+- [R1] Apple Developer Documentation, SwiftUI accessibility fundamentals: https://developer.apple.com/documentation/swiftui/accessibility-fundamentals
+- [R2] Apple Developer Documentation, Performing accessibility audits for your app: https://developer.apple.com/documentation/accessibility/performing-accessibility-audits-for-your-app
+- [R3] Accuracy and Acceptability of Commercial-Grade Physical Activity Monitors in Older Adults, 2018: https://pmc.ncbi.nlm.nih.gov/articles/PMC7023914/
+- [R4] Fitness band accuracy in older community dwelling adults, 2019: https://pubmed.ncbi.nlm.nih.gov/28743215/
+- [R5] The validity and reliability of consumer-grade activity trackers in older, community-dwelling adults: A systematic review, 2018: https://pubmed.ncbi.nlm.nih.gov/29704922/
