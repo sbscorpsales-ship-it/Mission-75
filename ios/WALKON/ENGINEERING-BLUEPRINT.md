@@ -55,8 +55,8 @@ After these: consolidate contradictions, close architecture decisions, produce a
 ## Last verified checkpoint
 - **Latest completed section:** 38.
 - **Latest research update:** Section 38 — maps, route display, map matching and location privacy.
-- **Section-38 commit:** pending verification after this write.
-- **Section-38 research blob:** pending verification after this write.
+- **Section-38 commit:** be0cbd09158f66ab41577223badb10dafd07df2d.
+- **Section-38 research blob:** 936be658af642e8b8fb89c2c71f65fd376a140ce.
 - **Next action:** research Section 39 — privacy, security, consent, retention and deletion.
 
 ---
