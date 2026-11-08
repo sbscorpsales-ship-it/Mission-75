@@ -6,8 +6,8 @@
 - **Repository:** `sbscorpsales-ship-it/Mission-75`, branch `main`.
 - **Blueprint:** `ios/WALKON/ENGINEERING-BLUEPRINT.md`.
 - **Phase:** Research and engineering specification only. **App building is not authorized yet.**
-- **Current completed research:** Sections 1–37 exist below. Latest research section: **37 — Offline-first storage, sync, conflict handling and export**.
-- **Exact next task:** **Section 38 — Maps, route display, map matching and location privacy.** Research route rendering, map providers/SDKs, offline map constraints, map matching limits, route simplification, geospatial privacy, start/end-point protection, location retention and sharing controls. Do not drift into unrelated feature design.
+- **Current completed research:** Sections 1–38 exist below. Latest research section: **38 — Maps, route display, map matching and location privacy**.
+- **Exact next task:** **Section 39 — Privacy, security, consent, retention and deletion.** Research data classification, threat model, encryption, secrets, account/session security, permission/consent lifecycle, data minimization, retention schedules, export/deletion workflows, backup handling and incident response. Do not drift into unrelated feature design.
 - **After Section 37:** update this register's latest-completed and exact-next-task fields before proceeding to Section 38 (maps, route display, map matching and location privacy).
 - **No user device testing or screenshot requests** until the research/architecture blueprint is sufficiently complete and a coherent buildable test plan is ready.
 
@@ -41,22 +41,23 @@
 - **Section 35:** Active, resting/basal, gross and total energy semantics; HealthKit/Health Connect calorie records; walking-model limits; wearable error; WALKON validation policy.
 - **Section 36:** iOS/Android location power efficiency, background execution, batching, thermal and Low Power Mode responses, sensor/CPU/network duty cycle, battery measurement, long-session degradation and validation gates.
 - **Section 37:** Local-first durable writes, transactional outbox/inbox, idempotent sync, retries/backoff, ordering, conflict policy, tombstones/deletion propagation, HealthKit workout/route export, upload recovery and offline validation.
+- **Section 38:** Native map rendering, provider comparison, pedestrian map-matching limits, display-only route simplification, GPS quality/gaps, offline map licensing, route privacy, endpoint masking and location-data minimization.
 
 ## Open research queue (ordered)
 36. Battery, thermal management and long-session behaviour.
 37. [COMPLETE] Offline-first storage, sync, conflict handling and export.
-38. Maps, route display, map matching and location privacy.
+38. [COMPLETE] Maps, route display, map matching and location privacy.
 39. Privacy, security, consent, retention and deletion.
 40. Accessibility, gait diversity and inclusive measurement.
 41. Test strategy, reference instruments, acceptance thresholds and release gates.
 After these: consolidate contradictions, close architecture decisions, produce a single implementation-ready specification and explicit go/no-go checklist. Only then ask for authorization to build.
 
 ## Last verified checkpoint
-- **Latest completed section:** 37.
-- **Latest research update:** Section 37 — offline-first storage, sync, conflict handling and export.
-- **Section-37 commit:** 7442ab2b20c86577881f93462b3f2e654e8fb298.
-- **Section-37 research blob:** 6113be98f48dc77594b463c2ee8c291db4216547.
-- **Next action:** research Section 38 — maps, route display, map matching and location privacy.
+- **Latest completed section:** 38.
+- **Latest research update:** Section 38 — maps, route display, map matching and location privacy.
+- **Section-38 commit:** pending verification after this write.
+- **Section-38 research blob:** pending verification after this write.
+- **Next action:** research Section 39 — privacy, security, consent, retention and deletion.
 
 ---
 
@@ -3541,3 +3542,201 @@ This is an architecture proposal only. No backend contract, sync implementation,
 - [R5] Apple Developer Documentation, Creating a workout route: https://developer.apple.com/documentation/healthkit/creating-a-workout-route
 - [R6] Apple Developer Documentation, finishRoute(with:metadata:completion:): https://developer.apple.com/documentation/healthkit/hkworkoutroutebuilder/finishroute%28with%3Ametadata%3Acompletion%3A%29
 - [R7] Apple Developer Documentation, HKWorkoutBuilder.finishWorkout(completion:): https://developer.apple.com/documentation/healthkit/hkworkoutbuilder/finishworkout%28completion%3A%29
+
+
+## 38. Maps, route display, map matching and location privacy
+
+Research update: 2026-11-08. Scope: render WALKON activity routes, distinguish recorded measurements from presentation geometry, evaluate map-provider and offline-map boundaries, and protect sensitive route locations. This is research and architecture specification only; no provider has been purchased, integrated or device-tested.
+
+### 38.1 Governing principles and route data layers
+
+**The recorded route is evidence; the displayed route is a visualization.** Map matching, smoothing, simplification, interpolation and map rendering must never overwrite the original accepted GPS observations or become the source for distance, pace, elapsed time, elevation or calories.
+
+Maintain three separately versioned representations:
+
+1. **Raw accepted observation journal:** timestamped Core Location samples that pass the recorder's quality/continuity gates, with original coordinates, horizontal accuracy, timestamp, segment ID, sequence and source metadata. Keep rejected samples and rejection reasons only where needed for bounded diagnostics; do not retain every noisy callback indefinitely.
+2. **Derived measurement track:** the exact accepted points/segments used by the metrics engine. It may exclude low-quality points or split gaps according to the Section 28 GPS rules. Distance and pace derive from this track and explicit elapsed/paused intervals, never from a provider's snapped geometry.
+3. **Display geometry:** a derived polyline optionally simplified for rendering or map-matched for visual clarity. Store its algorithm/provider/version and link it to the source track revision. It can be regenerated or discarded without changing the activity measurements.
+
+Every route has explicit segments. Pause/resume, GPS loss, permission loss, app interruption and long/low-confidence gaps close one segment and may begin another. Never draw a straight line across a known gap, pause or impossible jump simply to make a route look continuous. A map can show a visible break and an explanatory quality indicator.
+
+### 38.2 Native iOS map rendering
+
+For the first iPhone release, use Apple's native MapKit as the default map presentation candidate, subject to visual, accessibility and performance validation. MapKit provides SwiftUI Map content and MapPolyline for connected coordinate paths; UIKit MapKit supports MKPolyline overlays rendered by MKPolylineRenderer. [R1, R2]
+
+Implementation boundary:
+- MapView consumes immutable route-display geometry and workout annotations; it does not own Core Location or the workout state machine.
+- Render each route segment independently. Use distinct start/end markers and optional pause/gap markers only where they help explain the recorded activity.
+- Keep map camera movement, selection and user gestures separate from recorder state.
+- Avoid one SwiftUI view/annotation per GPS point. Use a small number of polylines and aggregated overlays; simplify only the display copy at the current zoom level.
+- Provide a non-map route summary and accessible text alternative: start/end context at a privacy-safe level, distance, duration, elevation availability and route-quality warnings.
+- Do not infer a precise street address from a route and expose it in the workout history by default.
+- Map tiles and labels are provider content; do not copy, scrape or repurpose them as a source for WALKON's own geographic database.
+
+MapKit is a strong low-friction iOS baseline because it is native and avoids adding a third-party map SDK solely to draw a route. This is a proposed choice, not proof that MapKit meets every visual, offline or cross-platform requirement.
+
+### 38.3 Map provider comparison and decision
+
+**Apple MapKit (recommended iOS v1 candidate)**
+- Native iOS integration and route overlays are documented.
+- Good fit for displaying WALKON's own coordinate polyline and user location while recording.
+- No public MapKit developer API for user-managed downloadable offline map regions was identified in this research. Do not confuse offline maps in the Apple Maps consumer app with a guaranteed offline-map download capability for third-party MapKit apps.
+- Treat previously viewed map content as best-effort cache only. A route line can still be shown against a blank/limited basemap if network map content is unavailable; the route data itself remains local.
+
+**Mapbox Maps SDK**
+- Official iOS documentation describes style packs and tile regions that can be downloaded for offline map display. Offline data needs the relevant style resources and tile regions, and consumes device storage; downloads can drain battery. The documentation describes tile-region limits and lifecycle operations, so limits and licensing must be rechecked against the selected SDK version and contract before implementation. [R3, R4]
+- The Mapbox Map Matching API supports walking and other profiles, but the documented regular request accepts at most 100 coordinates, is request-billed, has rate limits, and requires results to be displayed on a Mapbox map. [R5]
+- Stronger candidate if downloadable offline maps or a cross-platform map experience becomes a release requirement; introduces SDK, token, billing, offline storage and provider-lock-in considerations.
+
+**Google Maps Platform / Roads API**
+- Roads API can snap a path of up to 100 GPS points to likely road geometry and optionally interpolate the result. Google recommends consecutive points be relatively close, ideally within a few city blocks and suggests aiming for no more than 300 m between adjacent samples for good results. [R6]
+- The API is documented as identifying roads a vehicle is travelling along. Do not assume it is a walking-specific map matcher or that it correctly handles footpaths, parks, pedestrian cut-throughs, trails, indoor areas or private paths.
+- Google Maps Platform content has service-specific storage and use restrictions. Do not cache, bulk-download or reuse map/roads content outside the allowed services and terms. [R7]
+- Not recommended as the default WALKON walking-route renderer/matcher without a dedicated pedestrian accuracy and terms review.
+
+**OpenStreetMap data and tile services**
+- OpenStreetMap data is openly reusable under its applicable attribution/licensing conditions, but the community-operated standard tile servers are not a free offline tile-download service.
+- The OSM Foundation tile policy prohibits bulk prefetching, tile archives and offline-area downloads from tile.openstreetmap.org; it requires attribution and compliant caching and may block abusive clients. [R8]
+- If WALKON later chooses OSM-derived offline maps, use a provider that explicitly licenses offline downloads or operate a properly provisioned/self-hosted tile service. Do not implement offline downloads against the community standard tile endpoint.
+
+**Decision:** begin with native MapKit for iOS route display, keep the map provider behind a small presentation adapter, and do not add map matching to the recording path. Revisit Mapbox or a licensed OSM-derived provider only if downloadable offline maps, Android parity or a validated pedestrian map-matching requirement justifies the extra cost and complexity. Re-evaluate vendor terms, pricing, API limits, attribution and data residency at procurement time.
+
+### 38.4 Map matching: optional display enhancement, never measurement authority
+
+Map matching estimates which path in a road/path network most likely corresponds to a noisy GPS trace. It can improve visual presentation but can also be wrong, especially for walkers.
+
+Known risks:
+- A nearest-road matcher may move a user from a footpath to a parallel road, from a park path to a nearby street, across a river/railway barrier, or onto a road on the wrong side of a divided carriageway.
+- Sparse points and long gaps make matching ambiguous. A matcher may invent a plausible-looking route through a tunnel or across an intersection that the user did not traverse.
+- Map data may not include informal paths, campus tracks, trails, stairways, private roads or new pedestrian links.
+- A road-oriented matcher can be inappropriate for a pedestrian activity even if it accepts GPS coordinates.
+- Interpolated geometry adds display points; those points are not new GPS observations and must not be counted as measured distance.
+
+WALKON v1 policy:
+1. Preserve raw and measurement tracks unchanged.
+2. Default to displaying the accepted measurement track; map matching is off until validated.
+3. If a later display-only matcher is enabled, send only the minimum necessary coordinate sequence, in bounded chunks, with explicit consent and a documented provider/privacy basis.
+4. Reject a matched result when it crosses implausible barriers, changes path topology materially, has large displacement from accepted observations, bridges a pause/gap, or has poor/ambiguous confidence.
+5. Never match across separate route segments or across an extended missing-data interval.
+6. Keep both original and matched display versions with provider/model/version and timestamp. Label a corrected display as map-matched where that distinction matters.
+7. Do not recompute distance, pace, elevation, steps or calorie estimates from matched/interpolated points.
+8. If matching fails or the provider is unavailable, show the original measurement track without blocking workout history.
+
+Provider documentation describes API behaviour and limits, not accuracy for WALKON's walking routes. A field study across urban streets, parks, trails, pedestrian paths, dense buildings and poor-GPS conditions is required before choosing any matcher.
+
+### 38.5 Route simplification and rendering performance
+
+Simplification is a display-only operation. Use a geometry algorithm such as Douglas–Peucker or a zoom-aware equivalent on a copy of the display track; retain first/last points, segment boundaries, pause/gap markers and sharp turns that materially describe the route. Never simplify the canonical measurement track or exported original GPX without explicit user choice.
+
+Requirements:
+- Apply simplification with a documented tolerance in metres or screen-space pixels at the target zoom.
+- Recompute the display simplification when zoom changes materially, not on every location callback.
+- Preserve timestamps and source-point index mapping where possible so a selected map point can be traced to its source observation.
+- Do not let simplification create a bridge between separate segments.
+- Bound memory and CPU for long activities; render polylines in chunks if necessary.
+- Verify visual fidelity at overview and street zooms, including tight turns, switchbacks, short loops and dense urban blocks.
+- Keep the unsimplified source available for metrics, export and later algorithm improvements.
+
+### 38.6 GPS quality, route gaps and pedestrian-specific display
+
+Use Core Location's reported horizontal accuracy and authorization state as inputs to quality decisions. Apple's documentation states that desiredAccuracy is a request rather than a guarantee; the framework may initially provide less accurate data, and when precise location is not authorized the effective accuracy is reduced. [R9, R10]
+
+Display behaviour:
+- Show an unobtrusive recording-quality state such as Good, Weak GPS, Waiting for location or Approximate location.
+- Treat negative/invalid accuracy, stale timestamps, impossible speed/jumps and out-of-order samples as quality failures under the Section 28 acceptance logic.
+- A poor point must not drag the polyline across the map. Preserve a gap if no trustworthy path can be inferred.
+- Distinguish a pause from GPS loss. Paused time is not a GPS failure and must not be joined into the active route.
+- Do not infer that a user stopped simply because GPS updates are delayed.
+- If only reduced/approximate location is available, explain that route detail may be limited and allow the user to continue if the product's safety/measurement policy permits; do not silently represent approximate data as precise.
+- Do not show a false precision such as metre-level accuracy when the reported uncertainty is materially larger.
+
+### 38.7 Location privacy and user control
+
+A walking route can reveal a home, workplace, school, medical visit, religious/community attendance or daily routine. Treat precise route history as sensitive personal data even when it is not accompanied by a name.
+
+Product defaults:
+- Recording is explicit and visible. Do not continuously collect precise GPS for passive daily step counting.
+- Request location permission just in time, explain why an active walk needs it, and request only the authorization scope needed for the actual background-recording behaviour.
+- Make background location use clear in onboarding and in the active recording UI. Apple documents system prompts and periodic reminders when apps use location in the background. [R11, R12]
+- Keep workout history private by default. No public route, live tracking, community sharing or trainer access without a separate affirmative action.
+- Separate consent for recording, cloud synchronization, map-matching upload, live location sharing and public/community publication. One consent must not imply another.
+- Provide a clear pause/stop control and a visible indication while location is being recorded.
+- Allow deletion and export of an individual route and a full activity history; deletion semantics and retention periods are specified in Section 39.
+- Avoid route coordinates in analytics, crash reports, notifications, URLs, social previews, support screenshots and ordinary logs.
+- Encrypt local route storage using platform-appropriate file protection and protect remote transfer/storage in transit and at rest; exact security controls and threat model belong to Section 39.
+- Do not use precise location to infer sensitive attributes or to personalize ads.
+
+**Home/work privacy protection:** never publish exact start/end coordinates by default. For any future sharing feature, offer a user-visible privacy zone or endpoint masking option. Masking should remove or generalize the route portion inside a configurable radius or along a defined approach segment, not merely hide the start marker while leaving the path visible. Explain that masking is a privacy transformation and may reduce the displayed/shared distance. Keep the private original unchanged. A public/shared route must be generated as a separate redacted artifact, and the user must preview it before publication.
+
+### 38.8 Data minimization and third-party map/matching requests
+
+Before any coordinate leaves the device, classify the purpose: basemap rendering, geocoding, route matching, live sharing, cloud backup or crash diagnostics. Each has a different data requirement and consent basis.
+
+- Send no route points to a map provider merely to render a locally drawn polyline over its basemap.
+- Map-matching requests should be opt-in or clearly disclosed before first use, and only the minimum necessary segment should be sent.
+- Do not attach account name, email, phone, user profile or unrelated health metrics to map/matching requests.
+- Prefer server-side provider credentials or restricted platform tokens; never embed unrestricted secret keys in the app.
+- Review provider terms for storage, retention, training/secondary use, region, deletion, attribution, caching and restrictions on combining provider content with user data.
+- If a provider cannot meet the privacy and retention requirements, do not send the route to it. Keep local route display functional.
+- For live sharing, use a distinct time-limited sharing session with explicit recipient, expiry and revocation; never expose the user's full historical route library through a live-share token.
+- Do not use public map tile endpoints as a private route upload endpoint or as a database.
+
+### 38.9 Offline and degraded behaviour
+
+The recording engine must not depend on map tiles or provider connectivity. In airplane mode or weak coverage:
+- Continue local GPS capture and durable route persistence under the Section 36/37 lifecycle rules.
+- Show the route over available cached map content if possible; otherwise show a neutral grid/blank background with the route line, distance and a clear offline indicator.
+- Never delay workout start while downloading a map region.
+- Do not silently download large map regions over cellular.
+- If offline map downloads are introduced later, make region, zoom levels, storage estimate, Wi-Fi/cellular choice, update/expiry and delete controls explicit. Use only a provider/license that permits offline storage and validate current SDK quotas and terms.
+- OSM community tile endpoints must not be used for offline prefetch. [R8]
+- Mapbox provides a documented offline style-pack/tile-region workflow, but the implementation must follow its current limits, storage, billing and SDK terms. [R3, R4]
+
+### 38.10 Acceptance and field-validation plan
+
+1. Render a short route with several segments and verify each segment remains separate.
+2. Verify map display geometry never changes stored GPS observations or workout metrics.
+3. Compare raw/measurement/display tracks at overview and street zooms after simplification.
+4. Test tight loops, switchbacks, parallel roads, bridges, underpasses, parks, trails, stairs and dense urban streets.
+5. Inject a large GPS jump and a long missing interval; confirm no false straight-line bridge or implausible snap.
+6. Pause/resume and confirm the route shows a clear segment break and no distance is added across pause time.
+7. Test approximate/reduced location authorization; confirm the app communicates limited precision.
+8. Test no network, poor network, tile-provider outage and matcher outage; recording and local route history remain usable.
+9. Test a long route with tens of thousands of observations; map rendering stays responsive and memory remains bounded.
+10. Verify that no coordinates are sent to a map/matching provider unless required for the selected feature and consented.
+11. Inspect analytics, logs, notifications, crash payloads, URLs and social previews for coordinate leakage.
+12. Create a redacted share preview; verify home/work approach paths are removed, the private original remains intact and the user can cancel.
+13. Revoke location permission during recording; show a clear degraded/paused state and preserve the last durable segment.
+14. Verify provider attribution, caching and offline behaviour against current terms; test that OSM standard tiles are never bulk-prefetched.
+15. Repeat route comparisons against a reference track and classify matcher false positives/false snaps; no provider passes on visual appeal alone.
+
+### 38.11 Open decisions and evidence gaps
+
+- MapKit remains the preferred iOS v1 display candidate; verify the target iOS SDK behaviour and visual/performance constraints in a native prototype after architecture freeze.
+- No Apple MapKit offline-region download API was confirmed in the reviewed public documentation. If true offline basemaps are mandatory, compare licensed Mapbox and self-hosted/licensed OSM-derived options.
+- Select no map-matching provider until pedestrian-specific accuracy, privacy, terms and cost are validated.
+- Define route privacy-zone defaults, masking radius/shape, share expiry and redaction rules in Section 39 with user research and threat modelling.
+- Confirm exact Core Location authorization prompts and background mode requirements against the final minimum iOS version and actual recorder lifecycle.
+- Confirm provider data retention, processing region, contractual deletion and any restrictions on storing or exporting derived geometry before procurement.
+- Define quantitative route-display fidelity, false-snap tolerance, rendering latency and memory thresholds in Section 41. This section does not claim those tests have passed.
+
+### 38.12 Section conclusion
+
+WALKON should begin with native MapKit for iOS display, preserve raw accepted GPS observations and a separate measurement track, and render a derived display polyline only. Map matching is deferred and must remain a reversible, display-only enhancement after pedestrian validation. Route gaps and pauses remain visible rather than being cosmetically bridged. Offline recording must work without map tiles. Precise routes remain private by default; any provider upload, live sharing or public route is a separate purpose requiring clear user control. Offline tile downloads must use a provider that explicitly permits them; the OpenStreetMap standard tile service is not an offline download source.
+
+Research complete for Section 38. Next: Section 39 — Privacy, security, consent, retention and deletion.
+
+#### Section 38 references
+
+- [R1] Apple Developer Documentation, MapPolyline: https://developer.apple.com/documentation/mapkit/mappolyline
+- [R2] Apple Developer Documentation, MKPolylineRenderer: https://developer.apple.com/documentation/mapkit/mkpolylinerenderer
+- [R3] Mapbox Maps SDK for iOS, Concepts and Constraints (offline maps): https://docs.mapbox.com/ios/maps/guides/offline/concepts/
+- [R4] Mapbox Maps SDK for iOS, Manage Offline Data: https://docs.mapbox.com/ios/maps/guides/offline/manage-offline-data/
+- [R5] Mapbox Map Matching API: https://docs.mapbox.com/api/navigation/map-matching/
+- [R6] Google Maps Platform, Roads API Snap to Roads: https://developers.google.com/maps/documentation/roads/snap
+- [R7] Google Maps Platform, Places SDK for iOS policies (storage/use restrictions; review service-specific terms for each API): https://developers.google.com/maps/documentation/places/ios-sdk/policies
+- [R8] OpenStreetMap Foundation, Tile Usage Policy: https://operations.osmfoundation.org/policies/tiles/
+- [R9] Apple Developer Documentation, CLLocationManager.desiredAccuracy: https://developer.apple.com/documentation/corelocation/cllocationmanager/desiredaccuracy
+- [R10] Apple Developer Documentation, CLLocationAccuracy: https://developer.apple.com/documentation/corelocation/cllocationaccuracy
+- [R11] Apple Support, About privacy and Location Services in iOS: https://support.apple.com/en-us/102515
+- [R12] Apple Developer Documentation, NSLocationAlwaysAndWhenInUseUsageDescription: https://developer.apple.com/documentation/BundleResources/Information-Property-List/NSLocationAlwaysAndWhenInUseUsageDescription
