@@ -54,8 +54,8 @@ After these: consolidate contradictions, close architecture decisions, produce a
 ## Last verified checkpoint
 - **Latest completed section:** 37.
 - **Latest research update:** Section 37 — offline-first storage, sync, conflict handling and export.
-- **Section-37 commit:** pending verification after this write.
-- **Section-37 research blob:** pending verification after this write.
+- **Section-37 commit:** 7442ab2b20c86577881f93462b3f2e654e8fb298.
+- **Section-37 research blob:** 6113be98f48dc77594b463c2ee8c291db4216547.
 - **Next action:** research Section 38 — maps, route display, map matching and location privacy.
 
 ---
