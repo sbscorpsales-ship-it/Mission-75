@@ -4,7 +4,8 @@ import path from "node:path";
 const browser=await chromium.launch({headless:true});
 const page=await browser.newPage({viewport:{width:390,height:844},deviceScaleFactor:1});
 const errors=[];page.on("pageerror",e=>errors.push(e.message));
-await page.addInitScript(()=>{localStorage.clear();localStorage.setItem("gativx.v2.fresh.state",JSON.stringify({version:2,goal:{type:"Build strength",duration:"90 days"},entries:{[new Date().getFullYear()+"-"+String(new Date().getMonth()+1).padStart(2,"0")+"-"+String(new Date().getDate()).padStart(2,"0")]:{steps:1948,water:1500,protein:65,distance:.4}},walks:[]}));});
+const legacyFixtures={"mission75.dailyLogs":"preserve-existing-records-fixture","sb-crarbbsvcczwmtvxyrxo-auth-token":"preserve-auth-session-fixture"};
+await page.addInitScript((legacy)=>{for(const [key,value] of Object.entries(legacy))localStorage.setItem(key,value);sessionStorage.setItem("gativx.session.fixture","preserve-session-fixture");localStorage.setItem("gativx.v2.fresh.state",JSON.stringify({version:2,goal:{type:"Build strength",duration:"90 days"},entries:{[new Date().getFullYear()+"-"+String(new Date().getMonth()+1).padStart(2,"0")+"-"+String(new Date().getDate()).padStart(2,"0")]:{steps:1948,water:1500,protein:65,distance:.4}},walks:[]}));},legacyFixtures);
 await page.route("https://**/*",r=>r.abort());
 await page.goto(pathToFileURL(path.resolve("index.html")).href,{waitUntil:"domcontentloaded"});await page.waitForTimeout(300);
 const assert=(v,m)=>{if(!v)throw new Error(m)};
@@ -16,8 +17,12 @@ assert(await page.locator(".bottom button").count()===5,"Expected five navigatio
 for(const tab of ["home","journey","record","walk","coach"]){await page.locator('[data-panel="'+tab+'"]').click();assert(await page.locator("#"+tab+".panel.active").count()===1,"Navigation failed: "+tab)}
 await page.locator('[data-panel="home"]').click();assert(await page.locator("#missionTitle").textContent().then(x=>x.includes("Build strength")),"Mission changed after navigation");
 assert(errors.length===0,"Browser errors: "+errors.join("; "));
-const keys=await page.evaluate(()=>Object.keys(localStorage));assert(keys.includes("gativx.v2.fresh.state"),"Fresh GATIVX store was not used");assert(!keys.some(k=>k.startsWith("mission75.")||k==="gativx.goal.v1"||k==="gativx.motionDaily.v1"),"Legacy data key was read or created");
-console.log("PASS: clean GATIVX v2 uses only its fresh data store");
-console.log("PASS: mission, new metrics and all five navigation tabs render");
-console.log("PASS: no legacy data keys and no browser runtime errors");
+const storage=await page.evaluate(()=>({keys:Object.keys(localStorage),dailyLogs:localStorage.getItem("mission75.dailyLogs"),auth:localStorage.getItem("sb-crarbbsvcczwmtvxyrxo-auth-token"),session:sessionStorage.getItem("gativx.session.fixture")}));
+assert(storage.keys.includes("gativx.v2.fresh.state"),"Fresh GATIVX store was not used");
+assert(storage.dailyLogs==="preserve-existing-records-fixture","Existing Mission-75 browser records were changed or removed");
+assert(storage.auth==="preserve-auth-session-fixture","Existing browser auth session was changed or removed");
+assert(storage.session==="preserve-session-fixture","Existing sessionStorage was cleared");
+console.log("PASS: GATIVX v2 uses its own namespaced data store");
+console.log("PASS: existing Mission-75 records and auth/session storage are preserved");
+console.log("PASS: mission, metrics and all five navigation tabs render without browser errors");
 await browser.close();
