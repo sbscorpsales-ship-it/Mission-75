@@ -11,7 +11,13 @@ targets:
     sources:
       - path: WALKON
     info:
-      path: WALKON/Info.plist
+      properties:
+        NSHealthShareUsageDescription: "WALKON reads your daily step count from Apple Health to show your activity progress."
+        NSHealthUpdateUsageDescription: "WALKON saves walking workouts and their recorded routes to Apple Health when you choose to do so."
+        NSMotionUsageDescription: "WALKON uses motion sensors to measure steps during a walk you start, when supported."
+        NSLocationWhenInUseUsageDescription: "WALKON records your walking route only during an activity you start, including while the screen is locked."
+        UIBackgroundModes:
+          - location
     entitlements:
       path: WALKON/WALKON.entitlements
     settings:
@@ -21,11 +27,6 @@ targets:
         SWIFT_VERSION: "5.0"
         TARGETED_DEVICE_FAMILY: "1"
         GENERATE_INFOPLIST_FILE: YES
-        INFOPLIST_KEY_NSHealthShareUsageDescription: "WALKON reads your daily step count from Apple Health to show your activity progress."
-        INFOPLIST_KEY_NSHealthUpdateUsageDescription: "WALKON saves walking workouts and their recorded routes to Apple Health when you choose to do so."
-        INFOPLIST_KEY_NSMotionUsageDescription: "WALKON uses motion sensors to measure steps during a walk you start, when supported."
-        INFOPLIST_KEY_NSLocationWhenInUseUsageDescription: "WALKON records your walking route only during an activity you start, including while the screen is locked."
-        INFOPLIST_KEY_UIBackgroundModes: "location"
         CODE_SIGN_ENTITLEMENTS: WALKON/WALKON.entitlements
         SUPPORTS_MACCATALYST: NO
     scheme:
