@@ -84,6 +84,50 @@ final class WALKONTests: XCTestCase {
         XCTAssertEqual(reopened.sessions.count, 1)
     }
 
+    func testLegacyWalkPayloadDecodesWithoutRouteSegments() throws {
+        let id = UUID()
+        let json = """
+        {
+          "id": "\(id.uuidString)",
+          "startedAt": 1800000000,
+          "endedAt": null,
+          "steps": 12,
+          "distanceMeters": 40.0,
+          "route": [{"latitude": 15.85, "longitude": 74.50}]
+        }
+        """
+        let session = try JSONDecoder().decode(WalkSession.self, from: Data(json.utf8))
+        XCTAssertEqual(session.id, id)
+        XCTAssertNil(session.routeSegments, "Legacy records must remain readable.")
+        XCTAssertEqual(session.route.count, 1)
+    }
+
+    @MainActor
+    func testFinalizedWalkPreservesSeparateGPSSegments() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("WALKONSegments-\\(UUID().uuidString)", isDirectory: true)
+        let databaseURL = directory.appendingPathComponent("walk-history.sqlite")
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let id = UUID()
+        let started = Date(timeIntervalSince1970: 1_800_000_200)
+        let store = ActivityStore(databaseURL: databaseURL)
+        XCTAssertTrue(store.beginDraft(id: id, startedAt: started))
+        let first = JournalRoutePoint(sequence: 0, segment: 0, timestamp: started,
+            latitude: 15.85, longitude: 74.50, horizontalAccuracy: 4)
+        let second = JournalRoutePoint(sequence: 1, segment: 1, timestamp: started.addingTimeInterval(90),
+            latitude: 15.86, longitude: 74.51, horizontalAccuracy: 4)
+        XCTAssertTrue(store.appendRoutePoint(workoutID: id, point: first))
+        XCTAssertTrue(store.appendRoutePoint(workoutID: id, point: second))
+        XCTAssertTrue(store.finalizeDraft(id, endedAt: started.addingTimeInterval(120)))
+
+        let saved = try XCTUnwrap(store.sessions.first)
+        XCTAssertEqual(saved.route.count, 2)
+        XCTAssertEqual(saved.routeSegments?.count, 2)
+        XCTAssertEqual(saved.routeSegments?.map(\.count), [1, 1],
+            "A GPS gap must remain a discontinuity, not a connecting line.")
+    }
+
     @MainActor
     func testDiscardDraftRemovesJournaledRoutePoints() throws {
         let directory = FileManager.default.temporaryDirectory
