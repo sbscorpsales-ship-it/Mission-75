@@ -5,6 +5,7 @@ on:
     branches: ["main", "gativx/dashboard-connected-data-v2"]
     paths:
       - "index.html"
+      - "app-v2.html"
       - "sw.js"
       - "scripts/check-web.mjs"
       - "scripts/browser-smoke.mjs"
