@@ -6,13 +6,13 @@
 - **Repository:** `sbscorpsales-ship-it/Mission-75`, branch `main`.
 - **Blueprint:** `ios/WALKON/ENGINEERING-BLUEPRINT.md`.
 - **Phase:** Final architecture consolidated; **GO for local-first native iOS core implementation** under the user's standing instruction. No app code/build/device validation is yet claimed.
-- **Current completed research:** Sections 1–44 exist below. Latest research section: **44 — Final architecture consolidation and implementation go/no-go**.
-- **Exact next task:** **Complete milestone 1 CI verification.** Resolve any XcodeGen/Xcode build or test failures, verify a passing simulator build and unit-test run, then audit the generated app configuration. Preserve the blueprint; do not import legacy GATIVX/Mission-75 app code, data or credentials.
-- **After Section 37:** update this register's latest-completed and exact-next-task fields before proceeding to Section 38 (maps, route display, map matching and location privacy).
+- **Completed research:** Sections 1–44. **Implementation progress:** Section 45 records milestone-1 changes and remaining blockers.
+- **Exact next task:** **Complete milestone 1 CI verification.** Get XcodeGen generation, iOS Simulator build and XCTest green; resolve compile/test failures. Then implement durable active-workout draft and append-only route journaling. Preserve the blueprint; do not import legacy GATIVX/Mission-75 app code, data or credentials.
+- **Next implementation priority:** reliability and data durability; do not add cosmetic redesign or optional social/cloud features ahead of core correctness.
 - **No user device testing or screenshot requests** until the research/architecture blueprint is sufficiently complete and a coherent buildable test plan is ready.
 
 ## Non-negotiable working rules
-1. **Research before implementation.** Do not write app code, build, deploy, or ask the user to test until the research and architecture gates are explicitly closed.
+1. **Architecture gate is closed.** Section 44 authorizes local-first iOS core implementation. Build in small verified slices; no public release, paid service or irreversible account/legal action without separate approval.
 2. **One research domain at a time.** Complete the domain, document evidence, implications, unresolved questions and validation gates; then move to the next exact task.
 3. **No repeated recaps.** Do not re-explain completed sections unless a new finding changes them. Refer to section numbers and continue from the exact next task.
 4. **No circular instructions.** Never ask the user to repeat known context, re-run completed steps, or perform research the assistant can do.
@@ -49,6 +49,7 @@
 - **Section 43:** Test pyramid, deterministic fixtures, reference instruments, quantitative provisional acceptance thresholds, fault injection, CI/build/signing pipeline, security/privacy verification, evidence package and release-blocking go/no-go criteria.
 - **Section 44:** Consolidated architecture decision register, canonical first-release data flow, implementation sequence, unresolved decisions, scoped GO for local iOS core implementation and milestone-1 definition of done.
 - **Section 45:** Native project and CI setup, SQLite local history, HealthKit observer refresh, initial background location/GPS filters, retry UI, test target and explicitly tracked incomplete items.
+- **Section 45:** Native project and CI setup, SQLite local history, HealthKit observer refresh, initial background location/GPS filters, retry UI, test target and explicitly tracked incomplete items.
 
 ## Open research queue (ordered)
 - 36. [COMPLETE] Battery, thermal management and long-session behaviour.
@@ -62,13 +63,14 @@
 - 44. [COMPLETE] Final architecture consolidation and implementation go/no-go.
 
 ## Last verified checkpoint
-- **Latest completed section:** 44.
-- **Latest research update:** Section 44 — final architecture consolidation and implementation go/no-go.
+- **Latest completed research section:** 44 — final architecture consolidation and implementation go/no-go.
 - **Section-44 commit:** 5788ed4dc9b2a51c52169d0cd1cb92847e181df1.
 - **Section-44 research blob:** ec27d6b5e954d04f4009c7947c563b8c80675826.
-- **Milestone 1 progress:** existing WALKON scaffold audited; iOS deployment target raised from 17.0 to 26.0; HealthKit update purpose string added; duplicate WALKON build workflow removed; unit-test target and smoke test added; consolidated macOS CI workflow added. CI run is in progress; earlier runs failed because the test source directory had not yet been committed and are not accepted as final evidence.
-- **Latest implementation commit:** 024205f73babed8fe70e5b2dc1d24cfcc4ebaa82.
-- **Next action:** verify the current CI run, fix any failures and record the final milestone-1 evidence.
+- **Latest implementation progress:** Section 45; native project configured for iOS 26.0; WALKON XCTest target added; SQLite WAL/FULL local history and idempotent save test added; HealthKit observer refresh added; initial background location session and GPS quality gates added; save-failure retry UI added; legacy GATIVX CI made manual-only.
+- **Latest implementation commit:** 28ca34f166c351637af658f1472cbe3acdc23733 (followed by workflow isolation commit 03217aa120a85c2a150b001cd9185d041eba684a).
+- **Current blueprint blob before this register update:** d830bed7bda1fd8a12b1388a2a769836c3119fca.
+- **CI status:** WALKON CI run 42444282037 for commit 28ca34f166c351637af658f1472cbe3acdc23733 was queued at last inspection; no green build/test evidence yet. Newer queued run 42444306146 includes the Section 45 register update but is not a code-validation substitute.
+- **Next action:** obtain a completed green WALKON simulator build and XCTest result; fix errors; then implement durable in-progress workout journaling and route segments.
 
 ---
 
