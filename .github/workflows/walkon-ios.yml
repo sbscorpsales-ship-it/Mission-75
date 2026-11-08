@@ -5,6 +5,7 @@ on:
   pull_request:
     paths:
       - "ios/WALKON/**"
+      - "ios/WALKONTests/**"
       - "ios/project.yml"
       - ".github/workflows/walkon-ios.yml"
   push:
