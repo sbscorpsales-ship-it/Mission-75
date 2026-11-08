@@ -5,9 +5,9 @@
 - **Product:** WALKON — fresh native fitness app with fresh data. Do not resume or import GATIVX/Mission-75 app implementation or data.
 - **Repository:** `sbscorpsales-ship-it/Mission-75`, branch `main`.
 - **Blueprint:** `ios/WALKON/ENGINEERING-BLUEPRINT.md`.
-- **Phase:** Research and engineering specification only. **App building is not authorized yet.**
-- **Current completed research:** Sections 1–43 exist below. Latest research section: **43 — Test strategy, reference instruments, acceptance thresholds and release gates**.
-- **Exact next task:** **Final consolidation — Sections 1–43.** Audit contradictions and duplicates; classify each decision as selected, deferred or unresolved; reconcile implementation sequence, iOS version/device support, data model, persistence, HealthKit/Core Motion/Core Location, backend and privacy; produce a single implementation-ready specification, final architecture decision register and explicit go/no-go checklist. No further broad research sections unless a specific blocker is found.
+- **Phase:** Final architecture consolidated; **GO for local-first native iOS core implementation** under the user's standing instruction. No app code/build/device validation is yet claimed.
+- **Current completed research:** Sections 1–44 exist below. Latest research section: **44 — Final architecture consolidation and implementation go/no-go**.
+- **Exact next task:** **Implementation milestone 1 — audit the current repository tree and create the clean native WALKON iOS project foundation plus CI build/test workflow.** Preserve the blueprint; do not import legacy GATIVX/Mission-75 app code, data or credentials.
 - **After Section 37:** update this register's latest-completed and exact-next-task fields before proceeding to Section 38 (maps, route display, map matching and location privacy).
 - **No user device testing or screenshot requests** until the research/architecture blueprint is sufficiently complete and a coherent buildable test plan is ready.
 
@@ -47,6 +47,7 @@
 - **Section 41:** iOS profiling tools, provisional device budgets, battery/thermal methodology, CPU/memory/storage, route-volume formulas, network sync efficiency, backend concurrency, Supabase cost model, privacy-safe dashboards, SLO definitions and release performance gates.
 - **Section 42:** SwiftUI accessibility, VoiceOver/Voice Control/Switch Control, Dynamic Type, contrast/reduced motion, accessible map alternatives, gait diversity, step-count bias with slow gait and mobility aids, inclusive goals, reference procedures and release acceptance gates.
 - **Section 43:** Test pyramid, deterministic fixtures, reference instruments, quantitative provisional acceptance thresholds, fault injection, CI/build/signing pipeline, security/privacy verification, evidence package and release-blocking go/no-go criteria.
+- **Section 44:** Consolidated architecture decision register, canonical first-release data flow, implementation sequence, unresolved decisions, scoped GO for local iOS core implementation and milestone-1 definition of done.
 
 ## Open research queue (ordered)
 - 36. [COMPLETE] Battery, thermal management and long-session behaviour.
@@ -57,20 +58,20 @@
 - 41. [COMPLETE] Performance engineering, capacity modelling, cost and release observability.
 - 42. [COMPLETE] Accessibility, gait diversity and inclusive measurement.
 - 43. [COMPLETE] Test strategy, reference instruments, acceptance thresholds and release gates.
-- Final consolidation: resolve contradictions and close architecture decisions; create one implementation-ready specification and explicit go/no-go checklist. No more broad research loops.
+- 44. [COMPLETE] Final architecture consolidation and implementation go/no-go.
 
 ## Last verified checkpoint
-- **Latest completed section:** 43.
-- **Latest research update:** Section 43 — test strategy, reference instruments, acceptance thresholds and release gates.
-- **Section-43 commit:** pending verification.
-- **Section-43 research blob:** pending verification.
-- **Next action:** final consolidation of Sections 1–43 and explicit build-readiness decision.
+- **Latest completed section:** 44.
+- **Latest research update:** Section 44 — final architecture consolidation and implementation go/no-go.
+- **Section-44 commit:** pending verification.
+- **Section-44 research blob:** pending verification.
+- **Next action:** audit repository tree and create native WALKON iOS project foundation plus CI build/test workflow.
 
 ---
 
 # WALKON — Engineering Blueprint (Research Draft)
 
-Status: Research draft — NOT final architecture approval; Section 43 completed 2026-11-08
+Status: Consolidated implementation specification; GO for local iOS core implementation; Section 44 completed 2026-11-08
 Date: 2026-11-07
 Product: WALKON (temporary six-letter product name)
 Platform in first release: Native iPhone app (SwiftUI, iOS 26.0+)
@@ -4894,3 +4895,110 @@ Research complete for Section 43. Next: consolidate Sections 1–43, resolve con
 - [R4] OWASP Mobile Application Security Verification Standard (MASVS): https://mas.owasp.org/MASVS/
 - [R5] OWASP Mobile Application Security Testing Guide (MASTG): https://mas.owasp.org/MASTG/0x04b-Mobile-App-Security-Testing/
 - [R6] Apple App Review Guidelines, including HealthKit and fitness data restrictions: https://developer.apple.com/app-store/review/guidelines/
+
+
+## 44. Final architecture consolidation and implementation go/no-go
+
+Status: Consolidation complete 2026-11-08. Decisions marked SELECTED are the build baseline; CONDITIONAL items require evidence before activation; DEFERRED items are outside the first release; OPEN items must be closed before the affected feature ships. This is not a claim that code, builds, tests or device validation already exist.
+
+### 44.1 Product boundary and release definition
+
+**Selected — WALKON is a new, native iPhone-first walking recorder with a fresh data namespace.** The repository's historical name is only a GitHub identifier. Do not import old GATIVX/Mission-75 app code, credentials, schemas, workouts, users or health data.
+
+**First release must prove:**
+1. Reliable daily step display from HealthKit with correct local-day boundaries, refresh and honest permission/data states.
+2. A user-started outdoor walking workout using Apple's iPhone workout lifecycle.
+3. GPS route capture with quality metadata, segment/gap handling and distance/pace derived only from accepted observations.
+4. Durable local save and recovery independent of network.
+5. HealthKit workout and route export with safe partial-failure handling.
+6. Usable history and accessible primary workflows.
+7. Privacy, security, deletion and operational foundations sufficient for a controlled TestFlight pilot.
+
+No social feed, leaderboards, trainer marketplace, coaching video, payments, subscriptions, advertising, public route sharing, Android client or live-location sharing in the first release.
+
+### 44.2 Consolidated decision register
+
+| Domain | Decision | Status and implementation rule |
+|---|---|---|
+| iOS platform | Native SwiftUI, iOS 26.0+ | **Selected.** Use iOS 26 workout-session APIs; set deployment target during project foundation. |
+| Device support | iPhone 12 Pro Max is a named initial physical validation device | **Selected for first validation**, not proof of minimum support. Publish supported device/OS matrix only after compatibility tests. |
+| Workout lifecycle | HKWorkoutSession + HKLiveWorkoutBuilder | **Selected.** One WorkoutCoordinator owns lifecycle and state; no competing timer/state machine. |
+| Workout data source | HKLiveWorkoutDataSource for supported live metrics | **Selected.** Do not add duplicate sensor values to builder metrics. |
+| Session steps | Prefer workout-builder step statistics if available and validated; otherwise separately evaluate CMPedometer | **Conditional.** Exactly one source may populate session steps. If neither is valid, show unavailable; never synthesize or add sources. |
+| Daily steps | HealthKit cumulative daily statistics with observer/refresh strategy | **Selected.** Dashboard all-source daily aggregate; never add session steps to it. |
+| GPS capture | Core Location modern background activity model for explicit active workout | **Selected.** Use When In Use by default, modern service/background activity sessions where supported, visible recording state and explicit stop/pause semantics. No promise of uninterrupted OS execution. |
+| Route association | HealthKit workout builder route series / route finalization APIs | **Selected.** Preserve local route if HealthKit route export fails. |
+| Distance/pace | Filtered sequential accepted location samples; explicit gaps and segments | **Selected.** No straight-line gap bridging; elapsed and moving pace remain separate. |
+| Elevation | No public accuracy claim in v1 | **Deferred/conditional.** Store only if validated with a reference method; do not gate core walk recording. |
+| Local persistence | SQLite, WAL, full synchronous durability, versioned migrations, serialized writer and recovery journal | **Selected.** Local database is source of truth for saved WALKON workouts. |
+| Local/cloud boundary | Local-first recorder; network never required to start, continue or save locally | **Selected.** Sync is asynchronous outbox workflow. |
+| Backend | Modular monolith with relational DB, object storage and versioned API | **Selected as architecture pattern.** Provider not selected. Supabase remains a candidate pending prototype, security, load, restore and total-cost evaluation. |
+| Identity | Local recording works without account/network; account needed only for cloud sync features | **Selected product rule.** Exact sign-in provider remains open and must not block local recorder. |
+| Maps | Native map display with privacy minimization; map matching display-only | **Selected.** Map matching cannot alter canonical measured distance. Provider/licensing and offline map policy remain open. |
+| Privacy | Health and precise route data treated as highly sensitive; consent, purpose limitation, export and deletion | **Selected.** No health/route data for ads or unrelated analytics. |
+| Accessibility | Native accessibility semantics and assistive-technology acceptance gates | **Selected.** Core workflows must remain operable without colour-, sound-, gesture- or sight-only information. |
+| Android | Health Connect-based future architecture | **Deferred.** No Android code or Google Fit legacy dependency in first release. |
+| Product analytics | Minimal privacy-safe operational telemetry only | **Selected.** No raw coordinates, health samples, tokens or route payloads in logs/analytics. |
+| Build environment | GitHub-hosted macOS runner with pinned Xcode/toolchain and protected signing secrets | **Selected as build approach.** Signing requires valid Apple Developer account/certificates/profiles; runner does not replace iPhone testing. |
+
+### 44.3 Canonical first-release data flow
+
+1. App launch opens/migrates the WALKON SQLite store and recovers journaled workout state before presenting a misleading empty dashboard.
+2. Daily steps service queries HealthKit cumulative statistics for the user's local calendar day; observer/foreground/timezone refresh updates value and timestamp.
+3. User explicitly starts an outdoor walk. Create and durably commit a new WALKON workout UUID/draft before sensor capture.
+4. WorkoutCoordinator configures and starts HKWorkoutSession/HKLiveWorkoutBuilder; RouteRecorder starts Core Location with explicit authorization/accuracy state and opens a route segment.
+5. Sensor callbacks are timestamp-checked and quality-screened. Accepted route observations are durably journaled in bounded batches; invalid/rejected observations do not inflate distance. A gap closes continuity and is represented explicitly.
+6. Session step display uses one validated source only. Daily HealthKit steps remain a separate aggregate.
+7. Pause closes the active route segment and stops route accumulation. Resume opens a new segment. No distance or steps are invented across pause.
+8. Finish freezes capture, obtains final platform metrics, commits the local workout/route transaction and journal state, then finalizes HealthKit workout/route association.
+9. HealthKit export failure never deletes the local workout. UI distinguishes locally saved from HealthKit-exported and offers safe retry where the platform lifecycle permits.
+10. If cloud sync is enabled later, only committed local operations enter the idempotent outbox. Sync acknowledgement is independent of local save; retries cannot create duplicate workouts.
+11. History reads from local SQLite first. Optional cloud sync must never replace local history with a partial remote result.
+
+### 44.4 Final implementation sequence
+
+Build in small compiling vertical slices, each merged only with passing tests and evidence:
+1. **Repository and native project foundation:** audit existing repository paths; preserve blueprint; create clean WALKON app target and XcodeGen project; set iOS 26.0; configure bundle identifier, HealthKit entitlement, purpose strings, background location capability, CI and secret handling. Do not copy legacy app logic.
+2. **Persistence and recovery:** implement SQLite schema/migrations, WAL configuration, transaction writer, workout journal, route segments/points, outbox interfaces and crash/fault tests before sensor recording.
+3. **HealthKit workout lifecycle:** implement HKWorkoutSession/HKLiveWorkoutBuilder coordinator, state transitions, metrics, pause/resume/finish/discard, delegate lifecycle and recovery.
+4. **Core Location route engine:** implement authorization, background activity session, filtering, gap detection, segment persistence, distance and pace derivation, route-builder integration.
+5. **Daily steps:** implement HealthKit cumulative statistics and refresh. Add session-step source only after proving builder metric or CMPedometer choice with isolated tests.
+6. **Accessible core UI:** onboarding/permissions, dashboard, recording controls, recording status, save/recovery, history and route summary. Use native scalable controls and assistive labels.
+7. **HealthKit export and local history:** complete workout/route finalization, partial-failure UI, retry rules and end-to-end idempotency.
+8. **Physical-device validation:** run controlled route/step trials, screen-locked background sessions, crash recovery, permission changes, battery/thermal soak and inclusive usability tests on declared device cohort.
+9. **Backend decision and optional sync:** only after local core is stable, benchmark provider candidates, prove tenancy/RLS, restore, deletion and total cost; then implement selected provider.
+10. **TestFlight and release:** complete Section 43 release evidence, signing, privacy disclosures, staged beta, rollback and operational runbook.
+
+### 44.5 Remaining decisions that must not block local core implementation
+
+- Exact bundle identifier, display name finalization, Apple Developer team, signing certificate and provisioning setup.
+- Minimum supported iPhone model cohort beyond the initial iPhone 12 Pro Max validation device.
+- Whether live workout builder exposes a suitable step statistic on all supported configurations; CMPedometer fallback must be empirically evaluated before use.
+- Exact backend provider, region, database sizing and cloud sync scope.
+- Map provider, tile licensing, attribution and offline map policy.
+- Quantitative battery budget, production performance SLOs, and step/distance accuracy claims; all require measurements.
+- Account provider and account-required cloud features.
+- Elevation inclusion and any non-walking activity model.
+
+Each item must have an owner, decision date and evidence when it becomes relevant. Do not silently turn an unresolved choice into a hard-coded assumption.
+
+### 44.6 Explicit build-readiness decision
+
+**GO — local iOS core implementation.**
+
+The research/architecture gates for beginning the local-first native iPhone core are closed sufficiently to start implementation. The user has explicitly asked to continue autonomously and finish the work without repeated permission prompts. Proceed with the implementation sequence above. Do not wait for another permission message for routine repository edits, code generation, tests or safe CI configuration within the existing repository.
+
+This GO is narrowly scoped:
+- It authorizes beginning implementation of the WALKON local iOS core.
+- It does **not** claim that an app exists, builds, is signed, is installed, records correctly, syncs, or is ready for TestFlight.
+- It does **not** authorize purchases, paid cloud upgrades, accepting legal terms, publishing, public release, material costs, or using personal/health data beyond the stated WALKON purpose.
+- Any external paid service, irreversible public release, account/legal action or material spend must be surfaced before that action.
+- Physical-device validation remains mandatory before calling sensor, background, durability or accuracy work complete.
+
+### 44.7 First implementation milestone and proof required
+
+**Next exact task:** audit the current repository tree and current project files; create the minimal native WALKON iOS project foundation and CI build definition without touching legacy GATIVX/Mission-75 app logic. Verify project configuration, iOS deployment target, entitlements, permission strings, source layout and GitHub Actions workflow. Commit the foundation, then run the macOS/Xcode CI build and unit-test skeleton. If signing secrets are not configured, produce an unsigned simulator build/test result and clearly report the signing limitation; never invent a successful device archive.
+
+**Definition of done for milestone 1:** clean project builds in CI for iOS Simulator; project configuration is reproducible from source; required capabilities/purpose strings are present and audited; no secrets are committed; test target runs; GitHub commit and CI run are independently verified. No user device test is requested until this milestone and subsequent core sensor work are ready.
+
+Final consolidation complete. Next: implement WALKON native project foundation and CI; preserve the evidence discipline and continuity register.
