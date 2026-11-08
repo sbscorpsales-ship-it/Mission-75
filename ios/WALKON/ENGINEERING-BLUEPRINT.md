@@ -6,8 +6,8 @@
 - **Repository:** `sbscorpsales-ship-it/Mission-75`, branch `main`.
 - **Blueprint:** `ios/WALKON/ENGINEERING-BLUEPRINT.md`.
 - **Phase:** Research and engineering specification only. **App building is not authorized yet.**
-- **Current completed research:** Sections 1–40 exist below. Latest research section: **40 — Backend architecture, API design, identity, tenancy and operational reliability**.
-- **Exact next task:** **Section 41 — Performance engineering, capacity modelling, cost and release observability.** Research device/app/backend performance budgets, route-volume modelling, battery/memory/CPU/network measurements, database and storage capacity, concurrency/load testing, cost forecasts, SLOs, dashboards and release gates. Do not drift into unrelated feature design.
+- **Current completed research:** Sections 1–41 exist below. Latest research section: **41 — Performance engineering, capacity modelling, cost and release observability**.
+- **Exact next task:** **Section 42 — Accessibility, gait diversity and inclusive measurement.** Research accessible interaction, VoiceOver, Dynamic Type, motor/vision/hearing accessibility, diverse gait and mobility patterns, step-count bias, assistive-device compatibility, adaptive goals and inclusive field validation. Do not drift into unrelated feature design.
 - **After Section 37:** update this register's latest-completed and exact-next-task fields before proceeding to Section 38 (maps, route display, map matching and location privacy).
 - **No user device testing or screenshot requests** until the research/architecture blueprint is sufficiently complete and a coherent buildable test plan is ready.
 
@@ -44,28 +44,31 @@
 - **Section 38:** Native map rendering, provider comparison, pedestrian map-matching limits, display-only route simplification, GPS quality/gaps, offline map licensing, route privacy, endpoint masking and location-data minimization.
 - **Section 39:** Data classification and threat model, iOS file/Keychain protection, API/session security, granular consent, HealthKit restrictions, India DPDP staged commencement, retention, export/deletion, processor controls, backup/restore and incident response.
 - **Section 40:** Modular-monolith backend, provider evaluation, account tenancy, RLS and object authorization, versioned API contracts, idempotent ingestion, route/object storage, durable jobs, observability, CI/CD, backups/restore, quotas and API security testing.
+- **Section 41:** iOS profiling tools, provisional device budgets, battery/thermal methodology, CPU/memory/storage, route-volume formulas, network sync efficiency, backend concurrency, Supabase cost model, privacy-safe dashboards, SLO definitions and release performance gates.
 
 ## Open research queue (ordered)
-36. Battery, thermal management and long-session behaviour.
-37. [COMPLETE] Offline-first storage, sync, conflict handling and export.
-38. [COMPLETE] Maps, route display, map matching and location privacy.
-39. [COMPLETE] Privacy, security, consent, retention and deletion.
-40. Accessibility, gait diversity and inclusive measurement.
-41. Test strategy, reference instruments, acceptance thresholds and release gates.
-After these: consolidate contradictions, close architecture decisions, produce a single implementation-ready specification and explicit go/no-go checklist. Only then ask for authorization to build.
+- 36. [COMPLETE] Battery, thermal management and long-session behaviour.
+- 37. [COMPLETE] Offline-first storage, sync, conflict handling and export.
+- 38. [COMPLETE] Maps, route display, map matching and location privacy.
+- 39. [COMPLETE] Privacy, security, consent, retention and deletion.
+- 40. [COMPLETE] Backend architecture, API design, identity, tenancy and operational reliability.
+- 41. [COMPLETE] Performance engineering, capacity modelling, cost and release observability.
+- 42. Accessibility, gait diversity and inclusive measurement.
+- 43. Test strategy, reference instruments, acceptance thresholds and release gates.
+After these: consolidate contradictions, close architecture decisions, produce a single implementation-ready specification and explicit go/no-go checklist. Then present the build-readiness decision and proceed according to the agreed development authorization.
 
 ## Last verified checkpoint
-- **Latest completed section:** 40.
-- **Latest research update:** Section 40 — backend architecture, API design, identity, tenancy and operational reliability.
-- **Section-40 commit:** 42c5fffe7fbe9db36e8872e4fe87083226853f53.
-- **Section-40 research blob:** f1e11a69d230fb7f2857c3bbef00dce26927c32a.
-- **Next action:** research Section 41 — performance engineering, capacity modelling, cost and release observability.
+- **Latest completed section:** 41.
+- **Latest research update:** Section 41 — performance engineering, capacity modelling, cost and release observability.
+- **Section-41 commit:** pending verification after this write.
+- **Section-41 research blob:** pending verification after this write.
+- **Next action:** research Section 42 — accessibility, gait diversity and inclusive measurement.
 
 ---
 
 # WALKON — Engineering Blueprint (Research Draft)
 
-Status: Research draft — NOT final architecture approval
+Status: Research draft — NOT final architecture approval; Section 41 completed 2026-11-08
 Date: 2026-11-07
 Product: WALKON (temporary six-letter product name)
 Platform in first release: Native iPhone app (SwiftUI, iOS 26.0+)
@@ -4285,3 +4288,260 @@ Research complete for Section 40. Next: Section 41 — Performance engineering, 
 - [R5] OWASP API Security Top 10 2023: https://api-security.owasp.org/editions/2023/en/0x11-t10/
 - [R6] OWASP API Security Project: https://owasp.org/projects/api-security-project/
 - [R7] Apple App Review Guideline 5.1.1(v), account deletion: https://developer.apple.com/help/app-review/guideline-reference/5-1-1-account-deletion/
+
+
+## 41. Performance engineering, capacity modelling, cost and release observability
+
+Research update: 2026-11-08. Scope: define measurable performance budgets and a repeatable profiling/capacity/cost process for WALKON's local-first iPhone recorder and candidate backend. This is a proposed engineering baseline, not measured device performance, a provider quote, an SLO commitment or proof that any app has passed.
+
+### 41.1 Performance objectives and measurement discipline
+
+Performance must preserve the primary product contract: accurate, durable workout capture takes priority over animation, map decoration, background sync speed or nonessential features.
+
+Measure separately:
+- **Recorder correctness:** accepted GPS sample count, sequence continuity, dropped/rejected sample reasons, distance consistency, save/finalize correctness and crash recovery.
+- **Responsiveness:** cold/warm launch, time to ready, start/pause/resume/finish response, history load, map interaction and UI hitch rate.
+- **Device resources:** CPU time, memory footprint/peak, disk writes, storage growth, network bytes, location activity and thermal state.
+- **Energy:** battery percentage delta over controlled matched sessions, Xcode energy diagnostics, Instruments Power Profiler and MetricKit telemetry.
+- **Backend:** API latency/error rate, ingest throughput, queue delay, database saturation, object-storage throughput, sync lag and restore performance.
+- **Economics:** cost per active user, completed workout, retained route-hour and GB-month, including backups, egress, logs and operational add-ons.
+
+Every benchmark must record device model, OS/build, app commit, battery health/charge, Low Power Mode, screen state/brightness, network, location environment, workout duration, GPS sample count, map visibility, other running apps and ambient/thermal context. Repeat tests; compare distributions and confidence intervals rather than one lucky run. Never compare an instrumented debug build to a release build and call the difference an optimization.
+
+### 41.2 iOS profiling tools and authoritative platform signals
+
+Apple's current guidance recommends using Xcode, MetricKit and Instruments to investigate battery use. It identifies CPU, GPU, display, location activity and Wi-Fi/cellular transfer as relevant power categories; Power Profiler can record on-device traces on iPhone running iOS 26 or later. [R1, R2]
+
+Required tool chain:
+- **XCTest performance tests:** repeatable clock, CPU, memory, storage, launch and UI hitch measurements with baselines. XCTest reports significant regressions against established baselines. [R3, R4]
+- **Instruments:** Time Profiler, Allocations, Leaks, Points of Interest/signposts, Network, File Activity and Power Profiler for root-cause analysis.
+- **Xcode Organizer / Battery Usage:** review version-level energy trends where enough telemetry exists; not a substitute for controlled local experiments. [R1]
+- **MetricKit:** aggregate field metrics and diagnostics with app-version context; use only privacy-minimized telemetry and avoid route/health payloads. [R1]
+- **Device performance traces:** capture representative locked-screen/background walks and analyse later on a Mac; the iOS 26 Power Profiler workflow supports recording traces on device for later inspection. [R2]
+- **Backend load tests:** synthetic accounts and route traces; no real user routes in load fixtures.
+
+Simulator is useful for logic and UI tests but cannot certify real GPS reception, radio/battery behaviour, thermal throttling, background execution or wearable interaction. Those require physical devices.
+
+### 41.3 Proposed iPhone performance budgets (initial engineering targets)
+
+These are WALKON starting targets to validate and revise on representative supported iPhones; they are not Apple guarantees or measured results.
+
+| Metric | Initial target | Measurement/qualification |
+|---|---:|---|
+| Cold launch to usable dashboard | p95 ≤ 3.0 s | Release build, physical device, warm/cold cache reported separately |
+| Warm foreground resume to usable | p95 ≤ 1.5 s | Exclude OS unlock animation |
+| Start/pause/resume UI acknowledgement | p95 ≤ 300 ms | Local state transition; HealthKit completion is a separate state |
+| Local durable route-batch commit | p95 ≤ 250 ms | Representative batch, release build, no network dependency |
+| Workout finish to locally saved state | p95 ≤ 1.0 s | Finalization work may continue with explicit progress if larger |
+| History first page | p95 ≤ 1.5 s | Local database, first 20 summaries |
+| Main-thread blocking | No recurring >100 ms stalls | Instrumented interaction traces |
+| UI hitching | No persistent/recurring hitch under normal recording | XCTest hitch metric and physical-device review |
+| Memory growth | No unbounded growth over 3-hour soak | Track baseline, peak and post-session retained memory |
+| Crash-free recording sessions | ≥ 99.5% pilot target | Minimum meaningful cohort and confidence interval required |
+| Data loss after forced termination | Zero acknowledged durable records lost | Fault-injection and journal replay tests |
+| Route persistence backlog | Bounded; drains after recovery | Must not grow without bound during a long offline session |
+
+A p95 budget is not satisfied by an average. Report p50, p90, p95, p99, maximum, sample count and failure count. Averages can hide the slowest walks and oldest supported devices.
+
+### 41.4 Battery and thermal acceptance methodology
+
+There is no honest universal “battery percentage per hour” promise before testing; battery age, signal, screen brightness, temperature, GPS environment and radio conditions materially affect results.
+
+Test at least:
+1. 60-minute outdoor walk, screen mostly off, GPS active, no map visible.
+2. 60-minute walk with map visible and normal user interaction.
+3. 2-hour walk in mixed urban/park coverage with screen off for most of session.
+4. 3-hour soak with periodic GPS loss, app backgrounding and route persistence.
+5. Low Power Mode, low battery, warm ambient conditions and poor cellular coverage.
+6. Sync disabled, Wi-Fi available, cellular only and airplane/offline conditions.
+
+For each scenario, run matched control and WALKON sessions on the same device, repeat at least five times where practical, randomize order, record battery delta and temperature/thermal state, and report median plus spread. Battery percentage is coarse; use Power Profiler/MetricKit where available to diagnose subsystem cost.
+
+Proposed acceptance rule: WALKON must not cause sustained thermal pressure or unexpected system performance degradation in the target walk scenarios. Set a numeric battery budget only after pilot measurements and product trade-off review. If the recorder is expensive, optimize location request strategy, CPU wakeups, disk flush batching and network coalescing without weakening the GPS acceptance policy or durable-write guarantees. Do not reduce location accuracy blindly to make battery charts look better.
+
+Apple explicitly recommends reducing unnecessary subsystem use and profiling before/after changes; its tools expose CPU, GPU, location and network contributions. [R1, R2]
+
+### 41.5 CPU, memory, storage and database-on-device budgets
+
+- Keep Core Location callbacks lightweight: validate and enqueue; perform filtering, persistence and map rendering on appropriate queues/actors, never block the main thread on file/database I/O.
+- Batch durable writes within a bounded time/point window while preserving a crash-recoverable journal. Define the maximum data-at-risk window and test forced termination at every boundary.
+- Avoid retaining every GPS sample as a heavyweight SwiftUI view/model. Render a simplified display copy; keep the canonical measurement track in durable storage.
+- Bound in-memory route cache and map annotation count. Stream long histories and route exports rather than loading all points into memory.
+- Index common queries (owner/workout/time/sequence) and inspect query plans. Avoid per-point database lookups and N+1 patterns.
+- Measure SQLite write amplification, WAL growth, checkpoint behaviour, disk-full handling and migration time with realistic multi-hour route fixtures.
+- Add storage-pressure behaviour: stop nonessential cache growth, surface low-storage state, preserve workout journal and never silently discard accepted points.
+- Set a device storage warning before a workout only when available space is demonstrably insufficient for safe recording; estimate from measured route size, not a fabricated fixed allowance.
+- Use XCTest memory/storage metrics and Instruments Allocations/File Activity to detect regressions. Apple documents XCTest's memory and storage measurement capabilities. [R3, R4]
+
+### 41.6 Route-volume and local storage capacity model
+
+Use explicit variables:
+- (r) = accepted route observations per second.
+- (t) = recording duration in seconds.
+- (b) = encoded bytes per stored observation, including amortized metadata.
+- (w) = write/journal/index amplification factor measured on the actual schema.
+
+Then:
+[
+N = r 	imes t,qquad S_{raw}=N	imes b,qquad S_{disk}approx S_{raw}	imes w
+]
+
+Illustrative scenario only: at 1 accepted observation/second for a 2-hour walk, there are 7,200 observations. At an assumed 80–160 encoded bytes/observation, raw route payload is about 0.55–1.10 MiB before database indexes, journal/WAL, metadata and export copies. The 80–160 byte assumption must be replaced with actual serialized row/batch measurements.
+
+For 30 such walks per month, that is 216,000 observations and approximately 16.5–33.0 MiB raw payload per user-month under the same assumptions. This is not a forecast of actual WALKON storage until sample frequency, compression, schema overhead, retention and route density are measured.
+
+Capacity tests must cover:
+- 15-minute, 1-hour, 3-hour and 6-hour synthetic sessions.
+- Dense route observations, poor-GPS rejected observations and many segment breaks.
+- 1, 30, 365 and 1,000 stored workouts.
+- Export with and without raw observations.
+- Disk nearly full, interrupted transaction, WAL recovery and migration on a large history.
+
+Do not retain rejected noisy callbacks as if they were accepted route evidence. Keep only bounded diagnostics needed to explain quality decisions.
+
+### 41.7 Network and sync efficiency
+
+- Recording must never await network round trips.
+- Sync only durable, committed operations; coalesce small metadata updates and upload bounded route batches.
+- Use compression only after measuring CPU-vs-network trade-offs on older devices and low-signal cellular.
+- Persist backoff state; use exponential backoff with jitter and server Retry-After.
+- Avoid polling loops. Use bounded foreground refresh and platform-supported background opportunities without promising exact execution times.
+- Resume large uploads from acknowledged batch boundaries; verify hash and idempotency on retry.
+- Measure bytes per completed workout, requests per workout, retries, duplicate uploads, sync completion latency and cellular-vs-Wi-Fi transfer.
+- Make user-visible sync status honest: local-only, pending, syncing, synced, needs attention.
+- Do not upload HealthKit histories or precise route points to analytics.
+
+### 41.8 Backend capacity and concurrency model
+
+Capacity is driven by active recording sessions, route batch size, sync policy, history queries, exports, background jobs and retained storage—not registered accounts alone.
+
+Model:
+- (A) = daily active users.
+- (q) = completed workouts per active user per day.
+- (p) = accepted route points per workout.
+- (c) = average encoded bytes per point.
+- (d) = retention days.
+- (k) = storage/index/replication overhead factor measured in the chosen backend.
+
+Approximate daily route writes:
+[
+W_{points}=A	imes q	imes p
+]
+Approximate retained route storage:
+[
+Sapprox A	imes q	imes p	imes c	imes d	imes k
+]
+
+For illustration, assume 10,000 DAU, 0.7 workouts/DAU/day, 3,600 points/workout (one point per second for one hour), and 100 bytes/point. That yields 25.2 million point observations and about 2.52 GB raw route payload per day before compression, indexes, metadata, replication and backup. At 30 days, raw payload alone is approximately 75.6 GB. This scenario is a sizing exercise, not a prediction of adoption or a chosen sampling rate.
+
+Load-test ramp:
+- Local/single-user functional and soak tests.
+- 100 concurrent authenticated test clients.
+- 1,000 concurrent clients with realistic route-batch patterns.
+- 10,000 concurrent simulated sync clients only after earlier tests show headroom and cost controls.
+- Burst recovery after 30–60 minutes offline, when many devices reconnect together.
+
+Measure p50/p95/p99 latency, successful writes/sec, 429/5xx, database CPU/connections/locks, object throughput, queue age, sync backlog and cost. Test bursty reconnects separately from steady traffic; a system that handles steady uploads can still fail on a mass reconnect.
+
+### 41.9 Supabase candidate cost model and caveats
+
+Current Supabase public billing documentation (reviewed 2026-11-08) lists a Pro plan starting at US$25/month, with included allowances such as 8 GB database disk per project, 250 GB egress, 100 GB file storage and 100,000 monthly active users; overages and add-ons apply. Exact plan terms and regional taxes must be rechecked before procurement. [R5]
+
+Its compute documentation updated 2026-10-29 lists approximate monthly compute prices such as Micro US$10, Small US$15 and Medium US$60, and notes that compute is charged per running project/hour; plan compute credits and project count affect the actual bill. [R6] Its egress documentation confirms outbound data from Database, Auth, Storage, Edge Functions, Realtime and Log Drains can contribute to egress. [R7]
+
+Cost model must include:
+- plan base fee and number of separately running projects/environments;
+- compute size and any PITR/backup add-ons;
+- database disk, indexes, WAL and growth;
+- object storage, versions, export archives and backup copies;
+- database/storage egress, cached egress and cellular retry behaviour;
+- MAU, edge function invocations, realtime messages/connections if used;
+- logs, retention, log drains, monitoring and support;
+- email/OTP delivery, map provider and any other third-party usage;
+- taxes, currency conversion and payment fees.
+
+Do not choose Realtime for route streaming by default. Do not create a separate paid project per environment without modelling its compute cost. Do not mistake the headline Pro subscription for total production cost. Free tier is useful for synthetic prototypes but has limits and inactivity pause behaviour; it is not automatically a production reliability choice. [R5, R6]
+
+Create a monthly calculator with scenarios at 100, 1,000, 10,000 and 100,000 DAU. Fill actual usage from test traces and current pricing at the moment of procurement; do not publish a per-user price before those inputs exist.
+
+### 41.10 Observability, privacy and release dashboards
+
+Release dashboards should expose reliability without collecting sensitive payloads.
+
+**Client dashboard (aggregate, app-version segmented):**
+- crash-free sessions and workout sessions;
+- start/finish/save failures;
+- local journal commit latency and recovery count;
+- route accepted/rejected counts by reason category;
+- battery/CPU/memory/storage distributions;
+- location activity time and network bytes;
+- sync backlog age and eventual completion.
+
+**Backend dashboard:**
+- API availability, latency percentiles and errors;
+- route ingestion throughput/rejections/idempotency replay;
+- database CPU, connections, disk, slow queries and lock waits;
+- object storage errors, size, egress and orphan count;
+- queue depth/age/retries/dead letters;
+- export/deletion job completion;
+- backup freshness, restore test status and migration failures;
+- rate-limit and auth anomaly events.
+
+Never include raw coordinates, route payloads, HealthKit samples, private notes, access tokens or signed URLs in logs, traces, crash reports or alert notifications. Aggregate and minimize telemetry under Section 39 consent/retention controls.
+
+### 41.11 Performance SLOs and alert design
+
+Do not promise service levels before production measurement. Establish initial internal SLI definitions:
+- API availability = successful eligible requests / eligible requests, excluding documented client validation errors.
+- Route ingest success = valid idempotent batches durably acknowledged / valid submitted batches.
+- Sync lag = time from local durable commit to server acknowledgement.
+- Deletion lag = time from accepted deletion request to completion of primary and processor cleanup stages.
+- Backup freshness = age of latest successful backup; restore confidence = latest successful end-to-end restore drill.
+- Client save latency = local durable acknowledgement latency, measured independently of cloud sync.
+
+Set SLO targets only after pilot load and vendor plan are known. Alert on sustained burn/error budget, growing backlog, stale backup, restore failure, deletion queue failure, database saturation and unusual cost spikes. A notification must include owner/runbook and safe correlation IDs, never sensitive records.
+
+### 41.12 Release performance gates
+
+A build cannot pass performance release review until:
+1. Performance tests exist for launch, workout start/stop, route batch commit, history, map render and export.
+2. XCTest baselines are stored and regression thresholds reviewed.
+3. At least one supported physical iPhone completes a 3-hour background/locked-screen soak with no lost durable accepted route data.
+4. Representative older and newer iPhones complete controlled 60-minute walk tests.
+5. Battery and thermal measurements are collected in matched conditions; any target is justified by measured pilot data.
+6. Memory remains bounded over long-session and long-history tests; no leaks/unbounded growth.
+7. Local storage and WAL recovery survive force quit, crash, reboot, low storage and interrupted migration tests.
+8. Offline recording and reconnect burst tests pass; sync does not block recording.
+9. Backend load tests establish measured safe concurrency, headroom and cost per workload.
+10. Backup and restore include both relational data and route/export objects.
+11. Dashboards and alerts detect failures without exposing sensitive content.
+12. Performance regressions are part of CI/release review, not an afterthought.
+
+### 41.13 Open decisions and evidence gaps
+
+- Establish actual minimum supported iPhone model and battery-health test cohort.
+- Replace illustrative bytes/point, route sample rate and retention assumptions with measured schema and device traces.
+- Define quantitative battery budget after repeated field tests.
+- Confirm app version and iOS compatibility for MetricKit/Power Profiler instrumentation.
+- Select backend only after synthetic load tests, current plan/pricing review and database/object restore proof.
+- Decide route row-vs-object representation based on measured read/write and cost curves.
+- Set DAU/workout assumptions and cost ceiling with product owner before launch.
+- Define client and backend SLO targets after pilot; no uptime or battery promise is made here.
+- Add accessibility and inclusive measurement review as the next research section, then complete the test strategy and release gate consolidation.
+- No performance, load, battery, cost, memory, thermal or restore result is claimed as measured or passed in this section.
+
+### 41.14 Section conclusion
+
+WALKON's performance strategy must protect durable, accurate recording before optimizing cosmetic work. Use XCTest, Instruments, Power Profiler, MetricKit and controlled physical-device sessions; keep local recording independent of network; bound route memory/storage; model capacity from explicit usage variables; and calculate total backend cost including compute, storage, egress, backup, logs and third parties. Initial numeric targets are provisional acceptance hypotheses until measured. No app is performance-certified by this research alone.
+
+Research complete for Section 41. Next: Section 42 — Accessibility, gait diversity and inclusive measurement.
+
+#### Section 41 references
+
+- [R1] Apple Developer Documentation, Analyzing your app's battery use: https://developer.apple.com/documentation/xcode/analyzing-your-app-s-battery-use
+- [R2] Apple Developer Documentation, Measuring your app's power use with Power Profiler: https://developer.apple.com/documentation/xcode/measuring-your-app-s-power-use-with-power-profiler
+- [R3] Apple Developer Documentation, Performance Tests: https://developer.apple.com/documentation/xctest/performance-tests
+- [R4] Apple Developer Documentation, Writing and running performance tests: https://developer.apple.com/documentation/xcode/writing-and-running-performance-tests
+- [R5] Supabase, Billing and plan allowances: https://supabase.com/docs/guides/platform/billing-on-supabase
+- [R6] Supabase, Manage Compute usage (updated 2026-10-29): https://supabase.com/docs/guides/platform/manage-your-usage/compute
+- [R7] Supabase, Manage Egress usage: https://supabase.com/docs/guides/platform/manage-your-usage/egress
