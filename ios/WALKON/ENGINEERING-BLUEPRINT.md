@@ -63,8 +63,8 @@
 ## Last verified checkpoint
 - **Latest completed section:** 44.
 - **Latest research update:** Section 44 — final architecture consolidation and implementation go/no-go.
-- **Section-44 commit:** pending verification.
-- **Section-44 research blob:** pending verification.
+- **Section-44 commit:** 5788ed4dc9b2a51c52169d0cd1cb92847e181df1.
+- **Section-44 research blob:** ec27d6b5e954d04f4009c7947c563b8c80675826.
 - **Next action:** audit repository tree and create native WALKON iOS project foundation plus CI build/test workflow.
 
 ---
