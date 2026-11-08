@@ -129,6 +129,25 @@ final class WALKONTests: XCTestCase {
     }
 
     @MainActor
+    func testRoutePointWriteFailsWhenDraftDoesNotExist() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("WALKONMissingDraft-\\(UUID().uuidString)", isDirectory: true)
+        let databaseURL = directory.appendingPathComponent("walk-history.sqlite")
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let store = ActivityStore(databaseURL: databaseURL)
+        let missingWorkoutID = UUID()
+        let point = JournalRoutePoint(
+            sequence: 0, segment: 0, timestamp: Date(),
+            latitude: 15.85, longitude: 74.50, horizontalAccuracy: 5
+        )
+
+        XCTAssertFalse(store.appendRoutePoint(workoutID: missingWorkoutID, point: point))
+        XCTAssertTrue(try store.routePoints(for: missingWorkoutID).isEmpty)
+        XCTAssertTrue(store.recoverableDrafts.isEmpty)
+    }
+
+    @MainActor
     func testDiscardDraftRemovesJournaledRoutePoints() throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("WALKONDiscardTests-\\(UUID().uuidString)", isDirectory: true)
