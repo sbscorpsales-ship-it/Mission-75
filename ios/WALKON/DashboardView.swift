@@ -5,6 +5,8 @@ struct DashboardView: View {
     @StateObject private var tracker = WalkTracker()
     @StateObject private var store = ActivityStore()
     private let goal = 8000
+    @State private var pendingSession: WalkSession?
+    @State private var showSaveError = false
 
     var body: some View {
         TabView {
@@ -14,6 +16,15 @@ struct DashboardView: View {
         }
         .tint(Color(red: 0.72, green: 1.0, blue: 0.22))
         .onAppear { health.requestAccessAndRefresh() }
+        .alert("Walk not saved yet", isPresented: $showSaveError) {
+            Button("Retry Save") {
+                if let pendingSession, store.save(pendingSession) { self.pendingSession = nil }
+                else { showSaveError = true }
+            }
+            Button("Later", role: .cancel) { }
+        } message: {
+            Text("WALKON could not confirm a local save. Keep this screen open and retry. Your walk has not been marked as saved.")
+        }
     }
 
     private var today: some View {
@@ -77,7 +88,10 @@ struct DashboardView: View {
                 }
                 Button {
                     if tracker.isTracking {
-                        if let session = tracker.stop() { store.save(session) }
+                        if let session = tracker.stop(), !store.save(session) {
+                            pendingSession = session
+                            showSaveError = true
+                        }
                     } else { tracker.start() }
                 } label: {
                     Text(tracker.isTracking ? "Finish walk" : "Start walking")
@@ -86,6 +100,7 @@ struct DashboardView: View {
                         .foregroundStyle(.black)
                 }
                 Text(tracker.locationStatus).font(.caption).foregroundStyle(.secondary)
+                Text(store.storageStatus).font(.caption2).foregroundStyle(.secondary)
                 Text("Keep WALKON active in the background and allow location access to record your route while walking.")
                     .font(.footnote).multilineTextAlignment(.center).foregroundStyle(.secondary)
             }.padding(24).frame(maxWidth: .infinity, maxHeight: .infinity)
