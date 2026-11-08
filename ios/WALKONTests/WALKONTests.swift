@@ -103,6 +103,28 @@ final class WALKONTests: XCTestCase {
     }
 
     @MainActor
+    func testRouteSequenceRetryRejectsDifferentPayload() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("WALKONSequenceCollision-\\(UUID().uuidString)", isDirectory: true)
+        let databaseURL = directory.appendingPathComponent("walk-history.sqlite")
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let id = UUID()
+        let timestamp = Date(timeIntervalSince1970: 1_800_000_150)
+        let store = ActivityStore(databaseURL: databaseURL)
+        XCTAssertTrue(store.beginDraft(id: id))
+        let original = JournalRoutePoint(sequence: 0, segment: 0, timestamp: timestamp,
+            latitude: 15.85, longitude: 74.50, horizontalAccuracy: 4)
+        let conflicting = JournalRoutePoint(sequence: 0, segment: 0, timestamp: timestamp,
+            latitude: 15.86, longitude: 74.51, horizontalAccuracy: 4)
+
+        XCTAssertTrue(store.appendRoutePoint(workoutID: id, point: original))
+        XCTAssertFalse(store.appendRoutePoint(workoutID: id, point: conflicting),
+            "A sequence collision with different coordinates must not be accepted as an idempotent retry.")
+        XCTAssertEqual(try store.routePoints(for: id), [original])
+    }
+
+    @MainActor
     func testFinalizedWalkPreservesSeparateGPSSegments() throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("WALKONSegments-\(UUID().uuidString)", isDirectory: true)
