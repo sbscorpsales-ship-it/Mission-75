@@ -13,6 +13,7 @@ on:
       - main
     paths:
       - "ios/WALKON/**"
+      - "ios/WALKONTests/**"
       - "ios/project.yml"
       - ".github/workflows/walkon-ios.yml"
 
