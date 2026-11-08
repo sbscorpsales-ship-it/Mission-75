@@ -1,84 +1,16 @@
-name: GATIVX iOS build check
+name: Legacy GATIVX iOS build (manual only)
 
 on:
   workflow_dispatch:
-  pull_request:
-    paths:
-      - "ios/**"
-      - ".github/workflows/ios-build.yml"
-      - "README.md"
-  push:
-    paths:
-      - "ios/**"
-      - ".github/workflows/ios-build.yml"
 
 jobs:
-  build-ios:
+  legacy-build:
     runs-on: macos-15
     steps:
       - name: Check out source
         uses: actions/checkout@v4
-
-      - name: Show Xcode version
-        run: xcodebuild -version
-
-      - name: Install XcodeGen
-        run: brew install xcodegen
-
-      - name: Generate Xcode project
+      - name: Explain legacy status
         run: |
-          test -f ios/project.yml
-          test -f ios/GATIVX/Info.plist
-          test -d ios/GATIVX
-          xcodegen generate --spec ios/project.yml --project ios
-
-      - name: Compile for iPhone Simulator (no signing)
-        run: |
-          xcodebuild \
-            -project ios/GATIVX.xcodeproj \
-            -scheme GATIVX \
-            -sdk iphonesimulator \
-            -configuration Debug \
-            -derivedDataPath build/SimulatorDerivedData \
-            CODE_SIGNING_ALLOWED=NO \
-            build
-
-      - name: Compile a separate unsigned iPhone test build (CoreMotion test)
-        run: |
-          xcodebuild \
-            -project ios/GATIVX.xcodeproj \
-            -scheme GATIVX \
-            -sdk iphoneos \
-            -destination 'generic/platform=iOS' \
-            -configuration Debug \
-            -derivedDataPath build/DeviceDerivedData \
-            PRODUCT_BUNDLE_IDENTIFIER=com.paramitsolutions.gativx.freetest \
-            CODE_SIGN_ENTITLEMENTS= \
-            CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGN_IDENTITY="" \
-            build
-
-      - name: Package unsigned iPhone IPA for local signing
-        run: |
-          APP_PATH="build/DeviceDerivedData/Build/Products/Debug-iphoneos/GATIVX.app"
-          test -d "$APP_PATH"
-          mkdir -p build/ipa/Payload
-          cp -R "$APP_PATH" build/ipa/Payload/GATIVX.app
-          cd build/ipa
-          /usr/bin/zip -qr ../../GATIVX-Free-Test-Unsigned.ipa Payload
-          test -s ../../GATIVX-Free-Test-Unsigned.ipa
-
-      - name: Upload unsigned iPhone IPA
-        uses: actions/upload-artifact@v4
-        with:
-          name: GATIVX-Free-Test-Unsigned-IPA
-          path: GATIVX-Free-Test-Unsigned.ipa
-          if-no-files-found: error
-
-      - name: Upload simulator app bundle
-        uses: actions/upload-artifact@v4
-        with:
-          name: GATIVX-iOS-Simulator
-          path: build/SimulatorDerivedData/Build/Products/Debug-iphonesimulator/GATIVX.app
-          if-no-files-found: error
+          echo "This workflow is retained for historical GATIVX maintenance only."
+          echo "WALKON has its own independent iOS CI workflow."
+          echo "Do not use this workflow to validate WALKON."
