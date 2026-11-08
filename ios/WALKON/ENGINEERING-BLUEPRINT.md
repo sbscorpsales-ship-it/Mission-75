@@ -5128,3 +5128,34 @@ Daily HealthKit step totals and WALKON session steps must remain distinct. Never
 6. Test locked-screen tracking, interruptions, GPS gaps, HealthKit permissions, unavailable sensors and repeated finalization on a physical iPhone before calling the app ready.
 
 Acceptance rule: a summary is only as complete as its validated data. Missing sensors or denied permissions must produce an honest unavailable state, never fabricated metrics. This specification does not change the current status: no signed iPhone build, physical-device validation or TestFlight readiness is claimed.
+
+
+## 48. User-provided Apple Fitness and Google Fit reference review
+
+Status: Screenshots reviewed 2026-11-08. These are reference observations, not a live device integration test and not authorization to import third-party account data.
+
+### 48.1 Matching daily aggregate snapshot
+
+At the screenshot time (approximately 14:35–14:38 as shown in the status bars):
+
+- Apple Fitness displayed 641 steps and 0.60 km step distance for today; its Move ring displayed 18/400 kcal.
+- Google Fit displayed 641 steps, 0.6 km, 0 Heart Points, 7 Move Minutes and a 10,000-step / 50-Heart-Point daily goal.
+- The matching 641-step and approximately 0.6-km values are a useful cross-app consistency observation. They do not establish per-step synchronization latency, source priority, or accuracy against a ground-truth counter.
+- The differing calorie and points displays are not directly comparable: Apple Move calories, Google Fit Heart Points and Move Minutes have different definitions. WALKON must keep its own metrics clearly named and must not relabel them as Apple or Google scores.
+
+### 48.2 Useful history and profile patterns observed
+
+- Google Fit Journal presents daily step totals and workout entries with activity type, start time, duration, distance and Heart Points.
+- Historical examples visible include walks of 6.37 km in 1 h 1 min with 72 points, 6.3 km in 55 min with 91 points, and 6.17 km in 57 min with 84 points. These are UI examples only; they are not calibrated targets or formula inputs.
+- Google Fit exposes step and Heart Point goals, weight/height profile fields, trends, sleep, vitals and connected-device/data-permission settings. WALKON may adopt the useful goal/history concepts, but must request only permissions needed for its own features.
+- The Google Fit account screen lists multiple connected devices, including iPhone and Android devices. This is a reminder that cross-device imports can duplicate activity. WALKON should use a single authoritative source for each daily aggregate, preserve source provenance, and never sum duplicate imported records blindly.
+
+### 48.3 WALKON data-source and comparison rules
+
+1. On iPhone, HealthKit is the primary daily activity aggregation interface. Read the user's authorized HealthKit daily step total; do not independently add Google Fit totals to it.
+2. For a WALKON-recorded session, retain its own locally journaled session metrics. If importing or exporting HealthKit workouts later, use stable identifiers/source metadata and deduplication so the same activity is not counted twice.
+3. Keep daily aggregate steps distinct from steps measured during a WALKON session. Do not add the two if the session is already represented in the daily HealthKit aggregate.
+4. Store provenance and timestamps for imported readings; show last-updated state and permission/source errors where relevant.
+5. Treat the screenshot match as a useful baseline only. Formal validation requires a controlled walk with before/after readings, timestamps, source inspection and repeated tests; a screenshot alone cannot prove the sensor count is correct.
+
+This reference review does not change implementation status: no physical-device WALKON test, signed installation, or TestFlight build is claimed.
