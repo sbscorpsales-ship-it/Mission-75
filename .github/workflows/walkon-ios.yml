@@ -53,11 +53,24 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             build
 
-      - name: Verify packaged HealthKit purpose strings
+      - name: Verify packaged HealthKit purpose strings and source entitlements
         run: |
           APP=build/WALKON-Simulator/Build/Products/Debug-iphonesimulator/WALKON.app
           plutil -extract NSHealthShareUsageDescription raw -o - "$APP/Info.plist"
           plutil -extract NSHealthUpdateUsageDescription raw -o - "$APP/Info.plist"
+          python3 - <<'PY'
+          import os
+          import plistlib
+          from pathlib import Path
+
+          entitlement_file = Path(os.environ["GITHUB_WORKSPACE"]) / "ios/WALKON/WALKON.entitlements"
+          with entitlement_file.open("rb") as stream:
+              entitlements = plistlib.load(stream)
+          for key in ("com.apple.developer.healthkit", "com.apple.developer.healthkit.background-delivery"):
+              if entitlements.get(key) != True:
+                  raise SystemExit(f"Missing or disabled WALKON entitlement: {key}")
+          print("WALKON HealthKit entitlements validated")
+          PY
 
       - name: Run WALKON unit tests
         run: |
