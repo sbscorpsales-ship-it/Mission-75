@@ -91,7 +91,13 @@ final class WalkTracker: NSObject, ObservableObject, CLLocationManagerDelegate {
         backgroundActivity = nil
         sensorsStarted = false
         pedometer.stopUpdates()
-        checkpointMetrics()
+        guard checkpointMetrics() else {
+            self.workoutID = nil
+            startDate = nil
+            lastAcceptedLocation = nil
+            locationStatus = "Final metrics could not be saved — walk retained in recovery journal"
+            return false
+        }
         let saved = store.finalizeDraft(workoutID, endedAt: Date())
         self.workoutID = nil
         startDate = nil
@@ -100,9 +106,10 @@ final class WalkTracker: NSObject, ObservableObject, CLLocationManagerDelegate {
         return saved
     }
 
-    private func checkpointMetrics() {
-        guard let workoutID else { return }
-        _ = store.updateDraftMetrics(
+    @discardableResult
+    private func checkpointMetrics() -> Bool {
+        guard let workoutID else { return false }
+        return store.updateDraftMetrics(
             workoutID: workoutID,
             steps: liveSteps,
             distanceMeters: distanceMeters
