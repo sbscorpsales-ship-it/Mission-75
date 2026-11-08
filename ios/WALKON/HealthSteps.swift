@@ -34,6 +34,7 @@ final class HealthSteps: ObservableObject {
                     self.steps = nil
                     self.hasStepSamples = false
                     self.status = "Health request failed: " + error.localizedDescription
+                    self.didRequestAuthorization = false
                     return
                 }
                 // HealthKit deliberately does not disclose read authorization status to an app.
@@ -41,6 +42,10 @@ final class HealthSteps: ObservableObject {
                 self.status = success
                     ? "Checking Apple Health step data…"
                     : "Apple Health request could not be completed"
+                if !success {
+                    self.didRequestAuthorization = false
+                    return
+                }
                 self.installObserverIfNeeded()
                 self.refresh()
             }
@@ -122,11 +127,14 @@ final class HealthSteps: ObservableObject {
         observerQuery = query
         store.execute(query)
         store.enableBackgroundDelivery(for: stepType, frequency: .hourly) { [weak self] success, error in
-            guard let error else { return }
             Task { @MainActor in
-                self?.status = success
-                    ? "Background refresh enabled"
-                    : "Background refresh unavailable: " + error.localizedDescription
+                if success {
+                    self?.status = "Apple Health background refresh enabled"
+                } else if let error {
+                    self?.status = "Background refresh unavailable: " + error.localizedDescription
+                } else {
+                    self?.status = "Apple Health background refresh unavailable"
+                }
             }
         }
     }
