@@ -52,7 +52,7 @@ final class WALKONTests: XCTestCase {
     @MainActor
     func testDraftAndRouteJournalRecoverAfterReopenAndFinalizeExactlyOnce() throws {
         let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("WALKONDraftTests-\\(UUID().uuidString)", isDirectory: true)
+            .appendingPathComponent("WALKONDraftTests-\(UUID().uuidString)", isDirectory: true)
         let databaseURL = directory.appendingPathComponent("walk-history.sqlite")
         defer { try? FileManager.default.removeItem(at: directory) }
 
@@ -105,7 +105,7 @@ final class WALKONTests: XCTestCase {
     @MainActor
     func testFinalizedWalkPreservesSeparateGPSSegments() throws {
         let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("WALKONSegments-\\(UUID().uuidString)", isDirectory: true)
+            .appendingPathComponent("WALKONSegments-\(UUID().uuidString)", isDirectory: true)
         let databaseURL = directory.appendingPathComponent("walk-history.sqlite")
         defer { try? FileManager.default.removeItem(at: directory) }
 
@@ -131,7 +131,7 @@ final class WALKONTests: XCTestCase {
     @MainActor
     func testRoutePointWriteFailsWhenDraftDoesNotExist() throws {
         let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("WALKONMissingDraft-\\(UUID().uuidString)", isDirectory: true)
+            .appendingPathComponent("WALKONMissingDraft-\(UUID().uuidString)", isDirectory: true)
         let databaseURL = directory.appendingPathComponent("walk-history.sqlite")
         defer { try? FileManager.default.removeItem(at: directory) }
 
@@ -150,7 +150,7 @@ final class WALKONTests: XCTestCase {
     @MainActor
     func testDiscardDraftRemovesJournaledRoutePoints() throws {
         let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("WALKONDiscardTests-\\(UUID().uuidString)", isDirectory: true)
+            .appendingPathComponent("WALKONDiscardTests-\(UUID().uuidString)", isDirectory: true)
         let databaseURL = directory.appendingPathComponent("walk-history.sqlite")
         defer { try? FileManager.default.removeItem(at: directory) }
 
