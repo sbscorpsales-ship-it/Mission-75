@@ -4,13 +4,15 @@
 <dict>
     <key>NSHealthShareUsageDescription</key>
     <string>WALKON reads your daily step count from Apple Health to show your activity progress.</string>
+    <key>NSHealthUpdateUsageDescription</key>
+    <string>WALKON saves walking workouts and their recorded routes to Apple Health when you choose to do so.</string>
     <key>NSMotionUsageDescription</key>
-    <string>WALKON uses motion sensors to count steps during a walk you start.</string>
+    <string>WALKON uses motion sensors to measure steps during a walk you start, when supported.</string>
     <key>NSLocationWhenInUseUsageDescription</key>
-    <string>WALKON records your walking route only during an activity you start.</string>
-    <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-    <string>WALKON uses location during an active walk so route recording can continue when your phone is locked.</string>
+    <string>WALKON records your walking route only during an activity you start, including while the screen is locked.</string>
     <key>UIBackgroundModes</key>
-    <array><string>location</string></array>
+    <array>
+        <string>location</string>
+    </array>
 </dict>
 </plist>
