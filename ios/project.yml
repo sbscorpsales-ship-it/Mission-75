@@ -11,6 +11,7 @@ targets:
     sources:
       - path: WALKON
     info:
+      path: WALKON/Info.plist
       properties:
         NSHealthShareUsageDescription: "WALKON reads your daily step count from Apple Health to show your activity progress."
         NSHealthUpdateUsageDescription: "WALKON saves walking workouts and their recorded routes to Apple Health when you choose to do so."
@@ -26,7 +27,8 @@ targets:
         PRODUCT_NAME: WALKON
         SWIFT_VERSION: "5.0"
         TARGETED_DEVICE_FAMILY: "1"
-        GENERATE_INFOPLIST_FILE: YES
+        GENERATE_INFOPLIST_FILE: NO
+        INFOPLIST_FILE: $(SRCROOT)/WALKON/Info.plist
         CODE_SIGN_ENTITLEMENTS: WALKON/WALKON.entitlements
         SUPPORTS_MACCATALYST: NO
     scheme:
