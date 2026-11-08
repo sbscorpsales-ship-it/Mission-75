@@ -6,8 +6,8 @@
 - **Repository:** `sbscorpsales-ship-it/Mission-75`, branch `main`.
 - **Blueprint:** `ios/WALKON/ENGINEERING-BLUEPRINT.md`.
 - **Phase:** Research and engineering specification only. **App building is not authorized yet.**
-- **Current completed research:** Sections 1–39 exist below. Latest research section: **39 — Privacy, security, consent, retention and deletion**.
-- **Exact next task:** **Section 40 — Backend architecture, API design, identity, tenancy and operational reliability.** Research service boundaries, API contracts, authentication/authorization, database tenancy, storage, observability, deployment environments, backups, migrations, rate limits, abuse controls and failure recovery. Do not drift into unrelated feature design.
+- **Current completed research:** Sections 1–40 exist below. Latest research section: **40 — Backend architecture, API design, identity, tenancy and operational reliability**.
+- **Exact next task:** **Section 41 — Performance engineering, capacity modelling, cost and release observability.** Research device/app/backend performance budgets, route-volume modelling, battery/memory/CPU/network measurements, database and storage capacity, concurrency/load testing, cost forecasts, SLOs, dashboards and release gates. Do not drift into unrelated feature design.
 - **After Section 37:** update this register's latest-completed and exact-next-task fields before proceeding to Section 38 (maps, route display, map matching and location privacy).
 - **No user device testing or screenshot requests** until the research/architecture blueprint is sufficiently complete and a coherent buildable test plan is ready.
 
@@ -43,6 +43,7 @@
 - **Section 37:** Local-first durable writes, transactional outbox/inbox, idempotent sync, retries/backoff, ordering, conflict policy, tombstones/deletion propagation, HealthKit workout/route export, upload recovery and offline validation.
 - **Section 38:** Native map rendering, provider comparison, pedestrian map-matching limits, display-only route simplification, GPS quality/gaps, offline map licensing, route privacy, endpoint masking and location-data minimization.
 - **Section 39:** Data classification and threat model, iOS file/Keychain protection, API/session security, granular consent, HealthKit restrictions, India DPDP staged commencement, retention, export/deletion, processor controls, backup/restore and incident response.
+- **Section 40:** Modular-monolith backend, provider evaluation, account tenancy, RLS and object authorization, versioned API contracts, idempotent ingestion, route/object storage, durable jobs, observability, CI/CD, backups/restore, quotas and API security testing.
 
 ## Open research queue (ordered)
 36. Battery, thermal management and long-session behaviour.
@@ -54,11 +55,11 @@
 After these: consolidate contradictions, close architecture decisions, produce a single implementation-ready specification and explicit go/no-go checklist. Only then ask for authorization to build.
 
 ## Last verified checkpoint
-- **Latest completed section:** 39.
-- **Latest research update:** Section 39 — privacy, security, consent, retention and deletion.
-- **Section-39 commit:** d19c30d2f7eab9cbaee2d200e2c3a5bb72255c39.
-- **Section-39 research blob:** 809acf0b327e2c88a59f1a20c2a853dfe8ec03a2.
-- **Next action:** research Section 40 — backend architecture, API design, identity, tenancy and operational reliability.
+- **Latest completed section:** 40.
+- **Latest research update:** Section 40 — backend architecture, API design, identity, tenancy and operational reliability.
+- **Section-40 commit:** pending verification after this write.
+- **Section-40 research blob:** pending verification after this write.
+- **Next action:** research Section 41 — performance engineering, capacity modelling, cost and release observability.
 
 ---
 
@@ -4015,3 +4016,272 @@ Research complete for Section 39. Next: Section 40 — Backend architecture, API
 - [R11] MeitY, DPDP Rules 2025 and enforcement timeline: https://www.meity.gov.in/documents/act-and-policies/digital-personal-data-protection-rules-2025-gDOxUjMtQWa
 - [R12] India Code, DPDP Rules 2025 (official Gazette text reproduction): https://indiacode.ecourtsindia.com/rules/digital-personal-data-protection-dpdp-rules-2025-fe07b131/
 - [R13] OWASP, Mobile Application Security Verification Standard: https://mas.owasp.org/MASVS/
+
+## 40. Backend architecture, API design, identity, tenancy and operational reliability
+
+Research update: 2026-11-08. This is an architecture proposal and evidence review for the new native WALKON product. It does not claim a backend has been selected, provisioned, deployed or tested.
+
+### 40.1 Goals and boundaries
+
+The backend must provide optional identity and cross-device synchronization without making the active workout recorder network-dependent; store WALKON-owned workouts/routes under authenticated ownership; accept Section 37's idempotent ordered upload operations; support incremental sync, export and deletion; and operate securely with observable recovery. HealthKit reads and writes remain on-device unless a specific, consented feature requires server processing.
+
+Initial non-goals: microservices, Kubernetes, distributed event streaming, live-location relay, public social feeds, messaging, leaderboards, trainer dashboards, server-side GPS recording or mandatory account creation to start/save a local walk.
+
+### 40.2 Recommended architecture: modular monolith
+
+Start with one versioned API surface and a modular monolith backed by a transactional relational database. Keep domain boundaries explicit but do not split modules into separately deployed services until measured scale, team ownership, security isolation or independent availability justifies it.
+
+Modules:
+1. Identity/session adapter: validate provider tokens and derive the authenticated subject; never trust a client-supplied owner ID.
+2. Workout service: own workout lifecycle metadata, client-generated IDs, revisions, pause/resume events and finalization.
+3. Route ingestion: validate bounded batches, sequence ranges, checksums, timestamps, coordinate ranges and segment membership.
+4. Sync service: implement idempotency keys, outbox operations, sequence acknowledgements, incremental cursors and tombstones.
+5. Health export boundary: initially no server-side HealthKit ingestion; HealthKit remains device-owned.
+6. Export/deletion service: create user-scoped exports, accept deletion requests, revoke sessions/shares and coordinate cleanup.
+7. Operations boundary: health checks, migrations and restricted support/admin functions, never exposed as ordinary user routes.
+
+Shared capabilities: PostgreSQL, private object storage for large route/export artifacts, identity provider, durable job runner, secrets management, metrics/logging/tracing and backup/restore.
+
+A modular monolith reduces distributed failure modes and deployment overhead while preserving future extraction boundaries.
+
+### 40.3 Provider evaluation: Supabase candidate, not commitment
+
+Supabase is a strong candidate for a clean proof-of-concept, not an approved final dependency. Its current documentation describes managed PostgreSQL with Auth, Storage, Realtime and Edge Functions, daily database backups and point-in-time recovery on eligible paid plans. Crucially, database backups do not include objects stored through the Storage API; object data needs a separate backup/export strategy. [R1, R2]
+
+Fit: PostgreSQL transactions and constraints; managed identity/session primitives; row-level security; private object storage; and bounded server-side functions. Edge Functions may host request/response orchestration but should not become a long-running GPS stream or substitute for durable workers.
+
+Security qualification: Supabase's RLS guide says every table in an exposed schema needs RLS and suitable grants; adding a policy does not automatically remove broad grants. It recommends explicit allow/deny tests for select, insert, update and delete across roles with supabase test db. User-editable metadata must not become an authorization source. [R3, R4]
+
+Alternatives:
+- Custom API plus managed PostgreSQL: more control over API contracts, rate limits, queues and authorization, but more operational responsibility.
+- Document-oriented backend: possible, but workout/segment/event relationships, ordered route batches, transactional outbox and deletion reconciliation favour a relational baseline.
+- Self-hosted PostgreSQL: control and portability, but adds patching, monitoring, backup, network security, on-call and disaster recovery.
+
+Decision gate: use synthetic data in a small proof. Test RLS/object policies, route batch writes, idempotent retries, account deletion, private object access, database and object restore, migrations, latency and cost. Do not reuse or connect the prior Mission-75/GATIVX project, credentials, schema or data. WALKON requires a separately owned project and fresh secrets.
+
+### 40.4 Tenant and data model
+
+Initial tenant boundary: one personal account. Add team/coach/family membership only if a later approved feature requires it.
+
+Core entities: profiles; device installations; workouts; workout segments; immutable workout events; route batch manifests; sync operations; deletion tombstones; consent events; export jobs; minimized security audit events.
+
+Every user-owned row has a non-null owner subject or a verified parent relationship. Use composite uniqueness and foreign-key constraints for owner/workout/segment relationships. Constraints supplement authorization; they do not replace it. A UUID is not access control. Every read/write/delete and every object-storage operation checks the authenticated owner and role.
+
+Do not store raw HealthKit histories in the backend by default. Do not duplicate route points in database and object storage without a defined canonical representation and manifest contract.
+
+### 40.5 Authorization and RLS
+
+Layer authorization:
+1. Identity provider validates credentials.
+2. API runtime validates token signature, issuer, audience, expiry and required claims.
+3. Server derives subject from verified context.
+4. Database RLS/grants restrict rows and columns.
+5. Object-storage policies restrict paths and operations.
+6. Sensitive actions apply business rules and re-authentication.
+
+For a Supabase proof:
+- Enable RLS on every exposed user-data table before client access.
+- Revoke unnecessary anon/authenticated grants; grants and policies work together.
+- Write separate select/insert/update/delete policies and validate USING/WITH CHECK behaviour.
+- Derive owner from trusted auth.uid()/verified claims, never mutable profile fields.
+- Never authorize with user-editable user_metadata. Trusted role claims must account for JWT staleness.
+- Keep service-role/secret keys on trusted servers only. A mobile binary is a public client.
+- Restrict schemas, views, functions and grants; protect views with appropriate invoker semantics.
+- Test object storage ownership separately from database RLS.
+- Test two users, anonymous requests, expired/stale tokens, deleted accounts and admin/support roles.
+
+Supabase's current guidance treats RLS as the direct-client database authorization layer and explicitly requires grants review and policy testing. [R3, R4]
+
+### 40.6 API contract and versioning
+
+Use a documented versioned HTTPS API; OpenAPI is the proposed contract format.
+
+Rules:
+- RFC 3339 UTC instants, plus original IANA timezone identifier where relevant.
+- Stable client-generated UUIDs for workouts, segments, events and operations.
+- Integer sequence numbers for ordering; never sort only by device wall clock.
+- Explicit units and algorithm/schema versions.
+- Bounded request size, route points per batch, pagination and concurrency.
+- Opaque account-scoped cursors for history and change feeds.
+- Structured errors: stable code, safe message, correlation ID and retry classification.
+- Optimistic concurrency via revision/ETag for mutable metadata.
+- No stack traces, SQL details, secrets or other users' data in errors.
+- Start with API version v1. Add compatible optional fields without semantic changes; use explicit migration/versioning for breaking changes and maintain deprecation windows.
+- Maintain an API inventory and retire deprecated endpoints. Improper inventory management is an OWASP API risk. [R5]
+
+### 40.7 Proposed API surface
+
+These are conceptual operations, not implemented endpoints.
+
+| Operation | Purpose | Security/consistency rule |
+|---|---|---|
+| GET /v1/me | Current account | Subject from verified token |
+| GET /v1/workouts | Cursor-paginated history | Owner-scoped |
+| POST /v1/workouts | Create workout header | Idempotency key |
+| GET /v1/workouts/{id} | Workout detail | Object authorization |
+| PATCH /v1/workouts/{id} | Allowed metadata update | Property allowlist and revision |
+| POST /v1/workouts/{id}/route-batches | Append route batch | Sequence, checksum, idempotency |
+| POST /v1/workouts/{id}/finalize | Finalize workout | Verify batches and continuity |
+| GET /v1/sync/changes | Incremental changes/tombstones | Owner-scoped cursor |
+| POST /v1/sync/ack | Acknowledge operation IDs | Never accepts another owner |
+| POST /v1/exports | Create export job | Re-authenticate bulk export |
+| GET /v1/exports/{id} | Status/temporary download | Owner-scoped and expires |
+| DELETE /v1/workouts/{id} | Delete workout/route | Tombstone and cleanup |
+| POST /v1/account/deletion | Start account deletion | Re-authentication and confirmation |
+
+Do not expose arbitrary SQL, generic object mutation, unrestricted filters or client-selected storage paths. Keep route ingestion separate from profile edits.
+
+### 40.8 Idempotency and transaction boundaries
+
+Carry Section 37's durable outbox contract through the backend:
+- Require idempotency keys for create, route batch, finalize, export and deletion initiation.
+- Enforce uniqueness in the database within owner/operation scope.
+- Same key/same canonical payload returns the original logical result; same key/different payload conflicts.
+- Validate owner, workout state, segment and expected sequence in the same transaction as insertion/acknowledgement.
+- Insert batch metadata and points atomically, or use staged object upload followed by a validated transactional manifest.
+- Finalize only when required batches exist, hashes/counts match and no sequence gap remains.
+- Use row locks or compare-and-swap revision updates for concurrent finalization/metadata edits.
+- Keep transactions short; never hold one open during a large upload or external provider call.
+- Use a server-side outbox for cleanup/export/notifications; external calls happen after commit and are retryable.
+- Acknowledge only after the database commit succeeds.
+
+### 40.9 Route and object storage
+
+PostgreSQL holds workout metadata, segments, events, sequence manifests, sync state, ownership and tombstones. Private object storage may hold larger compressed route batches or export archives if benchmarks justify it.
+
+- Choose one canonical representation for route observations and avoid divergent duplicate copies.
+- Generate object keys on the server; never trust arbitrary client paths.
+- Use short-lived signed URLs or authenticated uploads with size, type, checksum and expiry constraints.
+- Keep objects private. A signed URL is a temporary bearer capability; keep expiry short and do not log it.
+- Verify checksum, size, encoding, schema and ownership before exposing an object to workout queries.
+- On deletion, tombstone first and block reads/writes; then remove objects, derivatives, caches and exports asynchronously with retry and tracked completion.
+- Supabase database backups do not include Storage API objects; define separate object backup/versioning and restore tests. [R1, R2]
+
+### 40.10 Durable background jobs
+
+Use durable jobs for route validation/compaction, export generation/expiry, deletion propagation, retention and backup verification. Each job has stable ID, owner scope, type/version, payload reference, attempts, next-attempt time, lease expiry, terminal state and correlation ID.
+
+Jobs must be idempotent and safe to redeliver. Use bounded concurrency, exponential backoff with jitter, dead-letter/needs-attention state and controlled replay. Do not run a long GPS stream through a short-lived function. Do not assume a webhook or Realtime message is a durable queue without documented delivery/retry guarantees.
+
+### 40.11 Identity lifecycle
+
+Local-only recording remains available without an account if that product choice is retained. For account mode:
+- Verify tokens on a trusted server/database boundary; never trust decoded but unverified claims.
+- Account ID is immutable; email/display-name changes do not reassign workouts.
+- Support refresh, sign-out, revoke-all-sessions, recovery and deletion as distinct flows.
+- On deletion, block new writes, revoke sessions, tombstone data, run Section 39 cleanup and report backup expiry accurately.
+- Account switching leaves pending outbox items bound to the original account and pauses them; no automatic reassignment.
+- Staff roles are separate, least-privilege, audited and time-bound. No client role flag grants admin access.
+
+### 40.12 Reliability and graceful degradation
+
+The recorder is local-first. API outage must not block start, capture, finish or local history. Apply request timeouts, bounded retries and circuit breakers. Respect Section 37 backoff and return Retry-After where appropriate.
+
+Measure API availability/latency, route ingestion success, sync lag, job age, deletion completion and backup freshness. Define SLOs only after expected usage and provider plan are known; do not invent a 99.9% promise. Map preview, export and analytics can degrade without affecting recording. App status must distinguish locally saved, upload pending, synced, sign-in required and needs attention.
+
+Test identity, database, object storage and queue outages; failover; rate limiting; expired credentials and slow jobs.
+
+### 40.13 Observability
+
+Use structured logs, metrics and traces with correlation IDs. Safe default fields: request ID, route template, API version, status/error class, latency, app version, coarse platform, job type/state and database timing.
+
+Never log access/refresh tokens, authorization headers, passwords, secrets, signed URLs, GPS coordinates, route payloads, HealthKit samples, heart rate/HRV/energy, private notes or export contents.
+
+Monitor API errors/latency, auth anomalies, RLS denials, route batch size/rejection/duplicate rate, sequence gaps, sync backlog, job retries, database connections/CPU/disk/slow queries, object failures/orphans, deletion lag, backup age, migration failures and unusual export bursts. Alerts must be actionable and contain no route data.
+
+### 40.14 Environments, migrations and CI/CD
+
+Separate development, staging and production projects, credentials, databases, buckets, identity config and callback URLs. Use synthetic data outside production.
+
+- Store schema and policy changes as version-controlled migrations, not dashboard-only edits.
+- Review lock duration, table rewrites, backfills, compatibility and rollback/forward-fix strategy.
+- Run migrations in CI on ephemeral databases; test policies, schema, integrations and upgrades.
+- Use expand-migrate-contract for breaking schema changes so supported old/new app versions coexist.
+- Deploy backend compatibility before requiring new client fields.
+- Use staged rollout and server feature flags; flags never bypass authorization.
+- Keep secrets in managed secret storage; scan repository, CI logs and builds for leaks.
+- Protect main branch and CI credentials; require reviewed, auditable deployments.
+- Maintain endpoint inventory, owner, version, deprecation and usage.
+
+### 40.15 Backup and disaster recovery
+
+Define RPO and RTO from product requirements; do not invent numeric promises. For a Supabase candidate, current docs describe daily backups on paid plans and plan-dependent retention, with PITR on eligible plans. Storage API objects are excluded from database backups. Verify exact plan/region terms at procurement. [R1, R2]
+
+Regardless of provider:
+- Database backup schedule, retention, encryption and access controls.
+- Separate route/export object backup, versioning or replication.
+- Configuration/migration backup without exposing live secrets.
+- Independent protected backup copy for critical production data.
+- Restore drills in isolation, including database and matching object versions.
+- Verify row counts, foreign keys, checksums, route manifests, ownership and tombstones.
+- Replay deletion tombstones before restored data becomes available.
+- Document provider/region outage, accidental deletion, credential compromise and corrupt migration recovery.
+- A configured backup is not proof of recoverability; only a successful restore drill is.
+
+### 40.16 Rate limits and abuse controls
+
+Apply layered limits by account, IP/network, device risk and endpoint class:
+- Auth: protect signup, login, OTP/email, recovery and refresh from brute force and cost abuse.
+- Route ingestion: cap points/batch, bytes/request, batches/minute, active uploads and concurrency.
+- History: cursor pagination, max page size and bounded date range.
+- Export: limit concurrent jobs, archive size and expiry; re-authenticate.
+- Deletion: idempotent request, confirmation and abuse monitoring.
+- Future sharing: expiry, revocation, scope, anti-enumeration and rate limits.
+- Return 429 with retry guidance; client persists backoff.
+- Detect abnormal upload volume, repeated auth failures, expensive export loops and suspicious account creation.
+- Provide a legitimate recovery path so controls do not permanently lock out users.
+
+These controls address OWASP API risks such as broken object authorization/authentication, property-level authorization, unrestricted resource consumption, sensitive business-flow abuse, security misconfiguration and improper inventory. [R5, R6]
+
+### 40.17 Acceptance tests
+
+1. Two-user isolation: user A cannot list/read/update/delete/export user B's workout, route, object or cursor.
+2. Anonymous/expired token: private resources deny access; no null-owner leakage.
+3. RLS matrix: allow/deny select/insert/update/delete for anon/authenticated/admin on every exposed table.
+4. Storage matrix: private paths, signed URL expiry, overwrite and deletion are owner-scoped.
+5. Idempotency: replay create/batch/finalize/delete; one logical effect; changed payload under same key conflicts.
+6. Concurrent duplicate batch/finalize requests produce one accepted logical operation.
+7. Missing/out-of-order route sequences cannot finalize; retries recover without duplicate points.
+8. Old supported app version and new backend coexist during rollout.
+9. Endpoint-specific quotas and 429/Retry-After work; legitimate offline backlog drains without retry storm.
+10. Oversized bodies, excessive points, malformed JSON, invalid coordinates and malicious imports are rejected safely.
+11. Database/storage/identity/queue outages recover; local recording remains unaffected.
+12. Worker crash after side effect but before acknowledgement replays idempotently.
+13. Deletion covers DB, objects, exports, caches and processor jobs; tombstones prevent resurrection.
+14. Restore database and matching route objects; verify checksums, ownership and deletion state.
+15. Test clean install, every supported migration, interrupted migration and forward repair.
+16. Logs/traces/alerts have correlation metadata but no secrets, coordinates or health payloads.
+17. Repository, CI logs, mobile binary and runtime config contain no privileged credentials.
+18. Sign-out, token revocation, recovery and account deletion cannot cross account boundaries.
+19. Load test expected peak uploads, route batches, history queries, exports and sync backlog; measure capacity/cost.
+20. Exercise provider outage and restore; measure actual RPO/RTO and document evidence.
+
+### 40.18 Open decisions
+
+- Confirm local-only mode and whether cloud account/sync is opt-in.
+- Run a clean Supabase proof against custom managed-Postgres/API baseline; select only after RLS, storage, restore, migrations, latency and cost tests.
+- Decide route points in Postgres rows or immutable object batches after realistic benchmarks.
+- Select durable worker/queue and verify delivery/retry guarantees.
+- Choose identity provider, token/session lifetimes, passkeys/MFA and recovery.
+- Add team tenancy only if an approved feature requires it.
+- Freeze API schema, pagination, payload sizes, quotas and supported app-version window.
+- Set RPO/RTO, SLOs, backup retention and object recovery requirements.
+- Decide region/data residency and processor terms after Section 39 privacy review.
+- Model costs against daily active users, route length, sync frequency, storage retention and export load.
+- No backend, API, database, RLS policy, identity provider, queue, backup, monitor or deployment is claimed implemented or tested.
+
+### 40.19 Section conclusion
+
+WALKON should start with a modular monolith, narrow versioned API, PostgreSQL-style transactional persistence, private route object storage where benchmarks justify it, durable background jobs and explicit account-scoped authorization. Supabase is a strong candidate for a fresh isolated proof-of-concept, not a final selection; RLS grants/policies and separate Storage backup obligations require explicit tests. Local-first recording remains independent of the backend. Every user-owned object is protected at API, database and object-storage layers. Reliability is demonstrated by idempotency, outage recovery, restore drills and measured objectives—not provider marketing claims.
+
+Research complete for Section 40. Next: Section 41 — Performance engineering, capacity modelling, cost and release observability.
+
+#### Section 40 references
+
+- [R1] Supabase Database overview: https://supabase.com/docs/guides/database/overview
+- [R2] Supabase Database Backups: https://supabase.com/docs/guides/platform/backups
+- [R3] Supabase Row Level Security: https://supabase.com/docs/guides/database/postgres/row-level-security
+- [R4] Supabase Secure Data: https://supabase.com/docs/guides/database/secure-data
+- [R5] OWASP API Security Top 10 2023: https://api-security.owasp.org/editions/2023/en/0x11-t10/
+- [R6] OWASP API Security Project: https://owasp.org/projects/api-security-project/
+- [R7] Apple App Review Guideline 5.1.1(v), account deletion: https://developer.apple.com/help/app-review/guideline-reference/5-1-1-account-deletion/
