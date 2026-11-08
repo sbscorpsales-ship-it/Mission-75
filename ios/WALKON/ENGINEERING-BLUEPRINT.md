@@ -6,8 +6,8 @@
 - **Repository:** `sbscorpsales-ship-it/Mission-75`, branch `main`.
 - **Blueprint:** `ios/WALKON/ENGINEERING-BLUEPRINT.md`.
 - **Phase:** Research and engineering specification only. **App building is not authorized yet.**
-- **Current completed research:** Sections 1–38 exist below. Latest research section: **38 — Maps, route display, map matching and location privacy**.
-- **Exact next task:** **Section 39 — Privacy, security, consent, retention and deletion.** Research data classification, threat model, encryption, secrets, account/session security, permission/consent lifecycle, data minimization, retention schedules, export/deletion workflows, backup handling and incident response. Do not drift into unrelated feature design.
+- **Current completed research:** Sections 1–39 exist below. Latest research section: **39 — Privacy, security, consent, retention and deletion**.
+- **Exact next task:** **Section 40 — Backend architecture, API design, identity, tenancy and operational reliability.** Research service boundaries, API contracts, authentication/authorization, database tenancy, storage, observability, deployment environments, backups, migrations, rate limits, abuse controls and failure recovery. Do not drift into unrelated feature design.
 - **After Section 37:** update this register's latest-completed and exact-next-task fields before proceeding to Section 38 (maps, route display, map matching and location privacy).
 - **No user device testing or screenshot requests** until the research/architecture blueprint is sufficiently complete and a coherent buildable test plan is ready.
 
@@ -42,22 +42,23 @@
 - **Section 36:** iOS/Android location power efficiency, background execution, batching, thermal and Low Power Mode responses, sensor/CPU/network duty cycle, battery measurement, long-session degradation and validation gates.
 - **Section 37:** Local-first durable writes, transactional outbox/inbox, idempotent sync, retries/backoff, ordering, conflict policy, tombstones/deletion propagation, HealthKit workout/route export, upload recovery and offline validation.
 - **Section 38:** Native map rendering, provider comparison, pedestrian map-matching limits, display-only route simplification, GPS quality/gaps, offline map licensing, route privacy, endpoint masking and location-data minimization.
+- **Section 39:** Data classification and threat model, iOS file/Keychain protection, API/session security, granular consent, HealthKit restrictions, India DPDP staged commencement, retention, export/deletion, processor controls, backup/restore and incident response.
 
 ## Open research queue (ordered)
 36. Battery, thermal management and long-session behaviour.
 37. [COMPLETE] Offline-first storage, sync, conflict handling and export.
 38. [COMPLETE] Maps, route display, map matching and location privacy.
-39. Privacy, security, consent, retention and deletion.
+39. [COMPLETE] Privacy, security, consent, retention and deletion.
 40. Accessibility, gait diversity and inclusive measurement.
 41. Test strategy, reference instruments, acceptance thresholds and release gates.
 After these: consolidate contradictions, close architecture decisions, produce a single implementation-ready specification and explicit go/no-go checklist. Only then ask for authorization to build.
 
 ## Last verified checkpoint
-- **Latest completed section:** 38.
-- **Latest research update:** Section 38 — maps, route display, map matching and location privacy.
-- **Section-38 commit:** be0cbd09158f66ab41577223badb10dafd07df2d.
-- **Section-38 research blob:** 936be658af642e8b8fb89c2c71f65fd376a140ce.
-- **Next action:** research Section 39 — privacy, security, consent, retention and deletion.
+- **Latest completed section:** 39.
+- **Latest research update:** Section 39 — privacy, security, consent, retention and deletion.
+- **Section-39 commit:** pending verification after this write.
+- **Section-39 research blob:** pending verification after this write.
+- **Next action:** research Section 40 — backend architecture, API design, identity, tenancy and operational reliability.
 
 ---
 
@@ -3740,3 +3741,277 @@ Research complete for Section 38. Next: Section 39 — Privacy, security, consen
 - [R10] Apple Developer Documentation, CLLocationAccuracy: https://developer.apple.com/documentation/corelocation/cllocationaccuracy
 - [R11] Apple Support, About privacy and Location Services in iOS: https://support.apple.com/en-us/102515
 - [R12] Apple Developer Documentation, NSLocationAlwaysAndWhenInUseUsageDescription: https://developer.apple.com/documentation/BundleResources/Information-Property-List/NSLocationAlwaysAndWhenInUseUsageDescription
+
+
+## 39. Privacy, security, consent, retention and deletion
+
+Research update: 2026-11-08. Scope: protect WALKON account, activity, health and precise location data across the native iOS app, local database, HealthKit, network, backend, support/analytics systems and user exports. This is an engineering and product-control specification, not legal advice or a claim of compliance certification.
+
+### 39.1 Security and privacy objectives
+
+WALKON processes data that can reveal identity, health/activity patterns, home/work locations and daily routines. Treat precise route history, health-derived records, account identifiers and authentication material as sensitive even where a field is not legally classified as sensitive under every applicable statute.
+
+Required objectives:
+- Confidentiality: only the user and explicitly authorized services/persons can access records.
+- Integrity: workout, route and health-derived values cannot be silently altered by another account, client or service.
+- Availability: local workout recording and saved history remain usable during network outages; security controls must not create an online-only recorder.
+- Purpose limitation: collect and process data only for a stated, necessary fitness purpose.
+- User control: permissions, sync, exports, sharing and deletion are separate understandable choices.
+- Accountability: retain minimal consent/security audit evidence without logging precise route content.
+- Resilience: compromise of a map provider, analytics SDK, support account or one API credential must not expose the entire route and health database.
+
+### 39.2 Data classification and inventory
+
+Maintain a living inventory with field owner, purpose, source, storage location, recipients, retention trigger, deletion method and security class.
+
+- **Class A — credentials/secrets:** access and refresh tokens, session IDs, signing keys, API credentials, recovery tokens and encryption key material. Never put these in logs, analytics, source control, app preferences or crash reports.
+- **Class B — precise location/route:** raw GPS points, timestamped segments, home/work endpoints, live location, geocoded addresses and route exports. Highest privacy sensitivity for WALKON; access only for active recording, user history, authorized sync/export and explicitly initiated sharing.
+- **Class C — health/activity:** steps, heart rate, HRV, energy, workouts, elevation, sleep or other HealthKit-derived values if ever supported. Request only types a released feature needs. HealthKit permissions are per type and read denial is intentionally not reliably distinguishable from no available data. [R1, R2]
+- **Class D — account/profile:** email/phone if used, display name, account ID, age band if needed, profile image and preferences. Do not require public identity fields for local-only workouts.
+- **Class E — operational metadata:** app version, crash type, sync state, request IDs, coarse device/OS compatibility and security event timestamps. Keep it coarse; exclude route/health content.
+- **Class F — user content/exports:** notes, photos, GPX/CSV/JSON exports, shared route previews and attachments. Apply protection equivalent to underlying records.
+
+Do not collect contacts, address book, advertising IDs, unrelated device files, microphone or camera access unless a separately specified feature requires it. None is currently in scope.
+
+### 39.3 Threat model and trust boundaries
+
+Model realistic attackers and failure sources:
+- Person with temporary access to an unlocked phone; lost, stolen, jailbroken or compromised device.
+- Malicious app or other installed software with excessive device privileges.
+- Stolen session token, weak/reused password or compromised recovery channel.
+- Compromised backend account, administrator, support tool or third-party processor.
+- Cross-account authorization bugs, IDOR/BOLA and mass assignment.
+- Malicious/malformed route imports, exports, deep links and uploaded files.
+- Network interception, TLS/DNS misconfiguration, replay and request tampering.
+- Analytics/crash SDK leakage, verbose logs, backups or support screenshots.
+- Provider retention or secondary use of location data.
+- Stale device or deleted account attempting to resurrect old records; insider access beyond operational need.
+
+Trust boundaries: app ↔ local database/Keychain; app ↔ HealthKit; app ↔ authenticated API; API ↔ database/object storage; API ↔ processors/map providers; app ↔ export/share sheet; operator/support ↔ production tools. Define authorization and data-flow rules at each boundary before implementation.
+
+### 39.4 Local storage encryption and key management
+
+Use iOS Data Protection for app files and Keychain Services for secrets. Apple documents encrypted file protection levels and Keychain accessibility classes that govern access while locked. [R3–R7]
+
+Proposed policy:
+- Store session/refresh tokens and any database encryption key in Keychain, never in SQLite or UserDefaults.
+- Choose the most restrictive Keychain accessibility class compatible with actual background requirements. WhenUnlockedThisDeviceOnly suits foreground-only secrets; AfterFirstUnlockThisDeviceOnly may be needed for selected background work after first unlock. Do not use Always accessibility. Apple recommends the most restrictive class that fits. [R4, R5]
+- Deliberately protect the database, WAL, SHM, journal, route files, temporary exports and upload files. Verify sidecar/temp-file protection, not just the database's main file.
+- Complete protection blocks access while locked; CompleteUntilFirstUserAuthentication permits access after first unlock following reboot and remains available after later locks. Choose based on Sections 36/37 locked-device recorder/transfer tests, not by convenience. [R6, R7]
+- If application-level database encryption is selected, use a maintained reviewed library and per-install random key in Keychain. No home-grown cipher or hard-coded key. Benchmark battery, migrations, recovery and background access.
+- Separate keys by purpose where practical; define rotation and revocation.
+- Never log keys/tokens or include them in crash breadcrumbs.
+- Device-only Keychain items may not migrate to a replacement phone; define secure re-authentication/recovery.
+- Decide whether local route history is allowed without a device passcode and disclose the risk.
+
+### 39.5 Network, API and backend security
+
+- Enforce HTTPS/TLS for authenticated APIs and uploads; reject cleartext and invalid certificates. Avoid custom certificate pinning unless rotation/recovery is documented.
+- Keep backend/provider secrets out of the client binary. Restrict public client identifiers by bundle ID, API, environment and quota where supported.
+- Authenticate every account request and authorize every object on the server. Never trust client-supplied owner IDs. Scope queries, storage paths and signed URLs to the authenticated principal.
+- Prevent BOLA/IDOR: a workout UUID is not authorization. Test read/update/export/delete of another user's records by substituting IDs.
+- Validate schema, size, sequence, content type and ownership for route uploads/imports. Treat client payloads as untrusted.
+- Use short-lived access tokens, protected refresh tokens, rotation/revocation and server-side session invalidation. Detect refresh-token reuse where supported.
+- Keep credentials and route data out of URLs/query strings. Use authorization headers and short-lived narrowly scoped transfer URLs.
+- Rate-limit login, refresh, export, deletion and sensitive endpoints without blocking offline capture.
+- Separate development, staging and production credentials, data and storage. Never use real user routes as test fixtures.
+- Apply least-privilege service roles, row-level authorization where supported, private object buckets, restricted admin access and audited break-glass procedures.
+- Encrypt backups, restrict access and include backups in retention/deletion design. A deleted live row is not fully erased if a backup can restore it indefinitely.
+
+### 39.6 Authentication, account recovery and session lifecycle
+
+Decide whether local-only mode is available without an account. If cloud sync is optional as Section 37 specifies, local capture must not force account creation.
+
+For account mode:
+- Use a proven identity provider or reviewed authentication implementation; never store plaintext passwords.
+- Prefer passkeys or strong modern authentication where supported; provide secure recovery that does not reveal whether an email/phone is registered.
+- Protect refresh tokens in Keychain and rotate/revoke on sign-out, password reset, suspicious activity or account deletion.
+- Bind pending outbox items to the account scope that created them; sign-out pauses upload. Account switching must not relabel another person's activity.
+- On shared devices, provide explicit sign-out and local data lock/clear controls with clear consequences.
+- Re-authenticate for bulk export, recovery changes, live sharing and account deletion.
+- Provide lost-device session revocation without access to the old device.
+- Face ID/Touch ID may gate local access through platform APIs but do not replace server authentication or object authorization.
+
+### 39.7 Consent and permission lifecycle
+
+Consent must be granular, purpose-specific, revocable and recorded. Do not combine multiple purposes in one vague “agree” action. Separate controls for:
+1. Location during an active walk.
+2. Background location needed to continue an explicitly started workout.
+3. HealthKit read access by data type.
+4. HealthKit write access by data type.
+5. Cloud synchronization/remote backup.
+6. Third-party map matching or route processing, if introduced.
+7. Public/community route sharing or live location, if introduced.
+8. Optional analytics beyond essential reliability/security operations.
+
+For each purpose explain what is collected, why, where it goes, recipients, optionality and withdrawal. Ask at point of need. Maintain an append-only consent ledger with policy version, purpose, data categories, user action, timestamp, locale and withdrawal event; do not store unnecessary sensitive details.
+
+System permissions and app consent are distinct. A user may grant iOS location but decline cloud upload, or authorize HealthKit writes but decline reads. Reflect system permission changes and direct users to Settings when necessary. HealthKit authorization is fine-grained and may change in Settings/Health; read denial cannot be treated as a reliable explicit denied flag. [R1, R2]
+
+Withdrawal stops future processing for that purpose and starts applicable deletion/reconciliation. It cannot retract data already disclosed to a recipient; explain this before sharing. Revoking HealthKit access does not automatically delete existing HealthKit samples or WALKON records.
+
+### 39.8 HealthKit-specific restrictions
+
+Apple requires explicit per-type authorization, clear usage descriptions and a privacy policy for HealthKit apps. It prohibits using HealthKit-derived information for advertising, selling it to data brokers/ad platforms, or disclosing it to third parties without express permission and a permitted health/fitness purpose. [R1, R8]
+
+WALKON requirements:
+- Request only health types needed for a feature, at the moment it is used.
+- Include accurate NSHealthShareUsageDescription and NSHealthUpdateUsageDescription before requesting relevant access.
+- Never use HealthKit data for targeted ads, unrelated personalization or data brokerage.
+- Do not send HealthKit data to map providers, analytics SDKs, social platforms or generic AI services.
+- Do not interpret missing reads as proof the user has no health data or denied permission.
+- Keep platform-derived totals and WALKON workout samples distinct by source/provenance.
+- Explain read/write access and how to revoke it.
+- Reconcile HealthKit change/deletion signals under Sections 34/37 without deleting the WALKON source record unless explicitly requested.
+
+### 39.9 India privacy law and staged DPDP commencement
+
+WALKON's intended initial market includes India, so the Digital Personal Data Protection Act, 2023 and DPDP Rules, 2025 must be part of launch legal review. Government notified the Rules on 14 November 2025. [R9]
+
+Important timing nuance as of 2026-11-08: the Act's commencement is staged. Gazette notification G.S.R. 843(E) brought specified institutional/definition provisions into force on publication; certain provisions are scheduled one year later; and the main processing, notice, consent, data-principal rights and fiduciary-obligation provisions are scheduled eighteen months after publication. The Rules also have staged commencement. Check the official notification and current MeitY publication immediately before launch; do not claim every substantive duty is already operative on this research date. [R10, R11]
+
+Engineer toward the full framework:
+- Clear itemized notice in plain language with purposes and personal-data categories.
+- Consent that is free, specific, informed, unconditional and unambiguous where consent is the applicable basis, with easy withdrawal.
+- Reasonable security safeguards and processor controls.
+- Breach detection, response, notification workflow and evidence preservation.
+- User routes to access information, correction, erasure, grievance redressal and account deletion as applicable.
+- Defined retention/erasure periods; no indefinite retention merely because storage is cheap.
+- Document processor/subprocessor roles, cross-border data flows and applicable restrictions/notifications.
+- Designated privacy/grievance contact and process for requests within legal timelines.
+- Separate child-user review before allowing under-18 accounts; do not assume a general-audience fitness app avoids age and verifiable parental-consent requirements.
+
+Final interpretation, applicability, exemptions, commencement dates, notice text, retention and cross-border requirements require qualified Indian privacy counsel. This section is not a legal compliance opinion.
+
+### 39.10 Retention schedule proposal
+
+Create a retention matrix before launch. Initial defaults for consideration, not legal mandates:
+- **Active workout local journal:** retain until user deletes it or clears/uninstalls local data; explain whether uninstall destroys the only copy.
+- **Cloud workout/route:** retain while account/activity is active, subject to deletion and legal obligations; avoid indefinite retention after account closure.
+- **Raw GPS observations:** retain only as long as needed for history, metric recalculation and user export; consider user-selectable raw-data retention. Never duplicate raw routes in analytics.
+- **Derived display geometry:** regenerate from source or delete with source workout; no orphan copy.
+- **HealthKit references/export state:** retain minimum identifiers/status needed for reconciliation; actual samples follow Health app controls.
+- **Access/refresh tokens:** revoke on sign-out/account deletion; retain only active session material.
+- **Security audit logs:** defined period, minimized identifiers, no precise coordinates; validate against law.
+- **Crash/diagnostics:** short purpose-limited retention, route/health values excluded or redacted.
+- **Exports/temp files:** expire after documented short window; remove staging copies after completion/cancellation.
+- **Backups:** define expiry, deletion propagation and restore suppression so deleted records do not reappear.
+
+No numeric duration is fixed here. Reconcile legal, operational, support and backup needs before release. Legal-retention exceptions must be narrow, documented and disclosed where permitted.
+
+### 39.11 User export, correction and deletion
+
+Provide in-app privacy controls for: download account/activity data; delete one workout and route; delete a shared route/revoke live share; disconnect HealthKit guidance; sign out/revoke sessions; delete account/cloud data.
+
+Export:
+- Reconfirm identity for bulk export.
+- Generate a machine-readable archive with manifest, version, timestamps, units, provenance and checksums as in Section 37.
+- Deliver through short-lived authenticated download or system share sheet, never a public permanent URL.
+- Exclude other users' comments/identifiers/private data.
+- Record export event without logging archive contents.
+
+Deletion:
+- Confirm scope and consequences; offer export first without coercion.
+- Mark local deletion immediately and create durable tombstones for remote propagation under Section 37.
+- Revoke sessions/tokens; stop queued uploads and sharing sessions.
+- Delete primary rows, route objects, thumbnails, exports, search indexes, analytics-linked identifiers and processor copies where controlled.
+- Ensure tombstones prevent old offline clients/backups resurrecting deleted records.
+- Apply deletion to replicas/caches; document backup expiry and restore suppression. Do not claim instant physical erasure from immutable backups if only scheduled expiry is guaranteed.
+- Report status distinguishing primary deletion, processor propagation and backup expiry.
+- Preserve only minimum legally/security-required records, isolated from product use and with explicit retention basis.
+
+### 39.12 Third-party processors, analytics and support
+
+Maintain a processor register: provider, service, data categories, purpose, region, retention, subprocessors, controls, deletion mechanism, incident contact and contract terms.
+
+Defaults:
+- No advertising SDK receives HealthKit or precise route data.
+- Analytics uses coarse events (workout started/completed, app version, failure category) without coordinates, heart-rate values, notes or full account identifiers.
+- Crash reports redact tokens, headers, coordinates, HealthKit payloads and user text.
+- Support staff see minimal metadata. Route access requires a user-initiated, scoped, expiring support share.
+- Production access is least-privilege, audited and time-bound; no shared admin credentials.
+- Map matching, geocoding, push, email, storage and observability vendors receive only fields necessary for their task.
+- Review retention, deletion and secondary-use terms before sending production data.
+
+### 39.13 Backup, restore and device loss
+
+- Local-only users must be told that app deletion, phone loss or reset may destroy the only copy unless they export or enable optional sync.
+- Cloud sync is not a tested backup guarantee; define backup cadence, recovery point/time objectives and restore drills.
+- Encrypt backups, restrict operators and test restoration in isolation.
+- Restore must reapply tombstones and account authorization before records become available.
+- Never restore tokens or device-bound keys in a way that bypasses Keychain policy.
+- On lost-device report, revoke sessions and allow disabling live shares.
+- Never silently upload local database backups to a personal cloud drive or third-party account.
+
+### 39.14 Incident response and breach handling
+
+Before public launch document:
+1. Detect/triage reports from monitoring, users, processors and researchers.
+2. Contain affected credentials, sessions, API keys, buckets, admins or processors.
+3. Preserve audit evidence without collecting additional route/health content.
+4. Determine affected data categories, users, time range, access evidence and likely harm.
+5. Engage privacy/security/legal owners; assess statutory, contractual and platform notification duties.
+6. Notify affected users/regulators within applicable timeframes and required form.
+7. Rotate/revoke credentials, patch cause, validate containment and monitor recurrence.
+8. Document root cause, improvements and closure approval.
+
+DPDP Rules 2025 include breach-intimation requirements and describe content such as breach nature, likely consequences, mitigation, user safety steps and contact information; verify applicability and timeframes against provisions in force at incident time. [R12]
+
+### 39.15 Security verification and release gates
+
+Use OWASP MASVS as a structured mobile-security baseline. Its groups cover storage, cryptography, authentication, network, platform, code, resilience and privacy; pair it with the mobile testing guide. [R13]
+
+Acceptance tests:
+1. Inspect app container, SQLite main/WAL/SHM, exports, caches and crash artifacts; verify file protection and no plaintext secrets.
+2. Verify tokens/database keys are in Keychain with correct accessibility, not logs/preferences.
+3. Lock device during active walk; confirm protection does not break documented recorder behaviour or expose data before first unlock after reboot.
+4. Substitute workout/route IDs, storage paths and signed URLs; unauthorized cross-account requests must fail.
+5. Test expired, revoked, rotated and replayed tokens; verify invalidation and no infinite refresh loop.
+6. Inspect network traffic; confirm TLS, no credentials in URLs and no route/health payload to analytics/map providers without purpose.
+7. Revoke location, HealthKit, cloud sync and sharing independently; features stop appropriately without corrupting local records.
+8. Verify HealthKit read denial/limited access is not misrepresented as zero data or proof of denial.
+9. Test consent withdrawal/policy version change; ledger and processing controls update.
+10. Delete a workout offline, reconnect stale clients and restore backup; deleted route must not resurrect.
+11. Delete account; verify sessions, shares, primary data, object storage, processors, caches and backup-expiry states.
+12. Export all data; verify only authenticated user's records, completeness, checksums and short-lived delivery.
+13. Test database corruption, device loss and restore; verify recovery objectives and key-loss behaviour.
+14. Simulate credential leak, unauthorized admin access and processor breach; exercise containment/notification runbooks.
+15. Review third-party SDK inventory and privacy disclosures against actual network traffic and stored fields.
+16. Independent mobile penetration test; remediate all critical/high findings before public release.
+17. Test clarity/accessibility of consent, withdrawal, export and deletion with representative users.
+18. Obtain Indian privacy counsel sign-off on DPDP commencement, notices/consent, child-user scope, retention, processors, breach response and launch disclosures.
+
+### 39.16 Open decisions and evidence gaps
+
+- Decide local-only mode, account requirement and account recovery.
+- Select database encryption and per-file Data Protection classes after Section 36/37 locked-device tests.
+- Finalize token lifetime, passkeys/MFA/recovery and session revocation.
+- Establish processor register and data-region requirements before backend/map procurement.
+- Set raw-route, cloud-route, audit-log, diagnostics, temporary-export and backup retention with counsel/operations.
+- Define child-user policy and age assurance before under-18 accounts.
+- Recheck DPDP commencement, amendments and notifications at launch; staged commencement means the 2023 enactment date alone is insufficient.
+- Define incident severity, owners, escalation contacts and tabletop schedule.
+- Select independent security assessor and remediation thresholds.
+- No encryption, penetration test, deletion, breach workflow or legal compliance result is claimed as implemented or passed.
+
+### 39.17 Section conclusion
+
+WALKON must treat precise routes and health/activity history as sensitive by design. Release architecture needs a complete data inventory and threat model, platform-protected local storage, Keychain-held secrets, authenticated object-level authorization, purpose-specific consent, strict HealthKit restrictions, processor minimization, defined retention, deletion tombstones and restore suppression, user exports, and an incident-response plan. Security and privacy are release gates, not post-launch polish. For India, engineer toward the full DPDP framework while accurately tracking staged commencement and obtaining legal review before launch.
+
+Research complete for Section 39. Next: Section 40 — Backend architecture, API design, identity, tenancy and operational reliability.
+
+#### Section 39 references
+
+- [R1] Apple Developer Documentation, Protecting user privacy in HealthKit: https://developer.apple.com/documentation/healthkit/protecting-user-privacy
+- [R2] Apple Developer Documentation, Authorizing access to health data: https://developer.apple.com/documentation/healthkit/authorizing-access-to-health-data
+- [R3] Apple Developer Documentation, Encrypting your app's files: https://developer.apple.com/documentation/uikit/encrypting-your-app-s-files
+- [R4] Apple Developer Documentation, Restricting Keychain item accessibility: https://developer.apple.com/documentation/security/restricting-keychain-item-accessibility
+- [R5] Apple Developer Documentation, kSecAttrAccessibleWhenUnlockedThisDeviceOnly: https://developer.apple.com/documentation/security/ksecattraccessiblewhenunlockedthisdeviceonly
+- [R6] Apple Developer Documentation, NSFileProtectionCompleteUntilFirstUserAuthentication: https://developer.apple.com/documentation/foundation/fileprotectiontype/completeuntilfirstuserauthentication
+- [R7] Apple Platform Security, Data Protection classes: https://support.apple.com/en-in/guide/security/secb010e978a/web
+- [R8] Apple Developer Documentation, HealthKit privacy restrictions: https://developer.apple.com/documentation/healthkit/protecting-user-privacy
+- [R9] Press Information Bureau, DPDP Rules 2025 notified (14 November 2025): https://www.pib.gov.in/PressReleasePage.aspx?PRID=2190655
+- [R10] Gazette of India, G.S.R. 843(E), DPDP Act commencement notification: https://egazette.gov.in/WriteReadData/2025/267647.pdf
+- [R11] MeitY, DPDP Rules 2025 and enforcement timeline: https://www.meity.gov.in/documents/act-and-policies/digital-personal-data-protection-rules-2025-gDOxUjMtQWa
+- [R12] India Code, DPDP Rules 2025 (official Gazette text reproduction): https://indiacode.ecourtsindia.com/rules/digital-personal-data-protection-dpdp-rules-2025-fe07b131/
+- [R13] OWASP, Mobile Application Security Verification Standard: https://mas.owasp.org/MASVS/
