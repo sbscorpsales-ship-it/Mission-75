@@ -1,19 +1,27 @@
 # WALKON
 
-A fresh native SwiftUI iPhone fitness app.
+A fresh native SwiftUI iPhone fitness app. This target is intentionally separate from the legacy GATIVX implementation in this repository.
 
-- Six-letter name; Chaldean numerology: W(6)+A(1)+L(3)+K(2)+O(7)+N(5) = 24 → 6.
-- Reads the daily step total from Apple Health.
-- Records new walks with Core Motion and GPS.
-- Saves only activities started in WALKON on this device.
-- No cloud account, cloud sync, old activity import, or legacy data migration in this first build.
+## First-release engineering contract
 
-## Build
+- Native iPhone app, iOS 26.0+.
+- Daily step total is read from Apple Health.
+- New workouts are owned by WALKON and recorded only after the user starts a walk.
+- Local persistence is the source of truth; network access is not required to record or save a walk.
+- HealthKit workout and route export is separate from the durable local save.
+- No old GATIVX/Mission-75 activity, user, credential or schema import.
+- No cloud account or cloud sync in the initial local-core milestone.
+
+## Generate and build
+
+Run from the repository root on a Mac with Xcode 26 and XcodeGen:
 
 ```sh
 brew install xcodegen
-xcodegen generate --spec ios/project.yml
+xcodegen generate --spec ios/project.yml --project ios
+xcodebuild -list -project ios/WALKON.xcodeproj
 xcodebuild -project ios/WALKON.xcodeproj -scheme WALKON -sdk iphonesimulator -configuration Debug CODE_SIGNING_ALLOWED=NO build
+xcodebuild -project ios/WALKON.xcodeproj -scheme WALKON -destination 'platform=iOS Simulator,name=iPhone 16' CODE_SIGNING_ALLOWED=NO test
 ```
 
-Real-device validation is required for HealthKit permissions, background location, and sensor accuracy before release.
+GitHub Actions runs the simulator build and unit-test target on a macOS runner. Real-device validation remains mandatory for HealthKit, Core Motion, background location, battery behaviour and sensor accuracy before release.
