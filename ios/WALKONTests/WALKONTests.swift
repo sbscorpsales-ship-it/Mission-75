@@ -131,7 +131,7 @@ final class WALKONTests: XCTestCase {
     @MainActor
     func testBeginDraftRejectsDuplicateIdentifierWithoutOverwritingOriginal() throws {
         let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("WALKONDuplicateDraft-\\(UUID().uuidString)", isDirectory: true)
+            .appendingPathComponent("WALKONDuplicateDraft-\(UUID().uuidString)", isDirectory: true)
         let databaseURL = directory.appendingPathComponent("walk-history.sqlite")
         defer { try? FileManager.default.removeItem(at: directory) }
 
