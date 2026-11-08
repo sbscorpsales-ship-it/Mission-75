@@ -6,8 +6,8 @@
 - **Repository:** `sbscorpsales-ship-it/Mission-75`, branch `main`.
 - **Blueprint:** `ios/WALKON/ENGINEERING-BLUEPRINT.md`.
 - **Phase:** Research and engineering specification only. **App building is not authorized yet.**
-- **Current completed research:** Sections 1–42 exist below. Latest research section: **42 — Accessibility, gait diversity and inclusive measurement**.
-- **Exact next task:** **Section 43 — Test strategy, reference instruments, acceptance thresholds and release gates.** Consolidate test layers, reference measurement methods, device/OS matrix, deterministic fixtures, fault injection, accessibility and inclusive gait validation, performance/battery/security/privacy/backend checks, release-blocking criteria and evidence artifacts.
+- **Current completed research:** Sections 1–43 exist below. Latest research section: **43 — Test strategy, reference instruments, acceptance thresholds and release gates**.
+- **Exact next task:** **Final consolidation — Sections 1–43.** Audit contradictions and duplicates; classify each decision as selected, deferred or unresolved; reconcile implementation sequence, iOS version/device support, data model, persistence, HealthKit/Core Motion/Core Location, backend and privacy; produce a single implementation-ready specification, final architecture decision register and explicit go/no-go checklist. No further broad research sections unless a specific blocker is found.
 - **After Section 37:** update this register's latest-completed and exact-next-task fields before proceeding to Section 38 (maps, route display, map matching and location privacy).
 - **No user device testing or screenshot requests** until the research/architecture blueprint is sufficiently complete and a coherent buildable test plan is ready.
 
@@ -46,6 +46,7 @@
 - **Section 40:** Modular-monolith backend, provider evaluation, account tenancy, RLS and object authorization, versioned API contracts, idempotent ingestion, route/object storage, durable jobs, observability, CI/CD, backups/restore, quotas and API security testing.
 - **Section 41:** iOS profiling tools, provisional device budgets, battery/thermal methodology, CPU/memory/storage, route-volume formulas, network sync efficiency, backend concurrency, Supabase cost model, privacy-safe dashboards, SLO definitions and release performance gates.
 - **Section 42:** SwiftUI accessibility, VoiceOver/Voice Control/Switch Control, Dynamic Type, contrast/reduced motion, accessible map alternatives, gait diversity, step-count bias with slow gait and mobility aids, inclusive goals, reference procedures and release acceptance gates.
+- **Section 43:** Test pyramid, deterministic fixtures, reference instruments, quantitative provisional acceptance thresholds, fault injection, CI/build/signing pipeline, security/privacy verification, evidence package and release-blocking go/no-go criteria.
 
 ## Open research queue (ordered)
 - 36. [COMPLETE] Battery, thermal management and long-session behaviour.
@@ -55,21 +56,21 @@
 - 40. [COMPLETE] Backend architecture, API design, identity, tenancy and operational reliability.
 - 41. [COMPLETE] Performance engineering, capacity modelling, cost and release observability.
 - 42. [COMPLETE] Accessibility, gait diversity and inclusive measurement.
-- 43. Test strategy, reference instruments, acceptance thresholds and release gates.
-After these: consolidate contradictions, close architecture decisions, produce a single implementation-ready specification and explicit go/no-go checklist. Then present the build-readiness decision and proceed according to the agreed development authorization.
+- 43. [COMPLETE] Test strategy, reference instruments, acceptance thresholds and release gates.
+- Final consolidation: resolve contradictions and close architecture decisions; create one implementation-ready specification and explicit go/no-go checklist. No more broad research loops.
 
 ## Last verified checkpoint
-- **Latest completed section:** 42.
-- **Latest research update:** Section 42 — accessibility, gait diversity and inclusive measurement.
-- **Section-42 commit:** pending verification.
-- **Section-42 research blob:** pending verification.
-- **Next action:** research Section 43 — test strategy, reference instruments, acceptance thresholds and release gates.
+- **Latest completed section:** 43.
+- **Latest research update:** Section 43 — test strategy, reference instruments, acceptance thresholds and release gates.
+- **Section-43 commit:** pending verification.
+- **Section-43 research blob:** pending verification.
+- **Next action:** final consolidation of Sections 1–43 and explicit build-readiness decision.
 
 ---
 
 # WALKON — Engineering Blueprint (Research Draft)
 
-Status: Research draft — NOT final architecture approval; Section 42 completed 2026-11-08
+Status: Research draft — NOT final architecture approval; Section 43 completed 2026-11-08
 Date: 2026-11-07
 Product: WALKON (temporary six-letter product name)
 Platform in first release: Native iPhone app (SwiftUI, iOS 26.0+)
@@ -4664,3 +4665,232 @@ Research complete for Section 42. Next: Section 43 — test strategy, reference 
 - [R3] Accuracy and Acceptability of Commercial-Grade Physical Activity Monitors in Older Adults, 2018: https://pmc.ncbi.nlm.nih.gov/articles/PMC7023914/
 - [R4] Fitness band accuracy in older community dwelling adults, 2019: https://pubmed.ncbi.nlm.nih.gov/28743215/
 - [R5] The validity and reliability of consumer-grade activity trackers in older, community-dwelling adults: A systematic review, 2018: https://pubmed.ncbi.nlm.nih.gov/29704922/
+
+
+## 43. Test strategy, reference instruments, acceptance thresholds and release gates
+
+Status: Research complete — test architecture and provisional release criteria documented. No source implementation, CI run, device test, penetration test or release has yet passed.
+
+### 43.1 Testing principles and evidence model
+
+Use a layered test pyramid: many fast deterministic unit tests, fewer integration tests, and a focused set of end-to-end UI tests. Add performance tests for critical paths. Apple's current Xcode testing guidance describes this mix and supports Swift Testing for unit tests and XCTest/XCUIAutomation for UI workflows. [R1]
+
+Every test result must be reproducible and traceable to:
+- Git commit SHA, build number, configuration and dependency lock state;
+- device model, iOS version/build, battery health where relevant, and app permission state;
+- test plan, fixture/data version, environment and test-run timestamp;
+- expected result, observed result, pass/fail, logs and safe evidence artifact;
+- known limitations, flaky-test quarantine reason and accountable owner.
+
+Classify evidence:
+1. **Automated deterministic:** repeatable unit/integration/UI/contract tests.
+2. **Simulated:** GPX routes, synthetic HealthKit/pedometer inputs, network faults and clock/timezone fixtures.
+3. **Physical-device:** actual Core Motion, HealthKit permissions, GPS, background execution, battery and thermal behaviour.
+4. **Human usability/accessibility:** task completion with assistive technologies and diverse participants.
+5. **Independent/security review:** threat-model review, static/dynamic testing and authorized penetration test.
+
+A simulator pass is not a physical sensor pass. A CI build is not a TestFlight validation. A TestFlight install is not App Store approval. Never combine these statuses into a generic “tested” claim.
+
+### 43.2 Test layers and ownership
+
+**Unit tests (largest layer):**
+- distance/geodesic calculations, timestamp ordering, GPS accuracy gates, impossible-jump rejection and gap handling;
+- pace/moving-time calculations, pause/resume segment boundaries and rounding;
+- step aggregation boundaries, local-day/DST/timezone transitions and source separation;
+- workout state machine transitions, invalid transition rejection and idempotent finalization;
+- SQLite transactions, migrations, journal replay, outbox ordering, idempotency keys and tombstones;
+- permission-state mapping, stale/unavailable/denied distinctions and error classification;
+- accessibility view-model state, localization/formatting and goal-state logic.
+
+**Integration tests:**
+- Core Location adapter -> quality filter -> durable route journal -> route summary;
+- Core Motion session updates -> persisted session metric -> final interval reconciliation;
+- HealthKit query/observer adapters -> daily aggregate refresh with source/time provenance;
+- local workout -> HealthKit workout and route export, including partial failure and retry;
+- SQLite transaction -> outbox -> authenticated API -> idempotent backend write -> acknowledgement;
+- object storage upload/download, checksum verification, deletion propagation and backup/restore;
+- auth/session refresh, RLS/tenant isolation and API validation.
+
+**UI tests:**
+- onboarding and permissions; denied/restricted/limited/unavailable states;
+- dashboard refresh and distinction between daily steps and session steps;
+- start, pause, resume, finish, save, retry, discard and recovery;
+- screen lock/background transitions where automation permits;
+- history, route summary, settings, data export/deletion and error recovery;
+- VoiceOver labels/values, Dynamic Type layouts and automated accessibility audits.
+
+**Performance/soak tests:** use the provisional Section 41 budgets as initial hypotheses, measure distributions, and revise only with documented product approval and evidence.
+
+### 43.3 Reference instruments and ground truth
+
+No single consumer app is ground truth for every metric. Use independent references matched to the metric:
+- **Step counts:** synchronized manual observer/video tally in controlled trials; validated research-grade step counter where available. Document device placement and counting protocol. Apple Health and other commercial apps are comparators, not independent ground truth when they may consume the same sensor/platform data.
+- **Distance and route:** surveyed/known-distance outdoor course or calibrated measurement wheel for controlled segments; high-quality reference GNSS logger/receiver where available; repeated route traversals. Strava and Apple Fitness are comparative references only.
+- **Time:** monotonic clock for elapsed durations; wall-clock fixtures only for calendar/day boundaries. Test timezone changes and daylight-saving transitions without relying on manual clock edits in production.
+- **Elevation:** known surveyed elevation profile or trusted reference instrument; do not certify elevation from a phone GPS trace alone.
+- **Heart rate:** validated chest strap or clinical-grade reference under appropriate conditions; consumer watch readings are comparative, not clinical truth.
+- **Battery/power:** matched physical-device runs, Xcode Power Profiler/Instruments/MetricKit where available; record environment and OS. Battery percentage alone is coarse.
+- **Accessibility:** direct task testing with VoiceOver, Voice Control, Switch Control, Dynamic Type and participants who use these technologies; Accessibility Inspector is a screening tool, not a substitute for user testing.
+- **Backend:** synthetic accounts, deterministic route fixtures, controlled load generators, database/object-store metrics and verified backup restores.
+
+For all reference comparisons, synchronize start/end times, document reference uncertainty, repeat trials and report error distributions rather than one headline accuracy number.
+
+### 43.4 Deterministic fixture library
+
+Create version-controlled, synthetic fixtures before implementation is considered complete:
+- clean straight route, loop, switchbacks, urban canyon, indoor/no-GPS, stationary drift, low-accuracy samples, stale/out-of-order samples, impossible jumps, long gaps and pause-separated segments;
+- slow walking, interrupted walking, short steps, mobility-aid-associated arm restriction and varied phone carry positions, labelled as synthetic cases until validated with volunteers;
+- pedometer count sequences including zero, missing, delayed, duplicated and final-query reconciliation differences;
+- calendar fixtures for midnight, timezone travel, DST boundary, leap day and locale changes;
+- HealthKit permission and availability fixtures without asserting that read denial can always be distinguished from no samples;
+- persistence fixtures for crash between every write boundary, disk full, WAL recovery, migration interruption, duplicate retry and corrupted/partial batch;
+- network fixtures for offline, captive portal, DNS/TLS failure, timeout, 401/403, 409, 429 with Retry-After, 5xx, partial upload, duplicate delivery and reconnect burst;
+- backend fixtures for cross-tenant IDs, object path traversal, oversized payload, invalid timestamps, replay, rate limits and deletion races;
+- accessibility fixtures for maximum Dynamic Type, long localized strings, RTL, VoiceOver focus order, large hit areas and high contrast.
+
+Fixtures must contain no real user coordinates, health records, tokens, email addresses or private notes. Use synthetic coordinates in public test regions and never check secrets into Git.
+
+### 43.5 Core functional and data-integrity acceptance matrix
+
+The following are release-blocking behaviours, not optional quality improvements.
+
+| Area | Required test | Pass condition |
+|---|---|---|
+| Daily steps | HealthKit aggregate vs same-time Apple Health display | Same aggregate value/window when the same query semantics apply; source/time shown; no session-step addition |
+| Session steps | Core Motion start/end interval and final reconciliation | Session-only value; no duplicate HealthKit step write; unavailable remains unavailable, not fabricated zero |
+| Workout lifecycle | Start/pause/resume/finish/discard/retry | Valid state transitions; one UUID/workout; pause gaps not counted as travelled route |
+| GPS quality | Clean/noisy/gap/jump/out-of-order fixtures | Invalid samples excluded; gaps visible; no fabricated straight-line distance |
+| Persistence | Crash/force termination at each durable-write boundary | Every acknowledged durable record recovers; no duplicate workout; no silent accepted-point loss |
+| Offline | Full workout with no network, then reconnect | Local recording and save unaffected; sync resumes idempotently |
+| HealthKit export | Authorization denied, save failure, route failure, retry | Local workout remains intact; partial failure is visible and recoverable |
+| Privacy | Permission withdrawal, export, deletion and processor propagation | Documented deletion workflow completes and is auditable; no sensitive payload in logs |
+| Accessibility | Primary workflows with assistive technologies | Core tasks completable without sight/touch-only or colour-only interaction |
+| Backend tenancy | Cross-user read/write/object tests | No unauthorized cross-tenant access; RLS and object authorization both enforced |
+
+### 43.6 Provisional quantitative acceptance thresholds
+
+Numeric values below are initial engineering thresholds and must be evaluated with confidence intervals and realistic sample sizes. They are not vendor guarantees or already measured WALKON performance.
+
+**Step counting (controlled validation):**
+- Report absolute step error and percentage error by device, carry position, gait speed/condition and mobility-aid condition.
+- For the explicitly supported baseline cohort and declared phone carry position, target median absolute percentage error ≤5% and 95th-percentile absolute percentage error ≤10% over controlled continuous walking trials with a sufficiently large reference count.
+- Any condition outside target must be documented and either excluded from the product accuracy claim, supported through a validated alternative, or shown as a known limitation. Do not conceal subgroup failures in pooled averages.
+- For very low counts, report absolute error; do not rely on unstable percentage error.
+- Do not claim that these targets are met until field evidence supports them.
+
+**Route/distance (controlled outdoor course):**
+- Initial target: median absolute distance error ≤5% on open-sky reference routes and ≤10% on a separately reported mixed urban route cohort.
+- 95th-percentile error, GPS-gap rate and false-distance accumulation must also be reported. Averages alone cannot pass.
+- No distance is added across a declared pause or long GPS gap as if it were travelled.
+
+**Durability and correctness:**
+- Zero loss of any record after the app has acknowledged its durable local commit.
+- Zero duplicate workout identities after retries/recovery.
+- Zero cross-account access in the complete authorization test matrix.
+- Every local workout remains readable when cloud sync is unavailable.
+- Any inability to meet a durability invariant is a release blocker.
+
+**Reliability/performance (align with Section 41):**
+- Pilot crash-free recording-session target ≥99.5%, with cohort size and confidence interval reported.
+- Meet Section 41 p95 launch, interaction, local commit, finish-save and history targets on the declared physical-device matrix.
+- Complete a 3-hour locked-screen/background soak with no loss of acknowledged route data.
+- No recurring main-thread stalls >100 ms under normal recording.
+- Battery budget must be based on matched repeated tests; no numeric battery promise before measurement.
+
+**Accessibility:**
+- No critical workflow blocked by VoiceOver, Voice Control, Switch Control or maximum supported Dynamic Type.
+- No unresolved high-severity accessibility audit findings without documented risk acceptance; core-task blockers cannot be waived.
+- Critical state must never be communicated by colour or sound alone.
+
+### 43.7 Fault injection and recovery matrix
+
+Inject failure at each relevant boundary:
+- app termination during preparing, recording, paused, finishing, local transaction, HealthKit save and sync;
+- device reboot and app relaunch during an active or recoverable session;
+- GPS permission downgrade, precise-location off, location services off, no fix and prolonged signal loss;
+- Motion & Fitness permission changes, HealthKit authorization changes and HealthKit unavailable;
+- storage nearly full, disk write error, SQLite busy/corruption, WAL checkpoint interruption and schema migration rollback;
+- network loss before request, during upload, after server commit but before acknowledgement, token expiry, duplicate response and server retry response;
+- backend restart, database connection exhaustion, object storage outage, job retry/dead-letter and backup restore;
+- timezone and calendar changes while the app is backgrounded.
+
+For every fault, specify expected persisted state, user-facing status, retry/recovery action, and whether a measurement gap must be declared. Test recovery repeatedly, not only the happy path.
+
+### 43.8 CI, build, signing and release pipeline
+
+Proposed pipeline (to implement after architecture consolidation):
+1. Pull request: formatting/lint, secret scan, dependency audit, Swift unit tests, deterministic route/step fixtures, schema migration tests and static checks.
+2. Main branch: full unit + integration + contract suite, simulator UI tests, accessibility audit automation, build artifact provenance and test-result retention.
+3. Nightly: broader device/simulator matrix, randomized state-machine/property tests, fault-injection suite, performance regression tests and backend load tests against isolated synthetic environments.
+4. Release candidate: signed archive, entitlement/Info.plist audit, privacy-manifest and permission-purpose review, dependency inventory, SBOM, static/dynamic security checks, manual accessibility review and physical-device field test.
+5. TestFlight: internal acceptance, then external beta with documented test script and issue reporting. Beta status is not production certification.
+6. Production: explicit go/no-go sign-off, staged rollout where supported, crash/health monitoring, rollback plan and support runbook.
+
+Use Xcode test plans to separate fast feedback from pre-release comprehensive suites. Apple documents GPX-based simulated locations and programmatic location construction for tests; simulation validates deterministic location logic but cannot validate real GNSS reception, radio conditions, background execution or battery behaviour. [R2, R3]
+
+Given the user's lack of a Mac, the proposed build route remains a GitHub-hosted macOS/Xcode runner for reproducible builds and signing workflows, subject to Apple Developer account/certificate/provisioning requirements. The runner does not replace physical iPhone testing. Signing credentials must be stored as protected CI secrets, never in repository files or logs.
+
+### 43.9 Security, privacy and compliance release review
+
+Use OWASP MASVS as the mobile security control baseline and MASTG for test procedures; the standard covers storage, cryptography, authentication, network, platform, code, resilience and privacy. It is a risk-based verification framework, not a guarantee of security or a substitute for backend testing. [R4, R5]
+
+Required checks:
+- local database, journal, backups and exported files protected according to Section 39 classification;
+- no secrets, tokens, precise routes or health payloads in source, logs, analytics, crash reports or screenshots;
+- authentication expiry/revocation, authorization on every API and object, RLS and cross-tenant negative tests;
+- TLS and certificate validation, safe error handling, rate limits and abuse controls;
+- consent, permission withdrawal, export, account deletion and processor deletion tested end-to-end;
+- dependency inventory, vulnerability scan, license review and update policy;
+- static analysis and authorized dynamic/penetration testing of app and backend;
+- App Store privacy disclosures and product claims match actual collection/use. Apple specifically prohibits using HealthKit/fitness/medical data for advertising or unrelated data mining and prohibits inaccurate HealthKit writes; disclose health data collection accurately. [R6]
+
+Do not claim “OWASP certified”; OWASP does not certify vendors/apps. Record the tested MASVS profile, scope, findings, exceptions and remediation evidence.
+
+### 43.10 Test reports and release evidence package
+
+Each release candidate must have:
+- commit/build identifiers, reproducible build instructions and dependency/SBOM snapshot;
+- unit/integration/UI/performance test summaries and coverage trends;
+- route/step accuracy report with protocol, reference instrument, sample size, cohort/condition breakdown, error distributions and limitations;
+- physical-device matrix with iOS version, permission state and device details;
+- background/locked-screen soak, crash recovery and data durability report;
+- battery/thermal and performance report with raw traces retained securely;
+- accessibility audit export and assistive-technology user-test findings;
+- security/privacy assessment, MASVS mapping, penetration-test findings and closure evidence;
+- backup/restore drill evidence and deletion propagation report;
+- known issues, risk acceptances, rollback plan, operational dashboards and support runbook.
+
+A test without a retained result artifact is not a release-gate pass.
+
+### 43.11 Release-blocking go/no-go rules
+
+**NO-GO** if any of the following is true:
+- daily HealthKit total and WALKON session steps can be double-counted or misrepresented;
+- route distance can silently include invalid jumps, pause gaps or fabricated straight-line bridges;
+- an acknowledged durable workout/route record can be lost or duplicated after crash/retry;
+- offline recording depends on a network call;
+- HealthKit partial failures can erase the local workout or appear as a successful export;
+- cross-account data access, exposed secrets, sensitive-data logging or untested deletion remains;
+- a core workflow is inaccessible to assistive technology or blocks users who cannot use touch/vision;
+- privacy disclosures or App Store claims do not match actual behaviour;
+- critical test suites are failing, missing, flaky without containment, or have no evidence artifact;
+- no physical iPhone has passed the essential sensor/background validation.
+
+**GO for limited TestFlight pilot only** when all critical local data, sensor, accessibility, privacy and security gates pass; known limitations are disclosed; monitoring and rollback exist; and pilot cohort/scope is explicit.
+
+**GO for public release** only after pilot evidence, measured performance/battery budgets, security findings closure, restore/deletion proof, App Store review readiness and operational support are complete.
+
+### 43.12 Section conclusion and remaining unknowns
+
+This section converts prior architecture research into a layered, evidence-driven test system. Deterministic fixtures and CI catch logic regressions; physical iPhones validate HealthKit, Core Motion, GPS, background, power and thermal behaviour; inclusive participants validate usability and measurement bias; independent security review verifies the threat model. Numeric accuracy/performance thresholds remain provisional until measured on the declared device and participant cohorts.
+
+Research complete for Section 43. Next: consolidate Sections 1–43, resolve contradictions and mark every architecture decision as selected, deferred or unresolved; produce the final implementation-ready specification and explicit go/no-go checklist.
+
+#### Section 43 references
+
+- [R1] Apple Developer Documentation, Testing in Xcode: https://developer.apple.com/documentation/xcode/testing
+- [R2] Apple Developer Documentation, Simulating location in tests: https://developer.apple.com/documentation/xcode/simulating-location-in-tests
+- [R3] Apple Developer Documentation, Organizing tests to improve feedback: https://developer.apple.com/documentation/xcode/organizing-tests-to-improve-feedback
+- [R4] OWASP Mobile Application Security Verification Standard (MASVS): https://mas.owasp.org/MASVS/
+- [R5] OWASP Mobile Application Security Testing Guide (MASTG): https://mas.owasp.org/MASTG/0x04b-Mobile-App-Security-Testing/
+- [R6] Apple App Review Guidelines, including HealthKit and fitness data restrictions: https://developer.apple.com/app-store/review/guidelines/
