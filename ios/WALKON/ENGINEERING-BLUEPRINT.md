@@ -7,7 +7,7 @@
 - **Blueprint:** `ios/WALKON/ENGINEERING-BLUEPRINT.md`.
 - **Phase:** Final architecture consolidated; **GO for local-first native iOS core implementation** under the user's standing instruction. No app code/build/device validation is yet claimed.
 - **Current completed research:** Sections 1–44 exist below. Latest research section: **44 — Final architecture consolidation and implementation go/no-go**.
-- **Exact next task:** **Implementation milestone 1 — audit the current repository tree and create the clean native WALKON iOS project foundation plus CI build/test workflow.** Preserve the blueprint; do not import legacy GATIVX/Mission-75 app code, data or credentials.
+- **Exact next task:** **Complete milestone 1 CI verification.** Resolve any XcodeGen/Xcode build or test failures, verify a passing simulator build and unit-test run, then audit the generated app configuration. Preserve the blueprint; do not import legacy GATIVX/Mission-75 app code, data or credentials.
 - **After Section 37:** update this register's latest-completed and exact-next-task fields before proceeding to Section 38 (maps, route display, map matching and location privacy).
 - **No user device testing or screenshot requests** until the research/architecture blueprint is sufficiently complete and a coherent buildable test plan is ready.
 
@@ -65,7 +65,9 @@
 - **Latest research update:** Section 44 — final architecture consolidation and implementation go/no-go.
 - **Section-44 commit:** 5788ed4dc9b2a51c52169d0cd1cb92847e181df1.
 - **Section-44 research blob:** ec27d6b5e954d04f4009c7947c563b8c80675826.
-- **Next action:** audit repository tree and create native WALKON iOS project foundation plus CI build/test workflow.
+- **Milestone 1 progress:** existing WALKON scaffold audited; iOS deployment target raised from 17.0 to 26.0; HealthKit update purpose string added; duplicate WALKON build workflow removed; unit-test target and smoke test added; consolidated macOS CI workflow added. CI run is in progress; earlier runs failed because the test source directory had not yet been committed and are not accepted as final evidence.
+- **Latest implementation commit:** 024205f73babed8fe70e5b2dc1d24cfcc4ebaa82.
+- **Next action:** verify the current CI run, fix any failures and record the final milestone-1 evidence.
 
 ---
 
