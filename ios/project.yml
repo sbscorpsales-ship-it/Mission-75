@@ -2,7 +2,7 @@ name: WALKON
 options:
   bundleIdPrefix: com.paramitsolutions
   deploymentTarget:
-    iOS: "17.0"
+    iOS: "26.0"
   createIntermediateGroups: true
 targets:
   WALKON:
@@ -24,4 +24,19 @@ targets:
         CODE_SIGN_ENTITLEMENTS: WALKON/WALKON.entitlements
         SUPPORTS_MACCATALYST: NO
     scheme:
+      testTargets:
+        - WALKONTests
       gatherCoverageData: false
+  WALKONTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: WALKONTests
+    dependencies:
+      - target: WALKON
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.paramitsolutions.walkon.tests
+        SWIFT_VERSION: "5.0"
+        GENERATE_INFOPLIST_FILE: YES
+        TARGETED_DEVICE_FAMILY: "1"
