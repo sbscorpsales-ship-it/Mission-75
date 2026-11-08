@@ -6,8 +6,8 @@
 - **Repository:** `sbscorpsales-ship-it/Mission-75`, branch `main`.
 - **Blueprint:** `ios/WALKON/ENGINEERING-BLUEPRINT.md`.
 - **Phase:** Research and engineering specification only. **App building is not authorized yet.**
-- **Current completed research:** Sections 1–36 exist below. Latest research section: **36 — Battery, thermal management and long-session behaviour**.
-- **Exact next task:** **Section 37 — Offline-first storage, sync, conflict handling and export.** Research durable local writes, outbox/inbox patterns, idempotency, retry/backoff, ordering, conflict policy, deletion propagation, health-store export, route upload, network transitions and recovery. Do not drift into unrelated feature design.
+- **Current completed research:** Sections 1–37 exist below. Latest research section: **37 — Offline-first storage, sync, conflict handling and export**.
+- **Exact next task:** **Section 38 — Maps, route display, map matching and location privacy.** Research route rendering, map providers/SDKs, offline map constraints, map matching limits, route simplification, geospatial privacy, start/end-point protection, location retention and sharing controls. Do not drift into unrelated feature design.
 - **After Section 37:** update this register's latest-completed and exact-next-task fields before proceeding to Section 38 (maps, route display, map matching and location privacy).
 - **No user device testing or screenshot requests** until the research/architecture blueprint is sufficiently complete and a coherent buildable test plan is ready.
 
@@ -40,10 +40,11 @@
 - **Section 34:** HealthKit/Health Connect permission semantics, aggregate versus raw reads, provenance, incremental changes, deletion, source reconciliation, privacy and acceptance tests.
 - **Section 35:** Active, resting/basal, gross and total energy semantics; HealthKit/Health Connect calorie records; walking-model limits; wearable error; WALKON validation policy.
 - **Section 36:** iOS/Android location power efficiency, background execution, batching, thermal and Low Power Mode responses, sensor/CPU/network duty cycle, battery measurement, long-session degradation and validation gates.
+- **Section 37:** Local-first durable writes, transactional outbox/inbox, idempotent sync, retries/backoff, ordering, conflict policy, tombstones/deletion propagation, HealthKit workout/route export, upload recovery and offline validation.
 
 ## Open research queue (ordered)
 36. Battery, thermal management and long-session behaviour.
-37. Offline-first storage, sync, conflict handling and export.
+37. [COMPLETE] Offline-first storage, sync, conflict handling and export.
 38. Maps, route display, map matching and location privacy.
 39. Privacy, security, consent, retention and deletion.
 40. Accessibility, gait diversity and inclusive measurement.
@@ -51,12 +52,11 @@
 After these: consolidate contradictions, close architecture decisions, produce a single implementation-ready specification and explicit go/no-go checklist. Only then ask for authorization to build.
 
 ## Last verified checkpoint
-- **Latest completed section:** 36.
-- **Latest research update:** Section 36 — battery, thermal management and long-session behaviour.
-- **Section-36 commit:** pending verification after this write.
-- **Section-36 research blob:** pending verification after this write.
-- **Next action:** research Section 37 — offline-first storage, sync, conflict handling and export.
-- **After Section 37:** Section 38 — maps, route display, map matching and location privacy.
+- **Latest completed section:** 37.
+- **Latest research update:** Section 37 — offline-first storage, sync, conflict handling and export.
+- **Section-37 commit:** pending verification after this write.
+- **Section-37 research blob:** pending verification after this write.
+- **Next action:** research Section 38 — maps, route display, map matching and location privacy.
 
 ---
 
@@ -3365,3 +3365,179 @@ Research complete for Section 36 at documentation/specification level. No batter
 - [G4] Android, Thermal API and thermal status: https://developer.android.com/games/optimize/adpf/thermal
 - [G5] Android Developers, Battery technical quality and wake-lock guidance: https://android-developers.googleblog.com/2026/03/battery-technical-quality-enforcement.html
 - [G6] Android, Fused Location Provider and battery-efficient location: https://developers.google.com/location-context/fused-location-provider
+
+
+## 37. Offline-first storage, sync, conflict handling and export
+
+Research update: 2026-11-08. This section specifies durable capture and later reconciliation of WALKON-owned workout records, route points and explicitly authorized health-store exports. Research only: no backend, sync worker, HealthKit export or device behaviour is claimed to exist.
+
+### 37.1 Governing rule and ownership boundaries
+
+**Local commit first; remote synchronization second.** WALKON must be able to record, finish, inspect and recover a walk when cellular data, Wi-Fi, DNS, the remote API or the user's account session is unavailable. A workout is not dependent on successful cloud upload. Android's official offline-first guidance describes a disk-backed local source of truth for repositories using network resources; higher layers read from local data, while the repository reconciles network state into it. [R1]
+
+Keep three domains distinct: (1) WALKON-owned activity—workout UUID, start/end times, pause/resume events, route segments, accepted route points, session metrics, algorithm version, completion state and user notes; the local database owns it. (2) Platform health-store data—HealthKit workouts/routes and permitted read aggregates; HealthKit remains an external store with independent authorization, identifiers, failure modes and deletion semantics. (3) Remote account data—an optional synchronized copy of WALKON-owned records, never a prerequisite for recording or the only copy.
+
+Do not sync raw HealthKit history wholesale. Export only the WALKON workout and route the user explicitly chooses and authorizes. Daily HealthKit aggregate steps remain platform-derived dashboard data, not a second workout upload or a value to add to session steps.
+
+Generate stable globally unique IDs on-device before any network request. Workout UUID is the aggregate root; route segments, route points, events, export jobs and sync jobs reference it. Retries reuse original IDs and never mint a second workout identity.
+
+### 37.2 Durable local write and transaction boundary
+
+The SQLite proposal in Section 3 remains the baseline; exact library and schema migration choices are implementation decisions.
+
+- Create the workout header and initial session event before sensor capture is considered active.
+- Append accepted route points with workout ID, segment ID, monotonically increasing per-workout sequence, event timestamp, coordinate, accuracy metadata and source/algorithm provenance.
+- Persist pause/resume/interruption events as durable state transitions.
+- Commit route points in bounded transactions. Do not keep a whole route only in memory or hold one transaction open for an entire walk.
+- On finish, atomically mark the local workout complete, persist end time/final metrics, close the active segment and create downstream export/sync intents.
+- A crash before the final transaction leaves a recoverable active/incomplete workout; after it leaves a completed local workout with pending downstream work.
+- Do not report “saved to HealthKit” or “synced” until external success is confirmed and the acknowledgement is persisted locally.
+
+Use foreign keys and uniqueness constraints to reject orphan points and duplicate identities. WAL mode, bounded queues and versioned migrations remain proposals from Section 3; profile write latency, checkpoint behaviour, disk pressure and recovery on target hardware before freezing settings.
+
+### 37.3 Transactional outbox and inbox
+
+A local database commit and an HTTP request cannot be one atomic transaction. Avoid the failure window where the workout commits but the app dies before recording that it needs upload.
+
+Use a transactional outbox. In the same local transaction that finalizes a workout, insert pending outbox rows. Each row includes immutable operation UUID, workout UUID, operation type, schema version, payload reference/content hash, creation time, attempt count, next eligible retry time, last error class and state.
+
+States: pending, inFlight, acknowledged, permanentlyFailed and cancelled. Persist inFlight before sending. On relaunch, stale inFlight rows become retryable only after checking whether the server already accepted the operation. Acknowledgement is a separate durable transaction. Keep payloads reproducible from immutable local records or a versioned snapshot, not a fragile temporary-file pointer.
+
+Use an inbox/deduplication ledger on the receiver for client operation IDs and server-originated events that may be delivered more than once. This gives at-least-once delivery with idempotent effects; it does not claim exactly-once network delivery.
+
+### 37.4 Idempotency, ordering and server contract
+
+Every create/update/export command carries a stable operation ID (idempotency key), workout UUID, child segment/point identity, authenticated account scope established by the server, schema/algorithm version, client event timestamp, sequence number and canonical payload checksum.
+
+The server enforces a database unique constraint on the idempotency key within the correct account/operation scope. Repeating the same key and same canonical payload returns the original logical result. Reusing a key with a different payload is a conflict, never an overwrite. Application-only “check then insert” is race-prone; deduplication and mutation must be protected by a database transaction and uniqueness constraint.
+
+Order operations per workout: create/header before route batches; batches carry sequence ranges; finalize follows all required batches. Do not assume HTTP completion order equals event order. The server rejects, buffers or requests missing sequence ranges instead of silently finalizing an incomplete route.
+
+Route-point batches are immutable and include sequence start/end, point count and content hash. An identical retry is harmless. A correction is a versioned repair/reprocessing operation, not changed bytes hidden under the same operation ID.
+
+### 37.5 Retry classification and network transitions
+
+Connectivity notifications are hints to attempt work, not proof that DNS, TLS, authentication or the WALKON endpoint works.
+
+- **Transient:** offline, timeout, reset, DNS failure, HTTP 408/429 and appropriate 5xx. Retry with exponential backoff, jitter, a maximum delay cap and server Retry-After where supplied.
+- **Authentication:** expired/invalid credentials. Refresh only through the supported session flow; otherwise pause account sync and request sign-in when the user returns. Do not loop on 401/403.
+- **Permanent validation/schema errors:** 400/422 or incompatible payload. Stop rapid retries, preserve local data and mark for repair/update.
+- **Conflict:** 409/version mismatch. Fetch and compare canonical state; apply conflict policy rather than blindly retrying.
+- **Rate limit:** respect Retry-After and reduce concurrency.
+
+Persist nextAttemptAt and attempt metadata. Coalesce connectivity changes into one sync coordinator. Never create one timer per record, tight retry loops, repeated wakeups or a request for every GPS callback. Android's official guidance discusses exponential backoff, error classification, queued writes and WorkManager for persistent network-constrained work. [R1]
+
+On iOS, background URLSession supports eligible long-running transfers outside the app process and completion event delivery. It has constraints: HTTP(S), delegate-based event delivery, and uploads from files rather than in-memory data/streams after the app exits. The system may rate-limit repeated background relaunch/transfer scheduling. Prepare durable upload files, use bounded batches and do not rely on one background callback per route point. [R2]
+
+Use BGTaskScheduler for opportunistic refresh/maintenance/sync that the system chooses to run; it is not a precise timer or guarantee of immediate execution. The user-initiated walk capture path must not depend on it. [R3] For future Android, use WorkManager with connected-network constraints and unique work to drain the durable queue; an in-memory coroutine is not a durable sync mechanism. [R1]
+
+### 37.6 Conflict policy
+
+Do not apply generic last-write-wins to fitness records. Device clock skew, delayed uploads and route integrity make wall-clock timestamps an unsafe sole conflict rule.
+
+- **Workout identity/capture:** device creates immutable UUID; duplicate creation is idempotent.
+- **Route points/event journal:** append-only, sequence-ordered records. Never merge distinct point streams by timestamp alone. Corrections are versioned and preserve original observations.
+- **Final summary:** versioned snapshot derived from the local journal. An explicitly authorized recalculation increments algorithmVersion/revision; it does not silently overwrite prior output.
+- **User-editable metadata:** versioned updates. Use field-level merge only where semantics are safe; otherwise preserve both versions and request user resolution.
+- **Deletion:** explicit tombstone wins over stale upserts for the same record generation. A stale device must not resurrect deleted content.
+- **Account preferences:** separate from workout capture; never block local recording.
+
+Server responses include canonical revision/version and accepted sequence ranges. The client must not apply remote state that discards local pending operations. If two devices record the same real-world walk independently, do not auto-merge on overlapping time/location; preserve both or ask the user to resolve.
+
+### 37.7 Deletion propagation and privacy
+
+Deletion is a first-class sync operation, not an upsert with fields missing.
+
+A local deletion creates a durable tombstone with record ID, generation/revision, deletion time and pending propagation state. Transmit idempotently; server prevents stale retries from recreating the record. Retain only minimum tombstone metadata under a documented policy; never retain route coordinates in a tombstone.
+
+If a user deletes a HealthKit item, use permitted platform change-query mechanisms where applicable and reconcile the local relationship. Do not assume deleting a HealthKit copy automatically deletes the WALKON original or remote copy. HealthKit anchored queries can return new samples and deleted objects with an anchor corresponding to the last change. Persist anchors and advance them only after local reconciliation commits. [R4]
+
+Distinguish deletion of a local WALKON workout, its HealthKit export and its cloud copy. Explain each scope. Export and cloud sync are separately consented; local-only recording remains possible. Do not put precise route coordinates in analytics, crash logs, ordinary push payloads or diagnostic breadcrumbs. Retention periods, account deletion and tombstone lifetime are decisions for Section 39.
+
+### 37.8 HealthKit workout and route export state machine
+
+HealthKit export is separate from cloud sync: it is a platform-store operation with independent authorization and partial failure.
+
+Track stages per workout: localWorkoutCommitted → healthWorkoutPending → healthWorkoutSaved (persist returned workout identifier) → healthRoutePending → healthRouteSaved → healthExportComplete. Failure must identify whether workout creation or route association failed. Never create a second HealthKit workout just because route finalization failed.
+
+Apple's route guide requires permission to share workout and workout-route samples. Its documented sequence is to collect locations, end the workout, save the workout, then finish the route builder to associate the route. The route builder's finish operation requires an already-saved workout; it must be finished before deallocation or accumulated route data is lost. An empty route cannot be finalized. [R5, R6]
+
+Keep the local route journal as durable recovery copy until HealthKit route save is confirmed. The workout coordinator owns the live route builder lifecycle. Do not assume an in-memory builder can be reconstructed after process death unless the platform explicitly supports restoration. If workout save succeeds but route save fails, retain the workout identifier and retry/reconcile the route stage without duplicating the workout. Never write duplicate step samples or upload a HealthKit daily aggregate as a WALKON session. Preserve Section 34's privacy-protected HealthKit read-authorization semantics.
+
+### 37.9 Route upload format and transfer boundaries
+
+The local database remains canonical for route capture. Remote transfer uses versioned bounded batches or a compact immutable file, not one request per point.
+
+Each batch carries workout UUID, segment UUID, sequence range, point count, schema/algorithm version, checksum and timestamps. Server validates sequence continuity, payload size, coordinate ranges, timestamp order and account authorization. Keep raw accepted observations distinct from derived/simplified display geometry.
+
+For background iOS file upload, write a complete immutable export file to app-controlled durable storage, close and validate it, then create a file-backed background URLSession upload task. Keep a manifest linking task identifier, outbox operation ID, workout ID, file hash and lifecycle. Do not delete the source file until transfer is confirmed and server acknowledgement is durable. Rebuild from the local journal if missing/corrupt. Do not build an unbounded in-memory JSON object for a long route.
+
+HealthKit export uses native HealthKit APIs; it is not route upload to a server. These destinations have separate consent and status.
+
+### 37.10 Recovery and reconciliation
+
+On launch/foreground: (1) open and integrity-check the local database; apply migrations before sync; (2) recover workouts left preparing/recording/paused/finishing and never silently mark incomplete sessions complete; (3) recover stale inFlight outbox rows while preserving IDs; (4) inspect persisted background URLSession tasks and map them to outbox operations; (5) resume HealthKit export from its last confirmed stage and query for an already-created workout before creating another when a prior result may have been lost; (6) drain eligible outbox items in per-workout order with bounded concurrency; (7) pull remote revisions/tombstones using a persisted cursor and apply transactionally; (8) persist the cursor only after the received page and effects commit locally; (9) derive sync status from durable state, not transient reachability.
+
+Test every crash boundary: before request, after request leaves device, after server commit, before response, after response but before local acknowledgement, and during acknowledgement commit.
+
+### 37.11 User-visible status and account transitions
+
+Expose clear independent states: Saved on this iPhone; Waiting for connection; Uploading; Synced; Sign-in required; Needs attention; HealthKit export pending; HealthKit export complete; Export failed (retry available).
+
+Do not conflate local save success, HealthKit export, remote upload, server acknowledgement and complete synchronization. A generic connectivity check is not proof that the WALKON API is available.
+
+On sign-out, local workouts remain accessible according to the local privacy policy. Pending account uploads pause until a valid session exists. Bind each outbox row to the account scope that authorized it; account switching must never upload one user's private workout into another account without an explicit migration/reassignment policy.
+
+### 37.12 User export and portability
+
+Provide explicit user-initiated export of their own history. GPX suits route geometry; CSV/JSON can carry summaries, events and provenance. FIT/TCX can be evaluated after format validation and privacy review. Preserve UTC timestamps plus original time-zone context where available, units and coordinate assumptions.
+
+Generate from a consistent database snapshot or immutable workout snapshot. Include a manifest with format version, export time, workout IDs, record counts and checksums. Validate the archive before calling it complete. Do not silently include private notes/photos unless selected.
+
+Cloud sync is not a substitute for independent user export; export does not imply a remote backup exists.
+
+### 37.13 Failure-injection and acceptance tests
+
+1. Record and finish in airplane mode; force-quit/relaunch; verify exactly one complete local workout and route.
+2. Toggle Wi-Fi/cellular repeatedly during a walk; capture remains independent of upload.
+3. Crash before/after final local transaction; recover as incomplete or complete, never falsely synced.
+4. Simulate server commit followed by dropped response; retry same idempotency key; exactly one remote workout.
+5. Replay identical route batch repeatedly; no duplicate points; reject changed payload under same key.
+6. Deliver batches out of order or omit a sequence range; server must not finalize incomplete route.
+7. Expire authentication mid-sync; pause retries, retain local data, no tight 401 loop.
+8. Exercise 429/Retry-After, 5xx, timeout, 400/422 and 409; verify correct policy.
+9. Delete offline, reconnect a stale device copy; tombstone wins and route coordinates are not resurrected.
+10. Interrupt HealthKit workout save, route finalization and acknowledgement persistence separately; resume without duplicate workout.
+11. Revoke HealthKit sharing permission before export; local workout remains and export is blocked clearly.
+12. Test long routes with thousands of points; bounded memory/request size, stable DB latency and resumable upload.
+13. Simulate storage pressure/write failure; app reports local persistence failure honestly and never claims saved.
+14. Export and validate manifest, checksums, timestamps, units, point counts and round-trip parsing.
+15. Migrate each supported prior schema version; test interrupted migration and corrupt database recovery.
+16. Verify sync status after restart, sign-out/in, reboot and prolonged offline operation.
+
+### 37.14 Open decisions and evidence gaps
+
+- Select the remote backend/API contract only after auditing the existing architecture; this research does not mandate a backend vendor.
+- Freeze SQLite schema, WAL/checkpoint policy, encryption/file-protection settings and migration tool after device profiling and Section 39 security review.
+- Decide whether multi-device editing belongs in v1. A safer first release can make remote history read-only on secondary devices until full conflict UX exists.
+- Define batch size, compression, concurrency and retention of acknowledged local route data using measured route sizes and battery tests.
+- Verify background URLSession restoration and file-protection behaviour on minimum supported iOS and locked-device state.
+- Validate HealthKit export retry/reconciliation and deletion semantics against the target SDK.
+- Define cloud retention, tombstone retention, account deletion and export guarantees in Section 39.
+- Set performance/fault-injection thresholds in Section 41. This section defines tests, not measured pass results.
+
+### 37.15 Section conclusion
+
+WALKON should use a **local-first, transactionally journaled, at-least-once synchronization design with idempotent server effects**. The device creates stable workout identities, commits route and event data locally, and records pending downstream work in the same transaction. A durable outbox is drained opportunistically with classified retries, backoff, bounded batches and per-workout ordering. The server deduplicates operations under database-enforced unique keys. Route points are append-only; corrections are versioned. Deletions propagate as tombstones. HealthKit workout and route export is a separate staged state machine, never conflated with cloud sync. User export is independent of both.
+
+This is an architecture proposal only. No backend contract, sync implementation, HealthKit export, upload, offline test or device result is claimed. Research complete for Section 37. Next: Section 38 — maps, route display, map matching and location privacy.
+
+#### Section 37 references
+
+- [R1] Android Developers, Build an offline-first app: https://developer.android.com/topic/architecture/data-layer/offline-first
+- [R2] Apple Developer Documentation, Downloading files in the background (background URLSession): https://developer.apple.com/documentation/foundation/downloading-files-in-the-background
+- [R3] Apple Developer Documentation, Using background tasks to update your app: https://developer.apple.com/documentation/uikit/using-background-tasks-to-update-your-app
+- [R4] Apple Developer Documentation, HKAnchoredObjectQuery: https://developer.apple.com/documentation/healthkit/hkanchoredobjectquery
+- [R5] Apple Developer Documentation, Creating a workout route: https://developer.apple.com/documentation/healthkit/creating-a-workout-route
+- [R6] Apple Developer Documentation, finishRoute(with:metadata:completion:): https://developer.apple.com/documentation/healthkit/hkworkoutroutebuilder/finishroute%28with%3Ametadata%3Acompletion%3A%29
+- [R7] Apple Developer Documentation, HKWorkoutBuilder.finishWorkout(completion:): https://developer.apple.com/documentation/healthkit/hkworkoutbuilder/finishworkout%28completion%3A%29
