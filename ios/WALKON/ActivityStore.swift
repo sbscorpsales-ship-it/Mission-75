@@ -16,6 +16,24 @@ struct WalkSession: Identifiable, Codable, Equatable {
     }
 }
 
+struct WorkoutDraft: Identifiable, Equatable {
+    let id: UUID
+    let startedAt: Date
+    let lastUpdatedAt: Date
+    let steps: Int
+    let distanceMeters: Double
+    let routePointCount: Int
+}
+
+struct JournalRoutePoint: Equatable {
+    let sequence: Int
+    let segment: Int
+    let timestamp: Date
+    let latitude: Double
+    let longitude: Double
+    let horizontalAccuracy: Double
+}
+
 enum ActivityStoreError: LocalizedError {
     case databaseOpen(String)
     case database(String)
@@ -30,11 +48,12 @@ enum ActivityStoreError: LocalizedError {
     }
 }
 
-/// Local-first durable store. A successful save means SQLite committed the workout
-/// with synchronous durability; it does not imply HealthKit export or cloud sync.
+/// Local-first store. Draft and route writes commit before returning; a successful
+/// call means SQLite accepted the write under WAL + synchronous FULL durability.
 @MainActor
 final class ActivityStore: ObservableObject {
     @Published private(set) var sessions: [WalkSession] = []
+    @Published private(set) var recoverableDrafts: [WorkoutDraft] = []
     @Published private(set) var storageStatus = "Local history ready"
 
     private var database: OpaquePointer?
@@ -47,6 +66,7 @@ final class ActivityStore: ObservableObject {
         do {
             try openDatabase()
             try load()
+            try loadDrafts()
         } catch {
             storageStatus = error.localizedDescription
         }
@@ -57,27 +77,198 @@ final class ActivityStore: ObservableObject {
     }
 
     @discardableResult
+    func beginDraft(id: UUID = UUID(), startedAt: Date = Date()) -> Bool {
+        do {
+            guard let database else { throw ActivityStoreError.database("Database is not open.") }
+            try execute("BEGIN IMMEDIATE;")
+            do {
+                var statement: OpaquePointer?
+                try prepare("INSERT INTO workout_drafts (id, started_at, updated_at, steps, distance_meters) VALUES (?, ?, ?, 0, 0) ON CONFLICT(id) DO NOTHING;", into: &statement, database: database)
+                defer { sqlite3_finalize(statement) }
+                bind(id.uuidString, to: 1, in: statement)
+                sqlite3_bind_double(statement, 2, startedAt.timeIntervalSince1970)
+                sqlite3_bind_double(statement, 3, startedAt.timeIntervalSince1970)
+                guard sqlite3_step(statement) == SQLITE_DONE else { throw ActivityStoreError.database(lastError(database)) }
+                try execute("COMMIT;")
+            } catch {
+                try? execute("ROLLBACK;")
+                throw error
+            }
+            try loadDrafts()
+            storageStatus = "Walk draft saved on this iPhone"
+            return true
+        } catch {
+            storageStatus = error.localizedDescription
+            return false
+        }
+    }
+
+    /// Appends one accepted GPS observation. Sequence numbers make retries idempotent.
+    @discardableResult
+    func appendRoutePoint(workoutID: UUID, point: JournalRoutePoint) -> Bool {
+        do {
+            guard let database else { throw ActivityStoreError.database("Database is not open.") }
+            try execute("BEGIN IMMEDIATE;")
+            do {
+                var statement: OpaquePointer?
+                try prepare("""
+                    INSERT INTO route_points (workout_id, sequence, segment, timestamp, latitude, longitude, horizontal_accuracy)
+                    SELECT ?, ?, ?, ?, ?, ?, ? WHERE EXISTS (
+                        SELECT 1 FROM workout_drafts WHERE id = ?
+                    ) ON CONFLICT(workout_id, sequence) DO NOTHING;
+                    """, into: &statement, database: database)
+                defer { sqlite3_finalize(statement) }
+                bind(workoutID.uuidString, to: 1, in: statement)
+                sqlite3_bind_int64(statement, 2, sqlite3_int64(point.sequence))
+                sqlite3_bind_int64(statement, 3, sqlite3_int64(point.segment))
+                sqlite3_bind_double(statement, 4, point.timestamp.timeIntervalSince1970)
+                sqlite3_bind_double(statement, 5, point.latitude)
+                sqlite3_bind_double(statement, 6, point.longitude)
+                sqlite3_bind_double(statement, 7, point.horizontalAccuracy)
+                bind(workoutID.uuidString, to: 8, in: statement)
+                guard sqlite3_step(statement) == SQLITE_DONE else { throw ActivityStoreError.database(lastError(database)) }
+                try execute("COMMIT;")
+            } catch {
+                try? execute("ROLLBACK;")
+                throw error
+            }
+            try loadDrafts()
+            storageStatus = "Walk route checkpoint saved"
+            return true
+        } catch {
+            storageStatus = error.localizedDescription
+            return false
+        }
+    }
+
+    @discardableResult
+    func updateDraftMetrics(workoutID: UUID, steps: Int, distanceMeters: Double, at date: Date = Date()) -> Bool {
+        do {
+            guard let database else { throw ActivityStoreError.database("Database is not open.") }
+            var statement: OpaquePointer?
+            try prepare("UPDATE workout_drafts SET updated_at = ?, steps = ?, distance_meters = ? WHERE id = ?;", into: &statement, database: database)
+            defer { sqlite3_finalize(statement) }
+            sqlite3_bind_double(statement, 1, date.timeIntervalSince1970)
+            sqlite3_bind_int64(statement, 2, sqlite3_int64(max(0, steps)))
+            sqlite3_bind_double(statement, 3, max(0, distanceMeters))
+            bind(workoutID.uuidString, to: 4, in: statement)
+            guard sqlite3_step(statement) == SQLITE_DONE, sqlite3_changes(database) == 1 else {
+                throw ActivityStoreError.database("The active walk draft no longer exists.")
+            }
+            try loadDrafts()
+            return true
+        } catch {
+            storageStatus = error.localizedDescription
+            return false
+        }
+    }
+
+    func routePoints(for workoutID: UUID) throws -> [JournalRoutePoint] {
+        guard let database else { throw ActivityStoreError.database("Database is not open.") }
+        var statement: OpaquePointer?
+        try prepare("SELECT sequence, segment, timestamp, latitude, longitude, horizontal_accuracy FROM route_points WHERE workout_id = ? ORDER BY sequence;", into: &statement, database: database)
+        defer { sqlite3_finalize(statement) }
+        bind(workoutID.uuidString, to: 1, in: statement)
+        var result: [JournalRoutePoint] = []
+        while sqlite3_step(statement) == SQLITE_ROW {
+            result.append(JournalRoutePoint(
+                sequence: Int(sqlite3_column_int64(statement, 0)),
+                segment: Int(sqlite3_column_int64(statement, 1)),
+                timestamp: Date(timeIntervalSince1970: sqlite3_column_double(statement, 2)),
+                latitude: sqlite3_column_double(statement, 3),
+                longitude: sqlite3_column_double(statement, 4),
+                horizontalAccuracy: sqlite3_column_double(statement, 5)
+            ))
+        }
+        return result
+    }
+
+    @discardableResult
+    func discardDraft(_ id: UUID) -> Bool {
+        do {
+            guard let database else { throw ActivityStoreError.database("Database is not open.") }
+            try execute("BEGIN IMMEDIATE;")
+            do {
+                for sql in ["DELETE FROM route_points WHERE workout_id = ?;", "DELETE FROM workout_drafts WHERE id = ?;"] {
+                    var statement: OpaquePointer?
+                    try prepare(sql, into: &statement, database: database)
+                    defer { sqlite3_finalize(statement) }
+                    bind(id.uuidString, to: 1, in: statement)
+                    guard sqlite3_step(statement) == SQLITE_DONE else { throw ActivityStoreError.database(lastError(database)) }
+                }
+                try execute("COMMIT;")
+            } catch {
+                try? execute("ROLLBACK;")
+                throw error
+            }
+            try loadDrafts()
+            return true
+        } catch {
+            storageStatus = error.localizedDescription
+            return false
+        }
+    }
+
+    /// Finalization writes the completed workout and removes its draft/points atomically.
+    @discardableResult
+    func finalizeDraft(_ id: UUID, endedAt: Date = Date()) -> Bool {
+        do {
+            guard let database else { throw ActivityStoreError.database("Database is not open.") }
+            guard let draft = recoverableDrafts.first(where: { $0.id == id }) else {
+                throw ActivityStoreError.database("The recoverable walk draft was not found.")
+            }
+            let points = try routePoints(for: id)
+            let session = WalkSession(
+                id: id, startedAt: draft.startedAt, endedAt: endedAt,
+                steps: draft.steps, distanceMeters: draft.distanceMeters,
+                route: points.map { .init(latitude: $0.latitude, longitude: $0.longitude) }
+            )
+            let payload = try encoder.encode(session)
+            try execute("BEGIN IMMEDIATE;")
+            do {
+                var statement: OpaquePointer?
+                try prepare("INSERT INTO walks (id, started_at, ended_at, payload) VALUES (?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET ended_at=excluded.ended_at, payload=excluded.payload;", into: &statement, database: database)
+                defer { sqlite3_finalize(statement) }
+                bind(id.uuidString, to: 1, in: statement)
+                sqlite3_bind_double(statement, 2, session.startedAt.timeIntervalSince1970)
+                sqlite3_bind_double(statement, 3, endedAt.timeIntervalSince1970)
+                payload.withUnsafeBytes { bytes in sqlite3_bind_blob(statement, 4, bytes.baseAddress, Int32(bytes.count), sqliteTransient) }
+                guard sqlite3_step(statement) == SQLITE_DONE else { throw ActivityStoreError.database(lastError(database)) }
+                for sql in ["DELETE FROM route_points WHERE workout_id = ?;", "DELETE FROM workout_drafts WHERE id = ?;"] {
+                    var cleanup: OpaquePointer?
+                    try prepare(sql, into: &cleanup, database: database)
+                    defer { sqlite3_finalize(cleanup) }
+                    bind(id.uuidString, to: 1, in: cleanup)
+                    guard sqlite3_step(cleanup) == SQLITE_DONE else { throw ActivityStoreError.database(lastError(database)) }
+                }
+                try execute("COMMIT;")
+            } catch {
+                try? execute("ROLLBACK;")
+                throw error
+            }
+            try load()
+            try loadDrafts()
+            storageStatus = "Saved on this iPhone"
+            return true
+        } catch {
+            storageStatus = error.localizedDescription
+            return false
+        }
+    }
+
+    @discardableResult
     func save(_ session: WalkSession) -> Bool {
         do {
             guard let database else { throw ActivityStoreError.database("Database is not open.") }
-            guard let payload = try? encoder.encode(session) else { throw ActivityStoreError.encoding }
-            let sql = "INSERT INTO walks (id, started_at, ended_at, payload) VALUES (?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET ended_at=excluded.ended_at, payload=excluded.payload;"
+            let payload = try encoder.encode(session)
             var statement: OpaquePointer?
-            try prepare(sql, into: &statement, database: database)
+            try prepare("INSERT INTO walks (id, started_at, ended_at, payload) VALUES (?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET ended_at=excluded.ended_at, payload=excluded.payload;", into: &statement, database: database)
             defer { sqlite3_finalize(statement) }
             bind(session.id.uuidString, to: 1, in: statement)
             sqlite3_bind_double(statement, 2, session.startedAt.timeIntervalSince1970)
-            if let endedAt = session.endedAt {
-                sqlite3_bind_double(statement, 3, endedAt.timeIntervalSince1970)
-            } else {
-                sqlite3_bind_null(statement, 3)
-            }
-            payload.withUnsafeBytes { bytes in
-                sqlite3_bind_blob(statement, 4, bytes.baseAddress, Int32(bytes.count), sqliteTransient)
-            }
-            guard sqlite3_step(statement) == SQLITE_DONE else {
-                throw ActivityStoreError.database(lastError(database))
-            }
+            if let endedAt = session.endedAt { sqlite3_bind_double(statement, 3, endedAt.timeIntervalSince1970) } else { sqlite3_bind_null(statement, 3) }
+            payload.withUnsafeBytes { bytes in sqlite3_bind_blob(statement, 4, bytes.baseAddress, Int32(bytes.count), sqliteTransient) }
+            guard sqlite3_step(statement) == SQLITE_DONE else { throw ActivityStoreError.database(lastError(database)) }
             try load()
             storageStatus = "Saved on this iPhone"
             return true
@@ -112,13 +303,21 @@ final class ActivityStore: ObservableObject {
         try execute("PRAGMA foreign_keys=ON;")
         try execute("""
             CREATE TABLE IF NOT EXISTS walks (
-                id TEXT PRIMARY KEY NOT NULL,
-                started_at REAL NOT NULL,
-                ended_at REAL,
-                payload BLOB NOT NULL
+                id TEXT PRIMARY KEY NOT NULL, started_at REAL NOT NULL, ended_at REAL, payload BLOB NOT NULL
             );
+            CREATE TABLE IF NOT EXISTS workout_drafts (
+                id TEXT PRIMARY KEY NOT NULL, started_at REAL NOT NULL, updated_at REAL NOT NULL,
+                steps INTEGER NOT NULL DEFAULT 0, distance_meters REAL NOT NULL DEFAULT 0
+            );
+            CREATE TABLE IF NOT EXISTS route_points (
+                workout_id TEXT NOT NULL REFERENCES workout_drafts(id) ON DELETE CASCADE,
+                sequence INTEGER NOT NULL, segment INTEGER NOT NULL, timestamp REAL NOT NULL,
+                latitude REAL NOT NULL, longitude REAL NOT NULL, horizontal_accuracy REAL NOT NULL,
+                PRIMARY KEY (workout_id, sequence)
+            );
+            CREATE INDEX IF NOT EXISTS route_points_workout_sequence ON route_points(workout_id, sequence);
             """)
-        try execute("PRAGMA user_version=1;")
+        try execute("PRAGMA user_version=2;")
     }
 
     private func load() throws {
@@ -129,11 +328,34 @@ final class ActivityStore: ObservableObject {
         var loaded: [WalkSession] = []
         while sqlite3_step(statement) == SQLITE_ROW {
             guard let bytes = sqlite3_column_blob(statement, 0) else { continue }
-            let count = Int(sqlite3_column_bytes(statement, 0))
-            let data = Data(bytes: bytes, count: count)
+            let data = Data(bytes: bytes, count: Int(sqlite3_column_bytes(statement, 0)))
             loaded.append(try decoder.decode(WalkSession.self, from: data))
         }
         sessions = loaded
+    }
+
+    private func loadDrafts() throws {
+        guard let database else { throw ActivityStoreError.database("Database is not open.") }
+        var statement: OpaquePointer?
+        try prepare("""
+            SELECT d.id, d.started_at, d.updated_at, d.steps, d.distance_meters,
+                   (SELECT COUNT(*) FROM route_points p WHERE p.workout_id = d.id)
+            FROM workout_drafts d ORDER BY d.started_at;
+            """, into: &statement, database: database)
+        defer { sqlite3_finalize(statement) }
+        var loaded: [WorkoutDraft] = []
+        while sqlite3_step(statement) == SQLITE_ROW {
+            guard let rawID = sqlite3_column_text(statement, 0), let id = UUID(uuidString: String(cString: rawID)) else { continue }
+            loaded.append(WorkoutDraft(
+                id: id,
+                startedAt: Date(timeIntervalSince1970: sqlite3_column_double(statement, 1)),
+                lastUpdatedAt: Date(timeIntervalSince1970: sqlite3_column_double(statement, 2)),
+                steps: Int(sqlite3_column_int64(statement, 3)),
+                distanceMeters: sqlite3_column_double(statement, 4),
+                routePointCount: Int(sqlite3_column_int64(statement, 5))
+            ))
+        }
+        recoverableDrafts = loaded
     }
 
     private func execute(_ sql: String) throws {
@@ -154,14 +376,10 @@ final class ActivityStore: ObservableObject {
     }
 
     private func bind(_ value: String, to index: Int32, in statement: OpaquePointer?) {
-        value.withCString { pointer in
-            sqlite3_bind_text(statement, index, pointer, -1, sqliteTransient)
-        }
+        value.withCString { sqlite3_bind_text(statement, index, $0, -1, sqliteTransient) }
     }
 
-    private func lastError(_ database: OpaquePointer) -> String {
-        String(cString: sqlite3_errmsg(database))
-    }
+    private func lastError(_ database: OpaquePointer) -> String { String(cString: sqlite3_errmsg(database)) }
 }
 
 private let sqliteTransient = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
