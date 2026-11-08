@@ -91,6 +91,9 @@ final class ActivityStore: ObservableObject {
                 sqlite3_bind_double(statement, 2, startedAt.timeIntervalSince1970)
                 sqlite3_bind_double(statement, 3, startedAt.timeIntervalSince1970)
                 guard sqlite3_step(statement) == SQLITE_DONE else { throw ActivityStoreError.database(lastError(database)) }
+                guard sqlite3_changes(database) == 1 else {
+                    throw ActivityStoreError.database("A walk with this identifier already exists; no new draft was created.")
+                }
                 try execute("COMMIT;")
             } catch {
                 try? execute("ROLLBACK;")
