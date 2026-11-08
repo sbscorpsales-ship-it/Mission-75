@@ -14,6 +14,7 @@ assert((await page.locator("#missionTitle").textContent()).includes("Build stren
 assert((await page.locator("#missionPct").textContent()).includes("MISSION ACTIVE"),"Mission status missing");
 assert((await page.locator("#distance").textContent()).includes("0.40 km"),"Fresh-store distance did not render");
 assert(await page.locator(".bottom button").count()===5,"Expected five navigation destinations");
+assert(await page.locator('a[href="./legacy-runtime.html"]').count()===1,"Existing account and saved-record access link missing");
 for(const tab of ["home","journey","record","walk","coach"]){await page.locator('[data-panel="'+tab+'"]').click();assert(await page.locator("#"+tab+".panel.active").count()===1,"Navigation failed: "+tab)}
 await page.locator('[data-panel="home"]').click();assert(await page.locator("#missionTitle").textContent().then(x=>x.includes("Build strength")),"Mission changed after navigation");
 assert(errors.length===0,"Browser errors: "+errors.join("; "));
