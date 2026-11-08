@@ -60,15 +60,19 @@ struct DashboardView: View {
                     VStack(alignment: .leading, spacing: 12) {
                         Text("TODAY'S STEPS").font(.caption.bold()).tracking(1.6).foregroundStyle(.secondary)
                         HStack(alignment: .firstTextBaseline, spacing: 8) {
-                            Text(health.steps.formatted()).font(.system(size: 48, weight: .bold, design: .rounded)).monospacedDigit()
+                            Text(health.steps?.formatted() ?? "—").font(.system(size: 48, weight: .bold, design: .rounded)).monospacedDigit()
                             Text("/ \(goal.formatted())").foregroundStyle(.secondary)
                         }
-                        ProgressView(value: min(Double(health.steps) / Double(goal), 1))
+                        ProgressView(value: min(Double(health.steps ?? 0) / Double(goal), 1))
                             .tint(.mint).scaleEffect(x: 1, y: 1.7, anchor: .center)
                         HStack {
                             Label(health.status, systemImage: "heart.text.square")
                             Spacer()
-                            Text("\(max(goal - health.steps, 0).formatted()) to go")
+                            if let steps = health.steps {
+                                Text("\(max(goal - steps, 0).formatted()) to go")
+                            } else {
+                                Text("Awaiting data")
+                            }
                         }.font(.caption).foregroundStyle(.secondary)
                         Button { health.refresh() } label: {
                             Label("Refresh Apple Health", systemImage: "arrow.clockwise")
