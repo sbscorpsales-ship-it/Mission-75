@@ -48,4 +48,59 @@ final class WALKONTests: XCTestCase {
         let data = try JSONEncoder().encode(session)
         XCTAssertEqual(try JSONDecoder().decode(WalkSession.self, from: data), session)
     }
+
+    @MainActor
+    func testDraftAndRouteJournalRecoverAfterReopenAndFinalizeExactlyOnce() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("WALKONDraftTests-\\(UUID().uuidString)", isDirectory: true)
+        let databaseURL = directory.appendingPathComponent("walk-history.sqlite")
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let id = UUID()
+        let started = Date(timeIntervalSince1970: 1_800_000_100)
+        let store = ActivityStore(databaseURL: databaseURL)
+        XCTAssertTrue(store.beginDraft(id: id, startedAt: started))
+        XCTAssertTrue(store.updateDraftMetrics(workoutID: id, steps: 240, distanceMeters: 125.5))
+
+        let point = JournalRoutePoint(
+            sequence: 1, segment: 0, timestamp: started.addingTimeInterval(30),
+            latitude: 15.85, longitude: 74.50, horizontalAccuracy: 4
+        )
+        XCTAssertTrue(store.appendRoutePoint(workoutID: id, point: point))
+        XCTAssertTrue(store.appendRoutePoint(workoutID: id, point: point), "Duplicate sequence retry must be idempotent.")
+
+        let reopened = ActivityStore(databaseURL: databaseURL)
+        XCTAssertEqual(reopened.recoverableDrafts.count, 1)
+        XCTAssertEqual(reopened.recoverableDrafts.first?.id, id)
+        XCTAssertEqual(reopened.recoverableDrafts.first?.routePointCount, 1)
+        XCTAssertEqual(try reopened.routePoints(for: id), [point])
+
+        XCTAssertTrue(reopened.finalizeDraft(id, endedAt: started.addingTimeInterval(60)))
+        XCTAssertEqual(reopened.sessions.count, 1)
+        XCTAssertEqual(reopened.sessions.first?.steps, 240)
+        XCTAssertEqual(reopened.sessions.first?.route.count, 1)
+        XCTAssertTrue(reopened.recoverableDrafts.isEmpty)
+        XCTAssertTrue(reopened.finalizeDraft(id) == false, "Finalization of a missing draft must not create another workout.")
+        XCTAssertEqual(reopened.sessions.count, 1)
+    }
+
+    @MainActor
+    func testDiscardDraftRemovesJournaledRoutePoints() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("WALKONDiscardTests-\\(UUID().uuidString)", isDirectory: true)
+        let databaseURL = directory.appendingPathComponent("walk-history.sqlite")
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let id = UUID()
+        let store = ActivityStore(databaseURL: databaseURL)
+        XCTAssertTrue(store.beginDraft(id: id))
+        XCTAssertTrue(store.appendRoutePoint(workoutID: id, point: JournalRoutePoint(
+            sequence: 0, segment: 0, timestamp: Date(), latitude: 15.85,
+            longitude: 74.50, horizontalAccuracy: 5
+        )))
+        XCTAssertTrue(store.discardDraft(id))
+        XCTAssertTrue(store.recoverableDrafts.isEmpty)
+        XCTAssertTrue(try store.routePoints(for: id).isEmpty)
+    }
+
 }
