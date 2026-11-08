@@ -5197,3 +5197,36 @@ WALKON should become an all-in-one personal walking and activity product, but fe
 7. Equipment/gear tracking and broader activity types after walking is stable.
 
 Do not let social, gamification, route-discovery or visual polish delay core data integrity. The app must not silently record a workout when the user has not explicitly started one. Passive daily step aggregation is separate from GPS workout sessions. This is a product requirements record, not an implementation or device-validation claim.
+
+
+## 50. Free-first operating policy and growth-stage funding gates
+
+Decision recorded 2026-11-08: WALKON should use the best reliable free options available now. Paid infrastructure, services, APIs, developer memberships and distribution costs are deferred until product scale justifies them. This policy does not authorize purchases; every actual expense or paid account action still requires the user's explicit approval.
+
+### 50.1 Current free-first architecture
+
+- iOS GPS: native Core Location, subject to permission, battery and physical-device validation.
+- iOS health and daily steps: native HealthKit, subject to user authorization and device capability.
+- Motion: native Core Motion where it adds value and does not double-count HealthKit data.
+- Durable records: local SQLite with transactional writes and recovery journal.
+- Source control and automated builds: existing GitHub repository and free available CI allowances; monitor quotas and avoid paid runner upgrades.
+- Maps: use native map rendering and only adopt a data provider after checking its license, attribution, usage limits, offline terms and cost.
+- No Strava API dependency for core GPS capture or permanent activity storage. Third-party activity import/export may be considered only after current terms, retention and competitive-use restrictions are reviewed.
+
+### 50.2 No-cost now; paid evaluation only after evidence
+
+The user's aspirational growth gates are 100,000 installations, 50,000 likes and a sustained 4+ star rating. These are review triggers, not automatic spending authorization or a promise that a paid service becomes necessary.
+
+Before recommending any paid service, evaluate:
+1. Monthly active users, retention and workout completion rates—not installs alone.
+2. Crash-free sessions, GPS/step accuracy, support burden and data-loss rate.
+3. Actual free-tier limits and whether they are causing measurable user harm.
+4. Total cost per active user, forecasted monthly spend and a no-cost fallback.
+5. Privacy, security, data portability, vendor lock-in and exit plan.
+6. User approval for the exact service, price and billing commitment.
+
+No recurring cost, paid developer program, paid API, paid hosting, paid runner or paid distribution is to be initiated without explicit approval. App Store or Play Store release constraints must be explained honestly; do not imply free CI creates a signed store-ready app.
+
+### 50.3 Reliability before scale
+
+The growth gates do not relax the core rule: correctness, data integrity, privacy and accessibility come before feature volume or marketing. Keep core tracking local-first and usable offline; treat third-party services as optional integrations, never as the only copy of a user's walk history.
