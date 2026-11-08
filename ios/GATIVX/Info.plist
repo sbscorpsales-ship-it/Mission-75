@@ -2,8 +2,14 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+    <key>NSHealthShareUsageDescription</key>
+    <string>GATIVX reads your daily step count and active energy from Apple Health to show your fitness progress.</string>
     <key>NSMotionUsageDescription</key>
     <string>GATIVX uses motion activity to display live step and walking-distance estimates while you use the app.</string>
+    <key>NSLocationWhenInUseUsageDescription</key>
+    <string>GATIVX records your GPS route only while you explicitly start an activity.</string>
+    <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+    <string>GATIVX uses location during an active walk so route recording can continue when your iPhone screen is locked.</string>
     <key>UIBackgroundModes</key>
     <array>
         <string>location</string>
