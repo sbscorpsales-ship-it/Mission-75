@@ -4,7 +4,7 @@ import HealthKit
 
 @MainActor
 final class HealthSteps: ObservableObject {
-    @Published private(set) var steps: Int = 0
+    @Published private(set) var steps: Int?
     @Published private(set) var status = "Apple Health connection not checked"
     @Published private(set) var lastUpdated: Date?
     @Published private(set) var hasStepSamples = false
@@ -17,6 +17,8 @@ final class HealthSteps: ObservableObject {
 
     func requestAccessAndRefresh() {
         guard isAvailable else {
+            steps = nil
+            hasStepSamples = false
             status = "Apple Health unavailable on this device"
             return
         }
@@ -29,7 +31,9 @@ final class HealthSteps: ObservableObject {
             Task { @MainActor in
                 guard let self else { return }
                 if let error {
-                    self.status = "Health request failed: \(error.localizedDescription)"
+                    self.steps = nil
+                    self.hasStepSamples = false
+                    self.status = "Health request failed: " + error.localizedDescription
                     return
                 }
                 // HealthKit deliberately does not disclose read authorization status to an app.
@@ -43,9 +47,14 @@ final class HealthSteps: ObservableObject {
         }
     }
 
-    func refresh() {
+    /// A missing HealthKit aggregate remains nil; zero is shown only for an actual sample total of zero.
+    func refresh(completion: (() -> Void)? = nil) {
         guard isAvailable else {
+            steps = nil
+            hasStepSamples = false
             status = "Apple Health unavailable"
+            lastUpdated = Date()
+            completion?()
             return
         }
         let now = Date()
@@ -63,15 +72,20 @@ final class HealthSteps: ObservableObject {
             let quantity = result?.sumQuantity()
             let count = quantity?.doubleValue(for: .count())
             Task { @MainActor in
-                guard let self else { return }
+                guard let self else {
+                    completion?()
+                    return
+                }
+                defer { completion?() }
                 if let error {
-                    self.status = "Step data unavailable: \(error.localizedDescription)"
+                    self.steps = nil
                     self.hasStepSamples = false
+                    self.status = "Step data unavailable: " + error.localizedDescription
                     self.lastUpdated = Date()
                     return
                 }
                 guard let count else {
-                    self.steps = 0
+                    self.steps = nil
                     self.hasStepSamples = false
                     self.status = "No readable step samples for today"
                     self.lastUpdated = Date()
@@ -91,14 +105,18 @@ final class HealthSteps: ObservableObject {
         let query = HKObserverQuery(sampleType: stepType, predicate: nil) { [weak self] _, completion, error in
             if let error {
                 Task { @MainActor in
-                    self?.status = "Health update notification failed: \(error.localizedDescription)"
+                    self?.status = "Health update notification failed: " + error.localizedDescription
                     completion()
                 }
                 return
             }
             Task { @MainActor in
-                self?.refresh()
-                completion()
+                guard let self else {
+                    completion()
+                    return
+                }
+                // Acknowledge the HealthKit delivery only after the refresh query finishes.
+                self.refresh(completion: completion)
             }
         }
         observerQuery = query
@@ -108,7 +126,7 @@ final class HealthSteps: ObservableObject {
             Task { @MainActor in
                 self?.status = success
                     ? "Background refresh enabled"
-                    : "Background refresh unavailable: \(error.localizedDescription)"
+                    : "Background refresh unavailable: " + error.localizedDescription
             }
         }
     }
