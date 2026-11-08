@@ -139,15 +139,25 @@ final class ActivityStore: ObservableObject {
                     var check: OpaquePointer?
                     try prepare("""
                         SELECT EXISTS(SELECT 1 FROM workout_drafts WHERE id = ?)
-                           AND EXISTS(SELECT 1 FROM route_points WHERE workout_id = ? AND sequence = ?);
+                           AND EXISTS(
+                               SELECT 1 FROM route_points
+                               WHERE workout_id = ? AND sequence = ? AND segment = ?
+                                 AND timestamp = ? AND latitude = ? AND longitude = ?
+                                 AND horizontal_accuracy = ?
+                           );
                         """, into: &check, database: database)
                     defer { sqlite3_finalize(check) }
                     bind(workoutID.uuidString, to: 1, in: check)
                     bind(workoutID.uuidString, to: 2, in: check)
                     sqlite3_bind_int64(check, 3, sqlite3_int64(point.sequence))
+                    sqlite3_bind_int64(check, 4, sqlite3_int64(point.segment))
+                    sqlite3_bind_double(check, 5, point.timestamp.timeIntervalSince1970)
+                    sqlite3_bind_double(check, 6, point.latitude)
+                    sqlite3_bind_double(check, 7, point.longitude)
+                    sqlite3_bind_double(check, 8, point.horizontalAccuracy)
                     guard sqlite3_step(check) == SQLITE_ROW,
                           sqlite3_column_int(check, 0) == 1 else {
-                        throw ActivityStoreError.database("The active walk draft is missing or this route point was not saved.")
+                        throw ActivityStoreError.database("The active draft is missing or this sequence belongs to a different route point.")
                     }
                 }
                 try execute("COMMIT;")
