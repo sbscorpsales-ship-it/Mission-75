@@ -48,6 +48,7 @@
 - **Section 42:** SwiftUI accessibility, VoiceOver/Voice Control/Switch Control, Dynamic Type, contrast/reduced motion, accessible map alternatives, gait diversity, step-count bias with slow gait and mobility aids, inclusive goals, reference procedures and release acceptance gates.
 - **Section 43:** Test pyramid, deterministic fixtures, reference instruments, quantitative provisional acceptance thresholds, fault injection, CI/build/signing pipeline, security/privacy verification, evidence package and release-blocking go/no-go criteria.
 - **Section 44:** Consolidated architecture decision register, canonical first-release data flow, implementation sequence, unresolved decisions, scoped GO for local iOS core implementation and milestone-1 definition of done.
+- **Section 45:** Native project and CI setup, SQLite local history, HealthKit observer refresh, initial background location/GPS filters, retry UI, test target and explicitly tracked incomplete items.
 
 ## Open research queue (ordered)
 - 36. [COMPLETE] Battery, thermal management and long-session behaviour.
@@ -5004,3 +5005,54 @@ This GO is narrowly scoped:
 **Definition of done for milestone 1:** clean project builds in CI for iOS Simulator; project configuration is reproducible from source; required capabilities/purpose strings are present and audited; no secrets are committed; test target runs; GitHub commit and CI run are independently verified. No user device test is requested until this milestone and subsequent core sensor work are ready.
 
 Final consolidation complete. Next: implement WALKON native project foundation and CI; preserve the evidence discipline and continuity register.
+
+
+## 45. Implementation milestone 1 — native project foundation and first core services
+
+Status: Implementation in progress (2026-11-08). Source changes are committed; simulator build/test is queued in GitHub Actions and has not yet been verified. No signed device build or physical iPhone validation is claimed.
+
+### 45.1 Changes made
+
+- Updated XcodeGen specification to iOS 26.0, added a separate WALKON unit-test target and attached it to the WALKON scheme.
+- Kept WALKON sources under `ios/WALKON`; no GATIVX Swift source, credentials, user data or migrations were imported.
+- Added HealthKit read/write purpose strings, motion and location purpose strings, and the location background mode.
+- Added a dedicated WALKON CI workflow on GitHub-hosted macOS runners to generate the Xcode project, list schemes, build an unsigned iOS Simulator app, run XCTest and upload the simulator app artifact.
+- Retained the old GATIVX iOS workflow as manual-only so WALKON commits do not falsely trigger the legacy GATIVX target build.
+- Replaced the starter UserDefaults history store with SQLite in Application Support, WAL journaling and synchronous FULL commits. The local store persists an encoded walk payload keyed by workout UUID; retries with the same UUID update rather than duplicate the row.
+- Added a deterministic SQLite persistence/retry/reopen test and a model Codable round-trip test.
+- Hardened HealthKit daily step refresh: cumulative sum for the current local calendar day, observer query refresh, hourly background delivery request, last-refresh timestamp and explicit no-sample/error states. The UI does not claim read authorization based solely on the authorization-request callback.
+- Added a When In Use background activity session for an explicitly user-started walk, authorization-aware location startup, visible background location indicator and initial GPS sample filters (accuracy, timestamp, duplicate/out-of-order, jump and implied-speed gates).
+- Added a visible retry path when a local workout save fails rather than silently treating the workout as saved.
+
+### 45.2 Commits
+
+- Native project specification, iOS 26 target, permission strings, README, CI workflow and test target: see repository history on `main`.
+- SQLite persistence implementation: `ee63e3e8c0d5e0ce2e26a47d47dbfc550cb26882`.
+- HealthKit observer refresh: `ce094e70b0b4d1e100c325a6a9619b7414865b0b`.
+- SQLite testability injection: `ee3c18e2053ff23b5e3b90e8f9166c2a5482da19`.
+- SQLite durability/idempotency tests: `f7e472632079657b8a40a038227da6654b2481a9`.
+- Background location and GPS filtering: `370b8c8398fe148a22cb471a001a64dbcce2c275`.
+- Save-failure retry UI: `28ca34f166c351637af658f1472cbe3acdc23733`.
+- Legacy GATIVX workflow isolation: `03217aa120a85c2a150b001cd9185d041eba684a`.
+
+### 45.3 Known incomplete work — do not call milestone 1 complete
+
+- GitHub Actions WALKON iOS CI run is queued/in progress; no successful build/test conclusion has been observed yet.
+- SQLite currently stores the completed workout payload, but live route points are not yet journaled incrementally. A force-quit during recording can still lose the in-progress session. Implement draft/journal and append-only route batch persistence before declaring crash recovery complete.
+- Route data is currently a flat coordinate list. Explicit segment boundaries must be added so map rendering never draws across a long GPS gap or pause.
+- Workout capture is not yet coordinated through HKWorkoutSession/HKLiveWorkoutBuilder. That is the next major service integration; the current CMPedometer reading is a provisional isolated session metric, not validated against a HealthKit workout builder.
+- HealthKit workout and route export is not yet implemented.
+- Background location session and sample filtering are code-level changes only; locked-screen, termination/relaunch and real GPS behaviour remain unverified on physical iPhone.
+- The first XCTest test target has not yet been confirmed by a successful Xcode run.
+- The current dashboard remains starter UI; accessibility, Dynamic Type, state distinctions and history/route review require further implementation.
+
+### 45.4 Next exact implementation sequence
+
+1. Obtain a green XcodeGen project-generation, simulator-build and XCTest CI run. Fix every compile/test error before layering on additional services.
+2. Implement durable active-workout draft and append-only route journal/batches in SQLite, including recovery, migration, disk-full handling, idempotency and fault-injection tests.
+3. Add route segments and explicit gap/pause boundaries to the data model and map representation.
+4. Implement HKWorkoutSession/HKLiveWorkoutBuilder lifecycle, then validate one session-step source before enabling its UI.
+5. Implement HealthKit workout and route export with local-first partial-failure semantics.
+6. Continue dashboard accessibility and history, then physical-device field testing.
+
+Milestone 1 is not complete until the first CI build and test result is green. The implementation is progressing, but no TestFlight or user-device testing link should be provided yet.
