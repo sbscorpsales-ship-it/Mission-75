@@ -5058,3 +5058,39 @@ Status: Implementation in progress (2026-11-08). Source changes are committed; s
 6. Continue dashboard accessibility and history, then physical-device field testing.
 
 Milestone 1 is not complete until the first CI build and test result is green. The implementation is progressing, but no TestFlight or user-device testing link should be provided yet.
+
+## 46. Implementation milestone 2 — live durable workout journal integration
+
+Status: Source integration committed 2026-11-08; CI verification pending. No physical-device behaviour is claimed.
+
+### 46.1 Changes made
+
+- WalkTracker now requires the shared ActivityStore and creates a durable workout draft before starting any sensor capture.
+- Accepted GPS observations are appended to SQLite with monotonic sequence numbers, timestamps, horizontal accuracy and segment identifiers. A point is added to the live route only after its journal write succeeds.
+- Live pedometer steps and accepted-route distance are checkpointed into the active draft.
+- A GPS observation gap greater than 30 seconds starts a new route segment and does not add distance across the gap. Existing speed/jump filters remain in force.
+- Finish stops sensor capture and asks ActivityStore to atomically finalize the draft into local history. If finalization fails, the draft remains available rather than being discarded.
+- Dashboard uses one shared ActivityStore instance for tracker and history. On launch it offers to save or discard an interrupted draft.
+
+### 46.2 Commits
+
+- Live sensor and GPS journaling: `b7da5d3691e253e61eafc4900fd8537024aed82c`.
+- Dashboard shared-store wiring and interrupted-draft recovery: `ba5b71b349cb032e73fe362bab84bf3c5f8f67c4`.
+
+### 46.3 Verification and remaining gaps
+
+- Prior CI run `42460747173` passed build, HealthKit purpose-string verification, XCTest and artifact upload for the preceding draft-store implementation.
+- The two integration commits above still require a fresh CI build and XCTest run.
+- Route points persist segment IDs, but the current completed WalkSession compatibility model still flattens points to a coordinate array. Update the canonical saved model and route UI to preserve segment boundaries before any route is rendered.
+- CMPedometer remains provisional for session steps; HKWorkoutSession/HKLiveWorkoutBuilder is not yet integrated.
+- Recovery currently offers save/discard for interrupted drafts. It does not resume live sensor capture.
+- Disk-full and SQLite write-failure recovery need explicit fault-injection coverage. A route write failure is surfaced in locationStatus and that point is not represented as saved.
+- No physical iPhone validation, signing, TestFlight archive or installable iPhone build is claimed.
+
+### 46.4 Next exact work
+
+1. Run CI against these integration commits and correct all compile/test failures.
+2. Extend saved route representation to preserve segment boundaries end-to-end, including Codable migration compatibility and tests proving no gap-bridging.
+3. Implement the single-owner HKWorkoutSession/HKLiveWorkoutBuilder coordinator and validate the session-step metric source.
+4. Add HealthKit workout and route export while preserving the local journal on platform export failure.
+5. Then complete accessible recovery/history UI and physical iPhone 11 Pro Max validation.
