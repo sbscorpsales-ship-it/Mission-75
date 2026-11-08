@@ -40,8 +40,10 @@ final class ActivityStore: ObservableObject {
     private var database: OpaquePointer?
     private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
+    private let configuredDatabaseURL: URL?
 
-    init() {
+    init(databaseURL: URL? = nil) {
+        configuredDatabaseURL = databaseURL
         do {
             try openDatabase()
             try load()
@@ -87,10 +89,16 @@ final class ActivityStore: ObservableObject {
 
     private func openDatabase() throws {
         let manager = FileManager.default
-        let directory = try manager.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
-            .appendingPathComponent("WALKON", isDirectory: true)
-        try manager.createDirectory(at: directory, withIntermediateDirectories: true)
-        let url = directory.appendingPathComponent("walk-history.sqlite")
+        let url: URL
+        if let configuredDatabaseURL {
+            url = configuredDatabaseURL
+            try manager.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+        } else {
+            let directory = try manager.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
+                .appendingPathComponent("WALKON", isDirectory: true)
+            try manager.createDirectory(at: directory, withIntermediateDirectories: true)
+            url = directory.appendingPathComponent("walk-history.sqlite")
+        }
         var handle: OpaquePointer?
         let result = sqlite3_open_v2(url.path, &handle, SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE | SQLITE_OPEN_FULLMUTEX, nil)
         guard result == SQLITE_OK, let handle else {
