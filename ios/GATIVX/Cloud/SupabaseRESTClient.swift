@@ -154,8 +154,12 @@ final class SupabaseRESTClient: ObservableObject {
             status = "Activity saved on this iPhone; cloud sync pending: " + error.localizedDescription
         }
     }
-    func syncActivitySessionRoute(id: UUID, startedAt: Date, finishedAt: Date, points: [GATIVXRoutePoint], retryAfterRefresh: Bool = true) async {
+    func syncActivitySessionRoute(id: UUID, startedAt: Date, finishedAt: Date, steps: Int?, points: [GATIVXRoutePoint], retryAfterRefresh: Bool = true) async {
         guard !points.isEmpty else { return }
+        guard let steps, steps >= 0 else {
+            status = "GPS route saved on this iPhone; cloud sync is pending because session steps are unavailable."
+            return
+        }
         // The database RPC caps payloads at 20,000 points. Preserve the full
         // local recording, but uniformly thin oversized cloud payloads while
         // retaining both endpoints and the overall route shape.
@@ -194,13 +198,14 @@ final class SupabaseRESTClient: ObservableObject {
                 "p_finished_at": formatter.string(from: finishedAt),
                 "p_duration_seconds": max(0, min(86400, Int(finishedAt.timeIntervalSince(startedAt)))),
                 "p_distance_m": distanceMeters,
+                "p_steps": steps,
                 "p_route_points": cloudPoints.map { $0.cloudValue }
             ])
             let (walkData, walkResponse) = try await URLSession.shared.data(for: walkRequest)
             guard let walkHTTP = walkResponse as? HTTPURLResponse else { throw ClientError.invalidResponse }
             if walkHTTP.statusCode == 401 && retryAfterRefresh {
                 try await refreshSession()
-                await syncActivitySessionRoute(id: id, startedAt: startedAt, finishedAt: finishedAt, points: points, retryAfterRefresh: false)
+                await syncActivitySessionRoute(id: id, startedAt: startedAt, finishedAt: finishedAt, steps: steps, points: points, retryAfterRefresh: false)
                 return
             }
             guard (200..<300).contains(walkHTTP.statusCode) else { throw Self.serverError(walkData) }
