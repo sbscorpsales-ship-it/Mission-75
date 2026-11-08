@@ -87,6 +87,7 @@ struct ContentView: View {
                         id: record.id,
                         startedAt: record.startedAt,
                         finishedAt: record.finishedAt,
+                        steps: record.steps,
                         points: points
                     )
                 }

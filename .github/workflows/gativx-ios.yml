@@ -75,11 +75,13 @@ jobs:
           if "location" not in info.get("UIBackgroundModes", []):
               raise SystemExit("Background location mode is missing")
 
-          with Path("ios/GATIVX/GATIVX.entitlements").open("rb") as stream:
+          entitlements_path = Path(__import__("os").environ["GITHUB_WORKSPACE"]) / "ios/GATIVX/GATIVX.entitlements"
+          with entitlements_path.open("rb") as stream:
               entitlements = plistlib.load(stream)
-          if entitlements.get("com.apple.developer.healthkit") is not True:
+          print("GATIVX source entitlements:", entitlements)
+          if entitlements.get("com.apple.developer.healthkit") != True:
               raise SystemExit("HealthKit entitlement is missing")
-          if entitlements.get("com.apple.developer.healthkit.background-delivery") is not True:
+          if entitlements.get("com.apple.developer.healthkit.background-delivery") != True:
               raise SystemExit("HealthKit background-delivery entitlement is missing")
           print("GATIVX permission strings and source entitlements validated")
           PY
