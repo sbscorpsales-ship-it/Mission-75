@@ -129,6 +129,25 @@ final class WALKONTests: XCTestCase {
     }
 
     @MainActor
+    func testBeginDraftRejectsDuplicateIdentifierWithoutOverwritingOriginal() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("WALKONDuplicateDraft-\\(UUID().uuidString)", isDirectory: true)
+        let databaseURL = directory.appendingPathComponent("walk-history.sqlite")
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let id = UUID()
+        let originalStart = Date(timeIntervalSince1970: 1_800_000_300)
+        let store = ActivityStore(databaseURL: databaseURL)
+        XCTAssertTrue(store.beginDraft(id: id, startedAt: originalStart))
+        XCTAssertTrue(store.updateDraftMetrics(workoutID: id, steps: 42, distanceMeters: 18))
+        XCTAssertFalse(store.beginDraft(id: id, startedAt: originalStart.addingTimeInterval(500)))
+        XCTAssertEqual(store.recoverableDrafts.count, 1)
+        XCTAssertEqual(store.recoverableDrafts.first?.startedAt, originalStart)
+        XCTAssertEqual(store.recoverableDrafts.first?.steps, 42)
+        XCTAssertEqual(store.recoverableDrafts.first?.distanceMeters, 18)
+    }
+
+    @MainActor
     func testRoutePointWriteFailsWhenDraftDoesNotExist() throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("WALKONMissingDraft-\(UUID().uuidString)", isDirectory: true)
