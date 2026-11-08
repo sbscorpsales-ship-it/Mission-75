@@ -5159,3 +5159,41 @@ At the screenshot time (approximately 14:35–14:38 as shown in the status bars)
 5. Treat the screenshot match as a useful baseline only. Formal validation requires a controlled walk with before/after readings, timestamps, source inspection and repeated tests; a screenshot alone cannot prove the sensor count is correct.
 
 This reference review does not change implementation status: no physical-device WALKON test, signed installation, or TestFlight build is claimed.
+
+
+## 49. Additional user-provided activity, route-discovery and live-workout references
+
+Status: Screenshots reviewed 2026-11-08. These references inform the WALKON product requirements; they do not claim that these features are implemented.
+
+### 49.1 Activity profile and progress
+
+The activity/social app screenshots show a profile with activity count, followers/following, profile editing, progress, activities, gallery, statistics, segments, posts, gear and challenges. WALKON should prioritize private personal statistics and activity history first. Optional profile, sharing, groups, posts, followers and leaderboards are deferred until core tracking, privacy controls and local records are reliable. No public sharing by default.
+
+### 49.2 Route discovery and maps
+
+The map screenshot demonstrates route discovery with filters and route attributes such as length, elevation, surface and difficulty, plus saved routes and route recommendations. WALKON's first map milestone is the user's own accurately recorded route, including start/end points and discontinuities. Route discovery, saved/recommended routes, surface and difficulty metadata are later features requiring a trusted map/routing data source; do not infer surface/difficulty from GPS alone. Any recommendation must be grounded in available route data and clear about uncertainty.
+
+### 49.3 Live workout recording
+
+The live workout screenshot demonstrates a prominent elapsed timer, distance, average pace, split visualization and a large pause control. WALKON live recording should provide:
+
+- Clearly visible elapsed time and live distance.
+- Current/average pace and speed only when enough valid GPS observations exist; show a searching/low-confidence state rather than 0.00 or fabricated values.
+- Kilometer splits (and configurable units later), recorded from accepted distance, with split pace and elapsed time.
+- Large, accessible Pause and Resume controls; paused intervals must not accrue moving time or distance. GPS route discontinuities remain explicit.
+- A deliberate Finish action with confirmation where appropriate, followed by durable local save and the Walk Summary defined in Section 47.
+- Lock-screen/background operation and interruption recovery tested on physical devices before claiming reliability.
+
+### 49.4 Product scope and sequence
+
+WALKON should become an all-in-one personal walking and activity product, but feature order remains strict:
+
+1. Accurate passive daily steps and durable, explicitly started workout capture.
+2. Reliable GPS route map, pause/resume, splits, distance, duration, pace/speed and elevation confidence.
+3. Saved Walk Summary, local history, goals and personal progress/statistics.
+4. HealthKit integration and validated calorie/heart-point estimates, with source and confidence labels.
+5. Route discovery and saved route recommendations, after recorded-route quality is proven.
+6. Challenges, achievements and optional community/sharing only after privacy and safety controls are designed.
+7. Equipment/gear tracking and broader activity types after walking is stable.
+
+Do not let social, gamification, route-discovery or visual polish delay core data integrity. The app must not silently record a workout when the user has not explicitly started one. Passive daily step aggregation is separate from GPS workout sessions. This is a product requirements record, not an implementation or device-validation claim.
