@@ -57,8 +57,8 @@ After these: consolidate contradictions, close architecture decisions, produce a
 ## Last verified checkpoint
 - **Latest completed section:** 40.
 - **Latest research update:** Section 40 — backend architecture, API design, identity, tenancy and operational reliability.
-- **Section-40 commit:** pending verification after this write.
-- **Section-40 research blob:** pending verification after this write.
+- **Section-40 commit:** 42c5fffe7fbe9db36e8872e4fe87083226853f53.
+- **Section-40 research blob:** f1e11a69d230fb7f2857c3bbef00dce26927c32a.
 - **Next action:** research Section 41 — performance engineering, capacity modelling, cost and release observability.
 
 ---
