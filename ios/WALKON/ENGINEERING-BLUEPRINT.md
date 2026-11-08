@@ -5,11 +5,12 @@
 - **Product:** WALKON — fresh native fitness app with fresh data. Do not resume or import GATIVX/Mission-75 app implementation or data.
 - **Repository:** `sbscorpsales-ship-it/Mission-75`, branch `main`.
 - **Blueprint:** `ios/WALKON/ENGINEERING-BLUEPRINT.md`.
-- **Phase:** Final architecture consolidated; **GO for local-first native iOS core implementation** under the user's standing instruction. No app code/build/device validation is yet claimed.
-- **Completed research:** Sections 1–44. **Implementation progress:** Section 45 records milestone-1 changes and remaining blockers.
-- **Exact next task:** **Complete milestone 1 CI verification.** Get XcodeGen generation, iOS Simulator build and XCTest green; resolve compile/test failures. Then implement durable active-workout draft and append-only route journaling. Preserve the blueprint; do not import legacy GATIVX/Mission-75 app code, data or credentials.
-- **Next implementation priority:** reliability and data durability; do not add cosmetic redesign or optional social/cloud features ahead of core correctness.
-- **No user device testing or screenshot requests** until the research/architecture blueprint is sufficiently complete and a coherent buildable test plan is ready.
+- **Phase:** Local-first native iOS core implementation in progress. WALKON is not a web-only page; the product target is a native iPhone walking tracker.
+- **Completed research:** Sections 1–44. **Implementation progress:** Sections 45–47 record implementation milestones, validation gates and the agreed Walk Summary specification.
+- **Exact next task:** Verify the latest route-segment source and tests in CI; resolve any failures. Then harden SQLite write/idempotency failure handling and implement the HealthKit workout lifecycle before expanding the summary UI.
+- **Agreed product output:** Every completed walk must be saved locally and reopenable from history, with an actual GPS route map, steps, distance, duration, active-calorie estimate, WALKON intensity-based heart points, elevation gain, pace, average/maximum speed, and heart-rate details only when a compatible device supplies them. Clearly label estimates and unavailable metrics; never fabricate readings or bridge GPS gaps.
+- **Next implementation priority:** reliability, measurement accuracy and durable records before cosmetic redesign or optional social/cloud features.
+- **No signed iPhone build, physical-device validation, or TestFlight readiness is claimed.** until the research/architecture blueprint is sufficiently complete and a coherent buildable test plan is ready.
 
 ## Non-negotiable working rules
 1. **Architecture gate is closed.** Section 44 authorizes local-first iOS core implementation. Build in small verified slices; no public release, paid service or irreversible account/legal action without separate approval.
@@ -5094,3 +5095,36 @@ Status: Source integration committed 2026-11-08; CI verification pending. No phy
 3. Implement the single-owner HKWorkoutSession/HKLiveWorkoutBuilder coordinator and validate the session-step metric source.
 4. Add HealthKit workout and route export while preserving the local journal on platform export failure.
 5. Then complete accessible recovery/history UI and physical iPhone 11 Pro Max validation.
+
+
+## 47. Product requirement — saved Walk Summary and complete walking metrics
+
+Status: User-approved product specification on 2026-11-08. This section records requirements only; it does not claim that the summary screen or all metrics are implemented.
+
+### 47.1 Required post-walk summary
+
+Every successfully finalized walk must be persisted in the local activity journal and available for later review. The detail view must present:
+
+- The actual recorded GPS route on a map, with start/end markers and separate route segments. Never draw a line across a recorded GPS gap.
+- Session steps, distance, elapsed duration and moving duration.
+- Estimated active calories, clearly labelled as an estimate and based on defensible available inputs; do not invent a value when inputs are insufficient.
+- WALKON heart points, calculated using a documented, transparent intensity rule. Do not label these as official Google Fit or Apple Activity rings points.
+- Elevation gain in metres, using filtered altitude observations and suppressing GPS altitude noise; indicate unavailable/low-confidence data rather than manufacturing climb.
+- Average pace, average speed and maximum speed, with sensible handling of pauses and outlier GPS fixes.
+- Heart-rate average, maximum and time-series only when an authorized compatible source actually supplies heart-rate samples. Otherwise show unavailable/not connected, not a synthetic estimate.
+- Session date/time and durable activity history. Reopening a past walk must show the saved record without requiring network access.
+
+### 47.2 Daily totals versus session values
+
+Daily HealthKit step totals and WALKON session steps must remain distinct. Never add daily aggregate steps to session steps to create a combined total. Calories, heart points and other daily totals must likewise identify their source and avoid double-counting imported workout data.
+
+### 47.3 Implementation order and acceptance gates
+
+1. Preserve and validate the local workout journal, route segments and saved-session compatibility.
+2. Integrate HKWorkoutSession/HKLiveWorkoutBuilder and establish one validated source for session steps; do not double-count CMPedometer and HealthKit values.
+3. Complete robust GPS route rendering, route segmentation and elevation filtering.
+4. Add defensible calorie and WALKON heart-point calculations, with explicit source/estimate labels.
+5. Build the post-walk summary and history detail view using only persisted, sourced values.
+6. Test locked-screen tracking, interruptions, GPS gaps, HealthKit permissions, unavailable sensors and repeated finalization on a physical iPhone before calling the app ready.
+
+Acceptance rule: a summary is only as complete as its validated data. Missing sensors or denied permissions must produce an honest unavailable state, never fabricated metrics. This specification does not change the current status: no signed iPhone build, physical-device validation or TestFlight readiness is claimed.
