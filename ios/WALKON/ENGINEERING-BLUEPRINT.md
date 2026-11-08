@@ -60,8 +60,8 @@ After these: consolidate contradictions, close architecture decisions, produce a
 ## Last verified checkpoint
 - **Latest completed section:** 41.
 - **Latest research update:** Section 41 — performance engineering, capacity modelling, cost and release observability.
-- **Section-41 commit:** pending verification after this write.
-- **Section-41 research blob:** pending verification after this write.
+- **Section-41 commit:** 5e035c526827db230002f5300e5bcfc38c95702e.
+- **Section-41 research blob:** cbced20228df49e6ff3acdb04a1b541249c9a5d2.
 - **Next action:** research Section 42 — accessibility, gait diversity and inclusive measurement.
 
 ---
