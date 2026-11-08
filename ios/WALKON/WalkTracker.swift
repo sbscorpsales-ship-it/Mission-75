@@ -13,12 +13,17 @@ final class WalkTracker: NSObject, ObservableObject, CLLocationManagerDelegate {
 
     private let location = CLLocationManager()
     private let pedometer = CMPedometer()
+    private let store: ActivityStore
+    private var workoutID: UUID?
     private var startDate: Date?
     private var lastAcceptedLocation: CLLocation?
     private var backgroundActivity: CLBackgroundActivitySession?
     private var sensorsStarted = false
+    private var nextSequence = 0
+    private var routeSegment = 0
 
-    override init() {
+    init(store: ActivityStore) {
+        self.store = store
         super.init()
         location.delegate = self
         location.activityType = .fitness
@@ -27,13 +32,24 @@ final class WalkTracker: NSObject, ObservableObject, CLLocationManagerDelegate {
         location.pausesLocationUpdatesAutomatically = false
     }
 
-    func start() {
-        guard !isTracking else { return }
+    /// The draft is durably created before any sensor is started.
+    @discardableResult
+    func start() -> Bool {
+        guard !isTracking else { return false }
+        let id = UUID()
+        let started = Date()
+        guard store.beginDraft(id: id, startedAt: started) else {
+            locationStatus = "Could not create a durable walk draft. No recording started."
+            return false
+        }
+        workoutID = id
         isTracking = true
-        startDate = Date()
+        startDate = started
         distanceMeters = 0
         route = []
         liveSteps = 0
+        nextSequence = 0
+        routeSegment = 0
         lastAcceptedLocation = nil
         sensorsStarted = false
 
@@ -53,17 +69,21 @@ final class WalkTracker: NSObject, ObservableObject, CLLocationManagerDelegate {
             pedometer.startUpdates(from: startDate) { [weak self] data, error in
                 guard error == nil, let count = data?.numberOfSteps.intValue else { return }
                 Task { @MainActor in
-                    guard self?.isTracking == true else { return }
-                    self?.liveSteps = max(0, count)
+                    guard let self, self.isTracking else { return }
+                    self.liveSteps = max(0, count)
+                    self.checkpointMetrics()
                 }
             }
         } else {
             locationStatus = "Motion step counting unavailable"
         }
+        return true
     }
 
-    func stop() -> WalkSession? {
-        guard isTracking, let startDate else { return nil }
+    /// Stops capture first, then atomically converts the journal into a saved walk.
+    @discardableResult
+    func stop() -> Bool {
+        guard isTracking, let workoutID else { return false }
         isTracking = false
         location.stopUpdatingLocation()
         location.allowsBackgroundLocationUpdates = false
@@ -71,17 +91,22 @@ final class WalkTracker: NSObject, ObservableObject, CLLocationManagerDelegate {
         backgroundActivity = nil
         sensorsStarted = false
         pedometer.stopUpdates()
-        let session = WalkSession(
-            id: UUID(),
-            startedAt: startDate,
-            endedAt: Date(),
-            steps: liveSteps,
-            distanceMeters: distanceMeters,
-            route: route
-        )
-        self.startDate = nil
+        checkpointMetrics()
+        let saved = store.finalizeDraft(workoutID, endedAt: Date())
+        self.workoutID = nil
+        startDate = nil
         lastAcceptedLocation = nil
-        return session
+        locationStatus = saved ? "Walk saved on this iPhone" : "Walk remains in recovery journal — retry from History"
+        return saved
+    }
+
+    private func checkpointMetrics() {
+        guard let workoutID else { return }
+        _ = store.updateDraftMetrics(
+            workoutID: workoutID,
+            steps: liveSteps,
+            distanceMeters: distanceMeters
+        )
     }
 
     func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
@@ -109,8 +134,6 @@ final class WalkTracker: NSObject, ObservableObject, CLLocationManagerDelegate {
             locationStatus = "iPhone Location Services are off"
             return
         }
-        // The visible background activity session allows a user-started walk to
-        // continue receiving When In Use location updates while the screen is locked.
         backgroundActivity = CLBackgroundActivitySession()
         location.allowsBackgroundLocationUpdates = true
         location.showsBackgroundLocationIndicator = true
@@ -124,7 +147,7 @@ final class WalkTracker: NSObject, ObservableObject, CLLocationManagerDelegate {
     }
 
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-        guard isTracking else { return }
+        guard isTracking, let workoutID else { return }
         for point in locations.sorted(by: { $0.timestamp < $1.timestamp }) {
             let age = Date().timeIntervalSince(point.timestamp)
             guard point.horizontalAccuracy >= 0,
@@ -136,23 +159,37 @@ final class WalkTracker: NSObject, ObservableObject, CLLocationManagerDelegate {
                 let elapsed = point.timestamp.timeIntervalSince(previous.timestamp)
                 guard elapsed > 0 else { continue }
                 let delta = point.distance(from: previous)
-                let impliedSpeed = delta / elapsed
-
-                // Reject impossible jumps. For a long signal gap, start a new
-                // continuity point but do not invent distance across the gap.
-                if elapsed <= 30 {
+                if elapsed > 30 {
+                    // Preserve the break as a new segment; never count distance over a GPS gap.
+                    routeSegment += 1
+                } else {
+                    let impliedSpeed = delta / elapsed
                     guard delta <= 100, impliedSpeed <= 7.0 else { continue }
                     if delta >= 1.0 { distanceMeters += delta }
                 }
             }
 
-            lastAcceptedLocation = point
-            route.append(
-                .init(
-                    latitude: point.coordinate.latitude,
-                    longitude: point.coordinate.longitude
-                )
+            let coordinate = WalkSession.Coordinate(
+                latitude: point.coordinate.latitude,
+                longitude: point.coordinate.longitude
             )
+            let journalPoint = JournalRoutePoint(
+                sequence: nextSequence,
+                segment: routeSegment,
+                timestamp: point.timestamp,
+                latitude: coordinate.latitude,
+                longitude: coordinate.longitude,
+                horizontalAccuracy: point.horizontalAccuracy
+            )
+            // Only expose a point in the live route after its durable checkpoint succeeds.
+            guard store.appendRoutePoint(workoutID: workoutID, point: journalPoint) else {
+                locationStatus = "Route checkpoint failed — local storage needs attention"
+                continue
+            }
+            nextSequence += 1
+            route.append(coordinate)
+            lastAcceptedLocation = point
+            checkpointMetrics()
         }
     }
 }
