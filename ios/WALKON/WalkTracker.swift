@@ -155,6 +155,7 @@ final class WalkTracker: NSObject, ObservableObject, CLLocationManagerDelegate {
                   age >= -5,
                   age <= 30 else { continue }
 
+            var acceptedDistanceDelta = 0.0
             if let previous = lastAcceptedLocation {
                 let elapsed = point.timestamp.timeIntervalSince(previous.timestamp)
                 guard elapsed > 0 else { continue }
@@ -165,7 +166,7 @@ final class WalkTracker: NSObject, ObservableObject, CLLocationManagerDelegate {
                 } else {
                     let impliedSpeed = delta / elapsed
                     guard delta <= 100, impliedSpeed <= 7.0 else { continue }
-                    if delta >= 1.0 { distanceMeters += delta }
+                    if delta >= 1.0 { acceptedDistanceDelta = delta }
                 }
             }
 
@@ -186,6 +187,8 @@ final class WalkTracker: NSObject, ObservableObject, CLLocationManagerDelegate {
                 locationStatus = "Route checkpoint failed — local storage needs attention"
                 continue
             }
+            // Distance advances only after the matching route observation is durable.
+            distanceMeters += acceptedDistanceDelta
             nextSequence += 1
             route.append(coordinate)
             lastAcceptedLocation = point
