@@ -2,11 +2,16 @@ import SwiftUI
 
 struct DashboardView: View {
     @StateObject private var health = HealthSteps()
-    @StateObject private var tracker = WalkTracker()
-    @StateObject private var store = ActivityStore()
+    @StateObject private var tracker: WalkTracker
+    @StateObject private var store: ActivityStore
     private let goal = 8000
-    @State private var pendingSession: WalkSession?
-    @State private var showSaveError = false
+    @State private var showRecoveryAlert = false
+
+    init() {
+        let activityStore = ActivityStore()
+        _store = StateObject(wrappedValue: activityStore)
+        _tracker = StateObject(wrappedValue: WalkTracker(store: activityStore))
+    }
 
     var body: some View {
         TabView {
@@ -15,15 +20,28 @@ struct DashboardView: View {
             history.tabItem { Label("History", systemImage: "chart.bar.fill") }
         }
         .tint(Color(red: 0.72, green: 1.0, blue: 0.22))
-        .onAppear { health.requestAccessAndRefresh() }
-        .alert("Walk not saved yet", isPresented: $showSaveError) {
-            Button("Retry Save") {
-                if let pendingSession, store.save(pendingSession) { self.pendingSession = nil }
-                else { showSaveError = true }
+        .onAppear {
+            health.requestAccessAndRefresh()
+            showRecoveryAlert = !store.recoverableDrafts.isEmpty
+        }
+        .alert("Unfinished walk found", isPresented: $showRecoveryAlert) {
+            Button("Save recovered walk") {
+                if let draft = store.recoverableDrafts.first {
+                    _ = store.finalizeDraft(draft.id)
+                }
+            }
+            Button("Discard", role: .destructive) {
+                if let draft = store.recoverableDrafts.first {
+                    _ = store.discardDraft(draft.id)
+                }
             }
             Button("Later", role: .cancel) { }
         } message: {
-            Text("WALKON could not confirm a local save. Keep this screen open and retry. Your walk has not been marked as saved.")
+            if let draft = store.recoverableDrafts.first {
+                Text("A walk from \(draft.startedAt.formatted(date: .abbreviated, time: .shortened)) was interrupted. You can save its journaled steps, distance and route, or discard it.")
+            } else {
+                Text("An unfinished walk is available for recovery.")
+            }
         }
     }
 
@@ -88,11 +106,10 @@ struct DashboardView: View {
                 }
                 Button {
                     if tracker.isTracking {
-                        if let session = tracker.stop(), !store.save(session) {
-                            pendingSession = session
-                            showSaveError = true
-                        }
-                    } else { tracker.start() }
+                        _ = tracker.stop()
+                    } else {
+                        _ = tracker.start()
+                    }
                 } label: {
                     Text(tracker.isTracking ? "Finish walk" : "Start walking")
                         .font(.headline).frame(maxWidth: .infinity).padding()
