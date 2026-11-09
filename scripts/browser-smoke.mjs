@@ -79,8 +79,9 @@ assert(accountIsolation.first.entries[Object.keys(accountIsolation.first.entries
 assert(accountIsolation.uploads.length===1&&accountIsolation.uploads[0].user==="test-user-123","First account's private daily data was uploaded to a different member");
 assert(accountIsolation.walks.length===1&&accountIsolation.walks[0].user==="test-user-123","First account's GPS route was uploaded to a different member");
 await cloudPage.locator("#cloudSignOut").click();
+await cloudPage.waitForFunction(()=>document.querySelector("#cloudState")?.textContent==="DEVICE ONLY");
 await cloudPage.reload();
-await cloudPage.waitForTimeout(250);
+await cloudPage.waitForFunction(()=>document.querySelector("#steps")?.textContent.trim()==="—");
 assert((await cloudPage.locator("#steps").textContent()).trim()==="—","Signed-out device exposed cached records from a previous member");
 await cloudPage.close();
 
