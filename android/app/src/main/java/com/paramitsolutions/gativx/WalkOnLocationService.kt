@@ -182,10 +182,9 @@ class WalkOnLocationService : Service(), LocationListener {
             if (!delta.isFinite() || delta < 0f) return
             if (elapsed > MAX_GAP_SECONDS) {
                 breakBefore = true
-            } else if (delta > MAX_JUMP_METERS || delta / elapsed > MAX_SPEED_METERS_PER_SECOND) {
-                // Reject this fix. The next accepted fix starts a fresh segment.
-                segmentBreak = true
-                return
+            } else if (delta > MAX_JUMP_METERS || delta.toDouble() / elapsed > MAX_SPEED_METERS_PER_SECOND) {
+                // Keep this fix as a new segment anchor, but never count the jump as distance.
+                breakBefore = true
             }
             if (!breakBefore) distanceMeters += delta.toDouble()
         }
