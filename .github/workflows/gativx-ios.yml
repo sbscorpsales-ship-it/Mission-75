@@ -21,7 +21,7 @@ permissions:
 
 jobs:
   build-ios:
-    runs-on: macos-26
+    runs-on: macos-15
     timeout-minutes: 20
     steps:
       - name: Check out source
