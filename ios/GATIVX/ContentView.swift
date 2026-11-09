@@ -303,6 +303,7 @@ struct ContentView: View {
                         Task { await cloud.syncActiveEnergy(date: day, kilocalories: total) }
                     }
                     health.refreshRecentDays()
+                    health.refreshTodayEnergy()
                     syncCurrentMotionSnapshotToCloud()
                     syncSavedActivitySessions()
                 }

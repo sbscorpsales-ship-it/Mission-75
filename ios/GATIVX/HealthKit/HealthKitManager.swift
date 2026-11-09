@@ -28,6 +28,7 @@ final class HealthKitManager: ObservableObject {
         guard isAvailable else { statusMessage = "Apple Health is unavailable on this iPhone."; return }
         startObserving()
         refreshRecentDays()
+        refreshTodayEnergy()
     }
 
     func requestReadAccessAndStart() {
@@ -43,6 +44,7 @@ final class HealthKitManager: ObservableObject {
                 UserDefaults.standard.set(true, forKey: self.connectionRequestedKey)
                 self.startObserving()
                 self.refreshRecentDays()
+                self.refreshTodayEnergy()
                 self.statusMessage = "Health access requested. Checking today's measured steps…"
             }
         }
@@ -93,7 +95,7 @@ final class HealthKitManager: ObservableObject {
         store.execute(query)
     }
 
-    private func refreshTodayEnergy(onComplete: (() -> Void)? = nil) {
+    func refreshTodayEnergy(onComplete: (() -> Void)? = nil) {
         let start = Calendar.current.startOfDay(for: Date())
         let predicate = HKQuery.predicateForSamples(withStart: start, end: Date(), options: .strictStartDate)
         let query = HKStatisticsQuery(quantityType: energyType, quantitySamplePredicate: predicate, options: .cumulativeSum) { [weak self] _, statistics, _ in
@@ -138,7 +140,10 @@ final class HealthKitManager: ObservableObject {
         }
     }
 
-    func refreshOnForeground() { refreshRecentDays() }
+    func refreshOnForeground() {
+        refreshRecentDays()
+        refreshTodayEnergy()
+    }
 
     func disconnect() {
         UserDefaults.standard.removeObject(forKey: connectionRequestedKey)
