@@ -205,7 +205,9 @@ private fun GativxAndroidScreen() {
         scope.launch {
             busy = true
             try {
-                session = SupabaseApi.syncDaily(currentSession, snapshot)
+                val refreshedSession = SupabaseApi.syncDaily(currentSession, snapshot)
+                SessionVault.save(context, refreshedSession)
+                session = refreshedSession
                 status = "Cloud backup complete for $measuredDate. Measured values only."
             } catch (error: Exception) {
                 status = error.message ?: "Cloud sync failed. Your Health Connect data remains on this device."
