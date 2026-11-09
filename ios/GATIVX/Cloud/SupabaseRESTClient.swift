@@ -188,8 +188,8 @@ final class SupabaseRESTClient: ObservableObject {
     }
     func syncActivitySessionRoute(id: UUID, startedAt: Date, finishedAt: Date, steps: Int?, points: [GATIVXRoutePoint], retryAfterRefresh: Bool = true) async {
         guard !points.isEmpty else { return }
-        guard let steps, steps >= 0 else {
-            status = "GPS route saved on this iPhone; cloud sync is pending because session steps are unavailable."
+        guard steps == nil || (steps! >= 0 && steps! <= 200_000) else {
+            status = "GPS route saved on this iPhone; cloud sync is pending because the session step count is invalid."
             return
         }
         // The database RPC caps payloads at 20,000 points. Preserve the full
@@ -233,7 +233,7 @@ final class SupabaseRESTClient: ObservableObject {
                 "p_finished_at": formatter.string(from: finishedAt),
                 "p_duration_seconds": max(0, min(86400, Int(finishedAt.timeIntervalSince(startedAt)))),
                 "p_distance_m": distanceMeters,
-                "p_steps": steps,
+                "p_steps": steps.map { $0 as Any } ?? NSNull(),
                 "p_route_points": cloudPoints.map { $0.cloudValue }
             ])
             let (walkData, walkResponse) = try await URLSession.shared.data(for: walkRequest)
