@@ -65,6 +65,10 @@ assert(cloudWalks.length===1&&cloudWalks[0].user==="test-user-123"&&cloudWalks[0
 assert(cloudWalks[0].row.steps===null,"Unknown GPS-only walk steps were incorrectly stored as zero");
 assert(cloudErrors.length===0,"Cloud account browser errors: "+cloudErrors.join("; "));
 await cloudPage.locator("#cloudSignOut").click();
+assert((await cloudPage.locator("#steps").textContent()).trim()==="—","Signing out did not immediately clear the previous member's dashboard");
+const afterImmediateSignOut=await cloudPage.evaluate(()=>({device:JSON.parse(localStorage.getItem("gativx.v2.fresh.state.device")||"null"),first:JSON.parse(localStorage.getItem("gativx.v2.fresh.state.user.test-user-123")||"null")}));
+assert(afterImmediateSignOut.device&&Object.keys(afterImmediateSignOut.device.entries||{}).length===0,"Signed-out device store inherited the previous member's entries");
+assert(afterImmediateSignOut.first&&afterImmediateSignOut.first.entries[Object.keys(afterImmediateSignOut.first.entries)[0]].weight===84,"Signing out deleted the previous member's private local backup");
 await cloudPage.locator("#cloudEmail").fill("second@example.com");
 await cloudPage.locator("#cloudPassword").fill("not-a-real-password");
 await cloudPage.locator("#cloudSignIn").click();
