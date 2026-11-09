@@ -122,3 +122,34 @@ jobs:
           name: GATIVX-iOS-Simulator
           path: build/GATIVX-Simulator/Build/Products/Debug-iphonesimulator/GATIVX.app
           if-no-files-found: error
+      # This creates a device-targeted unsigned IPA. It is NOT installable until
+      # a trusted sideloading tool signs it with the user's own Apple ID.
+      - name: Build unsigned iPhone device app
+        run: |
+          xcodebuild \
+            -project ios/GATIVX.xcodeproj \
+            -scheme GATIVX \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -configuration Debug \
+            -derivedDataPath build/GATIVX-Device \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+
+      - name: Package unsigned iPhone IPA
+        run: |
+          APP="build/GATIVX-Device/Build/Products/Debug-iphoneos/GATIVX.app"
+          test -d "$APP"
+          mkdir -p build/GATIVX-IPA/Payload
+          cp -R "$APP" build/GATIVX-IPA/Payload/GATIVX.app
+          cd build/GATIVX-IPA
+          /usr/bin/zip -qry ../GATIVX-unsigned.ipa Payload
+          /usr/bin/unzip -t ../GATIVX-unsigned.ipa
+          test -s ../GATIVX-unsigned.ipa
+
+      - name: Upload unsigned iPhone IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: GATIVX-iPhone-unsigned-IPA
+          path: build/GATIVX-unsigned.ipa
+          if-no-files-found: error
