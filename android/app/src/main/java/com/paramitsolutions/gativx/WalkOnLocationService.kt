@@ -44,6 +44,7 @@ class WalkOnLocationService : Service(), LocationListener {
     private var segmentBreak = true
     private var recording = false
     private var lastPersistedPointCount = 0
+    private var lastUiUpdateMillis = 0L
 
     override fun onCreate() {
         super.onCreate()
@@ -202,8 +203,12 @@ class WalkOnLocationService : Service(), LocationListener {
         segmentBreak = false
 
         if (points.size - lastPersistedPointCount >= 5) persistDraft()
-        WalkOnStore.setStatus(this, "WalkOn recording · %.2f km · %d GPS points".format(distanceMeters / 1000.0, points.size))
-        updateNotification("Recording · %.2f km".format(distanceMeters / 1000.0))
+        val now = System.currentTimeMillis()
+        if (now - lastUiUpdateMillis >= 10_000L) {
+            WalkOnStore.setStatus(this, "WalkOn recording · %.2f km · %d GPS points".format(distanceMeters / 1000.0, points.size))
+            updateNotification("Recording · %.2f km".format(distanceMeters / 1000.0))
+            lastUiUpdateMillis = now
+        }
     }
 
     private fun persistDraft() {
