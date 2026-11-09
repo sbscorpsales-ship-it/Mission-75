@@ -72,6 +72,7 @@ class WalkOnLocationService : Service(), LocationListener {
 
     private fun beginOrResumeWalk() {
         val existing = WalkOnStore.active(this)
+        val isNewSession = existing == null
         if (existing == null) {
             sessionId = UUID.randomUUID().toString()
             ownerUserId = SessionVault.load(this)?.userId
@@ -115,6 +116,7 @@ class WalkOnLocationService : Service(), LocationListener {
         }
 
         if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            if (isNewSession) WalkOnStore.clearActive(this)
             WalkOnStore.setStatus(this, "Precise location permission is required to record a reliable WalkOn route.")
             stopForeground(STOP_FOREGROUND_REMOVE)
             stopSelf()
@@ -124,6 +126,7 @@ class WalkOnLocationService : Service(), LocationListener {
         val providers = listOf(LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER)
             .filter { provider -> runCatching { locationManager.isProviderEnabled(provider) }.getOrDefault(false) }
         if (providers.isEmpty()) {
+            if (isNewSession) WalkOnStore.clearActive(this)
             WalkOnStore.setStatus(this, "Location services are off. Enable GPS and try WalkOn again.")
             stopForeground(STOP_FOREGROUND_REMOVE)
             stopSelf()
@@ -138,10 +141,12 @@ class WalkOnLocationService : Service(), LocationListener {
             WalkOnStore.setStatus(this, "WalkOn is recording GPS in the foreground service. You can lock your screen.")
             updateNotification("GPS route recording · screen may be locked")
         } catch (error: SecurityException) {
+            if (isNewSession) WalkOnStore.clearActive(this)
             WalkOnStore.setStatus(this, "Location permission was removed. Re-enable precise location to continue.")
             stopForeground(STOP_FOREGROUND_REMOVE)
             stopSelf()
         } catch (error: Exception) {
+            if (isNewSession) WalkOnStore.clearActive(this)
             WalkOnStore.setStatus(this, error.message ?: "Could not start GPS route recording.")
             stopForeground(STOP_FOREGROUND_REMOVE)
             stopSelf()
