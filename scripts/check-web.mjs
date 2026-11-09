@@ -12,6 +12,7 @@ if(!fs.existsSync("apple-touch-icon.png")||!shell.includes('rel="apple-touch-ico
 if(!entry.includes('id="brandIntro"')||!entry.includes('id="skipBrandIntro"')||!entry.includes("From Goals to Xcellence")||!entry.includes('id="gxTitle"'))fail("Original approved GATIVX website experience missing from root entry");else pass("Original approved GATIVX intro and dashboard restored at root");
 if(!fs.existsSync("app-v2.html")||!shell.includes('id="gpsStart"'))fail("GATIVX v2 GPS beta route missing");else pass("GATIVX v2 GPS beta remains available as a separate page");
 if(!entry.includes('id="vActiveEnergy"')||!entry.includes("active_energy_kcal"))fail("Apple Health active-energy dashboard sync missing");else pass("Measured Apple Health active-energy tile and cloud mapping present");
+if(!entry.includes("gativx_active_energy")||!entry.includes("apple_health_shortcuts"))fail("Apple Health Shortcut active-energy import missing");else pass("Apple Health Shortcut supports steps and active-energy import");
 if(shell.includes("mission75.")||shell.includes("gativx.goal.v1")||shell.includes("gativx.motionDaily.v1"))fail("New app reads or writes legacy data keys");else pass("No legacy data keys are read or written by the new app");
 if(!shell.includes('href="./legacy-runtime.html"'))fail("Existing account and saved-record access link missing");else pass("Existing account and saved-record access link present");
 if(!shell.includes("gativx.v2.fresh.state"))fail("Fresh v2 data namespace missing");else pass("Isolated fresh v2 data store present");
