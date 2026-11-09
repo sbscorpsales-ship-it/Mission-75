@@ -95,7 +95,7 @@ final class HealthKitManager: ObservableObject {
         store.execute(query)
     }
 
-    private func refreshTodayEnergy(onComplete: (() -> Void)? = nil) {
+    func refreshTodayEnergy(onComplete: (() -> Void)? = nil) {
         let start = Calendar.current.startOfDay(for: Date())
         let predicate = HKQuery.predicateForSamples(withStart: start, end: Date(), options: .strictStartDate)
         let query = HKStatisticsQuery(quantityType: energyType, quantitySamplePredicate: predicate, options: .cumulativeSum) { [weak self] _, statistics, _ in
