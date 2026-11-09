@@ -204,7 +204,28 @@ class WalkOnLocationService : Service(), LocationListener {
             .onFailure { WalkOnStore.setStatus(this, "Route is still recording, but encrypted draft storage needs attention.") }
     }
 
+    private fun restoreActiveIfNeeded() {
+        if (sessionId.isNotBlank()) return
+        val existing = WalkOnStore.active(this) ?: return
+        sessionId = existing.id
+        startedAtMillis = runCatching { Instant.parse(existing.startedAt).toEpochMilli() }.getOrDefault(System.currentTimeMillis())
+        distanceMeters = existing.distanceMeters
+        points.clear()
+        points.addAll(existing.points.takeLast(MAX_LOCAL_POINTS))
+        lastAcceptedLocation = points.lastOrNull()?.let { point ->
+            Location("gativx-walkon-recovered").apply {
+                latitude = point.latitude
+                longitude = point.longitude
+                time = point.timestampMillis
+                accuracy = point.accuracyMeters.toFloat()
+            }
+        }
+        segmentBreak = true
+        lastPersistedPointCount = points.size
+    }
+
     private fun finishWalk() {
+        restoreActiveIfNeeded()
         if (!recording && WalkOnStore.active(this) == null) {
             stopForeground(STOP_FOREGROUND_REMOVE)
             stopSelf()
