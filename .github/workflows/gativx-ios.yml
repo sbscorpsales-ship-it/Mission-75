@@ -61,7 +61,7 @@ jobs:
 
           checks = {
               "GPS activity starts even without pedometer": "routeRecorder.start(activity: selectedActivity)" in start_activity and start_activity.index("routeRecorder.start(activity: selectedActivity)") < start_activity.index("guard CMPedometer.isStepCountingAvailable()"),
-              "GPS-only activity button remains enabled without pedometer": 'Button("Start activity") { startActivitySession() }' in view and ".disabled(!CMPedometer.isStepCountingAvailable())" not in view,
+              "GPS-only activity button remains enabled without pedometer": 'Button(selectedActivity == "Walking" ? "Start WalkOn" : "Start activity") { startActivitySession() }' in view and ".disabled(!CMPedometer.isStepCountingAvailable())" not in view,
               "GPS route is saved when pedometer is unavailable": "saveRecord(nil)" in finish_activity and "routePoints: routePoints" in finish_activity,
               "Always permission enables background GPS during an active walk": "else if isRecording" in auth_handler and "manager.allowsBackgroundLocationUpdates = true" in auth_handler and "manager.showsBackgroundLocationIndicator = true" in auth_handler,
               "Active GPS updates resume after permission change": "manager.startUpdatingLocation()" in auth_handler,
