@@ -20,6 +20,7 @@ assert(await page.locator("#vActiveEnergy").textContent().then(x=>x.trim())==="â
 assert((await page.locator('[data-panel="coach"]').textContent()).includes("GURU"),"GURU navigation label missing");
 assert(await page.locator(".bottom button").count()===5,"Expected five navigation destinations");
 assert(await page.locator('a[href="./legacy-runtime.html"]').count()===1,"Existing account and saved-record access link missing");
+assert(await page.locator("#cloudAccount").count()===1,"New GATIVX account and cloud backup panel missing");
 for(const tab of ["home","journey","record","walk","coach"]){await page.locator('[data-panel="'+tab+'"]').click();assert(await page.locator("#"+tab+".panel.active").count()===1,"Navigation failed: "+tab)}
 await page.locator('[data-panel="home"]').click();assert(await page.locator("#missionTitle").textContent().then(x=>x.includes("Build strength")),"Mission changed after navigation");
 assert(errors.length===0,"Browser errors: "+errors.join("; "));
@@ -35,6 +36,33 @@ assert((await healthImport.locator("#stepNote").textContent()).includes("Apple H
 assert(await healthImport.evaluate(()=>!location.search.includes("gativx_active_energy")&&!location.search.includes("gativx_steps")),"Health readings remained in the page URL");
 assert(healthErrors.length===0,"Apple Health import browser errors: "+healthErrors.join("; "));
 await healthImport.close();
+
+// Account login and cloud sync are exercised with an isolated Supabase client double.
+const cloudPage=await browser.newPage({viewport:{width:390,height:844}});
+const cloudErrors=[];cloudPage.on("pageerror",e=>cloudErrors.push(e.message));
+await cloudPage.addInitScript(()=>{
+ const d=new Date(),day=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+ const localStamp=new Date(Date.now()-120000).toISOString(),remoteStamp=new Date(Date.now()-60000).toISOString();
+ localStorage.setItem("gativx.v2.fresh.state",JSON.stringify({version:2,goal:null,entries:{[day]:{steps:1240,stepsSource:"apple_health_shortcuts",stepsUpdatedAt:localStamp,activeEnergyKcal:345,activeEnergySource:"apple_health_shortcuts",activeEnergyUpdatedAt:localStamp,weight:84,water:1700,protein:72,distance:.6}},walks:[{date:day,distance:.03,points:[{lat:12.97,lon:77.59,accuracy:5,time:Date.now()-10000},{lat:12.97018,lon:77.59,accuracy:5,time:Date.now()}],createdAt:new Date().toISOString()}]}));
+ window.__cloudMock={uploaded:[],inserts:[]};
+ window.supabase={createClient:()=>({auth:{getSession:async()=>({data:{session:null},error:null}),onAuthStateChange:()=>({data:{subscription:{unsubscribe(){}}}}),signInWithPassword:async()=>({data:{user:{id:"test-user-123",user_metadata:{display_name:"GATIVX Tester"}}},error:null}),signUp:async()=>({data:{user:null,session:null},error:null}),signOut:async()=>({error:null})},from(table){return {select(){return {eq:async()=>({data:table==="daily_logs"?[{log_date:day,steps:2100,steps_source:"apple_health",steps_updated_at:remoteStamp,active_energy_kcal:410,active_energy_source:"apple_health",active_energy_updated_at:remoteStamp}]:[],error:null})}},upsert:async(rows)=>{window.__cloudMock.uploaded.push(...rows);return {error:null}},insert:async(row)=>{window.__cloudMock.inserts.push(row);return {error:null}}}}})};
+});
+await cloudPage.route("https://**/*",r=>r.abort());
+await cloudPage.goto(pathToFileURL(path.resolve("app-v2.html")).href,{waitUntil:"domcontentloaded"});
+await cloudPage.locator("#cloudEmail").fill("tester@example.com");
+await cloudPage.locator("#cloudPassword").fill("not-a-real-password");
+await cloudPage.locator("#cloudSignIn").click();
+await cloudPage.waitForFunction(()=>document.querySelector("#cloudState")?.textContent==="BACKUP CURRENT");
+assert((await cloudPage.locator("#steps").textContent()).trim()==="2,100","New cloud sync did not prefer newer native Apple Health steps");
+assert((await cloudPage.locator("#vActiveEnergy").textContent()).trim()==="410 kcal","New cloud sync did not prefer newer native active energy");
+const cloudRows=await cloudPage.evaluate(()=>window.__cloudMock.uploaded);
+const cloudWalks=await cloudPage.evaluate(()=>window.__cloudMock.inserts);
+assert(cloudRows.length===1,"New GATIVX daily record was not uploaded");
+assert(cloudRows[0].steps===2100&&cloudRows[0].active_energy_kcal===410,"Cloud upload did not preserve authoritative HealthKit readings");
+assert(cloudRows[0].weight_kg===84&&cloudRows[0].water_ml===1700&&cloudRows[0].protein_g===72&&cloudRows[0].walking_km===.6,"Cloud upload lost locally recorded wellness values");
+assert(cloudWalks.length===1&&cloudWalks[0].distance_m===30&&cloudWalks[0].route_points.length===2,"Saved GPS route was not backed up to the member cloud account");
+assert(cloudErrors.length===0,"Cloud account browser errors: "+cloudErrors.join("; "));
+await cloudPage.close();
 
 const storage=await page.evaluate(()=>({keys:Object.keys(localStorage),dailyLogs:localStorage.getItem("mission75.dailyLogs"),auth:localStorage.getItem("sb-crarbbsvcczwmtvxyrxo-auth-token"),session:sessionStorage.getItem("gativx.session.fixture")}));
 assert(storage.keys.includes("gativx.v2.fresh.state"),"Fresh GATIVX store was not used");
@@ -68,6 +96,7 @@ assert(v2Errors.length===0,"GATIVX v2 browser errors: "+v2Errors.join("; "));
 await v2.close();
 console.log("PASS: Original approved GATIVX intro and dashboard render and can be skipped");
 console.log("PASS: Apple Health Shortcut imports measured steps and active energy into the new GATIVX home");
+console.log("PASS: GATIVX v2 account sign-in, private cloud backup and HealthKit source reconciliation");
 console.log("PASS: GATIVX v2 uses its own namespaced data store");
 console.log("PASS: existing Mission-75 records and auth/session storage are preserved");
 console.log("PASS: mission, metrics and all five navigation tabs render without browser errors");
