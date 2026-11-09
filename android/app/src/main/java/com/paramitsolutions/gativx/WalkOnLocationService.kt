@@ -37,6 +37,7 @@ class WalkOnLocationService : Service(), LocationListener {
     private lateinit var locationManager: LocationManager
     private val points = mutableListOf<WalkOnPoint>()
     private var sessionId = ""
+    private var ownerUserId: String? = null
     private var startedAtMillis = 0L
     private var distanceMeters = 0.0
     private var lastAcceptedLocation: Location? = null
@@ -73,6 +74,7 @@ class WalkOnLocationService : Service(), LocationListener {
         val existing = WalkOnStore.active(this)
         if (existing == null) {
             sessionId = UUID.randomUUID().toString()
+            ownerUserId = SessionVault.load(this)?.userId
             startedAtMillis = System.currentTimeMillis()
             distanceMeters = 0.0
             points.clear()
@@ -88,11 +90,13 @@ class WalkOnLocationService : Service(), LocationListener {
                     finishedAt = null,
                     durationSeconds = 0,
                     distanceMeters = 0.0,
-                    points = emptyList()
+                    points = emptyList(),
+                    ownerUserId = ownerUserId
                 )
             )
         } else {
             sessionId = existing.id
+            ownerUserId = existing.ownerUserId
             startedAtMillis = runCatching { Instant.parse(existing.startedAt).toEpochMilli() }.getOrDefault(System.currentTimeMillis())
             distanceMeters = existing.distanceMeters
             points.clear()
@@ -197,7 +201,8 @@ class WalkOnLocationService : Service(), LocationListener {
             finishedAt = null,
             durationSeconds = 0,
             distanceMeters = distanceMeters,
-            points = points.toList()
+            points = points.toList(),
+            ownerUserId = ownerUserId
         )
         runCatching { WalkOnStore.saveActive(this, session) }
             .onSuccess { lastPersistedPointCount = points.size }
@@ -208,6 +213,7 @@ class WalkOnLocationService : Service(), LocationListener {
         if (sessionId.isNotBlank()) return
         val existing = WalkOnStore.active(this) ?: return
         sessionId = existing.id
+        ownerUserId = existing.ownerUserId
         startedAtMillis = runCatching { Instant.parse(existing.startedAt).toEpochMilli() }.getOrDefault(System.currentTimeMillis())
         distanceMeters = existing.distanceMeters
         points.clear()
