@@ -131,6 +131,7 @@ class WalkOnLocationService : Service(), LocationListener {
         if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             if (isNewSession) WalkOnStore.clearActive(this)
             WalkOnStore.setStatus(this, "Precise location permission is required to record a reliable WalkOn route.")
+            broadcastUpdate()
             stopForeground(STOP_FOREGROUND_REMOVE)
             stopSelf()
             return
@@ -141,6 +142,7 @@ class WalkOnLocationService : Service(), LocationListener {
         if (providers.isEmpty()) {
             if (isNewSession) WalkOnStore.clearActive(this)
             WalkOnStore.setStatus(this, "Location services are off. Enable GPS and try WalkOn again.")
+            broadcastUpdate()
             stopForeground(STOP_FOREGROUND_REMOVE)
             stopSelf()
             return
@@ -157,11 +159,13 @@ class WalkOnLocationService : Service(), LocationListener {
         } catch (error: SecurityException) {
             if (isNewSession) WalkOnStore.clearActive(this)
             WalkOnStore.setStatus(this, "Location permission was removed. Re-enable precise location to continue.")
+            broadcastUpdate()
             stopForeground(STOP_FOREGROUND_REMOVE)
             stopSelf()
         } catch (error: Exception) {
             if (isNewSession) WalkOnStore.clearActive(this)
             WalkOnStore.setStatus(this, error.message ?: "Could not start GPS route recording.")
+            broadcastUpdate()
             stopForeground(STOP_FOREGROUND_REMOVE)
             stopSelf()
         }
