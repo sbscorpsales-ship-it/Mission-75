@@ -170,13 +170,14 @@ async function cloudSync(){
    const start=pts.length?new Date(pts[0].time||pts[0].timestamp).toISOString():new Date(w.createdAt||Date.now()).toISOString();
    const end=pts.length?new Date(pts[pts.length-1].time||pts[pts.length-1].timestamp).toISOString():new Date(w.createdAt||Date.now()).toISOString();
    const seconds=Math.max(0,Math.min(86400,Math.round((Date.parse(end)-Date.parse(start))/1000)));
-   const ins=await cloudClient.from('walk_sessions').insert({user_id:syncAccountId,started_at:start,finished_at:end,duration_seconds:seconds,distance_m:Math.max(0,Math.round(Number(w.distance||0)*1000)),route_points:pts});
+   const walkSteps=w.steps==null?null:(Number.isInteger(Number(w.steps))&&Number(w.steps)>=0&&Number(w.steps)<=200000?Number(w.steps):null);
+   const ins=await cloudClient.from('walk_sessions').insert({user_id:syncAccountId,started_at:start,finished_at:end,duration_seconds:seconds,distance_m:Math.max(0,Math.round(Number(w.distance||0)*1000)),steps:walkSteps,route_points:pts});
    if(!isCurrent())return;if(ins.error)throw ins.error;sent.push(w.createdAt);
   }
   localStorage.setItem(syncedKey,JSON.stringify(sent));
   state.walks=localWalks;persist();render();renderWalk();
   cloudMsg('Sync complete. Your GATIVX journal and walks are backed up to your account.','BACKUP CURRENT');
- }catch(error){console.error('GATIVX cloud sync failed',error);cloudMsg('Cloud sync issue: '+(error&&error.message?error.message:'Please retry when connected.'),'SYNC ISSUE')}
+ }catch(error){if(isCurrent()){console.error('GATIVX cloud sync failed',error);cloudMsg('Cloud sync issue: '+(error&&error.message?error.message:'Please retry when connected.'),'SYNC ISSUE')}}
  finally{cloudBusy=false;if(cloudSyncQueued){cloudSyncQueued=false;queueMicrotask(()=>cloudSync())}}
 }
 async function cloudAuth(mode){
