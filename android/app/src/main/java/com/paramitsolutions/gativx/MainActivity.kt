@@ -102,8 +102,8 @@ private fun GativxAndroidScreen() {
     var session by remember { mutableStateOf(SessionVault.load(context)) }
     var busy by remember { mutableStateOf(false) }
     var status by remember { mutableStateOf("Connect Health Connect to read today's measured activity.") }
-    var activeWalk by remember { mutableStateOf(WalkOnStore.active(context)) }
-    var latestWalk by remember { mutableStateOf(WalkOnStore.completed(context).firstOrNull()) }
+    var activeWalk by remember { mutableStateOf(WalkOnStore.active(context)?.takeIf { it.ownerUserId == session?.userId }) }
+    var latestWalk by remember { mutableStateOf(session?.userId?.let { WalkOnStore.completedFor(context, it).firstOrNull() } ?: if (session == null) WalkOnStore.unassigned(context).firstOrNull() else null) }
     var walkStatus by remember { mutableStateOf(WalkOnStore.status(context)) }
     var walkSyncBusy by remember { mutableStateOf(false) }
 
@@ -119,6 +119,11 @@ private fun GativxAndroidScreen() {
     }
 
     fun startWalkOn() {
+        val existingWalk = WalkOnStore.active(context)
+        if (existingWalk != null && existingWalk.ownerUserId != session?.userId) {
+            walkStatus = "A WalkOn route belongs to another account or was recorded offline. Finish or explicitly assign it before starting a new route."
+            return
+        }
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
             startWalkOnService(context)
             walkStatus = "Starting WalkOn GPS tracking…"
@@ -145,9 +150,13 @@ private fun GativxAndroidScreen() {
             walkStatus = "Sign in to back up saved WalkOn routes."
             return
         }
-        val pending = WalkOnStore.pending(context)
+        val pending = WalkOnStore.pendingFor(context, currentSession.userId)
         if (pending.isEmpty()) {
-            walkStatus = "All saved WalkOn routes are already backed up."
+            walkStatus = if (WalkOnStore.unassigned(context).isNotEmpty()) {
+                "Some routes were recorded while signed out. Assign them to this account explicitly before upload."
+            } else {
+                "All saved WalkOn routes for this account are already backed up."
+            }
             return
         }
         scope.launch {
@@ -166,7 +175,7 @@ private fun GativxAndroidScreen() {
                 walkStatus = error.message ?: "WalkOn cloud backup failed. Your encrypted local route remains saved."
                 WalkOnStore.setStatus(context, walkStatus)
             } finally {
-                latestWalk = WalkOnStore.completed(context).firstOrNull()
+                latestWalk = WalkOnStore.completedFor(context, currentSession.userId).firstOrNull()
                 walkSyncBusy = false
             }
         }
@@ -174,8 +183,13 @@ private fun GativxAndroidScreen() {
 
     LaunchedEffect(Unit) {
         while (true) {
-            activeWalk = WalkOnStore.active(context)
-            latestWalk = WalkOnStore.completed(context).firstOrNull()
+            val storedActive = WalkOnStore.active(context)
+            activeWalk = storedActive?.takeIf { it.ownerUserId == session?.userId }
+            latestWalk = if (session != null) {
+                WalkOnStore.completedFor(context, session!!.userId).firstOrNull()
+            } else {
+                WalkOnStore.unassigned(context).firstOrNull()
+            }
             walkStatus = WalkOnStore.status(context)
             delay(1_000)
         }
