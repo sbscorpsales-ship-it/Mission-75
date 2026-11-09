@@ -194,7 +194,7 @@ $('cloudSignOut').onclick=async()=>{const r=await cloudClient.auth.signOut();if(
 function initCloud(){
  if(!cloudClient&&window.supabase&&window.supabase.createClient)cloudClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
  if(!cloudClient)return;
- cloudClient.auth.getSession().then(r=>{if(r.error)throw r.error;cloudUser=r.data.session&&r.data.session.user||null;cloudUi();if(cloudUser)cloudSync()}).catch(e=>cloudMsg(e.message||'Could not restore your account session.','SESSION ISSUE'));
+ cloudClient.auth.getSession().then(r=>{if(r.error)throw r.error;activateCloudUser(r.data.session&&r.data.session.user||null);cloudUi();if(cloudUser)cloudSync()}).catch(e=>cloudMsg(e.message||'Could not restore your account session.','SESSION ISSUE'));
  cloudClient.auth.onAuthStateChange((event,session)=>{activateCloudUser(session&&session.user||null);cloudUi();if(cloudUser&&event==='SIGNED_IN')setTimeout(cloudSync,0)});
 }
 initCloud();
