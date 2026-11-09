@@ -262,7 +262,7 @@ class WalkOnLocationService : Service(), LocationListener {
         }
     }
 
-    private fun buildNotification(): Notification {
+    private fun buildNotification(message: String = "GPS route recording is active."): Notification {
         val stopIntent = Intent(this, WalkOnLocationService::class.java).setAction(ACTION_STOP)
         val stopPending = PendingIntent.getService(
             this,
@@ -279,7 +279,7 @@ class WalkOnLocationService : Service(), LocationListener {
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_menu_mylocation)
             .setContentTitle("GATIVX · WalkOn")
-            .setContentText("GPS route recording is active.")
+            .setContentText(message)
             .setContentIntent(openPending)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
@@ -288,17 +288,6 @@ class WalkOnLocationService : Service(), LocationListener {
     }
 
     private fun updateNotification(message: String) {
-        val manager = getSystemService(NotificationManager::class.java)
-        manager.notify(NOTIFICATION_ID, buildNotification().let { notification ->
-            NotificationCompat.Builder(this, CHANNEL_ID)
-                .setSmallIcon(android.R.drawable.ic_menu_mylocation)
-                .setContentTitle("GATIVX · WalkOn")
-                .setContentText(message)
-                .setContentIntent(notification.contentIntent)
-                .setOngoing(true)
-                .setOnlyAlertOnce(true)
-                .addAction(android.R.drawable.ic_media_pause, "Finish walk", notification.actions.firstOrNull()?.actionIntent)
-                .build()
-        })
+        getSystemService(NotificationManager::class.java).notify(NOTIFICATION_ID, buildNotification(message))
     }
 }
