@@ -291,15 +291,36 @@ private object SupabaseApi {
     }
 
     suspend fun syncDaily(session: GativxSession, snapshot: DailyHealthSnapshot): GativxSession = withContext(Dispatchers.IO) {
-        val row = JSONObject().put("user_id", session.userId).put("log_date", snapshot.date)
-        snapshot.steps?.let {
-            row.put("steps", it).put("steps_source", "health_connect").put("steps_updated_at", snapshot.measuredAt)
-        }
-        snapshot.activeEnergyKcal?.let {
-            row.put("active_energy_kcal", it.toInt()).put("active_energy_source", "health_connect").put("active_energy_updated_at", snapshot.measuredAt)
-        }
-        val payload = JSONArray().put(row).toString()
         var activeSession = session
+        val lookupPath = "/rest/v1/daily_logs?select=steps,steps_source,steps_updated_at,active_energy_kcal,active_energy_source,active_energy_updated_at&user_id=eq.${session.userId}&log_date=eq.${snapshot.date}"
+        var lookup = request("GET", lookupPath, activeSession.accessToken, "")
+        if (lookup.first == 401) {
+            activeSession = refresh(activeSession)
+            lookup = request("GET", lookupPath, activeSession.accessToken, "")
+        }
+        if (lookup.first !in 200..299) throw IllegalStateException(parseError(lookup.second, "Could not compare existing daily measurements."))
+        val remote = JSONArray(lookup.second).optJSONObject(0)
+        val localMeasuredAt = parseTimestamp(snapshot.measuredAt)
+        val remoteStepsSource = remote?.optString("steps_source")?.takeIf { it.isNotBlank() }
+        val remoteStepsAt = parseTimestamp(remote?.optString("steps_updated_at"))
+        val preserveRemoteSteps = remoteStepsSource == "manual" || remoteStepsAt.isAfter(localMeasuredAt)
+        val remoteEnergyAt = parseTimestamp(remote?.optString("active_energy_updated_at"))
+        val preserveRemoteEnergy = remoteEnergyAt.isAfter(localMeasuredAt)
+
+        val row = JSONObject().put("user_id", session.userId).put("log_date", snapshot.date)
+        if (snapshot.steps != null && !preserveRemoteSteps) {
+            row.put("steps", snapshot.steps)
+                .put("steps_source", "health_connect")
+                .put("steps_updated_at", snapshot.measuredAt)
+        }
+        if (snapshot.activeEnergyKcal != null && !preserveRemoteEnergy) {
+            row.put("active_energy_kcal", snapshot.activeEnergyKcal.toInt())
+                .put("active_energy_source", "health_connect")
+                .put("active_energy_updated_at", snapshot.measuredAt)
+        }
+        if (row.length() <= 2) return@withContext activeSession
+
+        val payload = JSONArray().put(row).toString()
         var response = request("POST", "/rest/v1/daily_logs?on_conflict=user_id,log_date", activeSession.accessToken, payload, true)
         if (response.first == 401) {
             activeSession = refresh(activeSession)
@@ -307,6 +328,12 @@ private object SupabaseApi {
         }
         if (response.first !in 200..299) throw IllegalStateException(parseError(response.second, "Cloud sync failed."))
         activeSession
+    }
+
+    private fun parseTimestamp(value: String?): Instant = try {
+        if (value.isNullOrBlank()) Instant.MIN else Instant.parse(value)
+    } catch (_: Exception) {
+        Instant.MIN
     }
 
     private suspend fun refresh(session: GativxSession): GativxSession = withContext(Dispatchers.IO) {
@@ -322,7 +349,7 @@ private object SupabaseApi {
             requestMethod = method
             connectTimeout = TIMEOUT_MS
             readTimeout = TIMEOUT_MS
-            doOutput = true
+            doOutput = body.isNotEmpty()
             setRequestProperty("apikey", SUPABASE_PUBLISHABLE_KEY)
             setRequestProperty("Content-Type", "application/json")
             setRequestProperty("Accept", "application/json")
@@ -330,7 +357,7 @@ private object SupabaseApi {
             if (preferMerge) setRequestProperty("Prefer", "resolution=merge-duplicates,return=minimal")
         }
         return try {
-            connection.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
+            if (body.isNotEmpty()) connection.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
             val code = connection.responseCode
             val stream = if (code in 200..299) connection.inputStream else connection.errorStream
             val response = stream?.bufferedReader()?.use { it.readText() } ?: ""
