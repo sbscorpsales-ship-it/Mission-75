@@ -13,23 +13,27 @@ assert(await page.locator("#steps").textContent().then(x=>x.trim())==="1,948","F
 assert((await page.locator("#missionTitle").textContent()).includes("Build strength"),"Fresh-store mission did not render");
 assert((await page.locator("#missionPct").textContent()).includes("MISSION ACTIVE"),"Mission status missing");
 assert((await page.locator("#distance").textContent()).includes("0.40 km"),"Fresh-store distance did not render");
+assert(await page.locator(".summaryHero").count()===1,"Fitness summary hero missing");
+assert(await page.locator(".summaryTile").count()===4,"Expected four summary metric tiles");
+assert(await page.locator(".guruCard").count()===1,"GURU mode home card missing");
+assert(await page.locator("#vActiveEnergy").textContent().then(x=>x.trim())==="—","Active calories must not be fabricated before HealthKit data");
+assert((await page.locator('[data-panel="coach"]').textContent()).includes("GURU"),"GURU navigation label missing");
 assert(await page.locator(".bottom button").count()===5,"Expected five navigation destinations");
 assert(await page.locator('a[href="./legacy-runtime.html"]').count()===1,"Existing account and saved-record access link missing");
 for(const tab of ["home","journey","record","walk","coach"]){await page.locator('[data-panel="'+tab+'"]').click();assert(await page.locator("#"+tab+".panel.active").count()===1,"Navigation failed: "+tab)}
 await page.locator('[data-panel="home"]').click();assert(await page.locator("#missionTitle").textContent().then(x=>x.includes("Build strength")),"Mission changed after navigation");
 assert(errors.length===0,"Browser errors: "+errors.join("; "));
-// Verify the restored public entry uses the exact previously approved brand intro.
-const brand=await browser.newPage({viewport:{width:390,height:844}});
-const brandErrors=[];brand.on("pageerror",e=>brandErrors.push(e.message));
-await brand.route("https://**/*",r=>r.abort());
-await brand.goto(pathToFileURL(path.resolve("index.html")).href,{waitUntil:"domcontentloaded"});
-assert(await brand.locator("#brandIntro").count()===1,"Original GATIVX cinematic intro missing");
-assert(await brand.getByText("From Goals to Xcellence").count()>=1,"Original GATIVX motto missing");
-await brand.locator("#skipBrandIntro").click();
-await brand.locator("#brandIntro").waitFor({state:"hidden",timeout:3000});
-assert(await brand.locator("#gxTitle").count()===1,"Original GATIVX dashboard did not render after intro");
-assert(brandErrors.length===0,"Original GATIVX browser errors: "+brandErrors.join("; "));
-await brand.close();
+// Verify the public entry opens the new GATIVX fitness-summary home.
+const publicEntry=await browser.newPage({viewport:{width:390,height:844}});
+const entryErrors=[];publicEntry.on("pageerror",e=>entryErrors.push(e.message));
+await publicEntry.route("https://**/*",r=>r.abort());
+await publicEntry.goto(pathToFileURL(path.resolve("index.html")).href,{waitUntil:"domcontentloaded"});
+await publicEntry.waitForTimeout(300);
+assert(await publicEntry.locator(".summaryHero").count()===1,"Public GATIVX entry did not show the fitness summary home");
+assert(await publicEntry.locator(".guruCard").count()>=1,"GURU mode card missing from public home");
+assert(await publicEntry.locator("#vActiveEnergy").textContent().then(x=>x.trim())==="—","Active calories must remain unknown until measured");
+assert(entryErrors.length===0,"Public GATIVX browser errors: "+entryErrors.join("; "));
+await publicEntry.close();
 const storage=await page.evaluate(()=>({keys:Object.keys(localStorage),dailyLogs:localStorage.getItem("mission75.dailyLogs"),auth:localStorage.getItem("sb-crarbbsvcczwmtvxyrxo-auth-token"),session:sessionStorage.getItem("gativx.session.fixture")}));
 assert(storage.keys.includes("gativx.v2.fresh.state"),"Fresh GATIVX store was not used");
 assert(storage.dailyLogs==="preserve-existing-records-fixture","Existing Mission-75 browser records were changed or removed");
