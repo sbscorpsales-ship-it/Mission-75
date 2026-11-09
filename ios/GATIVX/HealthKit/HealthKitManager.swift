@@ -93,17 +93,18 @@ final class HealthKitManager: ObservableObject {
         store.execute(query)
     }
 
-    private func refreshTodayEnergy() {
+    private func refreshTodayEnergy(onComplete: (() -> Void)? = nil) {
         let start = Calendar.current.startOfDay(for: Date())
         let predicate = HKQuery.predicateForSamples(withStart: start, end: Date(), options: .strictStartDate)
         let query = HKStatisticsQuery(quantityType: energyType, quantitySamplePredicate: predicate, options: .cumulativeSum) { [weak self] _, statistics, _ in
             Task { @MainActor in
-                guard let self else { return }
+                guard let self else { onComplete?(); return }
                 let total = statistics?.sumQuantity().map {
                     max(0, Int($0.doubleValue(for: .kilocalorie()).rounded()))
                 }
                 self.todayActiveEnergyKcal = total
                 if let total { self.onActiveEnergy?(start, total) }
+                onComplete?()
             }
         }
         store.execute(query)
@@ -114,14 +115,21 @@ final class HealthKitManager: ObservableObject {
         // Observe both quantities so a change in active energy refreshes calories
         // even when no new step sample is written at the same time.
         for type in [stepType, energyType] {
-            let query = HKObserverQuery(sampleType: type, predicate: nil) { [weak self] _, completion, error in
+            let observedType = type
+            let query = HKObserverQuery(sampleType: observedType, predicate: nil) { [weak self] _, completion, error in
                 guard let self else { completion(); return }
                 guard error == nil else { completion(); return }
-                Task { @MainActor in self.refreshRecentDays(onComplete: completion) }
+                Task { @MainActor in
+                    if observedType.identifier == HKQuantityTypeIdentifier.activeEnergyBurned.rawValue {
+                        self.refreshTodayEnergy(onComplete: completion)
+                    } else {
+                        self.refreshRecentDays(onComplete: completion)
+                    }
+                }
             }
             observers.append(query)
             store.execute(query)
-            store.enableBackgroundDelivery(for: type, frequency: .hourly) { [weak self] success, error in
+            store.enableBackgroundDelivery(for: observedType, frequency: .hourly) { [weak self] success, error in
                 Task { @MainActor in
                     if let error { self?.statusMessage = "Apple Health background refresh unavailable: \(error.localizedDescription)" }
                     else if success { self?.statusMessage = "Apple Health step and active-energy updates enabled where iOS permits." }
