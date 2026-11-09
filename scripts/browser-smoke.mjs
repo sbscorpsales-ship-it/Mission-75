@@ -30,6 +30,17 @@ await brand.locator("#brandIntro").waitFor({state:"hidden",timeout:3000});
 assert(await brand.locator("#gxTitle").count()===1,"Original GATIVX dashboard did not render after intro");
 assert(brandErrors.length===0,"Original GATIVX browser errors: "+brandErrors.join("; "));
 await brand.close();
+
+const healthImport=await browser.newPage({viewport:{width:390,height:844}});
+const healthErrors=[];healthImport.on("pageerror",e=>healthErrors.push(e.message));
+await healthImport.route("https://**/*",r=>r.abort());
+const now=new Date(),localDay=now.getFullYear()+"-"+String(now.getMonth()+1).padStart(2,"0")+"-"+String(now.getDate()).padStart(2,"0");
+await healthImport.goto(pathToFileURL(path.resolve("index.html")).href+"?gativx_steps=1240&gativx_active_energy=345&gativx_date="+localDay,{waitUntil:"domcontentloaded"});
+assert((await healthImport.locator("#vSteps").textContent()).trim()==="1,240","Apple Health Shortcut steps did not render");
+assert((await healthImport.locator("#vActiveEnergy").textContent()).trim()==="345 kcal","Apple Health Shortcut active calories did not render");
+assert(await healthImport.evaluate(()=>!location.search.includes("gativx_active_energy")),"Health import values were left in the page URL");
+assert(healthErrors.length===0,"Health import browser errors: "+healthErrors.join("; "));
+await healthImport.close();
 const storage=await page.evaluate(()=>({keys:Object.keys(localStorage),dailyLogs:localStorage.getItem("mission75.dailyLogs"),auth:localStorage.getItem("sb-crarbbsvcczwmtvxyrxo-auth-token"),session:sessionStorage.getItem("gativx.session.fixture")}));
 assert(storage.keys.includes("gativx.v2.fresh.state"),"Fresh GATIVX store was not used");
 assert(storage.dailyLogs==="preserve-existing-records-fixture","Existing Mission-75 browser records were changed or removed");
@@ -61,6 +72,7 @@ assert((await v2.locator("#walkStatus").textContent()).includes("0.03 km"),"Save
 assert(v2Errors.length===0,"GATIVX v2 browser errors: "+v2Errors.join("; "));
 await v2.close();
 console.log("PASS: Original approved GATIVX intro and dashboard render and can be skipped");
+console.log("PASS: Apple Health Shortcut imports both daily steps and active calories");
 console.log("PASS: GATIVX v2 uses its own namespaced data store");
 console.log("PASS: existing Mission-75 records and auth/session storage are preserved");
 console.log("PASS: mission, metrics and all five navigation tabs render without browser errors");
