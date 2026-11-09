@@ -65,6 +65,7 @@ assert(cloudWalks.length===1&&cloudWalks[0].user==="test-user-123"&&cloudWalks[0
 assert(cloudWalks[0].row.steps===null,"Unknown GPS-only walk steps were incorrectly stored as zero");
 assert(cloudErrors.length===0,"Cloud account browser errors: "+cloudErrors.join("; "));
 await cloudPage.locator("#cloudSignOut").click();
+await cloudPage.waitForFunction(()=>document.querySelector("#cloudSignOut")?.style.display==="none");
 assert((await cloudPage.locator("#steps").textContent()).trim()==="—","Signing out did not immediately clear the previous member's dashboard");
 const afterImmediateSignOut=await cloudPage.evaluate(()=>({device:JSON.parse(localStorage.getItem("gativx.v2.fresh.state.device")||"null"),first:JSON.parse(localStorage.getItem("gativx.v2.fresh.state.user.test-user-123")||"null")}));
 assert(afterImmediateSignOut.device&&Object.keys(afterImmediateSignOut.device.entries||{}).length===0,"Signed-out device store inherited the previous member's entries");
@@ -79,7 +80,7 @@ assert(accountIsolation.first.entries[Object.keys(accountIsolation.first.entries
 assert(accountIsolation.uploads.length===1&&accountIsolation.uploads[0].user==="test-user-123","First account's private daily data was uploaded to a different member");
 assert(accountIsolation.walks.length===1&&accountIsolation.walks[0].user==="test-user-123","First account's GPS route was uploaded to a different member");
 await cloudPage.locator("#cloudSignOut").click();
-await cloudPage.waitForFunction(()=>document.querySelector("#cloudState")?.textContent==="DEVICE ONLY");
+await cloudPage.waitForFunction(()=>document.querySelector("#cloudSignOut")?.style.display==="none"&&(()=>{try{const d=JSON.parse(localStorage.getItem("gativx.v2.fresh.state.device")||"null");return !!d&&Object.keys(d.entries||{}).length===0}catch{return false}})());
 await cloudPage.reload();
 await cloudPage.waitForFunction(()=>document.querySelector("#steps")?.textContent.trim()==="—");
 assert((await cloudPage.locator("#steps").textContent()).trim()==="—","Signed-out device exposed cached records from a previous member");
