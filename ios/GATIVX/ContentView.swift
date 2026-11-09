@@ -280,6 +280,10 @@ struct ContentView: View {
                     guard cloud.isSignedIn else { return }
                     Task { await cloud.syncSteps(date: day, steps: total) }
                 }
+                health.onActiveEnergy = { day, total in
+                    guard cloud.isSignedIn else { return }
+                    Task { await cloud.syncActiveEnergy(date: day, kilocalories: total) }
+                }
                 health.resumeIfPreviouslyConnected()
                 health.refreshOnForeground()
                 startLiveMotionMonitor()
@@ -294,6 +298,9 @@ struct ContentView: View {
                 if signedIn {
                     health.onDailyTotal = { day, total in
                         Task { await cloud.syncSteps(date: day, steps: total) }
+                    }
+                    health.onActiveEnergy = { day, total in
+                        Task { await cloud.syncActiveEnergy(date: day, kilocalories: total) }
                     }
                     health.refreshRecentDays()
                     syncCurrentMotionSnapshotToCloud()
