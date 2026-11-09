@@ -112,15 +112,13 @@ function cloudDailyRow(day,x){
  return {user_id:cloudUser.id,log_date:day,steps:bounded(x.steps,0,200000),steps_source:x.stepsSource||null,steps_updated_at:x.stepsUpdatedAt||null,active_energy_kcal:bounded(x.activeEnergyKcal,0,2147483647)==null?null:Math.round(Number(x.activeEnergyKcal)),active_energy_source:x.activeEnergySource||null,active_energy_updated_at:x.activeEnergyUpdatedAt||null,walking_km:bounded(x.distance,0,300),water_ml:bounded(x.water,0,20000)==null?null:Math.round(Number(x.water)),protein_g:bounded(x.protein,0,500),weight_kg:bounded(x.weight,25,400)};
 }
 function mergeCloudDaily(remote,local){
- const merged={...remote};
+ const merged={...remote},remoteStepTime=Date.parse(remote.stepsUpdatedAt||'')||0,localStepTime=Date.parse(local.stepsUpdatedAt||'')||0,remoteEnergyTime=Date.parse(remote.activeEnergyUpdatedAt||'')||0,localEnergyTime=Date.parse(local.activeEnergyUpdatedAt||'')||0;
+ const keepRemoteSteps=remote.stepsSource==='apple_health'&&local.stepsSource!=='manual'&&(local.stepsSource!=='apple_health'||remoteStepTime>localStepTime);
+ const keepRemoteEnergy=remote.activeEnergySource==='apple_health'&&(local.activeEnergySource!=='apple_health'||remoteEnergyTime>localEnergyTime);
  for(const [k,v] of Object.entries(local||{})){
   if(v===null||v===undefined||v==='')continue;
-  if(k==='steps'&&remote.steps!=null&&remote.stepsSource==='apple_health'&&local.stepsSource==='manual')continue;
-  if(k==='stepsSource'&&merged.steps!==undefined&&local.stepsSource==='manual'&&remote.stepsSource==='apple_health')continue;
-  if(k==='stepsUpdatedAt'&&local.stepsSource==='manual'&&remote.stepsSource==='apple_health')continue;
-  if(k==='activeEnergyKcal'&&remote.activeEnergyKcal!=null&&remote.activeEnergySource==='apple_health'&&local.activeEnergySource!=='apple_health')continue;
-  if(k==='activeEnergySource'&&remote.activeEnergySource==='apple_health'&&local.activeEnergySource!=='apple_health')continue;
-  if(k==='activeEnergyUpdatedAt'&&remote.activeEnergySource==='apple_health'&&local.activeEnergySource!=='apple_health')continue;
+  if(keepRemoteSteps&&['steps','stepsSource','stepsUpdatedAt'].includes(k))continue;
+  if(keepRemoteEnergy&&['activeEnergyKcal','activeEnergySource','activeEnergyUpdatedAt'].includes(k))continue;
   merged[k]=v;
  }
  return merged;
