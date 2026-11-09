@@ -86,7 +86,7 @@ body{background:#050605;color:var(--ink)}
 <script async src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 (()=>{'use strict';const KEY='gativx.v2.fresh.state';// Keep legacy Mission-75/GATIVX browser records and auth sessions untouched.
-const $=id=>document.getElementById(id);const date=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};const blank=()=>({goal:null,entries:{},walks:[]});let state=blank();try{const saved=JSON.parse(localStorage.getItem(KEY)||'null');if(saved&&saved.version===2)state={...blank(),...saved}}catch{};const persist=()=>localStorage.setItem(KEY,JSON.stringify({...state,version:2}));const fmt=n=>Number(n||0).toLocaleString('en-IN');let watch=null,paused=false,points=[],distance=0,lastAcceptedFix=null,segmentBreak=true;
+const $=id=>document.getElementById(id);const date=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};const blank=()=>({goal:null,entries:{},walks:[]});const ACCOUNT_MIGRATED_KEY='gativx.v2.account-local-migrated';let stateStorageKey=KEY;try{if(localStorage.getItem(ACCOUNT_MIGRATED_KEY)==='1')stateStorageKey=KEY+'.device'}catch{};let state=blank();try{const saved=JSON.parse(localStorage.getItem(stateStorageKey)||'null');if(saved&&saved.version===2)state={...blank(),...saved}}catch{};let activeAccountId=null;const persist=()=>localStorage.setItem(stateStorageKey,JSON.stringify({...state,version:2}));const fmt=n=>Number(n||0).toLocaleString('en-IN');let watch=null,paused=false,points=[],distance=0,lastAcceptedFix=null,segmentBreak=true;
 function show(name){document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('active',p.id===name));document.querySelectorAll('[data-panel]').forEach(b=>b.classList.toggle('active',b.dataset.panel===name));if(name==='walk')renderWalk();if(name==='journey')renderJourney()}document.querySelectorAll('[data-panel]').forEach(b=>b.onclick=()=>show(b.dataset.panel));document.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>show(b.dataset.go));$('profile').onclick=()=>show('journey');
 $('dateLine').textContent=new Intl.DateTimeFormat('en-IN',{weekday:'long',month:'long',day:'numeric'}).format(new Date()).toUpperCase();$('todayDate').textContent=date();
 function render(){const x=state.entries[date()]||{};$('steps').textContent=x.steps==null?'—':fmt(x.steps);$('stepNote').textContent=x.steps==null?'No step reading recorded yet':x.stepsSource==='apple_health_shortcuts'?'Apple Health via Shortcuts':x.stepsSource==='apple_health'?'Apple Health measured':'Manually entered today';$('source').textContent=x.steps==null?'NO DATA CONNECTED':x.stepsSource==='apple_health_shortcuts'?'APPLE HEALTH · SHORTCUTS':x.stepsSource==='apple_health'?'APPLE HEALTH · MEASURED':'MANUAL ENTRY';$('vActiveEnergy').textContent=x.activeEnergyKcal==null?'—':fmt(x.activeEnergyKcal)+' kcal';$('activeEnergySourceLabel').textContent=x.activeEnergyKcal==null?'Awaiting Apple Health data':x.activeEnergySource==='apple_health_shortcuts'?'Apple Health via Shortcuts · active energy':'Apple Health measured active energy';$('distance').textContent=x.distance==null?'—':x.distance.toFixed(2)+' km';$('water').textContent=x.water?fmt(x.water)+' ml':'—';$('protein').textContent=x.protein?fmt(x.protein)+' g':'—';$('missionTitle').textContent=state.goal?state.goal.type:'Your next chapter starts here.';$('missionSub').textContent=state.goal?state.goal.duration+' · Your new mission is active.':'Choose a goal. Make today count.';$('missionPct').textContent=state.goal?'MISSION ACTIVE':'GOAL NOT SET';$('missionBar').style.width=state.goal?'8%':'0%';const rows=Object.entries(state.entries).sort((a,b)=>b[0].localeCompare(a[0])).slice(0,4);$('recent').innerHTML=rows.length?rows.map(([d,v])=>'<div class="entry"><b>'+d+'</b><span>'+(v.weight?v.weight+' kg · ':'')+(v.steps!=null?v.steps+' steps':'New entry')+'</span></div>').join(''):'<div class="empty">Your new GATIVX journey begins here.</div>'}
@@ -95,7 +95,24 @@ $('saveEntry').onclick=()=>{const v={};for(const [k,id] of [['weight','weightIn'
 
 const SUPABASE_URL='https://crarbbsvcczwmtvxyrxo.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY='sb_publishable_XAGRFtrWrFqJ-SfXh2WbRQ_jCcPnr-6';
-let cloudClient=null,cloudUser=null,cloudBusy=false,cloudSyncQueued=false;
+let cloudClient=null,cloudUser=null,cloudBusy=false,cloudSyncQueued=false,signupReady=false;
+function activateCloudUser(user){
+ if(!user){cloudUser=null;return}
+ if(activeAccountId===user.id){cloudUser=user;return}
+ if(activeAccountId)persist();
+ const key=KEY+'.user.'+user.id;
+ let saved=null;
+ try{saved=localStorage.getItem(key)}catch{}
+ if(!saved&&!localStorage.getItem(ACCOUNT_MIGRATED_KEY)){
+  localStorage.setItem(key,JSON.stringify({...state,version:2}));
+  localStorage.setItem(ACCOUNT_MIGRATED_KEY,'1');
+  saved=localStorage.getItem(key);
+ }
+ if(saved){try{const parsed=JSON.parse(saved);state=parsed&&parsed.version===2?{...blank(),...parsed}:blank()}catch{state=blank()}}
+ else state=blank();
+ stateStorageKey=key;activeAccountId=user.id;cloudUser=user;persist();
+ render();renderWalk();
+}
 const cloudMsg=(message,stateLabel)=>{const e=$('cloudStatus');if(e)e.textContent=message;const s=$('cloudState');if(s)s.textContent=stateLabel||(cloudUser?'ACCOUNT CONNECTED':'DEVICE ONLY')};
 function cloudUi(){
  const signed=!!cloudUser;
@@ -107,9 +124,9 @@ function cloudUi(){
  cloudMsg(signed?'Signed in. Your private cloud backup is available.':'Not signed in. New records remain safely on this device.',signed?'CONNECTED':'DEVICE ONLY');
 }
 function validDay(day){return /^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(day)&&!Number.isNaN(Date.parse(day+'T00:00:00'))}
-function cloudDailyRow(day,x){
+function cloudDailyRow(day,x,userId){
  const bounded=(v,min,max)=>v==null?null:(Number.isFinite(Number(v))&&Number(v)>=min&&Number(v)<=max?Number(v):null);
- return {user_id:cloudUser.id,log_date:day,steps:bounded(x.steps,0,200000)==null?null:Math.round(Number(x.steps)),steps_source:x.stepsSource||null,steps_updated_at:x.stepsUpdatedAt||null,active_energy_kcal:bounded(x.activeEnergyKcal,0,2147483647)==null?null:Math.round(Number(x.activeEnergyKcal)),active_energy_source:x.activeEnergySource||null,active_energy_updated_at:x.activeEnergyUpdatedAt||null,walking_km:bounded(x.distance,0,300),water_ml:bounded(x.water,0,20000)==null?null:Math.round(Number(x.water)),protein_g:bounded(x.protein,0,500),weight_kg:bounded(x.weight,25,400)};
+ return {user_id:userId,log_date:day,steps:bounded(x.steps,0,200000)==null?null:Math.round(Number(x.steps)),steps_source:x.stepsSource||null,steps_updated_at:x.stepsUpdatedAt||null,active_energy_kcal:bounded(x.activeEnergyKcal,0,2147483647)==null?null:Math.round(Number(x.activeEnergyKcal)),active_energy_source:x.activeEnergySource||null,active_energy_updated_at:x.activeEnergyUpdatedAt||null,walking_km:bounded(x.distance,0,300),water_ml:bounded(x.water,0,20000)==null?null:Math.round(Number(x.water)),protein_g:bounded(x.protein,0,500),weight_kg:bounded(x.weight,25,400)};
 }
 function mergeCloudDaily(remote,local){
  const merged={...remote},remoteStepTime=Date.parse(remote.stepsUpdatedAt||'')||0,localStepTime=Date.parse(local.stepsUpdatedAt||'')||0,remoteEnergyTime=Date.parse(remote.activeEnergyUpdatedAt||'')||0,localEnergyTime=Date.parse(local.activeEnergyUpdatedAt||'')||0;
@@ -126,32 +143,35 @@ function mergeCloudDaily(remote,local){
 async function cloudSync(){
  if(!cloudClient||!cloudUser)return;
  if(cloudBusy){cloudSyncQueued=true;return}
+ const syncUser=cloudUser,syncAccountId=syncUser.id,isCurrent=()=>cloudUser&&cloudUser.id===syncAccountId;
  cloudBusy=true;cloudMsg('Syncing your private records…','SYNCING');
  try{
-  const daily=await cloudClient.from('daily_logs').select('*').eq('user_id',cloudUser.id);
+  const daily=await cloudClient.from('daily_logs').select('*').eq('user_id',syncAccountId);
+  if(!isCurrent())return;
   if(daily.error)throw daily.error;
   const remoteByDay={};
   (daily.data||[]).forEach(row=>{const day=String(row.log_date);if(!validDay(day))return;remoteByDay[day]={steps:row.steps==null?null:Number(row.steps),stepsSource:row.steps_source||null,stepsUpdatedAt:row.steps_updated_at||null,activeEnergyKcal:row.active_energy_kcal==null?null:Number(row.active_energy_kcal),activeEnergySource:row.active_energy_source||null,activeEnergyUpdatedAt:row.active_energy_updated_at||null,distance:row.walking_km==null?null:Number(row.walking_km),water:row.water_ml==null?null:Number(row.water_ml),protein:row.protein_g==null?null:Number(row.protein_g),weight:row.weight_kg==null?null:Number(row.weight_kg)}});
   Object.keys(remoteByDay).forEach(day=>{state.entries[day]=mergeCloudDaily(remoteByDay[day],state.entries[day]||{})});
   persist();
-  const rows=Object.keys(state.entries).filter(validDay).map(day=>cloudDailyRow(day,state.entries[day]));
-  if(rows.length){const up=await cloudClient.from('daily_logs').upsert(rows,{onConflict:'user_id,log_date'});if(up.error)throw up.error;}
-  const walks=await cloudClient.from('walk_sessions').select('id,started_at,finished_at,duration_seconds,distance_m,route_points,steps').eq('user_id',cloudUser.id);
+  const rows=Object.keys(state.entries).filter(validDay).map(day=>cloudDailyRow(day,state.entries[day],syncAccountId));
+  if(rows.length){const up=await cloudClient.from('daily_logs').upsert(rows,{onConflict:'user_id,log_date'});if(!isCurrent())return;if(up.error)throw up.error;}
+  const walks=await cloudClient.from('walk_sessions').select('id,started_at,finished_at,duration_seconds,distance_m,route_points,steps').eq('user_id',syncAccountId);
+  if(!isCurrent())return;
   if(walks.error)throw walks.error;
   const remoteWalks=(walks.data||[]).map(w=>({cloudId:w.id,date:String(w.started_at||'').slice(0,10),distance:Number(w.distance_m||0)/1000,points:Array.isArray(w.route_points)?w.route_points:[],createdAt:w.started_at,finishedAt:w.finished_at,durationSeconds:Number(w.duration_seconds||0),steps:w.steps}));
   const localWalks=state.walks.slice();
   const walkStartMs=w=>{const raw=w.points&&w.points.length?(w.points[0].time||w.points[0].timestamp||w.startedAt||w.createdAt):(w.startedAt||w.createdAt);return typeof raw==='number'?raw:Date.parse(raw||'')};
   const matches=(a,b)=>Math.abs(walkStartMs(a)-walkStartMs(b))<=10000&&Math.abs((Number(a.distance)||0)-(Number(b.distance)||0))<=0.02;
   for(const rw of remoteWalks){const i=localWalks.findIndex(l=>matches(l,rw));if(i>=0)localWalks[i]={...localWalks[i],...rw};else localWalks.push(rw)}
-  const syncedKey='gativx.v2.cloud.walks.'+cloudUser.id;
+  const syncedKey='gativx.v2.cloud.walks.'+syncAccountId;
   let sent=[];try{sent=JSON.parse(localStorage.getItem(syncedKey)||'[]');if(!Array.isArray(sent))sent=[]}catch{}
   for(const w of localWalks.filter(x=>!x.cloudId&&!sent.includes(x.createdAt))){
    const pts=Array.isArray(w.points)?w.points:[];
    const start=pts.length?new Date(pts[0].time||pts[0].timestamp).toISOString():new Date(w.createdAt||Date.now()).toISOString();
    const end=pts.length?new Date(pts[pts.length-1].time||pts[pts.length-1].timestamp).toISOString():new Date(w.createdAt||Date.now()).toISOString();
    const seconds=Math.max(0,Math.min(86400,Math.round((Date.parse(end)-Date.parse(start))/1000)));
-   const ins=await cloudClient.from('walk_sessions').insert({user_id:cloudUser.id,started_at:start,finished_at:end,duration_seconds:seconds,distance_m:Math.max(0,Math.round(Number(w.distance||0)*1000)),route_points:pts});
-   if(ins.error)throw ins.error;sent.push(w.createdAt);
+   const ins=await cloudClient.from('walk_sessions').insert({user_id:syncAccountId,started_at:start,finished_at:end,duration_seconds:seconds,distance_m:Math.max(0,Math.round(Number(w.distance||0)*1000)),route_points:pts});
+   if(!isCurrent())return;if(ins.error)throw ins.error;sent.push(w.createdAt);
   }
   localStorage.setItem(syncedKey,JSON.stringify(sent));
   state.walks=localWalks;persist();render();renderWalk();
@@ -164,21 +184,22 @@ async function cloudAuth(mode){
  const email=$('cloudEmail').value.trim(),password=$('cloudPassword').value,name=$('cloudName').value.trim();
  if(!email||!password){cloudMsg('Enter your email and password first.','DETAILS NEEDED');return}
  if(password.length<6){cloudMsg('Use a password with at least 6 characters.','DETAILS NEEDED');return}
+ if(mode==='signup'&&!name){cloudMsg('Enter your name before creating the account.','DETAILS NEEDED');return}
  cloudMsg(mode==='signup'?'Creating your account…':'Signing in…','AUTHENTICATING');
  const result=mode==='signup'?await cloudClient.auth.signUp({email,password,options:{data:{display_name:name}}}):await cloudClient.auth.signInWithPassword({email,password});
  if(result.error){cloudMsg(result.error.message,'SIGN-IN ISSUE');return}
  if(mode==='signup'&&!result.data.session){cloudMsg('Account created. Confirm your email, then sign in here.','CONFIRM EMAIL');return}
- cloudUser=result.data.user;cloudUi();await cloudSync();
+ activateCloudUser(result.data.user);cloudUi();await cloudSync();
 }
 $('cloudSignIn').onclick=()=>cloudAuth('signin');
-$('cloudSignUp').onclick=()=>{ $('cloudNameWrap').style.display='block'; cloudAuth('signup') };
+$('cloudSignUp').onclick=()=>{if(!signupReady){signupReady=true;$('cloudNameWrap').style.display='block';$('cloudSignUp').textContent='Confirm account creation';cloudMsg('Enter your name, then confirm account creation.','CREATE ACCOUNT');return}cloudAuth('signup')};
 $('cloudSyncNow').onclick=()=>cloudSync();
-$('cloudSignOut').onclick=async()=>{const r=await cloudClient.auth.signOut();if(r.error){cloudMsg(r.error.message,'SIGN-OUT ISSUE');return}cloudUser=null;cloudUi()};
+$('cloudSignOut').onclick=async()=>{const r=await cloudClient.auth.signOut();if(r.error){cloudMsg(r.error.message,'SIGN-OUT ISSUE');return}activateCloudUser(null);cloudUi()};
 function initCloud(){
  if(!cloudClient&&window.supabase&&window.supabase.createClient)cloudClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
  if(!cloudClient)return;
- cloudClient.auth.getSession().then(r=>{if(r.error)throw r.error;cloudUser=r.data.session&&r.data.session.user||null;cloudUi();if(cloudUser)cloudSync()}).catch(e=>cloudMsg(e.message||'Could not restore your account session.','SESSION ISSUE'));
- cloudClient.auth.onAuthStateChange((event,session)=>{cloudUser=session&&session.user||null;cloudUi();if(cloudUser&&event==='SIGNED_IN')setTimeout(cloudSync,0)});
+ cloudClient.auth.getSession().then(r=>{if(r.error)throw r.error;activateCloudUser(r.data.session&&r.data.session.user||null);cloudUi();if(cloudUser)cloudSync()}).catch(e=>cloudMsg(e.message||'Could not restore your account session.','SESSION ISSUE'));
+ cloudClient.auth.onAuthStateChange((event,session)=>{activateCloudUser(session&&session.user||null);cloudUi();if(cloudUser&&event==='SIGNED_IN')setTimeout(cloudSync,0)});
 }
 initCloud();
 const cloudScript=document.querySelector('script[src*="supabase-js"]');
