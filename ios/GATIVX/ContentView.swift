@@ -245,7 +245,7 @@ struct ContentView: View {
                                 finishActivitySession()
                             }.buttonStyle(.bordered)
                         }
-                        Button("Start activity") { startActivitySession() }.buttonStyle(.borderedProminent).tint(.green)
+                        Button(selectedActivity == "Walking" ? "Start WalkOn" : "Start activity") { startActivitySession() }.buttonStyle(.borderedProminent).tint(.green)
                     } else {
                         Button("Finish & save activity", role: .destructive) { finishActivitySession() }.buttonStyle(.bordered)
                     }
