@@ -7,11 +7,35 @@ struct GATIVXRoutePoint: Codable {
     let longitude: Double
     let timestamp: Date
     let horizontalAccuracy: Double
+    /// Starts a new route segment; distance must never bridge this point to the previous fix.
+    let breakBefore: Bool
+
+    init(latitude: Double, longitude: Double, timestamp: Date, horizontalAccuracy: Double, breakBefore: Bool = false) {
+        self.latitude = latitude
+        self.longitude = longitude
+        self.timestamp = timestamp
+        self.horizontalAccuracy = horizontalAccuracy
+        self.breakBefore = breakBefore
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case latitude, longitude, timestamp, horizontalAccuracy, breakBefore
+    }
+
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        latitude = try values.decode(Double.self, forKey: .latitude)
+        longitude = try values.decode(Double.self, forKey: .longitude)
+        timestamp = try values.decode(Date.self, forKey: .timestamp)
+        horizontalAccuracy = try values.decode(Double.self, forKey: .horizontalAccuracy)
+        // Drafts saved by earlier app versions have no segment marker.
+        breakBefore = try values.decodeIfPresent(Bool.self, forKey: .breakBefore) ?? false
+    }
 
     var cloudValue: [String: Any] {
         ["latitude": latitude, "longitude": longitude,
          "timestamp": Int64(timestamp.timeIntervalSince1970 * 1000),
-         "accuracy": horizontalAccuracy]
+         "accuracy": horizontalAccuracy, "breakBefore": breakBefore]
     }
 }
 
@@ -41,6 +65,7 @@ final class GPSRouteRecorder: NSObject, ObservableObject, CLLocationManagerDeleg
     var routeDistanceMeters: Double {
         guard points.count > 1 else { return 0 }
         return zip(points, points.dropFirst()).reduce(0.0) { total, pair in
+            guard !pair.1.breakBefore else { return total }
             let a = CLLocation(latitude: pair.0.latitude, longitude: pair.0.longitude)
             let b = CLLocation(latitude: pair.1.latitude, longitude: pair.1.longitude)
             return total + b.distance(from: a)
@@ -51,6 +76,7 @@ final class GPSRouteRecorder: NSObject, ObservableObject, CLLocationManagerDeleg
     private var pendingStartAfterAuthorization = false
     private var activeStartedAt: Date?
     private var activeActivity = "Walking"
+    private var needsSegmentBreak = true
 
     override init() {
         super.init()
@@ -87,6 +113,7 @@ final class GPSRouteRecorder: NSObject, ObservableObject, CLLocationManagerDeleg
     func start(activity: String) {
         guard !isRecording else { return }
         points.removeAll()
+        needsSegmentBreak = true
         activeStartedAt = Date()
         activeActivity = activity
         recoveredStartedAt = nil
@@ -97,6 +124,8 @@ final class GPSRouteRecorder: NSObject, ObservableObject, CLLocationManagerDeleg
 
     func resumeRecovered() {
         guard activeStartedAt != nil else { return }
+        // A recovered route may have been interrupted while iOS suspended or terminated the app.
+        needsSegmentBreak = true
         requestAndBegin()
     }
 
@@ -184,19 +213,44 @@ final class GPSRouteRecorder: NSObject, ObservableObject, CLLocationManagerDeleg
         for location in locations {
             guard location.horizontalAccuracy >= 0,
                   location.horizontalAccuracy <= 50,
-                  abs(location.timestamp.timeIntervalSinceNow) < 30 else { continue }
-            if let last = points.last, location.timestamp <= last.timestamp { continue }
+                  abs(location.timestamp.timeIntervalSinceNow) < 30 else {
+                // The next accepted fix starts a new segment after a bad/stale fix.
+                needsSegmentBreak = true
+                continue
+            }
+
+            if let last = points.last {
+                let elapsed = location.timestamp.timeIntervalSince(last.timestamp)
+                guard elapsed > 0 else { continue }
+                if elapsed > 30 {
+                    // Do not draw or count distance across a long GPS outage.
+                    needsSegmentBreak = true
+                } else {
+                    let previous = CLLocation(latitude: last.latitude, longitude: last.longitude)
+                    let delta = location.distance(from: previous)
+                    let speed = delta / elapsed
+                    if delta > 150 || speed > 8 {
+                        // Reject this jump as distance, but keep it as a fresh anchor
+                        // so subsequent valid fixes can resume without a giant gap.
+                        needsSegmentBreak = true
+                    }
+                }
+            }
+
             points.append(GATIVXRoutePoint(latitude: location.coordinate.latitude,
                                            longitude: location.coordinate.longitude,
                                            timestamp: location.timestamp,
-                                           horizontalAccuracy: location.horizontalAccuracy))
+                                           horizontalAccuracy: location.horizontalAccuracy,
+                                           breakBefore: needsSegmentBreak))
+            needsSegmentBreak = false
             changed = true
         }
         if changed {
             // Persist each accepted batch, not just when the user presses Finish.
             // This allows recovery after app termination or a device restart.
             persistDraft()
-            status = "Recording GPS route · \(points.count) points"
+            status = "Recording GPS route · \(points.count) points · " +
+                String(format: "%.2f km", routeDistanceMeters / 1000)
         }
     }
 

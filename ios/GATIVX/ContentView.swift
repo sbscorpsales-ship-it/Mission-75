@@ -316,7 +316,9 @@ struct ContentView: View {
                         syncCurrentMotionSnapshotToCloud()
                         syncSavedActivitySessions()
                     }
-                } else {
+                } else if sessionStarted == nil && !routeRecorder.isRecording {
+                    // Keep the session pedometer alive while an explicitly started
+                    // activity is running in the background/with the screen locked.
                     livePedometer.stopUpdates()
                 }
             }
