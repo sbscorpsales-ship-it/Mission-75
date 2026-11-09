@@ -178,6 +178,8 @@ class WalkOnLocationService : Service(), LocationListener {
         if (location.latitude !in -90.0..90.0 || location.longitude !in -180.0..180.0) return
         if (points.size >= MAX_LOCAL_POINTS) {
             WalkOnStore.setStatus(this, "WalkOn reached the 20,000-point route limit. Finish this walk to save it safely.")
+            updateNotification("Route point limit reached · finish this walk")
+            broadcastUpdate()
             return
         }
 
