@@ -125,13 +125,22 @@ struct ContentView: View {
         let saveRecord: (Int?) -> Void = { queriedSteps in
             DispatchQueue.main.async {
                 let finalSteps = queriedSteps ?? self.sessionSteps
+                guard finalSteps != nil || !routePoints.isEmpty else {
+                    self.routeRecorder.clearDraft()
+                    self.sessionSteps = nil
+                    self.sessionStatus = "No step count or GPS route points were recorded."
+                    self.sessionStarted = nil
+                    return
+                }
                 let record = ActivitySessionRecord(id: UUID(), activity: activity, startedAt: start, finishedAt: finishedAt, steps: finalSteps, routePoints: routePoints)
                 var history = (try? JSONDecoder().decode([ActivitySessionRecord].self, from: UserDefaults.standard.data(forKey: "gativx.activitySessions.v1") ?? Data())) ?? []
                 history.insert(record, at: 0)
                 UserDefaults.standard.set(try? JSONEncoder().encode(history), forKey: "gativx.activitySessions.v1")
                 self.routeRecorder.clearDraft()
                 self.sessionSteps = finalSteps
-                self.sessionStatus = activity + " saved · " + (finalSteps?.formatted() ?? "step count unavailable; GPS route saved")
+                let stepSummary = finalSteps.map { $0.formatted() + " steps" } ?? "step count unavailable"
+                let routeSummary = routePoints.isEmpty ? "no GPS route points" : "GPS route saved"
+                self.sessionStatus = activity + " saved · " + stepSummary + " · " + routeSummary
                 self.sessionStarted = nil
                 self.syncSavedActivitySessions()
             }
