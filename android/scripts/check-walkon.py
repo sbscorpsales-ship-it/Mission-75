@@ -44,6 +44,7 @@ checks = {
     "route history is isolated by account": (
         "ownerUserId" in store
         and "pendingFor(context, currentSession.userId)" in activity
+        and "require(walk.ownerUserId == session.userId)" in activity
         and "assignUnowned(context, userId)" in activity
     ),
     "cloud route sync preserves unknown steps": (
