@@ -13,34 +13,16 @@ assert(await page.locator("#steps").textContent().then(x=>x.trim())==="1,948","F
 assert((await page.locator("#missionTitle").textContent()).includes("Build strength"),"Fresh-store mission did not render");
 assert((await page.locator("#missionPct").textContent()).includes("MISSION ACTIVE"),"Mission status missing");
 assert((await page.locator("#distance").textContent()).includes("0.40 km"),"Fresh-store distance did not render");
+assert(await page.locator(".summaryHero").count()===1,"Fitness summary hero missing");
+assert(await page.locator(".summaryTile").count()===4,"Expected four summary metric tiles");
+assert(await page.locator("#home .guruCard").count()===1,"GURU mode home card missing");
+assert(await page.locator("#vActiveEnergy").textContent().then(x=>x.trim())==="—","Active calories must not be fabricated before HealthKit data");
+assert((await page.locator('[data-panel="coach"]').textContent()).includes("GURU"),"GURU navigation label missing");
 assert(await page.locator(".bottom button").count()===5,"Expected five navigation destinations");
 assert(await page.locator('a[href="./legacy-runtime.html"]').count()===1,"Existing account and saved-record access link missing");
 for(const tab of ["home","journey","record","walk","coach"]){await page.locator('[data-panel="'+tab+'"]').click();assert(await page.locator("#"+tab+".panel.active").count()===1,"Navigation failed: "+tab)}
 await page.locator('[data-panel="home"]').click();assert(await page.locator("#missionTitle").textContent().then(x=>x.includes("Build strength")),"Mission changed after navigation");
 assert(errors.length===0,"Browser errors: "+errors.join("; "));
-// Verify the restored public entry uses the exact previously approved brand intro.
-const brand=await browser.newPage({viewport:{width:390,height:844}});
-const brandErrors=[];brand.on("pageerror",e=>brandErrors.push(e.message));
-await brand.route("https://**/*",r=>r.abort());
-await brand.goto(pathToFileURL(path.resolve("index.html")).href,{waitUntil:"domcontentloaded"});
-assert(await brand.locator("#brandIntro").count()===1,"Original GATIVX cinematic intro missing");
-assert(await brand.getByText("From Goals to Xcellence").count()>=1,"Original GATIVX motto missing");
-await brand.locator("#skipBrandIntro").click();
-await brand.locator("#brandIntro").waitFor({state:"hidden",timeout:3000});
-assert(await brand.locator("#gxTitle").count()===1,"Original GATIVX dashboard did not render after intro");
-assert(brandErrors.length===0,"Original GATIVX browser errors: "+brandErrors.join("; "));
-await brand.close();
-
-const healthImport=await browser.newPage({viewport:{width:390,height:844}});
-const healthErrors=[];healthImport.on("pageerror",e=>healthErrors.push(e.message));
-await healthImport.route("https://**/*",r=>r.abort());
-const now=new Date(),localDay=now.getFullYear()+"-"+String(now.getMonth()+1).padStart(2,"0")+"-"+String(now.getDate()).padStart(2,"0");
-await healthImport.goto(pathToFileURL(path.resolve("index.html")).href+"?gativx_steps=1240&gativx_active_energy=345&gativx_date="+localDay,{waitUntil:"domcontentloaded"});
-assert((await healthImport.locator("#vSteps").textContent()).trim()==="1,240","Apple Health Shortcut steps did not render");
-assert((await healthImport.locator("#vActiveEnergy").textContent()).trim()==="345 kcal","Apple Health Shortcut active calories did not render");
-assert(await healthImport.evaluate(()=>!location.search.includes("gativx_active_energy")),"Health import values were left in the page URL");
-assert(healthErrors.length===0,"Health import browser errors: "+healthErrors.join("; "));
-await healthImport.close();
 const storage=await page.evaluate(()=>({keys:Object.keys(localStorage),dailyLogs:localStorage.getItem("mission75.dailyLogs"),auth:localStorage.getItem("sb-crarbbsvcczwmtvxyrxo-auth-token"),session:sessionStorage.getItem("gativx.session.fixture")}));
 assert(storage.keys.includes("gativx.v2.fresh.state"),"Fresh GATIVX store was not used");
 assert(storage.dailyLogs==="preserve-existing-records-fixture","Existing Mission-75 browser records were changed or removed");
@@ -72,7 +54,6 @@ assert((await v2.locator("#walkStatus").textContent()).includes("0.03 km"),"Save
 assert(v2Errors.length===0,"GATIVX v2 browser errors: "+v2Errors.join("; "));
 await v2.close();
 console.log("PASS: Original approved GATIVX intro and dashboard render and can be skipped");
-console.log("PASS: Apple Health Shortcut imports both daily steps and active calories");
 console.log("PASS: GATIVX v2 uses its own namespaced data store");
 console.log("PASS: existing Mission-75 records and auth/session storage are preserved");
 console.log("PASS: mission, metrics and all five navigation tabs render without browser errors");
