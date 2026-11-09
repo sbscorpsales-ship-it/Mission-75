@@ -96,11 +96,20 @@ final class HealthKitManager: ObservableObject {
     }
 
     func refreshTodayEnergy(onComplete: (() -> Void)? = nil) {
+        guard UserDefaults.standard.bool(forKey: connectionRequestedKey), isAvailable else {
+            onComplete?()
+            return
+        }
         let start = Calendar.current.startOfDay(for: Date())
         let predicate = HKQuery.predicateForSamples(withStart: start, end: Date(), options: .strictStartDate)
-        let query = HKStatisticsQuery(quantityType: energyType, quantitySamplePredicate: predicate, options: .cumulativeSum) { [weak self] _, statistics, _ in
+        let query = HKStatisticsQuery(quantityType: energyType, quantitySamplePredicate: predicate, options: .cumulativeSum) { [weak self] _, statistics, error in
             Task { @MainActor in
                 guard let self else { onComplete?(); return }
+                if let error {
+                    self.statusMessage = "Apple Health active-energy read failed: \(error.localizedDescription)"
+                    onComplete?()
+                    return
+                }
                 let total = statistics?.sumQuantity().map {
                     max(0, Int($0.doubleValue(for: .kilocalorie()).rounded()))
                 }
@@ -134,7 +143,7 @@ final class HealthKitManager: ObservableObject {
             store.enableBackgroundDelivery(for: observedType, frequency: .immediate) { [weak self] success, error in
                 Task { @MainActor in
                     if let error { self?.statusMessage = "Apple Health background refresh unavailable: \(error.localizedDescription)" }
-                    else if success { self?.statusMessage = "Apple Health step and active-energy updates requested as soon as iOS permits." }
+                    else if success { self?.statusMessage = "Apple Health background updates enabled where supported. iOS may batch step updates to at most hourly; opening GATIVX refreshes the totals." }
                 }
             }
         }
