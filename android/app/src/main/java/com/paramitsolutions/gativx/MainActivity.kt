@@ -159,8 +159,9 @@ private fun GativxAndroidScreen() {
                     busy = true
                     try {
                         val granted = client.permissionController.getGrantedPermissions()
-                        if (granted.any { it in healthPermissions }) refreshHealthData()
-                        else permissionLauncher.launch(healthPermissions)
+                        val missingPermissions = healthPermissions - granted
+                        if (missingPermissions.isEmpty()) refreshHealthData()
+                        else permissionLauncher.launch(missingPermissions)
                     } catch (error: Exception) {
                         status = error.message ?: "Could not connect to Health Connect."
                     } finally { busy = false }
