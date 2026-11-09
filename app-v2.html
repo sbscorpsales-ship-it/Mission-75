@@ -82,8 +82,8 @@ function importAppleHealthShortcut(){
  const importedDate=params.get('gativx_date')||date();
  const parts=importedDate.split('-').map(Number);
  const parsed=parts.length===3?new Date(parts[0],parts[1]-1,parts[2]):new Date(NaN);
- const validDate=/^\\d{4}-\\d{2}-\\d{2}$/.test(importedDate)&&parsed.getFullYear()===parts[0]&&parsed.getMonth()===parts[1]-1&&parsed.getDate()===parts[2];
- const numeric=(raw,max)=>{if(raw==null)return null;const clean=raw.trim().replace(/,/g,'');if(!/^\\d+(?:\\.\\d+)?$/.test(clean))return null;const n=Number(clean);return Number.isFinite(n)&&n>=0&&n<=max?Math.round(n):null};
+ const validDate=/^\d{4}-\d{2}-\d{2}$/.test(importedDate)&&parsed.getFullYear()===parts[0]&&parsed.getMonth()===parts[1]-1&&parsed.getDate()===parts[2];
+ const numeric=(raw,max)=>{if(raw==null)return null;const clean=raw.trim().replace(/,/g,'');if(!/^\d+(?:\.\d+)?$/.test(clean))return null;const n=Number(clean);return Number.isFinite(n)&&n>=0&&n<=max?Math.round(n):null};
  const steps=hasSteps?numeric(params.get('gativx_steps'),100000):null;
  const energy=hasEnergy?numeric(params.get('gativx_active_energy'),20000):null;
  if(validDate&&(steps!==null||energy!==null)){
