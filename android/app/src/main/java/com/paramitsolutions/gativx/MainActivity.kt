@@ -148,8 +148,7 @@ private fun GativxAndroidScreen() {
     }
 
     fun syncWalkOnRoutes() {
-        val currentSession = session
-        if (currentSession == null) {
+        val currentSession = session ?: run {
             walkStatus = "Sign in to back up saved WalkOn routes."
             return
         }
