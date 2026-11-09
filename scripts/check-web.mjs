@@ -15,6 +15,8 @@ if(!entry.includes('id="vActiveEnergy"')||!entry.includes("active_energy_kcal"))
 if(shell.includes("mission75.")||shell.includes("gativx.goal.v1")||shell.includes("gativx.motionDaily.v1"))fail("New app reads or writes legacy data keys");else pass("No legacy data keys are read or written by the new app");
 if(!shell.includes('href="./legacy-runtime.html"'))fail("Existing account and saved-record access link missing");else pass("Existing account and saved-record access link present");
 if(!shell.includes("gativx.v2.fresh.state"))fail("Fresh v2 data namespace missing");else pass("Isolated fresh v2 data store present");
+for(const id of ["summaryHero","activityRing","vActiveEnergy","guruCard"])if(!shell.includes('class="'+id+'"')&&!shell.includes('id="'+id+'"'))fail("Fitness summary home component missing: "+id);else pass("Fitness summary component present: "+id);
+if(!shell.includes("GURU Mode")||!shell.includes(">GURU</button>"))fail("GURU mode entry missing");else pass("GURU mode entry present");
 if(/localStorage\.(?:clear|removeItem)|sessionStorage\.clear/.test(shell))fail("New app must not delete existing browser records or auth sessions");else pass("Existing browser storage is preserved");
 const scripts=[...shell.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)].filter(([,a])=>! /\bsrc\s*=/.test(a)).map(([, ,b])=>b).filter(x=>x.trim());
 for(const [i,src] of scripts.entries()){const p=path.join(os.tmpdir(),"gativx-v2-"+i+".js");fs.writeFileSync(p,src);const r=spawnSync("node",["--check",p],{encoding:"utf8"});if(r.status!==0)fail("V2 JavaScript invalid: "+r.stderr)}
