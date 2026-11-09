@@ -56,7 +56,17 @@ class WalkOnLocationService : Service(), LocationListener {
             finishWalk()
             return START_NOT_STICKY
         }
-        startAsForeground()
+        if (intent == null && WalkOnStore.active(this) == null) {
+            stopSelf()
+            return START_NOT_STICKY
+        }
+        try {
+            startAsForeground()
+        } catch (_: SecurityException) {
+            WalkOnStore.setStatus(this, "Android denied the location foreground service. Re-enable precise location and start WalkOn again.")
+            stopSelf()
+            return START_NOT_STICKY
+        }
         beginOrResumeWalk()
         return START_STICKY
     }
