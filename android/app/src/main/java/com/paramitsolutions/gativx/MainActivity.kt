@@ -308,7 +308,7 @@ private fun MetricTile(label: String, value: String, modifier: Modifier = Modifi
     }
 }
 
-private object SupabaseApi {
+internal object SupabaseApi {
     private const val TIMEOUT_MS = 15_000
 
     suspend fun signIn(email: String, password: String): GativxSession = withContext(Dispatchers.IO) {
@@ -324,6 +324,42 @@ private object SupabaseApi {
         if (response.first !in 200..299 && response.first != 401) {
             throw IllegalStateException(parseError(response.second, "Could not revoke the server session."))
         }
+    }
+
+    suspend fun syncWalkSessionRoute(session: GativxSession, walk: WalkOnSession): GativxSession = withContext(Dispatchers.IO) {
+        if (walk.points.isEmpty() || walk.finishedAt == null) return@withContext session
+        val cloudPoints = if (walk.points.size > 20_000) {
+            (0 until 20_000).map { index -> walk.points[index * (walk.points.size - 1) / 19_999] }
+        } else walk.points
+        val route = JSONArray()
+        cloudPoints.forEach { point ->
+            route.put(
+                JSONObject()
+                    .put("latitude", point.latitude)
+                    .put("longitude", point.longitude)
+                    .put("timestamp", point.timestampMillis)
+                    .put("accuracy", point.accuracyMeters)
+                    .put("breakBefore", point.breakBefore)
+            )
+        }
+        val body = JSONObject()
+            .put("p_session_id", walk.id)
+            .put("p_started_at", walk.startedAt)
+            .put("p_finished_at", walk.finishedAt)
+            .put("p_duration_seconds", walk.durationSeconds.coerceIn(0, 86_400))
+            .put("p_distance_m", walk.distanceMeters.coerceAtLeast(0.0))
+            .put("p_steps", JSONObject.NULL)
+            .put("p_route_points", route)
+        var activeSession = session
+        var response = request("POST", "/rest/v1/rpc/sync_walk_session_route", activeSession.accessToken, body.toString())
+        if (response.first == 401) {
+            activeSession = refresh(activeSession)
+            response = request("POST", "/rest/v1/rpc/sync_walk_session_route", activeSession.accessToken, body.toString())
+        }
+        if (response.first !in 200..299) {
+            throw IllegalStateException(parseError(response.second, "WalkOn route cloud sync failed."))
+        }
+        activeSession
     }
 
     suspend fun syncDaily(session: GativxSession, snapshot: DailyHealthSnapshot): GativxSession = withContext(Dispatchers.IO) {
