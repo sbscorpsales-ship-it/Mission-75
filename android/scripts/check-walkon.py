@@ -55,6 +55,7 @@ checks = {
         "WalkOnStore.markSynced(context, walk.id)" in activity
         and "WalkOnStore.pendingFor" in activity
     ),
+    "rotated Supabase tokens are saved before retry": activity.count("SessionVault.save(context, activeSession)") >= 3,
 }
 
 failed = [name for name, passed in checks.items() if not passed]
