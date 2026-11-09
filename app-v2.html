@@ -97,7 +97,21 @@ const SUPABASE_URL='https://crarbbsvcczwmtvxyrxo.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY='sb_publishable_XAGRFtrWrFqJ-SfXh2WbRQ_jCcPnr-6';
 let cloudClient=null,cloudUser=null,cloudBusy=false,cloudSyncQueued=false,signupReady=false;
 function activateCloudUser(user){
- if(!user){cloudUser=null;return}
+ if(!user){
+  if(activeAccountId){
+   persist();
+   activeAccountId=null;
+   stateStorageKey=KEY+'.device';
+   let deviceSaved=null;
+   try{deviceSaved=localStorage.getItem(stateStorageKey)}catch{}
+   if(deviceSaved){try{const parsed=JSON.parse(deviceSaved);state=parsed&&parsed.version===2?{...blank(),...parsed}:blank()}catch{state=blank()}}
+   else state=blank();
+   cloudUser=null;
+   persist();
+   render();renderWalk();
+  }else cloudUser=null;
+  return;
+ }
  if(activeAccountId===user.id){cloudUser=user;return}
  if(activeAccountId)persist();
  const key=KEY+'.user.'+user.id;
