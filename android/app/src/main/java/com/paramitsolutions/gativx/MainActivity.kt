@@ -166,7 +166,7 @@ private fun GativxAndroidScreen() {
             try {
                 var activeSession = currentSession
                 for (walk in pending) {
-                    activeSession = SupabaseApi.syncWalkSessionRoute(activeSession, walk)
+                    activeSession = SupabaseApi.syncWalkSessionRoute(context, activeSession, walk)
                     SessionVault.save(context, activeSession)
                     WalkOnStore.markSynced(context, walk.id)
                 }
@@ -333,7 +333,7 @@ private fun GativxAndroidScreen() {
         scope.launch {
             busy = true
             try {
-                val refreshedSession = SupabaseApi.syncDaily(currentSession, snapshot)
+                val refreshedSession = SupabaseApi.syncDaily(context, currentSession, snapshot)
                 SessionVault.save(context, refreshedSession)
                 session = refreshedSession
                 status = "Cloud backup complete for $measuredDate. Measured values only."
@@ -569,7 +569,7 @@ internal object SupabaseApi {
         }
     }
 
-    suspend fun syncWalkSessionRoute(session: GativxSession, walk: WalkOnSession): GativxSession = withContext(Dispatchers.IO) {
+    suspend fun syncWalkSessionRoute(context: Context, session: GativxSession, walk: WalkOnSession): GativxSession = withContext(Dispatchers.IO) {
         require(walk.ownerUserId == session.userId) { "This WalkOn route belongs to a different account." }
         if (walk.points.isEmpty() || walk.finishedAt == null) return@withContext session
         val cloudPoints = if (walk.points.size > 20_000) {
@@ -598,6 +598,7 @@ internal object SupabaseApi {
         var response = request("POST", "/rest/v1/rpc/sync_walk_session_route", activeSession.accessToken, body.toString())
         if (response.first == 401) {
             activeSession = refresh(activeSession)
+            SessionVault.save(context, activeSession)
             response = request("POST", "/rest/v1/rpc/sync_walk_session_route", activeSession.accessToken, body.toString())
         }
         if (response.first !in 200..299) {
@@ -606,12 +607,13 @@ internal object SupabaseApi {
         activeSession
     }
 
-    suspend fun syncDaily(session: GativxSession, snapshot: DailyHealthSnapshot): GativxSession = withContext(Dispatchers.IO) {
+    suspend fun syncDaily(context: Context, session: GativxSession, snapshot: DailyHealthSnapshot): GativxSession = withContext(Dispatchers.IO) {
         var activeSession = session
         val lookupPath = "/rest/v1/daily_logs?select=steps,steps_source,steps_updated_at,active_energy_kcal,active_energy_source,active_energy_updated_at&user_id=eq.${session.userId}&log_date=eq.${snapshot.date}"
         var lookup = request("GET", lookupPath, activeSession.accessToken, "")
         if (lookup.first == 401) {
             activeSession = refresh(activeSession)
+            SessionVault.save(context, activeSession)
             lookup = request("GET", lookupPath, activeSession.accessToken, "")
         }
         if (lookup.first !in 200..299) throw IllegalStateException(parseError(lookup.second, "Could not compare existing daily measurements."))
@@ -640,6 +642,7 @@ internal object SupabaseApi {
         var response = request("POST", "/rest/v1/daily_logs?on_conflict=user_id,log_date", activeSession.accessToken, payload, true)
         if (response.first == 401) {
             activeSession = refresh(activeSession)
+            SessionVault.save(context, activeSession)
             response = request("POST", "/rest/v1/daily_logs?on_conflict=user_id,log_date", activeSession.accessToken, payload, true)
         }
         if (response.first !in 200..299) throw IllegalStateException(parseError(response.second, "Cloud sync failed."))
