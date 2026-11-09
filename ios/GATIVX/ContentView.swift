@@ -98,7 +98,7 @@ struct ContentView: View {
         let start = Date()
         sessionStarted = start
         sessionSteps = nil
-        // GPS recording is independent of the motion sensor. A device without
+        // Begin location capture before checking the optional motion sensor.\n        // GPS recording is independent of the motion sensor. A device without
         // CMPedometer must still be able to record and save a complete route.
         routeRecorder.start(activity: selectedActivity)
         guard CMPedometer.isStepCountingAvailable() else {
