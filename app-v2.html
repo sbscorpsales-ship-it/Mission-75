@@ -177,7 +177,7 @@ async function cloudSync(){
   localStorage.setItem(syncedKey,JSON.stringify(sent));
   state.walks=localWalks;persist();render();renderWalk();
   cloudMsg('Sync complete. Your GATIVX journal and walks are backed up to your account.','BACKUP CURRENT');
- }catch(error){console.error('GATIVX cloud sync failed',error);cloudMsg('Cloud sync issue: '+(error&&error.message?error.message:'Please retry when connected.'),'SYNC ISSUE')}
+ }catch(error){if(isCurrent()){console.error('GATIVX cloud sync failed',error);cloudMsg('Cloud sync issue: '+(error&&error.message?error.message:'Please retry when connected.'),'SYNC ISSUE')}}
  finally{cloudBusy=false;if(cloudSyncQueued){cloudSyncQueued=false;queueMicrotask(()=>cloudSync())}}
 }
 async function cloudAuth(mode){
