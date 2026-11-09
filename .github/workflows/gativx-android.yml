@@ -14,6 +14,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: gativx-android-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build-android:
     runs-on: ubuntu-latest
