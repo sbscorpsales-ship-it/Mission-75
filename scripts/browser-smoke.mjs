@@ -23,6 +23,19 @@ assert(await page.locator('a[href="./legacy-runtime.html"]').count()===1,"Existi
 for(const tab of ["home","journey","record","walk","coach"]){await page.locator('[data-panel="'+tab+'"]').click();assert(await page.locator("#"+tab+".panel.active").count()===1,"Navigation failed: "+tab)}
 await page.locator('[data-panel="home"]').click();assert(await page.locator("#missionTitle").textContent().then(x=>x.includes("Build strength")),"Mission changed after navigation");
 assert(errors.length===0,"Browser errors: "+errors.join("; "));
+
+const healthImport=await browser.newPage({viewport:{width:390,height:844}});
+const healthErrors=[];healthImport.on("pageerror",e=>healthErrors.push(e.message));
+await healthImport.route("https://**/*",r=>r.abort());
+const now=new Date(),localDay=now.getFullYear()+"-"+String(now.getMonth()+1).padStart(2,"0")+"-"+String(now.getDate()).padStart(2,"0");
+await healthImport.goto(pathToFileURL(path.resolve("app-v2.html")).href+"?gativx_steps=1240&gativx_active_energy=345&gativx_date="+localDay,{waitUntil:"domcontentloaded"});
+assert((await healthImport.locator("#steps").textContent()).trim()==="1,240","Apple Health Shortcut steps did not reach the new GATIVX home");
+assert((await healthImport.locator("#vActiveEnergy").textContent()).trim()==="345 kcal","Measured active energy did not reach the new GATIVX home");
+assert((await healthImport.locator("#stepNote").textContent()).includes("Apple Health via Shortcuts"),"Shortcut step source was not labelled");
+assert(await healthImport.evaluate(()=>!location.search.includes("gativx_active_energy")&&!location.search.includes("gativx_steps")),"Health readings remained in the page URL");
+assert(healthErrors.length===0,"Apple Health import browser errors: "+healthErrors.join("; "));
+await healthImport.close();
+
 const storage=await page.evaluate(()=>({keys:Object.keys(localStorage),dailyLogs:localStorage.getItem("mission75.dailyLogs"),auth:localStorage.getItem("sb-crarbbsvcczwmtvxyrxo-auth-token"),session:sessionStorage.getItem("gativx.session.fixture")}));
 assert(storage.keys.includes("gativx.v2.fresh.state"),"Fresh GATIVX store was not used");
 assert(storage.dailyLogs==="preserve-existing-records-fixture","Existing Mission-75 browser records were changed or removed");
@@ -54,6 +67,7 @@ assert((await v2.locator("#walkStatus").textContent()).includes("0.03 km"),"Save
 assert(v2Errors.length===0,"GATIVX v2 browser errors: "+v2Errors.join("; "));
 await v2.close();
 console.log("PASS: Original approved GATIVX intro and dashboard render and can be skipped");
+console.log("PASS: Apple Health Shortcut imports measured steps and active energy into the new GATIVX home");
 console.log("PASS: GATIVX v2 uses its own namespaced data store");
 console.log("PASS: existing Mission-75 records and auth/session storage are preserved");
 console.log("PASS: mission, metrics and all five navigation tabs render without browser errors");
