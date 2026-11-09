@@ -51,8 +51,16 @@ jobs:
           health = Path("ios/GATIVX/HealthKit/HealthKitManager.swift").read_text()
           cloud = Path("ios/GATIVX/Cloud/SupabaseRESTClient.swift").read_text()
           migration = Path("supabase/migrations/20261109113101_allow_gps_route_sync_without_step_count.sql").read_text()
+          start_activity = view.split("private func startActivitySession()", 1)[1].split("private func finishActivitySession()", 1)[0]
+          finish_activity = view.split("private func finishActivitySession()", 1)[1].split("/// Prefer HealthKit", 1)[0]
+          auth_handler = gps.split("func locationManagerDidChangeAuthorization", 1)[1].split("func locationManager(", 1)[0]
 
           checks = {
+              "GPS activity starts even without pedometer": "routeRecorder.start(activity: selectedActivity)" in start_activity and start_activity.index("routeRecorder.start(activity: selectedActivity)") < start_activity.index("guard CMPedometer.isStepCountingAvailable()"),
+              "GPS route is saved when pedometer is unavailable": "saveRecord(nil)" in finish_activity and "routePoints: routePoints" in finish_activity,
+              "Always permission enables background GPS during an active walk": "else if isRecording" in auth_handler and "manager.allowsBackgroundLocationUpdates = true" in auth_handler and "manager.showsBackgroundLocationIndicator = true" in auth_handler,
+              "Active GPS updates resume after permission change": "manager.startUpdatingLocation()" in auth_handler,
+              "Location downgrade removes background GPS claim": "manager.allowsBackgroundLocationUpdates = false" in auth_handler and "Allow Always location for background recording" in auth_handler,
               "GPS accuracy filter": "location.horizontalAccuracy <= 50" in gps,
               "GPS long-gap segmentation": "elapsed > 30" in gps,
               "GPS jump/speed rejection": "delta > 150 || speed > 8" in gps,

@@ -196,15 +196,41 @@ final class GPSRouteRecorder: NSObject, ObservableObject, CLLocationManagerDeleg
 
     func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
         authorization = manager.authorizationStatus
-        if manager.authorizationStatus == .authorizedWhenInUse || manager.authorizationStatus == .authorizedAlways {
+        switch manager.authorizationStatus {
+        case .authorizedAlways:
             if pendingStartAfterAuthorization {
-                beginUpdates(allowsBackground: manager.authorizationStatus == .authorizedAlways)
+                beginUpdates(allowsBackground: true)
+            } else if isRecording {
+                // The user may grant Always from Settings while a walk is already
+                // active. Enable background delivery immediately for that session.
+                manager.allowsBackgroundLocationUpdates = true
+                manager.showsBackgroundLocationIndicator = true
+                manager.startUpdatingLocation()
+                status = "GPS route recording, including supported background use."
+            } else {
+                status = "Always location access granted. Start an activity to record GPS."
+            }
+        case .authorizedWhenInUse:
+            if pendingStartAfterAuthorization {
+                beginUpdates(allowsBackground: false)
+            } else if isRecording {
+                // If access is downgraded mid-session, never claim background GPS.
+                manager.allowsBackgroundLocationUpdates = false
+                manager.showsBackgroundLocationIndicator = false
+                manager.startUpdatingLocation()
+                status = "GPS route recording while GATIVX is open. Allow Always location for background recording."
             } else {
                 status = "Location permission granted. Tap Start activity to record GPS."
             }
-        } else if manager.authorizationStatus == .denied || manager.authorizationStatus == .restricted {
+        case .denied, .restricted:
             pendingStartAfterAuthorization = false
+            manager.allowsBackgroundLocationUpdates = false
+            manager.showsBackgroundLocationIndicator = false
             status = "Location permission denied. Enable it in iPhone Settings."
+        case .notDetermined:
+            break
+        @unknown default:
+            status = "Location permission could not be determined."
         }
     }
 

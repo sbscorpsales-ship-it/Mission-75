@@ -95,13 +95,21 @@ struct ContentView: View {
         }
     }
     private func startActivitySession() {
-        guard CMPedometer.isStepCountingAvailable() else { sessionStatus = "Step counting is unavailable."; return }
-        let start = Date(); sessionStarted = start; sessionSteps = 0
+        let start = Date()
+        sessionStarted = start
+        sessionSteps = nil
+        // GPS recording is independent of the motion sensor. A device without
+        // CMPedometer must still be able to record and save a complete route.
         routeRecorder.start(activity: selectedActivity)
-        sessionStatus = "Counting steps for " + selectedActivity.lowercased() + "…"
+        guard CMPedometer.isStepCountingAvailable() else {
+            sessionStatus = "Recording GPS route for " + selectedActivity.lowercased() + " · step counter unavailable."
+            return
+        }
+        sessionSteps = 0
+        sessionStatus = "Counting steps and recording GPS for " + selectedActivity.lowercased() + "…"
         pedometer.startUpdates(from: start) { data, error in
             DispatchQueue.main.async {
-                if let error { self.sessionStatus = "Motion step count unavailable: " + error.localizedDescription; return }
+                if let error { self.sessionStatus = "GPS is recording; motion step count unavailable: " + error.localizedDescription; return }
                 self.sessionSteps = data?.numberOfSteps.intValue
             }
         }
@@ -113,21 +121,38 @@ struct ContentView: View {
         pedometer.stopUpdates()
         routeRecorder.stop()
         let routePoints = routeRecorder.points
-        // Query the complete interval after stopping live updates so the final
-        // motion samples are included even if the last callback was delayed.
-        pedometer.queryPedometerData(from: start, to: finishedAt) { data, _ in
+        // Keep route persistence independent of the optional pedometer result.
+        let saveRecord: (Int?) -> Void = { queriedSteps in
             DispatchQueue.main.async {
-                let finalSteps = data?.numberOfSteps.intValue ?? self.sessionSteps
+                let finalSteps = queriedSteps ?? self.sessionSteps
+                guard finalSteps != nil || !routePoints.isEmpty else {
+                    self.routeRecorder.clearDraft()
+                    self.sessionSteps = nil
+                    self.sessionStatus = "No step count or GPS route points were recorded."
+                    self.sessionStarted = nil
+                    return
+                }
                 let record = ActivitySessionRecord(id: UUID(), activity: activity, startedAt: start, finishedAt: finishedAt, steps: finalSteps, routePoints: routePoints)
                 var history = (try? JSONDecoder().decode([ActivitySessionRecord].self, from: UserDefaults.standard.data(forKey: "gativx.activitySessions.v1") ?? Data())) ?? []
                 history.insert(record, at: 0)
                 UserDefaults.standard.set(try? JSONEncoder().encode(history), forKey: "gativx.activitySessions.v1")
                 self.routeRecorder.clearDraft()
                 self.sessionSteps = finalSteps
-                self.sessionStatus = activity + " saved · " + (finalSteps?.formatted() ?? "step count unavailable") + " steps"
+                let stepSummary = finalSteps.map { $0.formatted() + " steps" } ?? "step count unavailable"
+                let routeSummary = routePoints.isEmpty ? "no GPS route points" : "GPS route saved"
+                self.sessionStatus = activity + " saved · " + stepSummary + " · " + routeSummary
                 self.sessionStarted = nil
                 self.syncSavedActivitySessions()
             }
+        }
+        // Query the complete interval after stopping live updates so the final
+        // motion samples are included even if the last callback was delayed.
+        if CMPedometer.isStepCountingAvailable() {
+            pedometer.queryPedometerData(from: start, to: finishedAt) { data, _ in
+                saveRecord(data?.numberOfSteps.intValue)
+            }
+        } else {
+            saveRecord(nil)
         }
     }
 
