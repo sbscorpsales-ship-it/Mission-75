@@ -61,6 +61,8 @@ jobs:
               "Cloud distance skips segment breaks": "if cloudPoints[index].breakBefore { continue }" in cloud,
               "Active walk keeps motion monitor in background": "sessionStarted == nil && !routeRecorder.isRecording" in view,
               "Prompt HealthKit background update requested": "frequency: .immediate" in health,
+              "HealthKit step background cadence disclosed as hourly": "at most hourly" in health,
+              "Active-energy query requires explicit HealthKit connection": "guard UserDefaults.standard.bool(forKey: connectionRequestedKey), isAvailable else" in health,
               "GPS route upload allows unknown steps without inventing zero": '"p_steps": steps.map { $0 as Any } ?? NSNull()' in cloud,
               "GPS cloud distance skips discontinuous segments": "if cloudPoints[index].breakBefore { continue }" in cloud,
               "Database allows unknown route steps without writing zero": "alter column steps drop not null" in migration and "steps = coalesce(excluded.steps, public.walk_sessions.steps)" in migration,
