@@ -7,7 +7,7 @@ const errors=[];page.on("pageerror",e=>errors.push(e.message));
 const legacyFixtures={"mission75.dailyLogs":"preserve-existing-records-fixture","sb-crarbbsvcczwmtvxyrxo-auth-token":"preserve-auth-session-fixture"};
 await page.addInitScript((legacy)=>{for(const [key,value] of Object.entries(legacy))localStorage.setItem(key,value);sessionStorage.setItem("gativx.session.fixture","preserve-session-fixture");localStorage.setItem("gativx.v2.fresh.state",JSON.stringify({version:2,goal:{type:"Build strength",duration:"90 days"},entries:{[new Date().getFullYear()+"-"+String(new Date().getMonth()+1).padStart(2,"0")+"-"+String(new Date().getDate()).padStart(2,"0")]:{steps:1948,water:1500,protein:65,distance:.4}},walks:[]}));},legacyFixtures);
 await page.route("https://**/*",r=>r.abort());
-await page.goto(pathToFileURL(path.resolve("index.html")).href,{waitUntil:"domcontentloaded"});await page.waitForTimeout(300);
+await page.goto(pathToFileURL(path.resolve("app-v2.html")).href,{waitUntil:"domcontentloaded"});await page.waitForTimeout(300);
 const assert=(v,m)=>{if(!v)throw new Error(m)};
 assert(await page.locator("#steps").textContent().then(x=>x.trim())==="1,948","Fresh-store step value did not render");
 assert((await page.locator("#missionTitle").textContent()).includes("Build strength"),"Fresh-store mission did not render");
@@ -18,6 +18,18 @@ assert(await page.locator('a[href="./legacy-runtime.html"]').count()===1,"Existi
 for(const tab of ["home","journey","record","walk","coach"]){await page.locator('[data-panel="'+tab+'"]').click();assert(await page.locator("#"+tab+".panel.active").count()===1,"Navigation failed: "+tab)}
 await page.locator('[data-panel="home"]').click();assert(await page.locator("#missionTitle").textContent().then(x=>x.includes("Build strength")),"Mission changed after navigation");
 assert(errors.length===0,"Browser errors: "+errors.join("; "));
+// Verify the restored public entry uses the exact previously approved brand intro.
+const brand=await browser.newPage({viewport:{width:390,height:844}});
+const brandErrors=[];brand.on("pageerror",e=>brandErrors.push(e.message));
+await brand.route("https://**/*",r=>r.abort());
+await brand.goto(pathToFileURL(path.resolve("index.html")).href,{waitUntil:"domcontentloaded"});
+assert(await brand.locator("#brandIntro").count()===1,"Original GATIVX cinematic intro missing");
+assert(await brand.getByText("From Goals to Xcellence").count()>=1,"Original GATIVX motto missing");
+await brand.locator("#skipBrandIntro").click();
+await brand.locator("#brandIntro").waitFor({state:"hidden",timeout:3000});
+assert(await brand.locator("#gxTitle").count()===1,"Original GATIVX dashboard did not render after intro");
+assert(brandErrors.length===0,"Original GATIVX browser errors: "+brandErrors.join("; "));
+await brand.close();
 const storage=await page.evaluate(()=>({keys:Object.keys(localStorage),dailyLogs:localStorage.getItem("mission75.dailyLogs"),auth:localStorage.getItem("sb-crarbbsvcczwmtvxyrxo-auth-token"),session:sessionStorage.getItem("gativx.session.fixture")}));
 assert(storage.keys.includes("gativx.v2.fresh.state"),"Fresh GATIVX store was not used");
 assert(storage.dailyLogs==="preserve-existing-records-fixture","Existing Mission-75 browser records were changed or removed");
@@ -48,6 +60,7 @@ await v2.locator("#gpsFinish").click();
 assert((await v2.locator("#walkStatus").textContent()).includes("0.03 km"),"Saved GPS walk distance did not match filtered route distance");
 assert(v2Errors.length===0,"GATIVX v2 browser errors: "+v2Errors.join("; "));
 await v2.close();
+console.log("PASS: Original approved GATIVX intro and dashboard render and can be skipped");
 console.log("PASS: GATIVX v2 uses its own namespaced data store");
 console.log("PASS: existing Mission-75 records and auth/session storage are preserved");
 console.log("PASS: mission, metrics and all five navigation tabs render without browser errors");
