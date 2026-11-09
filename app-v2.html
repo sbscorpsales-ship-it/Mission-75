@@ -81,4 +81,5 @@ $('gpsStart').onclick=()=>{if(!navigator.geolocation){alert('GPS is not availabl
 $('gpsPause').onclick=()=>{paused=!paused;if(!paused){lastAcceptedFix=null;segmentBreak=true}$('gpsPause').textContent=paused?'Resume':'Pause';$('walkStatus').textContent=paused?'Walk paused':'GPS tracking active'};
 $('gpsFinish').onclick=()=>{if(watch!==null)navigator.geolocation.clearWatch(watch);watch=null;$('gpsStart').disabled=false;$('gpsPause').disabled=true;$('gpsFinish').disabled=true;if(points.length>=2&&distance>0){state.walks.push({date:date(),distance:distance/1000,points,createdAt:new Date().toISOString()});const x=state.entries[date()]||{};state.entries[date()]={...x,distance:Number(((x.distance||0)+distance/1000).toFixed(2))};persist();$('walkStatus').textContent='Walk saved · '+(distance/1000).toFixed(2)+' km'}else $('walkStatus').textContent='No measurable route saved';render();renderWalk()};
 render();})();
+if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{}));}
 </script></body></html>
