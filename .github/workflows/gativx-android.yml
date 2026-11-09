@@ -15,7 +15,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: gativx-android-${{ github.ref }}
+  group: gativx-android-${{ github.head_ref || github.ref_name }}
   cancel-in-progress: true
 
 jobs:
