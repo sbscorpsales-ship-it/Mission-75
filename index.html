@@ -428,7 +428,7 @@ const habitNames=['Walk or move','Protein with meals','Drink water regularly','E
 function renderHabits(){const done=habits[selectedDate]||[];$('habitList').innerHTML=habitNames.map((n,i)=>`<label class="check"><input type="checkbox" data-habit="${i}" ${done.includes(i)?'checked':''}>${n}</label>`).join('');$('habitList').querySelectorAll('input').forEach(c=>c.addEventListener('change',()=>{let a=habits[selectedDate]||[];a=c.checked?[...new Set([...a,+c.dataset.habit])]:a.filter(x=>x!==+c.dataset.habit);habits[selectedDate]=a;localStorage.setItem(HAB,JSON.stringify(habits));renderSummary();if(cloudUser)cloudSync()}))}
 function loadForm(){const x=logs[selectedDate]||{};['weight','waist','steps','distance','water','protein','sleep','workout','energy','food'].forEach(k=>$(k).value=x[k]??'');renderHabits()}
 $('logDate').addEventListener('change',()=>{selectedDate=$('logDate').value||localDate();loadForm();renderSummary()});
-function renderSummary(){const x=logs[localDate()]||{},motion=safeParse(localStorage.getItem('gativx.motionDaily.v1'),'{}'),motionToday=motion[localDate()],motionLabel=$('motionStepsLabel');if(motionLabel)motionLabel.textContent=motionToday?'iPhone motion · '+fmt(motionToday.steps)+' steps · '+(motionToday.measuredAt?'updated '+new Date(motionToday.measuredAt).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}):'native sync')+' (separate source)':'iPhone motion: awaiting native sync';const steps=+x.steps||0,done=(habits[localDate()]||[]).length,pct=Math.round(done/habitNames.length*100);const healthTime=Date.parse(x.stepsUpdatedAt||'')||0,motionTime=Date.parse(motionToday?.measuredAt||'')||0,preferMotion=!!motionToday&&motionTime>healthTime&&x.stepsSource!=='manual';const displaySteps=preferMotion?motionToday.steps:(x.steps!=null?x.steps:(motionToday?motionToday.steps:null));$('vSteps').textContent=displaySteps==null?'—':fmt(displaySteps);const sourceLabel=$('stepsSourceLabel');if(sourceLabel){if(preferMotion){sourceLabel.textContent='iPhone motion · native GATIVX sync'}else if(x.stepsSource==='apple_health_shortcuts'||x.stepsSource==='apple_health'){const syncedAt=x.stepsUpdatedAt?new Date(x.stepsUpdatedAt):null;const timeText=syncedAt&&!Number.isNaN(syncedAt.getTime())?' · synced '+syncedAt.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}):'';const age=healthTime?Date.now()-healthTime:0;sourceLabel.textContent='Apple Health'+timeText+(age>3*60*60*1000?' · refresh pending':'')}else if(x.stepsSource==='manual'){sourceLabel.textContent='Manual entry · not Apple Health'}else if(motionToday){sourceLabel.textContent='iPhone motion · native GATIVX sync'}else{sourceLabel.textContent='Not synced from Apple Health'}}$('vDistance').textContent=x.distance==null?'—':Number(x.distance).toFixed(2)+' km';$('vWater').textContent=x.water==null?'—':fmt(x.water)+' ml';$('vProtein').textContent=x.protein==null?'—':fmt(x.protein)+' g';$('vHeartPoints').textContent='—';$('vActiveMinutes').textContent='—';$('vActiveEnergy').textContent=x.activeEnergyKcal==null?'—':fmt(x.activeEnergyKcal)+' kcal';const energyLabel=$('activeEnergySourceLabel');if(energyLabel){const energyTime=Date.parse(x.activeEnergyUpdatedAt||'');energyLabel.textContent=x.activeEnergyKcal==null?'Awaiting Apple Health active-energy data':(x.activeEnergySource==='apple_health'?'Apple Health measured active energy'+(energyTime?' · updated '+new Date(energyTime).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}):'')+' · not total daily burn':'Source not verified · active kcal')}$('dayPercent').textContent=pct+'%';$('dayRing').style.background=`conic-gradient(var(--green) ${pct*3.6}deg,#29415e 0deg)`;$('dayLabel').textContent='DAY '+(Object.keys(logs).length+1);$('glanceWeight').textContent=x.weight?x.weight+' kg':'—';$('glanceSleep').textContent=x.sleep?x.sleep+' h':'—';$('glanceWorkout').textContent=x.workout||'—';$('glanceFood').textContent=x.food?(x.food.length>28?x.food.slice(0,28)+'…':x.food):'—';
+function renderSummary(){const x=logs[localDate()]||{},motion=safeParse(localStorage.getItem('gativx.motionDaily.v1'),'{}'),motionToday=motion[localDate()],motionLabel=$('motionStepsLabel');if(motionLabel)motionLabel.textContent=motionToday?'iPhone motion · '+fmt(motionToday.steps)+' steps · '+(motionToday.measuredAt?'updated '+new Date(motionToday.measuredAt).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}):'native sync')+' (separate source)':'iPhone motion: awaiting native sync';const steps=+x.steps||0,done=(habits[localDate()]||[]).length,pct=Math.round(done/habitNames.length*100);const healthTime=Date.parse(x.stepsUpdatedAt||'')||0,motionTime=Date.parse(motionToday?.measuredAt||'')||0,preferMotion=!!motionToday&&motionTime>healthTime&&x.stepsSource!=='manual';const displaySteps=preferMotion?motionToday.steps:(x.steps!=null?x.steps:(motionToday?motionToday.steps:null));$('vSteps').textContent=displaySteps==null?'—':fmt(displaySteps);const sourceLabel=$('stepsSourceLabel');if(sourceLabel){if(preferMotion){sourceLabel.textContent='iPhone motion · native GATIVX sync'}else if(x.stepsSource==='apple_health_shortcuts'||x.stepsSource==='apple_health'){const syncedAt=x.stepsUpdatedAt?new Date(x.stepsUpdatedAt):null;const timeText=syncedAt&&!Number.isNaN(syncedAt.getTime())?' · synced '+syncedAt.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}):'';const age=healthTime?Date.now()-healthTime:0;sourceLabel.textContent='Apple Health'+timeText+(age>3*60*60*1000?' · refresh pending':'')}else if(x.stepsSource==='manual'){sourceLabel.textContent='Manual entry · not Apple Health'}else if(motionToday){sourceLabel.textContent='iPhone motion · native GATIVX sync'}else{sourceLabel.textContent='Not synced from Apple Health'}}$('vDistance').textContent=x.distance==null?'—':Number(x.distance).toFixed(2)+' km';$('vWater').textContent=x.water==null?'—':fmt(x.water)+' ml';$('vProtein').textContent=x.protein==null?'—':fmt(x.protein)+' g';$('vHeartPoints').textContent='—';$('vActiveMinutes').textContent='—';$('vActiveEnergy').textContent=x.activeEnergyKcal==null?'—':fmt(x.activeEnergyKcal)+' kcal';const energyLabel=$('activeEnergySourceLabel');if(energyLabel){const energyTime=Date.parse(x.activeEnergyUpdatedAt||'');energyLabel.textContent=x.activeEnergyKcal==null?'Awaiting Apple Health active-energy data':(x.activeEnergySource==='apple_health'?'Apple Health measured active energy'+(energyTime?' · updated '+new Date(energyTime).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}):'')+' · not total daily burn':x.activeEnergySource==='apple_health_shortcuts'?'Apple Health via Shortcuts · active energy':'Source not verified · active kcal')}$('dayPercent').textContent=pct+'%';$('dayRing').style.background=`conic-gradient(var(--green) ${pct*3.6}deg,#29415e 0deg)`;$('dayLabel').textContent='DAY '+(Object.keys(logs).length+1);$('glanceWeight').textContent=x.weight?x.weight+' kg':'—';$('glanceSleep').textContent=x.sleep?x.sleep+' h':'—';$('glanceWorkout').textContent=x.workout||'—';$('glanceFood').textContent=x.food?(x.food.length>28?x.food.slice(0,28)+'…':x.food):'—';
 const entries=Object.keys(logs).sort().filter(d=>logs[d].weight!=null);let latest=entries.length?logs[entries[entries.length-1]].weight:null;const start=+settings.startWeight,target=+settings.targetWeight;let progress=latest!=null&&start!==target?Math.max(0,Math.min(100,(start-latest)/(start-target)*100)):0;$('goalWeight').textContent=target;$('weightBar').style.width=progress+'%';$('weightSummary').textContent=latest==null?'Log your weight to begin tracking.':`Latest recorded weight: ${latest} kg`;$('weightRemaining').textContent=latest==null?'Your first entry starts your trend.':`${Math.abs(latest-target).toFixed(1)} kg ${latest>target?'to go':'from target reached'} · ${progress.toFixed(0)}% journey progress`;
 const dates=Object.keys(logs).sort().reverse().slice(0,7);$('recentHistory').innerHTML=dates.length?dates.map(d=>{const z=logs[d];return `<div class="entry"><div><b>${d}</b><br><span>${z.workout||'No workout'} · ${z.steps?fmt(z.steps)+' steps':'Steps not logged'}</span></div><div style="text-align:right">${(+z.distance||0).toFixed(2)} km<br><span>${z.weight??'—'} kg</span></div></div>`}).join(''):'<div class="empty">Save your first daily log to see activity here.</div>';renderTrends()}
 function renderTrends(){const ds=Object.keys(logs).sort(),ws=ds.filter(d=>logs[d].weight!=null),first=ws.length?logs[ws[0]].weight:null,last=ws.length?logs[ws[ws.length-1]].weight:null;$('weightChange').textContent=first==null?'—':`${last-first>0?'+':''}${(last-first).toFixed(1)} kg`;$('daysLogged').textContent=ds.length;$('totalWalk').textContent=ds.reduce((s,d)=>s+(+logs[d].distance||0),0).toFixed(1)+' km';const sleeps=ds.map(d=>+logs[d].sleep).filter(n=>n>0);$('avgSleep').textContent=sleeps.length?(sleeps.reduce((a,b)=>a+b,0)/sleeps.length).toFixed(1)+' h':'—';const last7=ds.slice(-7);$('weeklyStats').innerHTML=last7.length?last7.map(d=>`<div class="metricline"><span>${d}</span><b>${fmt(logs[d].steps)} steps · ${(+logs[d].distance||0).toFixed(1)} km</b></div>`).join(''):'<div class="empty">Your weekly summary will appear here.</div>'}
@@ -512,47 +512,58 @@ $('welcomeDone').addEventListener('change',()=>{let done=welcomeState.done||[];d
 function init(){renderSettings();loadForm();renderSummary();renderGps();coach();}init();window.addEventListener('resize',()=>{if($('pane-trends').classList.contains('active'))drawChart()});
 function importAppleHealthShortcutSteps(){
  const params=new URLSearchParams(window.location.search);
- if(!params.has('gativx_steps'))return;
- const raw=(params.get('gativx_steps')||'').trim();
- // Shortcuts may stringify a numeric result with locale grouping or a decimal suffix.
- const numeric=raw.replace(/,/g,'');
- const parsed=Number(numeric),n=Math.round(parsed),date=params.get('gativx_date')||localDate();
+ const hasSteps=params.has('gativx_steps'),hasEnergy=params.has('gativx_active_energy');
+ if(!hasSteps&&!hasEnergy)return;
+ const date=params.get('gativx_date')||localDate();
  const parts=date.split('-').map(Number),check=parts.length===3?new Date(parts[0],parts[1]-1,parts[2]):new Date(NaN);
- const validDate=/^\d{4}-\d{2}-\d{2}$/.test(date)&&check.getFullYear()===parts[0]&&check.getMonth()===parts[1]-1&&check.getDate()===parts[2];
- if(!raw||!/^\d+(?:\.\d+)?$/.test(numeric)||!Number.isFinite(parsed)||!Number.isSafeInteger(n)||n<0||n>100000||!validDate){
-  toast('Apple Health did not send a valid step total. No data was changed.');
-  params.delete('gativx_steps');params.delete('gativx_date');
-  const clean=window.location.pathname+(params.toString()?'?'+params.toString():'')+window.location.hash;
-  window.history.replaceState({},'',clean);return;
- }
+ const validDate=/^\\d{4}-\\d{2}-\\d{2}$/.test(date)&&check.getFullYear()===parts[0]&&check.getMonth()===parts[1]-1&&check.getDate()===parts[2];
+ const numericValue=(raw,max)=>{if(raw==null)return null;const cleaned=raw.trim().replace(/,/g,'');if(!/^\\d+(?:\\.\\d+)?$/.test(cleaned))return null;const value=Number(cleaned);if(!Number.isFinite(value)||value<0||value>max)return null;return Math.round(value)};
+ const steps=hasSteps?numericValue(params.get('gativx_steps'),100000):null;
+ const energy=hasEnergy?numericValue(params.get('gativx_active_energy'),20000):null;
  const stamp=new Date().toISOString(),prior=logs[date]||{};
- // Always retain the shortcut result as diagnostic evidence. HealthKit's
- // native aggregated total and an intentional manual entry take precedence.
- const importKey='gativx.steps.importHistory.v1';
- const history=safeParse(localStorage.getItem(importKey),[]);
- history.unshift({date,steps:n,source:'apple_health_shortcuts',receivedAt:stamp});
- localStorage.setItem(importKey,JSON.stringify(history.slice(0,30)));
- const protectedSource=prior.stepsSource==='apple_health'||prior.stepsSource==='manual';
- if(!protectedSource){
-  logs[date]={...prior,steps:n,stepsSource:'apple_health_shortcuts',stepsUpdatedAt:stamp};
-  localStorage.setItem(KEY,JSON.stringify(logs));
+ if(!validDate){
+  toast('Apple Health import date is invalid. No data was changed.');
+ }else if((hasSteps&&steps===null)||(hasEnergy&&energy===null)){
+  if(steps===null&&energy===null)toast('Apple Health did not send valid steps or active calories. No data was changed.');
  }
- selectedDate=date;
- if($('logDate'))$('logDate').value=date;
- loadForm();renderSummary();
- params.delete('gativx_steps');params.delete('gativx_date');
+ let changed=false;
+ if(validDate&&steps!==null){
+  const importKey='gativx.steps.importHistory.v1';
+  const history=safeParse(localStorage.getItem(importKey),[]);
+  history.unshift({date,steps,source:'apple_health_shortcuts',receivedAt:stamp});
+  localStorage.setItem(importKey,JSON.stringify(history.slice(0,30)));
+  const protectedSource=prior.stepsSource==='apple_health'||prior.stepsSource==='manual';
+  if(!protectedSource){logs[date]={...(logs[date]||{}),steps,stepsSource:'apple_health_shortcuts',stepsUpdatedAt:stamp};changed=true;}
+ }
+ if(validDate&&energy!==null){
+  const importKey='gativx.activeEnergy.importHistory.v1';
+  const history=safeParse(localStorage.getItem(importKey),[]);
+  history.unshift({date,kilocalories:energy,source:'apple_health_shortcuts',receivedAt:stamp});
+  localStorage.setItem(importKey,JSON.stringify(history.slice(0,30)));
+  const latest=logs[date]||prior;
+  // Native HealthKit data is preferred over a Shortcut import.
+  if(latest.activeEnergySource!=='apple_health'){
+   logs[date]={...latest,activeEnergyKcal:energy,activeEnergySource:'apple_health_shortcuts',activeEnergyUpdatedAt:stamp};changed=true;
+  }
+ }
+ if(changed)localStorage.setItem(KEY,JSON.stringify(logs));
+ if(validDate&&changed){
+  selectedDate=date;
+  if($('logDate'))$('logDate').value=date;
+  loadForm();renderSummary();
+ }
+ params.delete('gativx_steps');params.delete('gativx_active_energy');params.delete('gativx_date');
  const clean=window.location.pathname+(params.toString()?'?'+params.toString():'')+window.location.hash;
  window.history.replaceState({},'',clean);
- toast(protectedSource
-  ? 'Shortcut reading '+fmt(n)+' saved for comparison; existing '+prior.stepsSource+' total preserved.'
-  : 'Apple Health shortcut reading imported: '+fmt(n));
- if(cloudUser){
-  cloudMsg('Shortcut reading recorded. Checking cloud backup…');
-  cloudSync();
- }else{
-  cloudMsg('Shortcut reading saved on this device. Sign in to back up your records.');
+ if(validDate){
+  const messages=[];
+  if(steps!==null)messages.push('steps '+fmt(steps));
+  if(energy!==null)messages.push(energy+' active kcal');
+  toast(messages.length?'Apple Health import received: '+messages.join(' · '):'No valid Apple Health values were imported.');
+  if(cloudUser){cloudMsg('Apple Health reading recorded. Checking cloud backup…');cloudSync();}
+  else cloudMsg('Apple Health reading saved on this device. Sign in to back up your records.');
+  window.dispatchEvent(new CustomEvent('gativx:health-imported',{detail:{date,steps,activeEnergyKcal:energy,source:'apple_health_shortcuts',receivedAt:stamp}}));
  }
- window.dispatchEvent(new CustomEvent('gativx:steps-imported',{detail:{date,steps:n,source:'apple_health_shortcuts',receivedAt:stamp,authoritative:!protectedSource}}));
 }
 importAppleHealthShortcutSteps();
 })();
