@@ -13,6 +13,7 @@ final class HealthKitManager: ObservableObject {
     @Published private(set) var lastRefresh: Date?
     @Published private(set) var statusMessage = "Apple Health is not connected."
     var onDailyTotal: ((Date, Int) -> Void)?
+    var onActiveEnergy: ((Date, Int) -> Void)?
 
     private let store = HKHealthStore()
     private let connectionRequestedKey = "gativx.healthkit.connectionRequested"
@@ -98,9 +99,11 @@ final class HealthKitManager: ObservableObject {
         let query = HKStatisticsQuery(quantityType: energyType, quantitySamplePredicate: predicate, options: .cumulativeSum) { [weak self] _, statistics, _ in
             Task { @MainActor in
                 guard let self else { return }
-                self.todayActiveEnergyKcal = statistics?.sumQuantity().map {
+                let total = statistics?.sumQuantity().map {
                     max(0, Int($0.doubleValue(for: .kilocalorie()).rounded()))
                 }
+                self.todayActiveEnergyKcal = total
+                if let total { self.onActiveEnergy?(start, total) }
             }
         }
         store.execute(query)
