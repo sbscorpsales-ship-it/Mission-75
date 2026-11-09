@@ -340,6 +340,56 @@ private fun GativxAndroidScreen() {
                 }
 
                 Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF17232A))) {
+                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Text("WalkOn · GPS ROUTE TRACKING", color = Color(0xFFD8FF3E), fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        if (activeWalk != null) {
+                            Text("RECORDING · %.2f km · %d GPS points".format(activeWalk!!.distanceMeters / 1000.0, activeWalk!!.points.size), color = Color.White, fontWeight = FontWeight.Bold)
+                            Button(onClick = { stopWalkOn() }, enabled = !busy && !walkSyncBusy, modifier = Modifier.fillMaxWidth()) {
+                                Text("Finish & save WalkOn")
+                            }
+                        } else {
+                            Text("Record a GPS route while your screen is locked. Precise location and the ongoing notification are required.", color = Color(0xFF9DAEB6), fontSize = 12.sp)
+                            Button(
+                                onClick = { startWalkOn() },
+                                enabled = !busy && !walkSyncBusy,
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD8FF3E), contentColor = Color(0xFF111820))
+                            ) { Text("Start WalkOn", fontWeight = FontWeight.Bold) }
+                        }
+                        val routePreviewPoints = activeWalk?.points?.takeIf { it.size > 1 }
+                            ?: latestWalk?.points?.takeIf { it.size > 1 }
+                        if (routePreviewPoints != null) {
+                            WalkOnRoutePreview(routePreviewPoints)
+                            Text("GPS route trace preview · not a street map", color = Color(0xFF9DAEB6), fontSize = 10.sp)
+                        }
+                        latestWalk?.let { walk ->
+                            Text(
+                                "Last route · %.2f km · %d seconds".format(walk.distanceMeters / 1000.0, walk.durationSeconds),
+                                color = Color.White,
+                                fontSize = 12.sp
+                            )
+                            Text(
+                                if (walk.synced) "CLOUD BACKUP · COMPLETE" else "SAVED ON DEVICE · BACKUP PENDING",
+                                color = if (walk.synced) Color(0xFFD8FF3E) else Color(0xFFFFC66D),
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                        val pendingWalkCount = WalkOnStore.pending(context).size
+                        if (pendingWalkCount > 0) {
+                            Button(
+                                onClick = { syncWalkOnRoutes() },
+                                enabled = session != null && !busy && !walkSyncBusy && activeWalk == null,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(if (walkSyncBusy) "Backing up routes…" else "Sync saved routes ($pendingWalkCount)")
+                            }
+                        }
+                        Text(walkStatus, color = Color(0xFF9DAEB6), fontSize = 11.sp)
+                    }
+                }
+
+                Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF17232A))) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Text("PRIVATE CLOUD BACKUP", color = Color.White, fontWeight = FontWeight.Bold)
                         if (session == null) {
