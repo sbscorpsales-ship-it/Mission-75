@@ -80,6 +80,34 @@ await cloudPage.waitForTimeout(250);
 assert((await cloudPage.locator("#steps").textContent()).trim()==="—","Signed-out device exposed cached records from a previous member");
 await cloudPage.close();
 
+// A member switch during an in-flight request must cancel the old member's
+// merge/upload work before the new member's sync is allowed to proceed.
+const racePage=await browser.newPage({viewport:{width:390,height:844}});
+const raceErrors=[];racePage.on("pageerror",e=>raceErrors.push(e.message));
+await racePage.addInitScript(()=>{
+ const d=new Date(),day=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+ localStorage.setItem("gativx.v2.fresh.state",JSON.stringify({version:2,goal:null,entries:{[day]:{weight:82,water:1200}},walks:[{date:day,distance:.02,createdAt:new Date().toISOString(),points:[{lat:12.97,lon:77.59,time:Date.now()-5000},{lat:12.9701,lon:77.59,time:Date.now()}]}]}));
+ window.__race={uploads:[],inserts:[],currentUser:null,holdFirst:true,releaseFirst:null};
+ window.supabase={createClient:()=>({auth:{getSession:async()=>({data:{session:null},error:null}),onAuthStateChange:()=>({data:{subscription:{unsubscribe(){}}}}),signInWithPassword:async({email})=>{window.__race.currentUser=email.startsWith("first")?"race-user-A":"race-user-B";return {data:{user:{id:window.__race.currentUser},error:null}}},signUp:async()=>({data:{user:null,session:null},error:null}),signOut:async()=>{window.__race.currentUser=null;return {error:null}}},from(table){return {select(){return {eq:async()=>{const id=window.__race.currentUser;if(id==="race-user-A"&&window.__race.holdFirst){window.__race.holdFirst=false;await new Promise(resolve=>{window.__race.releaseFirst=resolve})}return {data:[],error:null}}}},upsert:async(rows)=>{window.__race.uploads.push({user:window.__race.currentUser,rows});return {error:null}},insert:async(row)=>{window.__race.inserts.push({user:window.__race.currentUser,row});return {error:null}}}}})};
+});
+await racePage.route("https://**/*",r=>r.abort());
+await racePage.goto(pathToFileURL(path.resolve("app-v2.html")).href,{waitUntil:"domcontentloaded"});
+await racePage.locator("#cloudEmail").fill("first@example.com");
+await racePage.locator("#cloudPassword").fill("not-a-real-password");
+await racePage.locator("#cloudSignIn").click();
+await racePage.waitForFunction(()=>typeof window.__race.releaseFirst==="function");
+await racePage.locator("#cloudSignOut").click();
+await racePage.locator("#cloudEmail").fill("second@example.com");
+await racePage.locator("#cloudPassword").fill("not-a-real-password");
+await racePage.locator("#cloudSignIn").click();
+await racePage.evaluate(()=>window.__race.releaseFirst());
+await racePage.waitForFunction(()=>document.querySelector("#cloudState")?.textContent==="BACKUP CURRENT");
+const raceResult=await racePage.evaluate(()=>({uploads:window.__race.uploads,inserts:window.__race.inserts,first:JSON.parse(localStorage.getItem("gativx.v2.fresh.state.user.race-user-A")),second:JSON.parse(localStorage.getItem("gativx.v2.fresh.state.user.race-user-B"))}));
+assert(raceResult.uploads.length===0&&raceResult.inserts.length===0,"An in-flight first-account sync wrote data after switching accounts");
+assert(raceResult.first.entries[Object.keys(raceResult.first.entries)[0]].weight===82&&Object.keys(raceResult.second.entries).length===0,"In-flight account switch mixed local member records");
+assert(raceErrors.length===0,"Account-switch race browser errors: "+raceErrors.join("; "));
+await racePage.close();
+
 const storage=await page.evaluate(()=>({keys:Object.keys(localStorage),dailyLogs:localStorage.getItem("mission75.dailyLogs"),auth:localStorage.getItem("sb-crarbbsvcczwmtvxyrxo-auth-token"),session:sessionStorage.getItem("gativx.session.fixture")}));
 assert(storage.keys.includes("gativx.v2.fresh.state"),"Fresh GATIVX store was not used");
 assert(storage.dailyLogs==="preserve-existing-records-fixture","Existing Mission-75 browser records were changed or removed");
