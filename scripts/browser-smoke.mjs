@@ -73,6 +73,10 @@ assert(Object.keys(accountIsolation.entries).length===0,"A second account inheri
 assert(accountIsolation.first.entries[Object.keys(accountIsolation.first.entries)[0]].weight===84,"First account's local data was not preserved after switching accounts");
 assert(accountIsolation.uploads.length===1&&accountIsolation.uploads[0].user==="test-user-123","First account's private daily data was uploaded to a different member");
 assert(accountIsolation.walks.length===1&&accountIsolation.walks[0].user==="test-user-123","First account's GPS route was uploaded to a different member");
+await cloudPage.locator("#cloudSignOut").click();
+await cloudPage.reload();
+await cloudPage.waitForTimeout(250);
+assert((await cloudPage.locator("#steps").textContent()).trim()==="—","Signed-out device exposed cached records from a previous member");
 await cloudPage.close();
 
 const storage=await page.evaluate(()=>({keys:Object.keys(localStorage),dailyLogs:localStorage.getItem("mission75.dailyLogs"),auth:localStorage.getItem("sb-crarbbsvcczwmtvxyrxo-auth-token"),session:sessionStorage.getItem("gativx.session.fixture")}));
