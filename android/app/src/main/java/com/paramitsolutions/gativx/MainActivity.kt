@@ -161,8 +161,10 @@ private fun GativxAndroidScreen() {
                 }
                 session = activeSession
                 walkStatus = "WalkOn route backup complete. Your GPS history is in your GATIVX account."
+                WalkOnStore.setStatus(context, walkStatus)
             } catch (error: Exception) {
                 walkStatus = error.message ?: "WalkOn cloud backup failed. Your encrypted local route remains saved."
+                WalkOnStore.setStatus(context, walkStatus)
             } finally {
                 latestWalk = WalkOnStore.completed(context).firstOrNull()
                 walkSyncBusy = false
@@ -322,7 +324,7 @@ private fun GativxAndroidScreen() {
                         Text(measuredDate, color = Color(0xFF9DAEB6), fontSize = 12.sp)
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             MetricTile("STEPS", steps?.toString() ?: "—", Modifier.weight(1f))
-                            MetricTile("ACTIVE ENERGY", activeEnergy?.let { "\${it.toInt()} kcal" } ?: "—", Modifier.weight(1f))
+                            MetricTile("ACTIVE ENERGY", activeEnergy?.let { "${it.toInt()} kcal" } ?: "—", Modifier.weight(1f))
                         }
                         Button(
                             onClick = { connectHealthConnect() },
@@ -397,7 +399,7 @@ private fun GativxAndroidScreen() {
                             OutlinedTextField(value = password, onValueChange = { password = it }, label = { Text("Password") }, visualTransformation = PasswordVisualTransformation(), singleLine = true, modifier = Modifier.fillMaxWidth())
                             Button(onClick = { signIn() }, enabled = !busy, modifier = Modifier.fillMaxWidth()) { Text("Sign in to GATIVX") }
                         } else {
-                            Text("Signed in · \${session?.userId?.take(8)}…", color = Color(0xFFD8FF3E))
+                            Text("Signed in · ${session?.userId?.take(8)}…", color = Color(0xFFD8FF3E))
                             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                                 Button(onClick = { syncToCloud() }, enabled = !busy && healthReady) { Text("Sync measured data") }
                                 Button(
@@ -434,6 +436,46 @@ private fun GativxAndroidScreen() {
                     }
                 }
             }
+        }
+    }
+}
+
+private fun startWalkOnService(context: Context) {
+    val intent = Intent(context, WalkOnLocationService::class.java).setAction(WalkOnLocationService.ACTION_START)
+    ContextCompat.startForegroundService(context, intent)
+}
+
+@Composable
+private fun WalkOnRoutePreview(points: List<WalkOnPoint>) {
+    Canvas(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(132.dp)
+            .background(Color(0xFF0D171D), RoundedCornerShape(12.dp))
+    ) {
+        if (points.size < 2) return@Canvas
+        val minLatitude = points.minOf { it.latitude }
+        val maxLatitude = points.maxOf { it.latitude }
+        val minLongitude = points.minOf { it.longitude }
+        val maxLongitude = points.maxOf { it.longitude }
+        val latitudeRange = (maxLatitude - minLatitude).coerceAtLeast(0.000001)
+        val longitudeRange = (maxLongitude - minLongitude).coerceAtLeast(0.000001)
+        val inset = 12.dp.toPx()
+        val drawWidth = (size.width - inset * 2).coerceAtLeast(1f)
+        val drawHeight = (size.height - inset * 2).coerceAtLeast(1f)
+        fun position(point: WalkOnPoint): Offset = Offset(
+            inset + ((point.longitude - minLongitude) / longitudeRange).toFloat() * drawWidth,
+            inset + ((maxLatitude - point.latitude) / latitudeRange).toFloat() * drawHeight
+        )
+        for (index in 1 until points.size) {
+            if (points[index].breakBefore) continue
+            drawLine(
+                color = Color(0xFFD8FF3E),
+                start = position(points[index - 1]),
+                end = position(points[index]),
+                strokeWidth = 4.dp.toPx(),
+                cap = StrokeCap.Round
+            )
         }
     }
 }
