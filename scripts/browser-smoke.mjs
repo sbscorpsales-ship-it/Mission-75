@@ -81,7 +81,8 @@ const deviceState=await cloudPage.evaluate(()=>JSON.parse(localStorage.getItem("
 assert(!deviceState||Object.keys(deviceState.entries||{}).length===0,"Signed-out device store retained a previous member's records");
 await cloudPage.reload();
 await cloudPage.waitForFunction(()=>document.querySelector("#cloudState")?.textContent==="DEVICE ONLY");
-assert((await cloudPage.locator("#steps").textContent()).trim()==="—","Signed-out device exposed cached records from a previous member");
+const signedOutDebug=await cloudPage.evaluate(()=>({steps:document.querySelector("#steps")?.textContent,marker:localStorage.getItem("gativx.v2.account-local-migrated"),device:localStorage.getItem("gativx.v2.fresh.state.device"),base:localStorage.getItem("gativx.v2.fresh.state"),first:localStorage.getItem("gativx.v2.fresh.state.user.test-user-123"),second:localStorage.getItem("gativx.v2.fresh.state.user.test-user-456")}));
+assert((await cloudPage.locator("#steps").textContent()).trim()==="—","Signed-out device exposed cached records from a previous member: "+JSON.stringify(signedOutDebug));
 await cloudPage.close();
 
 // A member switch during an in-flight request must cancel the old member's
