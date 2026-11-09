@@ -55,6 +55,38 @@ final class SupabaseRESTClient: ObservableObject {
         }
     }
 
+    func syncActiveEnergy(date: Date, kilocalories: Int, retryAfterRefresh: Bool = true) async {
+        guard kilocalories >= 0 else { return }
+        do {
+            guard let token = accessToken else { throw ClientError.notSignedIn }
+            var request = URLRequest(url: baseURL.appendingPathComponent("rest/v1/rpc/sync_healthkit_daily_energy"))
+            request.httpMethod = "POST"
+            request.setValue(publishableKey, forHTTPHeaderField: "apikey")
+            request.setValue("Bearer " + token, forHTTPHeaderField: "Authorization")
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            let day = DateFormatter()
+            day.locale = Locale(identifier: "en_US_POSIX")
+            day.timeZone = TimeZone.current
+            day.dateFormat = "yyyy-MM-dd"
+            request.httpBody = try JSONSerialization.data(withJSONObject: [
+                "p_log_date": day.string(from: date),
+                "p_active_energy_kcal": kilocalories,
+                "p_updated_at": ISO8601DateFormatter().string(from: Date())
+            ])
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let http = response as? HTTPURLResponse else { throw ClientError.invalidResponse }
+            if http.statusCode == 401 && retryAfterRefresh {
+                try await refreshSession()
+                await syncActiveEnergy(date: date, kilocalories: kilocalories, retryAfterRefresh: false)
+                return
+            }
+            guard (200..<300).contains(http.statusCode) else { throw Self.serverError(data) }
+            status = "Apple Health active calories synced to your GATIVX account."
+        } catch {
+            status = "Active calorie sync pending: " + error.localizedDescription + ". Open the app later to retry."
+        }
+    }
+
     /// Store the iPhone-only CoreMotion total separately from Apple's
     /// aggregated HealthKit total. These two sources must never overwrite or
     /// be added together in daily_logs.
