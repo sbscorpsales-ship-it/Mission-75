@@ -103,15 +103,18 @@ private fun GativxAndroidScreen() {
         val today = LocalDate.now(zone)
         val start = today.atStartOfDay(zone).toInstant()
         val end = today.plusDays(1).atStartOfDay(zone).toInstant()
-        val metrics = buildSet {
-            if (canReadSteps) add(StepsRecord.COUNT_TOTAL)
-            if (canReadEnergy) add(ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL)
-        }
-        val response = client.aggregate(
-            AggregateRequest(metrics = metrics, timeRangeFilter = TimeRangeFilter.between(start, end))
-        )
-        steps = if (canReadSteps) response[StepsRecord.COUNT_TOTAL] else null
-        activeEnergy = if (canReadEnergy) response[ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL]?.inKilocalories else null
+        steps = if (canReadSteps) {
+            val response = client.aggregate(
+                AggregateRequest(metrics = setOf(StepsRecord.COUNT_TOTAL), timeRangeFilter = TimeRangeFilter.between(start, end))
+            )
+            response[StepsRecord.COUNT_TOTAL]
+        } else null
+        activeEnergy = if (canReadEnergy) {
+            val response = client.aggregate(
+                AggregateRequest(metrics = setOf(ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL), timeRangeFilter = TimeRangeFilter.between(start, end))
+            )
+            response[ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL]?.inKilocalories
+        } else null
         measuredDate = today.toString()
         measuredAt = Instant.now().toString()
         healthReady = true
