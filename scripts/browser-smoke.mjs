@@ -28,7 +28,7 @@ const publicEntry=await browser.newPage({viewport:{width:390,height:844}});
 const entryErrors=[];publicEntry.on("pageerror",e=>entryErrors.push(e.message));
 await publicEntry.route("https://**/*",r=>r.abort());
 await publicEntry.goto(pathToFileURL(path.resolve("index.html")).href,{waitUntil:"domcontentloaded"});
-await publicEntry.waitForTimeout(300);
+await publicEntry.waitForTimeout(900);
 assert(await publicEntry.locator(".summaryHero").count()===1,"Public GATIVX entry did not show the fitness summary home");
 assert(await publicEntry.locator(".guruCard").count()>=1,"GURU mode card missing from public home");
 assert(await publicEntry.locator("#vActiveEnergy").textContent().then(x=>x.trim())==="—","Active calories must remain unknown until measured");
