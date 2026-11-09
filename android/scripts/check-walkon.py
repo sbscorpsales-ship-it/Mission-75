@@ -18,6 +18,11 @@ checks = {
         and "requestLocationUpdates" in service
         and "ACTION_STOP" in service
     ),
+    "dashboard refreshes from scoped service broadcasts": (
+        "ACTION_UPDATED" in service
+        and "broadcastUpdate()" in service
+        and "ContextCompat.registerReceiver" in activity
+    ),
     "GPS accuracy and jump filters": (
         "MAX_ACCURACY_METERS = 50f" in service
         and "MAX_JUMP_METERS = 150f" in service
