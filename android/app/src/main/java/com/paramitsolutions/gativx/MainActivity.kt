@@ -195,6 +195,13 @@ private fun GativxAndroidScreen() {
         }
     }
 
+    LaunchedEffect(session?.userId) {
+        val userId = session?.userId ?: return@LaunchedEffect
+        if (WalkOnStore.pendingFor(context, userId).isNotEmpty()) {
+            syncWalkOnRoutes()
+        }
+    }
+
     suspend fun refreshHealthData() {
         val client = healthClient ?: return
         val granted = client.permissionController.getGrantedPermissions()
@@ -459,7 +466,7 @@ private fun GativxAndroidScreen() {
                                             }
                                         }
                                     },
-                                    enabled = !busy && WalkOnStore.active(context) == null
+                                    enabled = !busy && !walkSyncBusy && WalkOnStore.active(context) == null
                                 ) { Text("Sign out") }
                             }
                         }
