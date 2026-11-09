@@ -1,7 +1,9 @@
 package com.paramitsolutions.gativx
 
 import android.Manifest
+import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.IntentFilter
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
@@ -32,6 +34,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -57,7 +60,6 @@ import androidx.health.connect.client.request.AggregateRequest
 import androidx.health.connect.client.time.TimeRangeFilter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
@@ -106,6 +108,7 @@ private fun GativxAndroidScreen() {
     var latestWalk by remember { mutableStateOf(session?.userId?.let { WalkOnStore.completedFor(context, it).firstOrNull() } ?: if (session == null) WalkOnStore.unassigned(context).firstOrNull() else null) }
     var walkStatus by remember { mutableStateOf(WalkOnStore.status(context)) }
     var walkSyncBusy by remember { mutableStateOf(false) }
+    var walkRevision by remember { mutableStateOf(0) }
 
     val locationPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
@@ -181,18 +184,30 @@ private fun GativxAndroidScreen() {
         }
     }
 
-    LaunchedEffect(Unit) {
-        while (true) {
-            val storedActive = WalkOnStore.active(context)
-            activeWalk = storedActive?.takeIf { it.ownerUserId == session?.userId }
-            latestWalk = if (session != null) {
-                WalkOnStore.completedFor(context, session!!.userId).firstOrNull()
-            } else {
-                WalkOnStore.unassigned(context).firstOrNull()
+    DisposableEffect(context) {
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(receiverContext: Context?, intent: Intent?) {
+                walkRevision += 1
             }
-            walkStatus = WalkOnStore.status(context)
-            delay(1_000)
         }
+        ContextCompat.registerReceiver(
+            context,
+            receiver,
+            IntentFilter(WalkOnLocationService.ACTION_UPDATED),
+            ContextCompat.RECEIVER_NOT_EXPORTED
+        )
+        onDispose { runCatching { context.unregisterReceiver(receiver) } }
+    }
+
+    LaunchedEffect(walkRevision, session?.userId) {
+        val storedActive = WalkOnStore.active(context)
+        activeWalk = storedActive?.takeIf { it.ownerUserId == session?.userId }
+        latestWalk = if (session != null) {
+            WalkOnStore.completedFor(context, session!!.userId).firstOrNull()
+        } else {
+            WalkOnStore.unassigned(context).firstOrNull()
+        }
+        walkStatus = WalkOnStore.status(context)
     }
 
     LaunchedEffect(session?.userId) {
