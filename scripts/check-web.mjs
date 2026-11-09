@@ -15,6 +15,8 @@ if(!entry.includes('id="vActiveEnergy"')||!entry.includes("active_energy_kcal"))
 if(shell.includes("mission75.")||shell.includes("gativx.goal.v1")||shell.includes("gativx.motionDaily.v1"))fail("New app reads or writes legacy data keys");else pass("No legacy data keys are read or written by the new app");
 if(!shell.includes('href="./legacy-runtime.html"'))fail("Existing account and saved-record access link missing");else pass("Existing account and saved-record access link present");
 if(!shell.includes("gativx.v2.fresh.state"))fail("Fresh v2 data namespace missing");else pass("Isolated fresh v2 data store present");
+if(!shell.includes("apple-health-shortcut.html")||!fs.existsSync("apple-health-shortcut.html"))fail("Free Apple Health Shortcut guide is not linked from the new home");else pass("Free Apple Health Shortcut guide is linked from the new home");
+if(!shell.includes("gativx_active_energy")||!shell.includes("importAppleHealthShortcut"))fail("New home Apple Health import bridge missing");else pass("New home supports validated Apple Health Shortcut imports");
 for(const id of ["summaryHero","activityRing","vActiveEnergy","guruCard"])if(!shell.includes('class="'+id+'"')&&!shell.includes('id="'+id+'"'))fail("Fitness summary home component missing: "+id);else pass("Fitness summary component present: "+id);
 if(!shell.includes("GURU Mode")||!shell.includes(">GURU</button>"))fail("GURU mode entry missing");else pass("GURU mode entry present");
 if(/localStorage\.(?:clear|removeItem)|sessionStorage\.clear/.test(shell))fail("New app must not delete existing browser records or auth sessions");else pass("Existing browser storage is preserved");
