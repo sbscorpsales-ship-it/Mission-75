@@ -246,7 +246,6 @@ struct ContentView: View {
                             }.buttonStyle(.bordered)
                         }
                         Button("Start activity") { startActivitySession() }.buttonStyle(.borderedProminent).tint(.green)
-                            .disabled(!CMPedometer.isStepCountingAvailable())
                     } else {
                         Button("Finish & save activity", role: .destructive) { finishActivitySession() }.buttonStyle(.bordered)
                     }
