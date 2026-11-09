@@ -9,7 +9,8 @@ const manifest=JSON.parse(fs.readFileSync("manifest.webmanifest","utf8"));
 if(manifest.short_name!=="GATIVX"||manifest.display!=="standalone")fail("Standalone manifest invalid");else pass("Standalone manifest valid");
 for(const icon of manifest.icons||[]){const p=icon.src.split(/[?#]/,1)[0].replace(/^\.\//,"");if(!fs.existsSync(p))fail("Manifest icon missing: "+icon.src)}
 if(!fs.existsSync("apple-touch-icon.png")||!shell.includes('rel="apple-touch-icon"'))fail("iPhone icon missing");else pass("iPhone Home Screen icon linked");
-if(!entry.includes("./app-v2.html")||!entry.includes("location.replace"))fail("Root entry does not launch new app");else pass("Root entry launches GATIVX v2");
+if(!entry.includes('id="brandIntro"')||!entry.includes('id="skipBrandIntro"')||!entry.includes("From Goals to Xcellence")||!entry.includes('id="gxTitle"'))fail("Original approved GATIVX website experience missing from root entry");else pass("Original approved GATIVX intro and dashboard restored at root");
+if(!fs.existsSync("app-v2.html")||!shell.includes('id="gpsStart"'))fail("GATIVX v2 GPS beta route missing");else pass("GATIVX v2 GPS beta remains available as a separate page");
 if(shell.includes("mission75.")||shell.includes("gativx.goal.v1")||shell.includes("gativx.motionDaily.v1"))fail("New app reads or writes legacy data keys");else pass("No legacy data keys are read or written by the new app");
 if(!shell.includes('href="./legacy-runtime.html"'))fail("Existing account and saved-record access link missing");else pass("Existing account and saved-record access link present");
 if(!shell.includes("gativx.v2.fresh.state"))fail("Fresh v2 data namespace missing");else pass("Isolated fresh v2 data store present");
