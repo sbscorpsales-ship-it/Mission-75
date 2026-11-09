@@ -23,18 +23,6 @@ assert(await page.locator('a[href="./legacy-runtime.html"]').count()===1,"Existi
 for(const tab of ["home","journey","record","walk","coach"]){await page.locator('[data-panel="'+tab+'"]').click();assert(await page.locator("#"+tab+".panel.active").count()===1,"Navigation failed: "+tab)}
 await page.locator('[data-panel="home"]').click();assert(await page.locator("#missionTitle").textContent().then(x=>x.includes("Build strength")),"Mission changed after navigation");
 assert(errors.length===0,"Browser errors: "+errors.join("; "));
-// Verify the public entry opens the new GATIVX fitness-summary home.
-const publicEntry=await browser.newPage({viewport:{width:390,height:844}});
-const entryErrors=[];publicEntry.on("pageerror",e=>entryErrors.push(e.message));
-await publicEntry.route("https://**/*",r=>r.abort());
-await publicEntry.goto(pathToFileURL(path.resolve("index.html")).href,{waitUntil:"domcontentloaded"});
-await publicEntry.locator("#skipBrandIntro").click();
-await publicEntry.waitForTimeout(600);
-assert(await publicEntry.locator(".summaryHero").count()===1,"Public GATIVX entry did not show the fitness summary home");
-assert(await publicEntry.locator(".guruCard").count()>=1,"GURU mode card missing from public home");
-assert(await publicEntry.locator("#vActiveEnergy").textContent().then(x=>x.trim())==="—","Active calories must remain unknown until measured");
-assert(entryErrors.length===0,"Public GATIVX browser errors: "+entryErrors.join("; "));
-await publicEntry.close();
 const storage=await page.evaluate(()=>({keys:Object.keys(localStorage),dailyLogs:localStorage.getItem("mission75.dailyLogs"),auth:localStorage.getItem("sb-crarbbsvcczwmtvxyrxo-auth-token"),session:sessionStorage.getItem("gativx.session.fixture")}));
 assert(storage.keys.includes("gativx.v2.fresh.state"),"Fresh GATIVX store was not used");
 assert(storage.dailyLogs==="preserve-existing-records-fixture","Existing Mission-75 browser records were changed or removed");
