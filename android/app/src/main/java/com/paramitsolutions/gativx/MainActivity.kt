@@ -358,7 +358,13 @@ private fun GativxAndroidScreen() {
                 Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF17232A))) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Text("WalkOn · GPS ROUTE TRACKING", color = Color(0xFFD8FF3E), fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                        if (activeWalk != null) {
+                        val foreignActiveWalk = WalkOnStore.active(context) != null && activeWalk == null
+                        if (foreignActiveWalk) {
+                            Text("A WalkOn route from another account or an offline session is active. Its route details are hidden here.", color = Color(0xFFFFC66D), fontSize = 12.sp)
+                            Button(onClick = { stopWalkOn() }, enabled = !busy && !walkSyncBusy, modifier = Modifier.fillMaxWidth()) {
+                                Text("Finish active device route")
+                            }
+                        } else if (activeWalk != null) {
                             Text("RECORDING · %.2f km · %d GPS points".format(activeWalk!!.distanceMeters / 1000.0, activeWalk!!.points.size), color = Color.White, fontWeight = FontWeight.Bold)
                             Button(onClick = { stopWalkOn() }, enabled = !busy && !walkSyncBusy, modifier = Modifier.fillMaxWidth()) {
                                 Text("Finish & save WalkOn")
@@ -391,11 +397,31 @@ private fun GativxAndroidScreen() {
                                 fontWeight = FontWeight.Bold
                             )
                         }
-                        val pendingWalkCount = WalkOnStore.pending(context).size
+                        val pendingWalkCount = session?.userId?.let { WalkOnStore.pendingFor(context, it).size } ?: 0
+                        val unassignedWalkCount = WalkOnStore.unassigned(context).size
+                        if (session != null && unassignedWalkCount > 0) {
+                            Button(
+                                onClick = {
+                                    val userId = session?.userId
+                                    if (userId != null) {
+                                        WalkOnStore.assignUnowned(context, userId)
+                                        WalkOnStore.setStatus(context, "Device-only routes assigned to this account by your request.")
+                                        walkStatus = WalkOnStore.status(context)
+                                        syncWalkOnRoutes()
+                                    }
+                                },
+                                enabled = !busy && !walkSyncBusy && activeWalk == null && !foreignActiveWalk,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("Assign offline routes to this account ($unassignedWalkCount)")
+                            }
+                        } else if (session == null && unassignedWalkCount > 0) {
+                            Text("$unassignedWalkCount device-only route(s) saved while signed out. Sign in to choose an account before uploading.", color = Color(0xFF9DAEB6), fontSize = 11.sp)
+                        }
                         if (pendingWalkCount > 0) {
                             Button(
                                 onClick = { syncWalkOnRoutes() },
-                                enabled = session != null && !busy && !walkSyncBusy && activeWalk == null,
+                                enabled = session != null && !busy && !walkSyncBusy && activeWalk == null && !foreignActiveWalk,
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 Text(if (walkSyncBusy) "Backing up routes…" else "Sync saved routes ($pendingWalkCount)")
@@ -433,7 +459,7 @@ private fun GativxAndroidScreen() {
                                             }
                                         }
                                     },
-                                    enabled = !busy
+                                    enabled = !busy && WalkOnStore.active(context) == null
                                 ) { Text("Sign out") }
                             }
                         }
