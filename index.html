@@ -584,7 +584,7 @@ importAppleHealthShortcutSteps();
    if(soundBtn)soundBtn.textContent="♫ SOUND ON";
   }catch(e){if(soundBtn)soundBtn.textContent="♫ TAP FOR SOUND";}
  };
- const closeIntro=()=>{if(closed)return;closed=true;try{localStorage.setItem(SEEN_KEY,"1");}catch(e){}stopSound();intro.classList.add("intro-hide");window.setTimeout(()=>intro.remove(),900);};
+ const closeIntro=()=>{if(closed)return;closed=true;try{localStorage.setItem(SEEN_KEY,"1");}catch(e){}stopSound();intro.classList.add("intro-hide");window.setTimeout(()=>{window.location.replace("./app-v2.html");},350);};
  if(soundBtn)soundBtn.addEventListener("click",playFanfare,{once:true});
  const skip=document.getElementById("skipBrandIntro");if(skip)skip.addEventListener("click",closeIntro,{once:true});
  const reduced=window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches;
