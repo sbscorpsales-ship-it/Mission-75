@@ -25,6 +25,7 @@ class WalkOnLocationService : Service(), LocationListener {
     companion object {
         const val ACTION_START = "com.paramitsolutions.gativx.walkon.START"
         const val ACTION_STOP = "com.paramitsolutions.gativx.walkon.STOP"
+        const val ACTION_UPDATED = "com.paramitsolutions.gativx.walkon.UPDATED"
         private const val CHANNEL_ID = "gativx_walkon_location"
         private const val NOTIFICATION_ID = 7401
         private const val MAX_ACCURACY_METERS = 50f
@@ -65,6 +66,7 @@ class WalkOnLocationService : Service(), LocationListener {
             startAsForeground()
         } catch (_: SecurityException) {
             WalkOnStore.setStatus(this, "Android denied the location foreground service. Re-enable precise location and start WalkOn again.")
+            broadcastUpdate()
             stopSelf()
             return START_NOT_STICKY
         }
@@ -151,6 +153,7 @@ class WalkOnLocationService : Service(), LocationListener {
             recording = true
             WalkOnStore.setStatus(this, "WalkOn is recording GPS in the foreground service. You can lock your screen.")
             updateNotification("GPS route recording · screen may be locked")
+            broadcastUpdate()
         } catch (error: SecurityException) {
             if (isNewSession) WalkOnStore.clearActive(this)
             WalkOnStore.setStatus(this, "Location permission was removed. Re-enable precise location to continue.")
@@ -208,6 +211,7 @@ class WalkOnLocationService : Service(), LocationListener {
             WalkOnStore.setStatus(this, "WalkOn recording · %.2f km · %d GPS points".format(distanceMeters / 1000.0, points.size))
             updateNotification("Recording · %.2f km".format(distanceMeters / 1000.0))
             lastUiUpdateMillis = now
+            broadcastUpdate()
         }
     }
 
@@ -273,16 +277,19 @@ class WalkOnLocationService : Service(), LocationListener {
             if (finished != null) "WalkOn saved · %.2f km · %d GPS points. Sync it to your GATIVX account when signed in.".format(distanceMeters / 1000.0, points.size)
             else "WalkOn finished. No reliable route points were available to save."
         )
+        broadcastUpdate()
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
     }
 
     override fun onProviderEnabled(provider: String) {
         WalkOnStore.setStatus(this, "Location provider enabled. WalkOn is recording when a reliable GPS fix arrives.")
+        broadcastUpdate()
     }
 
     override fun onProviderDisabled(provider: String) {
         WalkOnStore.setStatus(this, "GPS provider disabled. Enable Location Services to continue route recording.")
+        broadcastUpdate()
     }
 
     override fun onDestroy() {
@@ -292,6 +299,10 @@ class WalkOnLocationService : Service(), LocationListener {
         }
         recording = false
         super.onDestroy()
+    }
+
+    private fun broadcastUpdate() {
+        sendBroadcast(Intent(ACTION_UPDATED).setPackage(packageName))
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
