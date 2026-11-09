@@ -15,7 +15,7 @@ This native Android target is the first Health Connect integration for GATIVX.
 
 ## Current limitations — not a public release yet
 
-- The access/refresh token pair is held in memory for this first build. The member must sign in again after closing the app; encrypted persistent session storage is a follow-up.
+- Supabase access/refresh tokens are encrypted at rest using an AES-GCM key held by Android Keystore. Signing out clears the encrypted local session and attempts server-side token revocation.
 - Health data is read on demand while the app is in the foreground. Background reads and periodic WorkManager sync are not included yet.
 - Native GPS foreground-service tracking is not included yet.
 - No Android device/emulator acceptance test has been completed.
