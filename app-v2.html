@@ -140,8 +140,8 @@ async function cloudSync(){
   if(walks.error)throw walks.error;
   const remoteWalks=(walks.data||[]).map(w=>({cloudId:w.id,date:String(w.started_at||'').slice(0,10),distance:Number(w.distance_m||0)/1000,points:Array.isArray(w.route_points)?w.route_points:[],createdAt:w.started_at,finishedAt:w.finished_at,durationSeconds:Number(w.duration_seconds||0),steps:w.steps}));
   const localWalks=state.walks.slice();
-  const walkStart=w=>w.points&&w.points.length?(w.points[0].time||w.points[0].timestamp||w.startedAt||w.createdAt):(w.startedAt||w.createdAt);
-  const matches=(a,b)=>Math.abs(Date.parse(walkStart(a))-Date.parse(walkStart(b)))<=10000&&Math.abs((Number(a.distance)||0)-(Number(b.distance)||0))<=0.02;
+  const walkStartMs=w=>{const raw=w.points&&w.points.length?(w.points[0].time||w.points[0].timestamp||w.startedAt||w.createdAt):(w.startedAt||w.createdAt);return typeof raw==='number'?raw:Date.parse(raw||'')};
+  const matches=(a,b)=>Math.abs(walkStartMs(a)-walkStartMs(b))<=10000&&Math.abs((Number(a.distance)||0)-(Number(b.distance)||0))<=0.02;
   for(const rw of remoteWalks){const i=localWalks.findIndex(l=>matches(l,rw));if(i>=0)localWalks[i]={...localWalks[i],...rw};else localWalks.push(rw)}
   const syncedKey='gativx.v2.cloud.walks.'+cloudUser.id;
   let sent=[];try{sent=JSON.parse(localStorage.getItem(syncedKey)||'[]');if(!Array.isArray(sent))sent=[]}catch{}
