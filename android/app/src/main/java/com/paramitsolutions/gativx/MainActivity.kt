@@ -52,6 +52,7 @@ import java.net.URL
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
+import kotlin.math.roundToInt
 
 private const val SUPABASE_URL = "https://crarbbsvcczwmtvxyrxo.supabase.co"
 private const val SUPABASE_PUBLISHABLE_KEY = "sb_publishable_XAGRFtrWrFqJ-SfXh2WbRQ_jCcPnr-6"
@@ -320,7 +321,7 @@ private object SupabaseApi {
                 .put("steps_updated_at", snapshot.measuredAt)
         }
         if (snapshot.activeEnergyKcal != null && !preserveRemoteEnergy) {
-            row.put("active_energy_kcal", snapshot.activeEnergyKcal.toInt())
+            row.put("active_energy_kcal", snapshot.activeEnergyKcal.roundToInt())
                 .put("active_energy_source", "health_connect")
                 .put("active_energy_updated_at", snapshot.measuredAt)
         }
