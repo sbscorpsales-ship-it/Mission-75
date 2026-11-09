@@ -65,6 +65,7 @@ assert(cloudWalks.length===1&&cloudWalks[0].user==="test-user-123"&&cloudWalks[0
 assert(cloudWalks[0].row.steps===null,"Unknown GPS-only walk steps were incorrectly stored as zero");
 assert(cloudErrors.length===0,"Cloud account browser errors: "+cloudErrors.join("; "));
 await cloudPage.locator("#cloudSignOut").click();
+await cloudPage.waitForFunction(()=>document.querySelector("#cloudSignOut")?.style.display==="none");
 assert((await cloudPage.locator("#steps").textContent()).trim()==="—","Signing out did not immediately clear the previous member's dashboard");
 const afterImmediateSignOut=await cloudPage.evaluate(()=>({device:JSON.parse(localStorage.getItem("gativx.v2.fresh.state.device")||"null"),first:JSON.parse(localStorage.getItem("gativx.v2.fresh.state.user.test-user-123")||"null")}));
 assert(afterImmediateSignOut.device&&Object.keys(afterImmediateSignOut.device.entries||{}).length===0,"Signed-out device store inherited the previous member's entries");
@@ -79,8 +80,9 @@ assert(accountIsolation.first.entries[Object.keys(accountIsolation.first.entries
 assert(accountIsolation.uploads.length===1&&accountIsolation.uploads[0].user==="test-user-123","First account's private daily data was uploaded to a different member");
 assert(accountIsolation.walks.length===1&&accountIsolation.walks[0].user==="test-user-123","First account's GPS route was uploaded to a different member");
 await cloudPage.locator("#cloudSignOut").click();
+await cloudPage.waitForFunction(()=>document.querySelector("#cloudSignOut")?.style.display==="none"&&(()=>{try{const d=JSON.parse(localStorage.getItem("gativx.v2.fresh.state.device")||"null");return !!d&&Object.keys(d.entries||{}).length===0}catch{return false}})());
 await cloudPage.reload();
-await cloudPage.waitForTimeout(250);
+await cloudPage.waitForFunction(()=>document.querySelector("#steps")?.textContent.trim()==="—");
 assert((await cloudPage.locator("#steps").textContent()).trim()==="—","Signed-out device exposed cached records from a previous member");
 await cloudPage.close();
 
@@ -111,6 +113,40 @@ assert(raceResult.uploads.length===0&&raceResult.inserts.length===0,"An in-fligh
 assert(raceResult.first.entries[Object.keys(raceResult.first.entries)[0]].weight===82&&Object.keys(raceResult.second.entries).length===0,"In-flight account switch mixed local member records");
 assert(raceErrors.length===0,"Account-switch race browser errors: "+raceErrors.join("; "));
 await racePage.close();
+
+// Android Health Connect source labels and cloud reconciliation.
+const androidHealthPage=await browser.newPage({viewport:{width:390,height:844}});
+const androidHealthErrors=[];androidHealthPage.on("pageerror",e=>androidHealthErrors.push(e.message));
+await androidHealthPage.addInitScript(()=>{
+ const d=new Date(),today=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+ const y=new Date(d.getTime()-86400000),yesterday=y.getFullYear()+"-"+String(y.getMonth()+1).padStart(2,"0")+"-"+String(y.getDate()).padStart(2,"0");
+ const localStamp=new Date(Date.now()-120000).toISOString(),remoteStamp=new Date(Date.now()-60000).toISOString();
+ localStorage.setItem("gativx.v2.fresh.state",JSON.stringify({version:2,goal:null,entries:{
+  [today]:{steps:1000,stepsSource:"apple_health_shortcuts",stepsUpdatedAt:localStamp,activeEnergyKcal:100,activeEnergySource:"apple_health_shortcuts",activeEnergyUpdatedAt:localStamp},
+  [yesterday]:{steps:5000,stepsSource:"health_connect",stepsUpdatedAt:localStamp}
+ },walks:[]}));
+ window.__hcMock={uploaded:[],currentUser:null};
+ window.supabase={createClient:()=>({auth:{getSession:async()=>({data:{session:null},error:null}),onAuthStateChange:()=>({data:{subscription:{unsubscribe(){}}}}),signInWithPassword:async()=>{window.__hcMock.currentUser="android-health-user";return {data:{user:{id:"android-health-user"}},error:null}},signUp:async()=>({data:{user:null,session:null},error:null}),signOut:async()=>({error:null})},from(table){return {select(){return {eq:async()=>({data:table==="daily_logs"?[
+  {log_date:today,steps:3200,steps_source:"health_connect",steps_updated_at:remoteStamp,active_energy_kcal:250,active_energy_source:"health_connect",active_energy_updated_at:remoteStamp},
+  {log_date:yesterday,steps:1200,steps_source:"manual",steps_updated_at:localStamp,active_energy_kcal:null,active_energy_source:null,active_energy_updated_at:null}
+ ]:[],error:null})}},upsert:async(rows)=>{window.__hcMock.uploaded.push(...rows);return {error:null}},insert:async()=>({error:null})}}})};
+});
+await androidHealthPage.route("https://**/*",r=>r.abort());
+await androidHealthPage.goto(pathToFileURL(path.resolve("app-v2.html")).href,{waitUntil:"domcontentloaded"});
+await androidHealthPage.locator("#cloudEmail").fill("android@example.com");
+await androidHealthPage.locator("#cloudPassword").fill("not-a-real-password");
+await androidHealthPage.locator("#cloudSignIn").click();
+await androidHealthPage.waitForFunction(()=>document.querySelector("#cloudState")?.textContent==="BACKUP CURRENT");
+assert((await androidHealthPage.locator("#steps").textContent()).trim()==="3,200","Newer Android Health Connect steps did not replace an older Shortcut import");
+assert((await androidHealthPage.locator("#stepNote").textContent()).trim()==="Android Health Connect","Android Health Connect source label was not displayed");
+assert((await androidHealthPage.locator("#source").textContent()).trim()==="ANDROID HEALTH CONNECT","Android Health Connect summary source was not displayed");
+assert((await androidHealthPage.locator("#vActiveEnergy").textContent()).trim()==="250 kcal","Newer Android active energy was not reconciled");
+assert((await androidHealthPage.locator("#activeEnergySourceLabel").textContent()).trim()==="Health Connect · active energy","Android active-energy source label was not displayed");
+const androidRows=await androidHealthPage.evaluate(()=>window.__hcMock.uploaded);
+assert(androidRows.find(r=>r.steps_source==="health_connect"&&r.steps===3200),"Android Health Connect values were not preserved in the cloud upsert");
+assert(androidRows.find(r=>r.steps_source==="manual"&&r.steps===1200),"A manual entry was overwritten by an older Android reading");
+assert(androidHealthErrors.length===0,"Android Health Connect browser integration errors: "+androidHealthErrors.join("; "));
+await androidHealthPage.close();
 
 const storage=await page.evaluate(()=>({keys:Object.keys(localStorage),dailyLogs:localStorage.getItem("mission75.dailyLogs"),auth:localStorage.getItem("sb-crarbbsvcczwmtvxyrxo-auth-token"),session:sessionStorage.getItem("gativx.session.fixture")}));
 assert(storage.keys.includes("gativx.v2.fresh.state"),"Fresh GATIVX store was not used");
