@@ -205,6 +205,7 @@ final class GPSRouteRecorder: NSObject, ObservableObject, CLLocationManagerDeleg
                 // active. Enable background delivery immediately for that session.
                 manager.allowsBackgroundLocationUpdates = true
                 manager.showsBackgroundLocationIndicator = true
+                manager.startUpdatingLocation()
                 status = "GPS route recording, including supported background use."
             } else {
                 status = "Always location access granted. Start an activity to record GPS."
@@ -216,6 +217,7 @@ final class GPSRouteRecorder: NSObject, ObservableObject, CLLocationManagerDeleg
                 // If access is downgraded mid-session, never claim background GPS.
                 manager.allowsBackgroundLocationUpdates = false
                 manager.showsBackgroundLocationIndicator = false
+                manager.startUpdatingLocation()
                 status = "GPS route recording while GATIVX is open. Allow Always location for background recording."
             } else {
                 status = "Location permission granted. Tap Start activity to record GPS."
