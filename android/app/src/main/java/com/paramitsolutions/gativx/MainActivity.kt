@@ -570,6 +570,7 @@ internal object SupabaseApi {
     }
 
     suspend fun syncWalkSessionRoute(session: GativxSession, walk: WalkOnSession): GativxSession = withContext(Dispatchers.IO) {
+        require(walk.ownerUserId == session.userId) { "This WalkOn route belongs to a different account." }
         if (walk.points.isEmpty() || walk.finishedAt == null) return@withContext session
         val cloudPoints = if (walk.points.size > 20_000) {
             (0 until 20_000).map { index -> walk.points[index * (walk.points.size - 1) / 19_999] }
