@@ -131,7 +131,7 @@ function cloudDailyRow(day,x,userId){
 function mergeCloudDaily(remote,local){
  const merged={...remote},remoteStepTime=Date.parse(remote.stepsUpdatedAt||'')||0,localStepTime=Date.parse(local.stepsUpdatedAt||'')||0,remoteEnergyTime=Date.parse(remote.activeEnergyUpdatedAt||'')||0,localEnergyTime=Date.parse(local.activeEnergyUpdatedAt||'')||0;
  const remoteManualSteps=remote.stepsSource==='manual',localManualSteps=local.stepsSource==='manual';
- const keepRemoteSteps=remote.steps!=null&&(remoteManualSteps?(!localManualSteps||remoteStepTime>=localStepTime):(!localManualSteps&&remoteStepTime>localStepTime));
+ const keepRemoteSteps=remote.steps!=null&&(remoteManualSteps?(!localManualSteps||remoteStepTime>localStepTime):(!localManualSteps&&remoteStepTime>localStepTime));
  const keepRemoteEnergy=remote.activeEnergyKcal!=null&&remoteEnergyTime>localEnergyTime;
  for(const [k,v] of Object.entries(local||{})){
   if(v===null||v===undefined||v==='')continue;
