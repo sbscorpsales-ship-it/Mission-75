@@ -92,37 +92,40 @@ private fun GativxAndroidScreen() {
     suspend fun refreshHealthData() {
         val client = healthClient ?: return
         val granted = client.permissionController.getGrantedPermissions()
-        if (!granted.containsAll(healthPermissions)) {
+        val canReadSteps = HealthPermission.getReadPermission(StepsRecord::class) in granted
+        val canReadEnergy = HealthPermission.getReadPermission(ActiveCaloriesBurnedRecord::class) in granted
+        if (!canReadSteps && !canReadEnergy) {
             healthReady = false
-            status = "Health Connect permission is missing. Reconnect and approve the requested readings."
+            status = "No Health Connect read permission is enabled. Grant Steps or Active Calories to continue."
             return
         }
         val zone = ZoneId.systemDefault()
         val today = LocalDate.now(zone)
         val start = today.atStartOfDay(zone).toInstant()
         val end = today.plusDays(1).atStartOfDay(zone).toInstant()
+        val metrics = buildSet {
+            if (canReadSteps) add(StepsRecord.COUNT_TOTAL)
+            if (canReadEnergy) add(ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL)
+        }
         val response = client.aggregate(
-            AggregateRequest(
-                metrics = setOf(StepsRecord.COUNT_TOTAL, ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL),
-                timeRangeFilter = TimeRangeFilter.between(start, end)
-            )
+            AggregateRequest(metrics = metrics, timeRangeFilter = TimeRangeFilter.between(start, end))
         )
-        steps = response[StepsRecord.COUNT_TOTAL]
-        activeEnergy = response[ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL]?.inKilocalories
+        steps = if (canReadSteps) response[StepsRecord.COUNT_TOTAL] else null
+        activeEnergy = if (canReadEnergy) response[ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL]?.inKilocalories else null
         measuredDate = today.toString()
         measuredAt = Instant.now().toString()
         healthReady = true
-        status = if (steps == null && activeEnergy == null) {
-            "Health Connect is connected, but it has no measured steps or active energy for today yet."
-        } else {
-            "Measured Health Connect data refreshed. No estimates have been added."
+        status = when {
+            steps == null && activeEnergy == null -> "Health Connect is connected, but it has no measured values for the permitted data types today."
+            !canReadSteps || !canReadEnergy -> "Partial Health Connect access. Available measured values were refreshed; denied metrics remain unknown."
+            else -> "Measured Health Connect data refreshed. No estimates have been added."
         }
     }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = PermissionController.createRequestPermissionResultContract()
     ) { granted ->
-        if (granted.containsAll(healthPermissions)) {
+        if (granted.any { it in healthPermissions }) {
             scope.launch {
                 busy = true
                 try { refreshHealthData() }
@@ -131,7 +134,7 @@ private fun GativxAndroidScreen() {
             }
         } else {
             healthReady = false
-            status = "Health Connect access was not fully granted. You can review permissions and try again."
+            status = "Health Connect read access was denied. You can review permissions and try again."
         }
     }
 
