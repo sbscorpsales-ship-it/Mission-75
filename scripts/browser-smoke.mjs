@@ -57,10 +57,11 @@ assert((await cloudPage.locator("#steps").textContent()).trim()==="2,100","New c
 assert((await cloudPage.locator("#vActiveEnergy").textContent()).trim()==="410 kcal","New cloud sync did not prefer newer native active energy");
 const cloudRows=await cloudPage.evaluate(()=>window.__cloudMock.uploaded);
 const cloudWalks=await cloudPage.evaluate(()=>window.__cloudMock.inserts);
-assert(cloudRows.length===1,"New GATIVX daily record was not uploaded");
-assert(cloudRows[0].steps===2100&&cloudRows[0].active_energy_kcal===410,"Cloud upload did not preserve authoritative HealthKit readings");
-assert(cloudRows[0].weight_kg===84&&cloudRows[0].water_ml===1700&&cloudRows[0].protein_g===72&&cloudRows[0].walking_km===.6,"Cloud upload lost locally recorded wellness values");
-assert(cloudWalks.length===1&&cloudWalks[0].distance_m===30&&cloudWalks[0].route_points.length===2,"Saved GPS route was not backed up to the member cloud account");
+assert(cloudRows.length===1&&cloudRows[0].user==="test-user-123"&&cloudRows[0].rows.length===1,"New GATIVX daily record was not uploaded to the signed-in member");
+const uploadedDaily=cloudRows[0].rows[0];
+assert(uploadedDaily.steps===2100&&uploadedDaily.active_energy_kcal===410,"Cloud upload did not preserve authoritative HealthKit readings");
+assert(uploadedDaily.weight_kg===84&&uploadedDaily.water_ml===1700&&uploadedDaily.protein_g===72&&uploadedDaily.walking_km===.6,"Cloud upload lost locally recorded wellness values");
+assert(cloudWalks.length===1&&cloudWalks[0].user==="test-user-123"&&cloudWalks[0].row.distance_m===30&&cloudWalks[0].row.route_points.length===2,"Saved GPS route was not backed up to the member cloud account");
 assert(cloudErrors.length===0,"Cloud account browser errors: "+cloudErrors.join("; "));
 await cloudPage.locator("#cloudSignOut").click();
 await cloudPage.locator("#cloudEmail").fill("second@example.com");
