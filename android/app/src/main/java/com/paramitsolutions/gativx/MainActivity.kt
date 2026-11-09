@@ -1,9 +1,17 @@
 package com.paramitsolutions.gativx
 
+import android.Manifest
+import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.setContent
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -22,7 +30,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -30,7 +40,10 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.ContextCompat
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
@@ -44,6 +57,7 @@ import androidx.health.connect.client.request.AggregateRequest
 import androidx.health.connect.client.time.TimeRangeFilter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
@@ -88,6 +102,82 @@ private fun GativxAndroidScreen() {
     var session by remember { mutableStateOf(SessionVault.load(context)) }
     var busy by remember { mutableStateOf(false) }
     var status by remember { mutableStateOf("Connect Health Connect to read today's measured activity.") }
+    var activeWalk by remember { mutableStateOf(WalkOnStore.active(context)) }
+    var latestWalk by remember { mutableStateOf(WalkOnStore.completed(context).firstOrNull()) }
+    var walkStatus by remember { mutableStateOf(WalkOnStore.status(context)) }
+    var walkSyncBusy by remember { mutableStateOf(false) }
+
+    val locationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { result ->
+        if (result[Manifest.permission.ACCESS_FINE_LOCATION] == true) {
+            startWalkOnService(context)
+            walkStatus = "Starting WalkOn GPS tracking…"
+        } else {
+            walkStatus = "Precise location permission is required for reliable WalkOn route recording."
+        }
+    }
+
+    fun startWalkOn() {
+        if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            startWalkOnService(context)
+            walkStatus = "Starting WalkOn GPS tracking…"
+        } else {
+            val requested = buildList {
+                add(Manifest.permission.ACCESS_FINE_LOCATION)
+                add(Manifest.permission.ACCESS_COARSE_LOCATION)
+                if (Build.VERSION.SDK_INT >= 33) add(Manifest.permission.POST_NOTIFICATIONS)
+            }
+            locationPermissionLauncher.launch(requested.toTypedArray())
+        }
+    }
+
+    fun stopWalkOn() {
+        context.startService(
+            Intent(context, WalkOnLocationService::class.java).setAction(WalkOnLocationService.ACTION_STOP)
+        )
+        walkStatus = "Finishing and saving your WalkOn route…"
+    }
+
+    fun syncWalkOnRoutes() {
+        val currentSession = session
+        if (currentSession == null) {
+            walkStatus = "Sign in to back up saved WalkOn routes."
+            return
+        }
+        val pending = WalkOnStore.pending(context)
+        if (pending.isEmpty()) {
+            walkStatus = "All saved WalkOn routes are already backed up."
+            return
+        }
+        scope.launch {
+            walkSyncBusy = true
+            try {
+                var activeSession = currentSession
+                for (walk in pending) {
+                    activeSession = SupabaseApi.syncWalkSessionRoute(activeSession, walk)
+                    SessionVault.save(context, activeSession)
+                    WalkOnStore.markSynced(context, walk.id)
+                }
+                session = activeSession
+                walkStatus = "WalkOn route backup complete. Your GPS history is in your GATIVX account."
+            } catch (error: Exception) {
+                walkStatus = error.message ?: "WalkOn cloud backup failed. Your encrypted local route remains saved."
+            } finally {
+                latestWalk = WalkOnStore.completed(context).firstOrNull()
+                walkSyncBusy = false
+            }
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        while (true) {
+            activeWalk = WalkOnStore.active(context)
+            latestWalk = WalkOnStore.completed(context).firstOrNull()
+            walkStatus = WalkOnStore.status(context)
+            delay(1_000)
+        }
+    }
 
     suspend fun refreshHealthData() {
         val client = healthClient ?: return
