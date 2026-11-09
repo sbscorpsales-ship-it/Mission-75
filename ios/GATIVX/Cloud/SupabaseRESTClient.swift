@@ -216,6 +216,9 @@ final class SupabaseRESTClient: ObservableObject {
             var distanceMeters = 0.0
             if coordinates.count > 1 {
                 for index in 1..<coordinates.count {
+                    // A breakBefore point begins a new segment after a GPS outage,
+                    // invalid fix or implausible jump. Never count across that gap.
+                    if cloudPoints[index].breakBefore { continue }
                     distanceMeters += coordinates[index - 1].distance(from: coordinates[index])
                 }
             }
