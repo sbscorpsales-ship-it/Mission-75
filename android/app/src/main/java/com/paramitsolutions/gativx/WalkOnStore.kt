@@ -28,7 +28,8 @@ internal data class WalkOnSession(
     val durationSeconds: Long,
     val distanceMeters: Double,
     val points: List<WalkOnPoint>,
-    val synced: Boolean = false
+    val synced: Boolean = false,
+    val ownerUserId: String? = null
 )
 
 /** Encrypted local storage for sensitive GPS route drafts and completed walks. */
@@ -48,6 +49,22 @@ internal object WalkOnStore {
 
     fun pending(context: Context): List<WalkOnSession> =
         completed(context).filter { !it.synced }
+
+    fun pendingFor(context: Context, userId: String): List<WalkOnSession> =
+        completed(context).filter { !it.synced && it.ownerUserId == userId }
+
+    fun unassigned(context: Context): List<WalkOnSession> =
+        completed(context).filter { !it.synced && it.ownerUserId == null }
+
+    fun completedFor(context: Context, userId: String): List<WalkOnSession> =
+        completed(context).filter { it.ownerUserId == userId }
+
+    fun assignUnowned(context: Context, userId: String) {
+        val history = completed(context).map {
+            if (it.ownerUserId == null && !it.synced) it.copy(ownerUserId = userId) else it
+        }
+        writeEncrypted(context, COMPLETED_KEY, encodeSessions(history))
+    }
 
     fun status(context: Context): String =
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
@@ -189,6 +206,7 @@ internal object WalkOnStore {
         .put("durationSeconds", session.durationSeconds)
         .put("distanceMeters", session.distanceMeters)
         .put("synced", session.synced)
+        .put("ownerUserId", session.ownerUserId ?: JSONObject.NULL)
         .put("points", JSONArray().also { array -> session.points.forEach { array.put(encodePoint(it)) } })
         .toString()
 
@@ -205,7 +223,8 @@ internal object WalkOnStore {
             durationSeconds = json.optLong("durationSeconds", 0),
             distanceMeters = json.optDouble("distanceMeters", 0.0),
             points = points,
-            synced = json.optBoolean("synced", false)
+            synced = json.optBoolean("synced", false),
+            ownerUserId = json.optString("ownerUserId").takeIf { it.isNotBlank() && it != "null" }
         )
     }
 
