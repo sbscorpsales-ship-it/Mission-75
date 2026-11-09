@@ -14,6 +14,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: gativx-android-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
 jobs:
   build-android:
     runs-on: ubuntu-latest
@@ -38,6 +42,8 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.11.1"
+      - name: Verify WalkOn GPS, privacy and cloud-sync safeguards
+        run: python android/scripts/check-walkon.py
       - name: Build debug APK
         run: gradle -p android :app:assembleDebug
       - name: Upload debug APK
