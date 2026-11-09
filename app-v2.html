@@ -106,9 +106,10 @@ function cloudUi(){
  $('cloudFields').style.display=signed?'none':'grid';
  cloudMsg(signed?'Signed in. Your private cloud backup is available.':'Not signed in. New records remain safely on this device.',signed?'CONNECTED':'DEVICE ONLY');
 }
-function validDay(day){return /^\\d{4}-\\d{2}-\\d{2}$/.test(day)&&!Number.isNaN(Date.parse(day+'T00:00:00'))}
+function validDay(day){return /^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(day)&&!Number.isNaN(Date.parse(day+'T00:00:00'))}
 function cloudDailyRow(day,x){
- return {user_id:cloudUser.id,log_date:day,steps:x.steps==null?null:Number(x.steps),steps_source:x.stepsSource||null,steps_updated_at:x.stepsUpdatedAt||null,active_energy_kcal:x.activeEnergyKcal==null?null:Math.round(Number(x.activeEnergyKcal)),active_energy_source:x.activeEnergySource||null,active_energy_updated_at:x.activeEnergyUpdatedAt||null,walking_km:x.distance==null?null:Number(x.distance),water_ml:x.water==null?null:Number(x.water),protein_g:x.protein==null?null:Number(x.protein),weight_kg:x.weight==null?null:Number(x.weight)};
+ const bounded=(v,min,max)=>v==null?null:(Number.isFinite(Number(v))&&Number(v)>=min&&Number(v)<=max?Number(v):null);
+ return {user_id:cloudUser.id,log_date:day,steps:bounded(x.steps,0,200000),steps_source:x.stepsSource||null,steps_updated_at:x.stepsUpdatedAt||null,active_energy_kcal:bounded(x.activeEnergyKcal,0,2147483647)==null?null:Math.round(Number(x.activeEnergyKcal)),active_energy_source:x.activeEnergySource||null,active_energy_updated_at:x.activeEnergyUpdatedAt||null,walking_km:bounded(x.distance,0,300),water_ml:bounded(x.water,0,20000)==null?null:Math.round(Number(x.water)),protein_g:bounded(x.protein,0,500),weight_kg:bounded(x.weight,25,400)};
 }
 function mergeCloudDaily(remote,local){
  const merged={...remote};
