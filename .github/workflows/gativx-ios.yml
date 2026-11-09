@@ -50,6 +50,7 @@ jobs:
           view = Path("ios/GATIVX/ContentView.swift").read_text()
           health = Path("ios/GATIVX/HealthKit/HealthKitManager.swift").read_text()
           cloud = Path("ios/GATIVX/Cloud/SupabaseRESTClient.swift").read_text()
+          migration = Path("supabase/migrations/20261109113101_allow_gps_route_sync_without_step_count.sql").read_text()
 
           checks = {
               "GPS accuracy filter": "location.horizontalAccuracy <= 50" in gps,
@@ -62,6 +63,7 @@ jobs:
               "Prompt HealthKit background update requested": "frequency: .immediate" in health,
               "GPS route upload allows unknown steps without inventing zero": '"p_steps": steps.map { $0 as Any } ?? NSNull()' in cloud,
               "GPS cloud distance skips discontinuous segments": "if cloudPoints[index].breakBefore { continue }" in cloud,
+              "Database allows unknown route steps without writing zero": "alter column steps drop not null" in migration and "steps = coalesce(excluded.steps, public.walk_sessions.steps)" in migration,
           }
           for name, ok in checks.items():
               print(("PASS: " if ok else "FAIL: ") + name)
