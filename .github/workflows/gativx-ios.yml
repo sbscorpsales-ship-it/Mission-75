@@ -41,6 +41,32 @@ jobs:
       - name: Validate project and scheme
         run: xcodebuild -list -project ios/GATIVX.xcodeproj
 
+      - name: Verify real-time tracking safeguards
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          gps = Path("ios/GATIVX/GPSRouteRecorder.swift").read_text()
+          view = Path("ios/GATIVX/ContentView.swift").read_text()
+          health = Path("ios/GATIVX/HealthKit/HealthKitManager.swift").read_text()
+          cloud = Path("ios/GATIVX/Cloud/SupabaseRESTClient.swift").read_text()
+
+          checks = {
+              "GPS accuracy filter": "location.horizontalAccuracy <= 50" in gps,
+              "GPS long-gap segmentation": "elapsed > 30" in gps,
+              "GPS jump/speed rejection": "delta > 150 || speed > 8" in gps,
+              "Backward-compatible route draft decoding": "decodeIfPresent(Bool.self, forKey: .breakBefore) ?? false" in gps,
+              "Route distance skips segment breaks": "!pair.1.breakBefore" in gps,
+              "Cloud distance skips segment breaks": "if cloudPoints[index].breakBefore { continue }" in cloud,
+              "Active walk keeps motion monitor in background": "sessionStarted == nil && !routeRecorder.isRecording" in view,
+              "Prompt HealthKit background update requested": "frequency: .immediate" in health,
+          }
+          for name, ok in checks.items():
+              print(("PASS: " if ok else "FAIL: ") + name)
+          if not all(checks.values()):
+              raise SystemExit("Real-time tracking safeguard verification failed")
+          PY
+
       - name: Build GATIVX for iPhone Simulator
         run: |
           xcodebuild \
