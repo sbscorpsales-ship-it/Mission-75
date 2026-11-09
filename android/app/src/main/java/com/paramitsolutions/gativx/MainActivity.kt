@@ -319,7 +319,7 @@ private object SupabaseApi {
     }
 
     suspend fun signOut(session: GativxSession) = withContext(Dispatchers.IO) {
-        val response = request("POST", "/auth/v1/logout", session.accessToken, "")
+        val response = request("POST", "/auth/v1/logout?scope=local", session.accessToken, "")
         if (response.first !in 200..299 && response.first != 401) {
             throw IllegalStateException(parseError(response.second, "Could not revoke the server session."))
         }
