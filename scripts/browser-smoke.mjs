@@ -26,7 +26,7 @@ assert(storage.session==="preserve-session-fixture","Existing sessionStorage was
 // Exercise GATIVX v2 GPS filtering with deterministic browser location fixes.
 const v2=await browser.newPage({viewport:{width:390,height:844}});
 const v2Errors=[];v2.on("pageerror",e=>v2Errors.push(e.message));
-await v2.addInitScript(()=>{let emit;Object.defineProperty(navigator,"geolocation",{configurable:true,value:{watchPosition(callback){emit=callback;window.__emitGPS=(lat,lon,accuracy=5,time=Date.now())=>emit({coords:{latitude:lat,longitude:lon,accuracy},timestamp:time});return 7;},clearWatch(){}}});});
+await v2.addInitScript(()=>{let emit;const geo=navigator.geolocation;if(!geo)throw new Error("Browser geolocation API is unavailable in the smoke-test context");Object.defineProperty(geo,"watchPosition",{configurable:true,value(callback){emit=callback;window.__emitGPS=(lat,lon,accuracy=5,time=Date.now())=>emit({coords:{latitude:lat,longitude:lon,accuracy},timestamp:time});return 7;}});Object.defineProperty(geo,"clearWatch",{configurable:true,value(){}});});
 await v2.route("https://**/*",r=>r.abort());
 await v2.goto(pathToFileURL(path.resolve("app-v2.html")).href,{waitUntil:"domcontentloaded"});
 await v2.locator('[data-panel="walk"]').click();
@@ -34,7 +34,7 @@ await v2.locator("#gpsStart").click();
 const baseTime=Date.now();
 await v2.evaluate(t=>window.__emitGPS(12.97000,77.59000,5,t),baseTime+1);
 await v2.evaluate(t=>window.__emitGPS(12.97018,77.59000,5,t),baseTime+2001);
-assert((await v2.locator("#gpsDistance").textContent()).trim()==="0.02 km","Valid GPS segment was not measured");
+assert((await v2.locator("#gpsDistance").textContent()).trim()==="0.02 km","Valid GPS segment was not measured; got "+await v2.locator("#gpsDistance").textContent()+"; status="+await v2.locator("#walkStatus").textContent()+"; errors="+v2Errors.join("; "));
 await v2.locator("#gpsPause").click();
 await v2.evaluate(t=>window.__emitGPS(12.98000,77.59000,5,t),baseTime+4001);
 await v2.locator("#gpsPause").click();
