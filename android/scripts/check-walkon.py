@@ -30,7 +30,7 @@ checks = {
     ),
     "GPS jump becomes a new segment anchor, not a permanent tracking stop": (
         "Keep this fix as a new segment anchor" in service
-        and "segmentBreak = true\\n                return" not in service
+        and "segmentBreak = true\n                return" not in service
     ),
     "encrypted local route storage": (
         'Cipher.getInstance("AES/GCM/NoPadding")' in store
