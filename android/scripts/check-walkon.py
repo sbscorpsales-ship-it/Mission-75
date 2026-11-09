@@ -28,6 +28,10 @@ checks = {
         "if (!breakBefore) distanceMeters += delta.toDouble()" in service
         and "if (points[index].breakBefore) continue" in activity
     ),
+    "GPS jump becomes a new segment anchor, not a permanent tracking stop": (
+        "Keep this fix as a new segment anchor" in service
+        and "segmentBreak = true\\n                return" not in service
+    ),
     "encrypted local route storage": (
         'Cipher.getInstance("AES/GCM/NoPadding")' in store
         and 'KeyStore.getInstance(KEYSTORE)' in store
