@@ -65,6 +65,7 @@ assert(cloudWalks.length===1&&cloudWalks[0].user==="test-user-123"&&cloudWalks[0
 assert(cloudWalks[0].row.steps===null,"Unknown GPS-only walk steps were incorrectly stored as zero");
 assert(cloudErrors.length===0,"Cloud account browser errors: "+cloudErrors.join("; "));
 await cloudPage.locator("#cloudSignOut").click();
+await cloudPage.waitForFunction(()=>document.querySelector("#cloudState")?.textContent==="DEVICE ONLY");
 await cloudPage.locator("#cloudEmail").fill("second@example.com");
 await cloudPage.locator("#cloudPassword").fill("not-a-real-password");
 await cloudPage.locator("#cloudSignIn").click();
