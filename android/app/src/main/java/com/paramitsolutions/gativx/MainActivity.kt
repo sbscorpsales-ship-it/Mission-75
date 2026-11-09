@@ -85,7 +85,7 @@ private fun GativxAndroidScreen() {
     var measuredAt by remember { mutableStateOf<String?>(null) }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
-    var session by remember { mutableStateOf<GativxSession?>(null) }
+    var session by remember { mutableStateOf(SessionVault.load(context)) }
     var busy by remember { mutableStateOf(false) }
     var status by remember { mutableStateOf("Connect Health Connect to read today's measured activity.") }
 
@@ -180,9 +180,11 @@ private fun GativxAndroidScreen() {
         scope.launch {
             busy = true
             try {
-                session = SupabaseApi.signIn(email.trim(), password)
+                val signedIn = SupabaseApi.signIn(email.trim(), password)
+                SessionVault.save(context, signedIn)
+                session = signedIn
                 password = ""
-                status = "Signed in. Your Health Connect readings can now be backed up to your account."
+                status = "Signed in securely. Your session is encrypted on this device."
             } catch (error: Exception) {
                 status = error.message ?: "Sign-in failed. Check your details and try again."
             } finally { busy = false }
@@ -255,7 +257,25 @@ private fun GativxAndroidScreen() {
                             Text("Signed in · \${session?.userId?.take(8)}…", color = Color(0xFFD8FF3E))
                             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                                 Button(onClick = { syncToCloud() }, enabled = !busy && healthReady) { Text("Sync measured data") }
-                                Button(onClick = { session = null; status = "Signed out. Health readings remain on this device." }, enabled = !busy) { Text("Sign out") }
+                                Button(
+                                    onClick = {
+                                        val activeSession = session
+                                        scope.launch {
+                                            busy = true
+                                            try {
+                                                if (activeSession != null) SupabaseApi.signOut(activeSession)
+                                                status = "Signed out. Health readings remain on this device."
+                                            } catch (_: Exception) {
+                                                status = "Signed out on this device. Server revocation could not be confirmed."
+                                            } finally {
+                                                SessionVault.clear(context)
+                                                session = null
+                                                busy = false
+                                            }
+                                        }
+                                    },
+                                    enabled = !busy
+                                ) { Text("Sign out") }
                             }
                         }
                     }
@@ -267,7 +287,7 @@ private fun GativxAndroidScreen() {
                         Spacer(Modifier.height(8.dp))
                         Text(status, color = Color.White, fontSize = 14.sp)
                         Text("GATIVX reads aggregated Health Connect totals to reduce duplicate-source counting. It does not estimate missing steps or calories.", color = Color(0xFF9DAEB6), fontSize = 11.sp)
-                        Text("This early build keeps the sign-in session in memory; sign in again after closing the app.", color = Color(0xFF9DAEB6), fontSize = 11.sp)
+                        Text("Your session is encrypted with Android Keystore and can be revoked when you sign out.", color = Color(0xFF9DAEB6), fontSize = 11.sp)
                     }
                 }
             }
@@ -294,6 +314,13 @@ private object SupabaseApi {
         if (response.first !in 200..299) throw IllegalStateException(parseError(response.second, "Sign-in failed."))
         val json = JSONObject(response.second)
         GativxSession(json.getJSONObject("user").getString("id"), json.getString("access_token"), json.getString("refresh_token"))
+    }
+
+    suspend fun signOut(session: GativxSession) = withContext(Dispatchers.IO) {
+        val response = request("POST", "/auth/v1/logout", session.accessToken, "")
+        if (response.first !in 200..299 && response.first != 401) {
+            throw IllegalStateException(parseError(response.second, "Could not revoke the server session."))
+        }
     }
 
     suspend fun syncDaily(session: GativxSession, snapshot: DailyHealthSnapshot): GativxSession = withContext(Dispatchers.IO) {
