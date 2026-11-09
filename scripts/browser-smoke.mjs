@@ -15,7 +15,7 @@ assert((await page.locator("#missionPct").textContent()).includes("MISSION ACTIV
 assert((await page.locator("#distance").textContent()).includes("0.40 km"),"Fresh-store distance did not render");
 assert(await page.locator(".summaryHero").count()===1,"Fitness summary hero missing");
 assert(await page.locator(".summaryTile").count()===4,"Expected four summary metric tiles");
-assert(await page.locator(".guruCard").count()===1,"GURU mode home card missing");
+assert(await page.locator("#home .guruCard").count()===1,"GURU mode home card missing");
 assert(await page.locator("#vActiveEnergy").textContent().then(x=>x.trim())==="—","Active calories must not be fabricated before HealthKit data");
 assert((await page.locator('[data-panel="coach"]').textContent()).includes("GURU"),"GURU navigation label missing");
 assert(await page.locator(".bottom button").count()===5,"Expected five navigation destinations");
