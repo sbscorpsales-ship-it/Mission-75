@@ -174,6 +174,7 @@ private fun GativxAndroidScreen() {
                 walkStatus = "WalkOn route backup complete. Your GPS history is in your GATIVX account."
                 WalkOnStore.setStatus(context, walkStatus)
             } catch (error: Exception) {
+                session = SessionVault.load(context) ?: currentSession
                 walkStatus = error.message ?: "WalkOn cloud backup failed. Your encrypted local route remains saved."
                 WalkOnStore.setStatus(context, walkStatus)
             } finally {
@@ -338,6 +339,7 @@ private fun GativxAndroidScreen() {
                 session = refreshedSession
                 status = "Cloud backup complete for $measuredDate. Measured values only."
             } catch (error: Exception) {
+                session = SessionVault.load(context) ?: currentSession
                 status = error.message ?: "Cloud sync failed. Your Health Connect data remains on this device."
             } finally { busy = false }
         }
