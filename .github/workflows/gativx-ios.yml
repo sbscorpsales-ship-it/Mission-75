@@ -20,7 +20,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: gativx-ios-${{ github.ref }}
+  group: gativx-ios-${{ github.head_ref || github.ref_name }}
   cancel-in-progress: true
 
 jobs:
