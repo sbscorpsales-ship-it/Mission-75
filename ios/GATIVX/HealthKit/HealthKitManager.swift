@@ -131,10 +131,10 @@ final class HealthKitManager: ObservableObject {
             }
             observers.append(query)
             store.execute(query)
-            store.enableBackgroundDelivery(for: observedType, frequency: .hourly) { [weak self] success, error in
+            store.enableBackgroundDelivery(for: observedType, frequency: .immediate) { [weak self] success, error in
                 Task { @MainActor in
                     if let error { self?.statusMessage = "Apple Health background refresh unavailable: \(error.localizedDescription)" }
-                    else if success { self?.statusMessage = "Apple Health step and active-energy updates enabled where iOS permits." }
+                    else if success { self?.statusMessage = "Apple Health step and active-energy updates requested as soon as iOS permits." }
                 }
             }
         }
