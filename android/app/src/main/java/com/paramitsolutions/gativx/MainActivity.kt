@@ -32,6 +32,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -101,6 +102,8 @@ private fun GativxAndroidScreen() {
     var measuredAt by remember { mutableStateOf<String?>(null) }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var confirmPassword by remember { mutableStateOf("") }
+    var isRegistering by remember { mutableStateOf(false) }
     var session by remember { mutableStateOf(SessionVault.load(context)) }
     var busy by remember { mutableStateOf(false) }
     var status by remember { mutableStateOf("Connect Health Connect to read today's measured activity.") }
@@ -301,6 +304,41 @@ private fun GativxAndroidScreen() {
         }
     }
 
+    fun register() {
+        val cleanEmail = email.trim()
+        if (cleanEmail.isBlank() || !android.util.Patterns.EMAIL_ADDRESS.matcher(cleanEmail).matches()) {
+            status = "Enter a valid email address to create your GATIVX account."
+            return
+        }
+        if (password.length < 8) {
+            status = "Choose a password with at least 8 characters."
+            return
+        }
+        if (password != confirmPassword) {
+            status = "Your passwords do not match. Please check and try again."
+            return
+        }
+        scope.launch {
+            busy = true
+            try {
+                val createdSession = SupabaseApi.signUp(cleanEmail, password)
+                password = ""
+                confirmPassword = ""
+                if (createdSession != null) {
+                    SessionVault.save(context, createdSession)
+                    session = createdSession
+                    isRegistering = false
+                    status = "Welcome to GATIVX! Your account is created and you are signed in securely."
+                } else {
+                    isRegistering = false
+                    status = "Account request received. Check your email and confirm your address, then return here and sign in."
+                }
+            } catch (error: Exception) {
+                status = error.message ?: "Could not create your GATIVX account. Please try again."
+            } finally { busy = false }
+        }
+    }
+
     fun signIn() {
         if (email.isBlank() || password.isBlank()) {
             status = "Enter your email and password to sign in."
@@ -458,9 +496,32 @@ private fun GativxAndroidScreen() {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Text("PRIVATE CLOUD BACKUP", color = Color.White, fontWeight = FontWeight.Bold)
                         if (session == null) {
+                            Text(
+                                if (isRegistering) "Create your free GATIVX account to keep your walks and measured activity backed up privately."
+                                else "Sign in to access your private GATIVX cloud backup, or create a free account to get started.",
+                                color = Color(0xFF9DAEB6),
+                                fontSize = 12.sp
+                            )
                             OutlinedTextField(value = email, onValueChange = { email = it }, label = { Text("Email") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                            OutlinedTextField(value = password, onValueChange = { password = it }, label = { Text("Password") }, visualTransformation = PasswordVisualTransformation(), singleLine = true, modifier = Modifier.fillMaxWidth())
-                            Button(onClick = { signIn() }, enabled = !busy, modifier = Modifier.fillMaxWidth()) { Text("Sign in to GATIVX") }
+                            OutlinedTextField(value = password, onValueChange = { password = it }, label = { Text(if (isRegistering) "Create password (8+ characters)" else "Password") }, visualTransformation = PasswordVisualTransformation(), singleLine = true, modifier = Modifier.fillMaxWidth())
+                            if (isRegistering) {
+                                OutlinedTextField(value = confirmPassword, onValueChange = { confirmPassword = it }, label = { Text("Confirm password") }, visualTransformation = PasswordVisualTransformation(), singleLine = true, modifier = Modifier.fillMaxWidth())
+                                Button(onClick = { register() }, enabled = !busy, modifier = Modifier.fillMaxWidth()) {
+                                    Text(if (busy) "Creating account…" else "Create GATIVX Account")
+                                }
+                                TextButtonCompat(
+                                    text = "Already have an account? Sign in",
+                                    enabled = !busy,
+                                    onClick = { isRegistering = false; password = ""; confirmPassword = "" }
+                                )
+                            } else {
+                                Button(onClick = { signIn() }, enabled = !busy, modifier = Modifier.fillMaxWidth()) { Text(if (busy) "Signing in…" else "Sign in to GATIVX") }
+                                TextButtonCompat(
+                                    text = "New to GATIVX? Create a free account",
+                                    enabled = !busy,
+                                    onClick = { isRegistering = true; password = ""; confirmPassword = "" }
+                                )
+                            }
                         } else {
                             Text("Signed in · ${session?.userId?.take(8)}…", color = Color(0xFFD8FF3E))
                             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -544,6 +605,13 @@ private fun WalkOnRoutePreview(points: List<WalkOnPoint>) {
 }
 
 @Composable
+private fun TextButtonCompat(text: String, enabled: Boolean, onClick: () -> Unit) {
+    TextButton(onClick = onClick, enabled = enabled, modifier = Modifier.fillMaxWidth()) {
+        Text(text, color = Color(0xFFD8FF3E), fontSize = 12.sp)
+    }
+}
+
+@Composable
 private fun MetricTile(label: String, value: String, modifier: Modifier = Modifier) {
     Card(modifier = modifier, colors = CardDefaults.cardColors(containerColor = Color(0xFF0D171D))) {
         Column(Modifier.padding(12.dp)) {
@@ -555,6 +623,21 @@ private fun MetricTile(label: String, value: String, modifier: Modifier = Modifi
 
 internal object SupabaseApi {
     private const val TIMEOUT_MS = 15_000
+
+    suspend fun signUp(email: String, password: String): GativxSession? = withContext(Dispatchers.IO) {
+        val response = request("POST", "/auth/v1/signup", null,
+            JSONObject().put("email", email).put("password", password).toString())
+        if (response.first !in 200..299) throw IllegalStateException(parseError(response.second, "Account creation failed."))
+        val json = JSONObject(response.second)
+        val user = json.optJSONObject("user") ?: json
+        val accessToken = json.optString("access_token")
+        val refreshToken = json.optString("refresh_token")
+        if (accessToken.isNotBlank() && refreshToken.isNotBlank() && user.has("id")) {
+            GativxSession(user.getString("id"), accessToken, refreshToken)
+        } else {
+            null
+        }
+    }
 
     suspend fun signIn(email: String, password: String): GativxSession = withContext(Dispatchers.IO) {
         val response = request("POST", "/auth/v1/token?grant_type=password", null,
