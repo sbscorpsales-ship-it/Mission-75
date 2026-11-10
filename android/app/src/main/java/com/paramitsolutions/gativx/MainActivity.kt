@@ -13,6 +13,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.setContent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -104,6 +105,7 @@ private fun GativxAndroidScreen() {
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
     var isRegistering by remember { mutableStateOf(false) }
+    var selectedFeature by remember { mutableStateOf("Home") }
     var session by remember { mutableStateOf(SessionVault.load(context)) }
     var busy by remember { mutableStateOf(false) }
     var status by remember { mutableStateOf("Connect Health Connect to read today's measured activity.") }
@@ -391,6 +393,63 @@ private fun GativxAndroidScreen() {
             ) {
                 Text("GATIVX", color = Color(0xFFD8FF3E), fontSize = 34.sp, fontWeight = FontWeight.Black)
                 Text("MOVE. GROW. EXCEL.", color = Color(0xFF9DAEB6), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+
+                Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF17232A))) {
+                    Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text("EXPLORE GATIVX", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            Text("EARLY ACCESS", color = Color(0xFFFFC66D), fontWeight = FontWeight.Bold, fontSize = 10.sp)
+                        }
+                        Text("Your fitness journey, all in one place. Tap any section to explore its current status.", color = Color(0xFF9DAEB6), fontSize = 11.sp)
+                        val featureRows = listOf(
+                            listOf("Home", "Mission", "Activity"),
+                            listOf("Wellness", "Strength", "GURU"),
+                            listOf("Community", "Motion 3D", "Rewards"),
+                            listOf("Referrals", "Profile", "Settings")
+                        )
+                        featureRows.forEach { row ->
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                                row.forEach { feature ->
+                                    FeatureHubTile(
+                                        name = feature,
+                                        status = when (feature) {
+                                            "Home", "Activity", "Profile" -> "Available"
+                                            "Mission" -> "Testing"
+                                            else -> "Coming soon"
+                                        },
+                                        selected = selectedFeature == feature,
+                                        modifier = Modifier.weight(1f),
+                                        onClick = {
+                                            selectedFeature = feature
+                                            status = when (feature) {
+                                                "Home" -> "Home dashboard: your GATIVX starting point."
+                                                "Activity" -> "Activity tracking: WalkOn GPS is available for testing. Health data depends on device permissions."
+                                                "Mission" -> "Mission setup is being tested. Full goal planning and milestones are expanding soon."
+                                                "Profile" -> "Profile and account access are available in the cloud backup section below."
+                                                "Wellness" -> "Wellness journal, food, water and sleep tracking — coming soon."
+                                                "Strength" -> "Strength workouts and guided exercise library — expanding soon."
+                                                "GURU" -> "GURU personal guidance and daily coaching — under development."
+                                                "Community" -> "Friends, groups and community challenges — coming soon."
+                                                "Motion 3D" -> "3D route replay and elevation insights — under development."
+                                                "Rewards" -> "Achievements, learning rewards and milestones — coming soon."
+                                                "Referrals" -> "Invite and referral rewards — coming soon."
+                                                else -> "Settings and preferences — expanding soon."
+                                            }
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                        Text(
+                            when (selectedFeature) {
+                                "Home", "Activity", "Profile" -> "SELECTED: $selectedFeature · AVAILABLE FOR TESTING"
+                                "Mission" -> "SELECTED: MISSION · TESTING IN PROGRESS"
+                                else -> "SELECTED: $selectedFeature · COMING SOON"
+                            },
+                            color = Color(0xFFD8FF3E), fontSize = 10.sp, fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
                 Text("Android Health Connect", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
 
                 Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF17232A))) {
@@ -599,6 +658,38 @@ private fun WalkOnRoutePreview(points: List<WalkOnPoint>) {
                 end = position(points[index]),
                 strokeWidth = 4.dp.toPx(),
                 cap = StrokeCap.Round
+            )
+        }
+    }
+}
+
+@Composable
+private fun FeatureHubTile(
+    name: String,
+    status: String,
+    selected: Boolean,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    val active = status == "Available"
+    Card(
+        modifier = modifier.clickable(onClick = onClick),
+        colors = CardDefaults.cardColors(
+            containerColor = if (selected) Color(0xFF344329) else Color(0xFF0D171D)
+        ),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Column(
+            Modifier.fillMaxWidth().padding(vertical = 12.dp, horizontal = 5.dp),
+            verticalArrangement = Arrangement.spacedBy(5.dp)
+        ) {
+            Text(name, color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.fillMaxWidth())
+            Text(
+                status.uppercase(),
+                color = if (active) Color(0xFFD8FF3E) else Color(0xFFFFC66D),
+                fontSize = 8.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.fillMaxWidth()
             )
         }
     }
