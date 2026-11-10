@@ -282,7 +282,7 @@ struct ContentView: View {
                 .tint(.black)
                 .foregroundStyle(.yellow)
 
-                Button("Refresh Apple Health now") {
+                Button("Refresh measured steps now") {
                     health.refreshRecentDays()
                     health.refreshTodayEnergy()
                 }
