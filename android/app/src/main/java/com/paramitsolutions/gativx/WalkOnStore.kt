@@ -138,7 +138,9 @@ internal object WalkOnStore {
     }
 
     private fun readSessions(context: Context, key: String): List<WalkOnSession>? {
-        val raw = readEncrypted(context, key) ?: return emptyList()
+        val preferences = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        if (!preferences.contains(key)) return emptyList()
+        val raw = readEncrypted(context, key) ?: return null
         return try {
             val array = JSONArray(raw)
             (0 until array.length()).map { index -> decodeSession(array.getJSONObject(index)) }
