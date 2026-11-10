@@ -797,9 +797,17 @@ internal object SupabaseApi {
         val localMeasuredAt = parseTimestamp(snapshot.measuredAt)
         val remoteStepsSource = remote?.optString("steps_source")?.takeIf { it.isNotBlank() }
         val remoteStepsAt = parseTimestamp(remote?.optString("steps_updated_at"))
-        val preserveRemoteSteps = remoteStepsSource == "manual" || remoteStepsAt.isAfter(localMeasuredAt)
+        val remoteHasSteps = remote != null && !remote.isNull("steps")
+        // Health Connect may refresh only its own previous value or an empty field.
+        // Preserve manual, Apple Health, GPS/legacy and unknown-provenance values.
+        val preserveRemoteSteps = remoteHasSteps && remoteStepsSource != "health_connect" ||
+            (remoteStepsSource == "health_connect" && remoteStepsAt.isAfter(localMeasuredAt))
+        val remoteEnergySource = remote?.optString("active_energy_source")?.takeIf { it.isNotBlank() }
         val remoteEnergyAt = parseTimestamp(remote?.optString("active_energy_updated_at"))
-        val preserveRemoteEnergy = remoteEnergyAt.isAfter(localMeasuredAt)
+        val remoteHasEnergy = remote != null && !remote.isNull("active_energy_kcal")
+        // Keep energy from another source (including legacy rows) intact.
+        val preserveRemoteEnergy = remoteHasEnergy && remoteEnergySource != "health_connect" ||
+            (remoteEnergySource == "health_connect" && remoteEnergyAt.isAfter(localMeasuredAt))
 
         val row = JSONObject().put("user_id", session.userId).put("log_date", snapshot.date)
         if (snapshot.steps != null && !preserveRemoteSteps) {

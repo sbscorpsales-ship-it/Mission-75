@@ -7,6 +7,16 @@ store = (ROOT / "android/app/src/main/java/com/paramitsolutions/gativx/WalkOnSto
 activity = (ROOT / "android/app/src/main/java/com/paramitsolutions/gativx/MainActivity.kt").read_text()
 
 checks = {
+    "Android Health Connect preserves existing non-Health-Connect step values": (
+        "remoteHasSteps = remote != null && !remote.isNull(\"steps\")" in activity
+        and "remoteStepsSource != \"health_connect\"" in activity
+        and "remoteStepsAt.isAfter(localMeasuredAt)" in activity
+    ),
+    "Android Health Connect preserves legacy and other-source active energy": (
+        "remoteHasEnergy = remote != null && !remote.isNull(\"active_energy_kcal\")" in activity
+        and "remoteEnergySource != \"health_connect\"" in activity
+        and "remoteEnergyAt.isAfter(localMeasuredAt)" in activity
+    ),
     "location foreground-service permissions": (
         'android.permission.FOREGROUND_SERVICE_LOCATION' in manifest
         and 'android:foregroundServiceType="location"' in manifest
