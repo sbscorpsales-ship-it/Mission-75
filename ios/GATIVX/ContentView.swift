@@ -177,16 +177,17 @@ struct ContentView: View {
         }
     }
 
-    /// Prefer HealthKit's deduplicated all-source total. Use the iPhone-only
-    /// CoreMotion total only when HealthKit has no value; never add the sources.
+    /// HealthKit is the authority for the all-day total. CoreMotion is only a
+    /// live preview; it may be foreground-limited and must never replace the
+    /// complete Health aggregate or be added to it.
     private var displayedDailySteps: Int? {
-        health.todaySteps ?? liveMotionSteps
+        health.todaySteps
     }
 
     private var displayedStepSource: String {
-        if health.todaySteps != nil { return "Apple Health · combined supported sources" }
-        if liveMotionSteps != nil { return "iPhone motion · GATIVX fallback" }
-        return "Waiting for step data"
+        if health.todaySteps != nil { return "Apple Health · all available supported sources" }
+        if liveMotionSteps != nil { return "Apple Health not connected · live sensor preview only" }
+        return "Connect Apple Health to show your all-day measured total"
     }
 
     private var stepProgress: Double {
