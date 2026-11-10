@@ -45,7 +45,7 @@ internal object WalkOnStore {
         readSession(context, ACTIVE_KEY)
 
     fun completed(context: Context): List<WalkOnSession> =
-        readSessions(context, COMPLETED_KEY)
+        readSessions(context, COMPLETED_KEY) ?: emptyList()
 
     fun pending(context: Context): List<WalkOnSession> =
         completed(context).filter { !it.synced }
@@ -60,7 +60,11 @@ internal object WalkOnStore {
         completed(context).filter { it.ownerUserId == userId }
 
     fun assignUnowned(context: Context, userId: String) {
-        val history = completed(context).map {
+        val existing = readSessions(context, COMPLETED_KEY) ?: run {
+            setStatus(context, "Saved route history could not be read. The encrypted original is preserved; no routes were replaced.")
+            return
+        }
+        val history = existing.map {
             if (it.ownerUserId == null && !it.synced) it.copy(ownerUserId = userId) else it
         }
         writeEncrypted(context, COMPLETED_KEY, encodeSessions(history))
@@ -102,8 +106,11 @@ internal object WalkOnStore {
             synced = false
         )
         if (finished.points.isNotEmpty()) {
-            val history = completed(context).filterNot { it.id == finished.id }
-                .toMutableList()
+            val history = readSessions(context, COMPLETED_KEY)?.filterNot { it.id == finished.id }
+                ?.toMutableList() ?: run {
+                    setStatus(context, "Saved route history could not be read. Your active route draft is preserved; no history was replaced.")
+                    return null
+                }
             history.add(0, finished)
             writeEncrypted(context, COMPLETED_KEY, encodeSessions(history.take(100)))
             setStatus(context, "WalkOn route saved on this device. Cloud backup is pending.")
@@ -115,28 +122,31 @@ internal object WalkOnStore {
     }
 
     fun markSynced(context: Context, id: String) {
-        val history = completed(context).map { if (it.id == id) it.copy(synced = true) else it }
-        writeEncrypted(context, COMPLETED_KEY, encodeSessions(history))
+        val history = readSessions(context, COMPLETED_KEY) ?: run {
+            setStatus(context, "Saved route history could not be read. The encrypted original is preserved; sync status was not changed.")
+            return
+        }
+        writeEncrypted(context, COMPLETED_KEY, encodeSessions(history.map { if (it.id == id) it.copy(synced = true) else it }))
     }
 
     private fun readSession(context: Context, key: String): WalkOnSession? {
         val raw = readEncrypted(context, key) ?: return null
         return try { decodeSession(JSONObject(raw)) } catch (_: Exception) {
-            context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().remove(key).apply()
+            setStatus(context, "A saved WalkOn route could not be decoded. Its encrypted original was preserved for recovery.")
             null
         }
     }
 
-    private fun readSessions(context: Context, key: String): List<WalkOnSession> {
-        val raw = readEncrypted(context, key) ?: return emptyList()
+    private fun readSessions(context: Context, key: String): List<WalkOnSession>? {
+        val preferences = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        if (!preferences.contains(key)) return emptyList()
+        val raw = readEncrypted(context, key) ?: return null
         return try {
             val array = JSONArray(raw)
-            (0 until array.length()).mapNotNull { index ->
-                try { decodeSession(array.getJSONObject(index)) } catch (_: Exception) { null }
-            }
+            (0 until array.length()).map { index -> decodeSession(array.getJSONObject(index)) }
         } catch (_: Exception) {
-            context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().remove(key).apply()
-            emptyList()
+            setStatus(context, "Saved WalkOn history could not be decoded. The encrypted original was preserved; no partial history was loaded.")
+            null
         }
     }
 
@@ -159,14 +169,20 @@ internal object WalkOnStore {
             val cipher = Cipher.getInstance("AES/GCM/NoPadding")
             cipher.init(
                 Cipher.DECRYPT_MODE,
-                getOrCreateKey(),
+                getExistingKey(),
                 GCMParameterSpec(128, Base64.decode(pieces[0], Base64.NO_WRAP))
             )
             String(cipher.doFinal(Base64.decode(pieces[1], Base64.NO_WRAP)), Charsets.UTF_8)
         } catch (_: Exception) {
-            context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().remove(key).apply()
+            setStatus(context, "Encrypted WalkOn data could not be opened. The original encrypted data was preserved; do not clear app data.")
             null
         }
+    }
+
+    private fun getExistingKey(): SecretKey {
+        val keyStore = KeyStore.getInstance(KEYSTORE).apply { load(null) }
+        return keyStore.getKey(KEY_ALIAS, null) as? SecretKey
+            ?: throw IllegalStateException("The original WalkOn encryption key is unavailable.")
     }
 
     private fun getOrCreateKey(): SecretKey {
