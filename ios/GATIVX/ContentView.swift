@@ -133,16 +133,37 @@ struct ContentView: View {
                     return
                 }
                 let record = ActivitySessionRecord(id: UUID(), activity: activity, startedAt: start, finishedAt: finishedAt, steps: finalSteps, routePoints: routePoints)
-                var history = (try? JSONDecoder().decode([ActivitySessionRecord].self, from: UserDefaults.standard.data(forKey: "gativx.activitySessions.v1") ?? Data())) ?? []
+                let storageKey = "gativx.activitySessions.v1"
+                let existingData = UserDefaults.standard.data(forKey: storageKey)
+                var history: [ActivitySessionRecord]
+                do {
+                    history = try existingData.map { try JSONDecoder().decode([ActivitySessionRecord].self, from: $0) } ?? []
+                } catch {
+                    // Never replace an unreadable history with an empty array.
+                    self.sessionStatus = "Could not read existing activity history. Your current route draft is preserved; no saved history was replaced."
+                    self.sessionStarted = nil
+                    return
+                }
                 history.insert(record, at: 0)
-                UserDefaults.standard.set(try? JSONEncoder().encode(history), forKey: "gativx.activitySessions.v1")
-                self.routeRecorder.clearDraft()
-                self.sessionSteps = finalSteps
-                let stepSummary = finalSteps.map { $0.formatted() + " steps" } ?? "step count unavailable"
-                let routeSummary = routePoints.isEmpty ? "no GPS route points" : "GPS route saved"
-                self.sessionStatus = activity + " saved · " + stepSummary + " · " + routeSummary
-                self.sessionStarted = nil
-                self.syncSavedActivitySessions()
+                do {
+                    let encodedHistory = try JSONEncoder().encode(history)
+                    UserDefaults.standard.set(encodedHistory, forKey: storageKey)
+                    guard UserDefaults.standard.data(forKey: storageKey) != nil else {
+                        throw NSError(domain: "GATIVXActivityStorage", code: 1, userInfo: [NSLocalizedDescriptionKey: "Local activity history could not be verified after saving."])
+                    }
+                    // Clear the durable GPS draft only after the completed session
+                    // has been encoded and stored successfully.
+                    self.routeRecorder.clearDraft()
+                    self.sessionSteps = finalSteps
+                    let stepSummary = finalSteps.map { $0.formatted() + " steps" } ?? "step count unavailable"
+                    let routeSummary = routePoints.isEmpty ? "no GPS route points" : "GPS route saved"
+                    self.sessionStatus = activity + " saved · " + stepSummary + " · " + routeSummary
+                    self.sessionStarted = nil
+                    self.syncSavedActivitySessions()
+                } catch {
+                    self.sessionStatus = "Could not save this activity on this iPhone: " + error.localizedDescription + ". Your GPS draft remains preserved; do not clear app data."
+                    self.sessionStarted = nil
+                }
             }
         }
         // Query the complete interval after stopping live updates so the final
