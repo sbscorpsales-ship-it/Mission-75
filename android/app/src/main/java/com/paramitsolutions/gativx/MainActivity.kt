@@ -285,6 +285,24 @@ private fun GativxAndroidScreen() {
         }
     }
 
+    // Reconnect silently on launch when the member previously granted Health Connect access.
+    // No permission dialog is ever started from this automatic path.
+    LaunchedEffect(Unit) {
+        val sdkStatus = HealthConnectClient.getSdkStatus(context, HEALTH_CONNECT_PROVIDER)
+        if (sdkStatus == HealthConnectClient.SDK_AVAILABLE) {
+            try {
+                val client = HealthConnectClient.getOrCreate(context)
+                val granted = client.permissionController.getGrantedPermissions()
+                if (healthPermissions.any { it in granted }) {
+                    healthClient = client
+                    refreshHealthData()
+                }
+            } catch (error: Exception) {
+                status = error.message ?: "Could not reconnect to Health Connect."
+            }
+        }
+    }
+
     // Refresh measured aggregates whenever the app returns to the foreground.
     // This never launches a permission prompt: it only reads permissions already granted.
     DisposableEffect(context, healthClient) {
