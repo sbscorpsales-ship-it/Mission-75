@@ -42,10 +42,10 @@ final class HealthKitManager: ObservableObject {
                 }
                 // HealthKit intentionally does not reveal whether read access was denied.
                 UserDefaults.standard.set(true, forKey: self.connectionRequestedKey)
+                self.statusMessage = "Apple Health access was requested. Checking today's measured steps…"
                 self.startObserving()
                 self.refreshRecentDays()
                 self.refreshTodayEnergy()
-                self.statusMessage = "Health access requested. Checking today's measured steps…"
             }
         }
     }
