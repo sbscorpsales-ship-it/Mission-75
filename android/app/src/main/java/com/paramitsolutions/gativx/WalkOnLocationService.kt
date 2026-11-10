@@ -164,7 +164,7 @@ class WalkOnLocationService : Service(), LocationListener, SensorEventListener {
             return
         }
 
-        if (checkSelfPermission(Manifest.permission.ACTIVITY_RECOGNITION) == PackageManager.PERMISSION_GRANTED) {
+        if (Build.VERSION.SDK_INT >= 29 && checkSelfPermission(Manifest.permission.ACTIVITY_RECOGNITION) == PackageManager.PERMISSION_GRANTED) {
             stepCounter?.let { sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_NORMAL) }
         }
 
@@ -173,7 +173,7 @@ class WalkOnLocationService : Service(), LocationListener, SensorEventListener {
                 locationManager.requestLocationUpdates(provider, 1_000L, 3f, this, Looper.getMainLooper())
             }
             recording = true
-            WalkOnStore.setStatus(this, "WalkOn is recording GPS in the foreground service. You can lock your screen.")
+            WalkOnStore.setStatus(this, if (stepCounter != null && Build.VERSION.SDK_INT >= 29 && checkSelfPermission(Manifest.permission.ACTIVITY_RECOGNITION) == PackageManager.PERMISSION_GRANTED) "WalkOn is recording GPS and measured session steps. You can lock your screen." else "WalkOn GPS is recording. Measured session steps are unavailable: this device needs a step counter and Activity Recognition permission.")
             updateNotification("GPS route recording · screen may be locked")
             broadcastUpdate()
         } catch (error: SecurityException) {
