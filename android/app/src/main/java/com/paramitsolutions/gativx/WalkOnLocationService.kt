@@ -13,6 +13,10 @@ import android.content.pm.ServiceInfo
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
 import android.os.Build
 import android.os.IBinder
 import android.os.Looper
@@ -21,7 +25,7 @@ import java.time.Instant
 import java.util.UUID
 
 /** Foreground GPS service. It continues recording while the screen is locked. */
-class WalkOnLocationService : Service(), LocationListener {
+class WalkOnLocationService : Service(), LocationListener, SensorEventListener {
     companion object {
         const val ACTION_START = "com.paramitsolutions.gativx.walkon.START"
         const val ACTION_STOP = "com.paramitsolutions.gativx.walkon.STOP"
@@ -46,10 +50,16 @@ class WalkOnLocationService : Service(), LocationListener {
     private var recording = false
     private var lastPersistedPointCount = 0
     private var lastUiUpdateMillis = 0L
+    private lateinit var sensorManager: SensorManager
+    private var stepCounter: Sensor? = null
+    private var sessionSteps = 0L
+    private var lastStepCounterValue: Float? = null
 
     override fun onCreate() {
         super.onCreate()
         locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
+        sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
+        stepCounter = sensorManager.getDefaultSensor(Sensor.TYPE_STEP_COUNTER)
         createNotificationChannel()
     }
 
@@ -95,6 +105,8 @@ class WalkOnLocationService : Service(), LocationListener {
             lastAcceptedLocation = null
             segmentBreak = true
             lastPersistedPointCount = 0
+            sessionSteps = 0L
+            lastStepCounterValue = null
             WalkOnStore.saveActive(
                 this,
                 WalkOnSession(
@@ -105,6 +117,8 @@ class WalkOnLocationService : Service(), LocationListener {
                     durationSeconds = 0,
                     distanceMeters = 0.0,
                     points = emptyList(),
+                    sessionSteps = 0L,
+                    stepCounterLastValue = null,
                     ownerUserId = ownerUserId
                 )
             )
@@ -115,6 +129,8 @@ class WalkOnLocationService : Service(), LocationListener {
             distanceMeters = existing.distanceMeters
             points.clear()
             points.addAll(existing.points.takeLast(MAX_LOCAL_POINTS))
+            sessionSteps = existing.sessionSteps
+            lastStepCounterValue = existing.stepCounterLastValue
             lastAcceptedLocation = points.lastOrNull()?.let { point ->
                 Location("gativx-walkon-recovered").apply {
                     latitude = point.latitude
@@ -148,12 +164,16 @@ class WalkOnLocationService : Service(), LocationListener {
             return
         }
 
+        if (Build.VERSION.SDK_INT >= 29 && checkSelfPermission(Manifest.permission.ACTIVITY_RECOGNITION) == PackageManager.PERMISSION_GRANTED) {
+            stepCounter?.let { sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_NORMAL) }
+        }
+
         try {
             providers.forEach { provider ->
                 locationManager.requestLocationUpdates(provider, 1_000L, 3f, this, Looper.getMainLooper())
             }
             recording = true
-            WalkOnStore.setStatus(this, "WalkOn is recording GPS in the foreground service. You can lock your screen.")
+            WalkOnStore.setStatus(this, if (stepCounter != null && Build.VERSION.SDK_INT >= 29 && checkSelfPermission(Manifest.permission.ACTIVITY_RECOGNITION) == PackageManager.PERMISSION_GRANTED) "WalkOn is recording GPS and measured session steps. You can lock your screen." else "WalkOn GPS is recording. Measured session steps are unavailable: this device needs a step counter and Activity Recognition permission.")
             updateNotification("GPS route recording · screen may be locked")
             broadcastUpdate()
         } catch (error: SecurityException) {
@@ -231,6 +251,8 @@ class WalkOnLocationService : Service(), LocationListener {
             durationSeconds = 0,
             distanceMeters = distanceMeters,
             points = points.toList(),
+            sessionSteps = sessionSteps,
+            stepCounterLastValue = lastStepCounterValue,
             ownerUserId = ownerUserId
         )
         runCatching { WalkOnStore.saveActive(this, session) }
@@ -267,6 +289,7 @@ class WalkOnLocationService : Service(), LocationListener {
             return
         }
         runCatching { locationManager.removeUpdates(this) }
+        runCatching { sensorManager.unregisterListener(this) }
         recording = false
         persistDraft()
         val finishedMillis = System.currentTimeMillis()
@@ -288,6 +311,23 @@ class WalkOnLocationService : Service(), LocationListener {
         stopSelf()
     }
 
+    override fun onSensorChanged(event: SensorEvent?) {
+        if (!recording || event?.sensor?.type != Sensor.TYPE_STEP_COUNTER || event.values.isEmpty()) return
+        val current = event.values[0]
+        if (!current.isFinite() || current < 0f) return
+        val previous = lastStepCounterValue
+        if (previous != null && current >= previous) {
+            sessionSteps = (sessionSteps + (current - previous).toLong()).coerceAtLeast(0L)
+        }
+        // If the device rebooted, the hardware counter may reset. Preserve the session
+        // total and establish a new baseline rather than subtracting across the reset.
+        lastStepCounterValue = current
+        persistDraft()
+        broadcastUpdate()
+    }
+
+    override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) = Unit
+
     override fun onProviderEnabled(provider: String) {
         WalkOnStore.setStatus(this, "Location provider enabled. WalkOn is recording when a reliable GPS fix arrives.")
         broadcastUpdate()
@@ -301,6 +341,7 @@ class WalkOnLocationService : Service(), LocationListener {
     override fun onDestroy() {
         if (recording) {
             runCatching { locationManager.removeUpdates(this) }
+            runCatching { sensorManager.unregisterListener(this) }
             persistDraft()
         }
         recording = false

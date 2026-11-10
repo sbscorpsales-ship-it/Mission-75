@@ -28,6 +28,8 @@ internal data class WalkOnSession(
     val durationSeconds: Long,
     val distanceMeters: Double,
     val points: List<WalkOnPoint>,
+    val sessionSteps: Long = 0,
+    val stepCounterLastValue: Float? = null,
     val synced: Boolean = false,
     val ownerUserId: String? = null
 )
@@ -221,6 +223,8 @@ internal object WalkOnStore {
         .put("finishedAt", session.finishedAt ?: JSONObject.NULL)
         .put("durationSeconds", session.durationSeconds)
         .put("distanceMeters", session.distanceMeters)
+        .put("sessionSteps", session.sessionSteps)
+        .put("stepCounterLastValue", session.stepCounterLastValue?.toDouble() ?: JSONObject.NULL)
         .put("synced", session.synced)
         .put("ownerUserId", session.ownerUserId ?: JSONObject.NULL)
         .put("points", JSONArray().also { array -> session.points.forEach { array.put(encodePoint(it)) } })
@@ -239,6 +243,8 @@ internal object WalkOnStore {
             durationSeconds = json.optLong("durationSeconds", 0),
             distanceMeters = json.optDouble("distanceMeters", 0.0),
             points = points,
+            sessionSteps = json.optLong("sessionSteps", 0).coerceAtLeast(0),
+            stepCounterLastValue = if (json.isNull("stepCounterLastValue")) null else json.optDouble("stepCounterLastValue").toFloat(),
             synced = json.optBoolean("synced", false),
             ownerUserId = json.optString("ownerUserId").takeIf { it.isNotBlank() && it != "null" }
         )
