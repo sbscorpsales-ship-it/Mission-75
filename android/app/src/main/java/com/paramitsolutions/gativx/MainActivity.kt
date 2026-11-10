@@ -138,16 +138,24 @@ private fun GativxAndroidScreen() {
             walkStatus = "A WalkOn route belongs to another account or was recorded offline. Finish or explicitly assign it before starting a new route."
             return
         }
-        if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-            startWalkOnService(context)
-            walkStatus = "Starting WalkOn GPS tracking…"
-        } else {
-            val requested = buildList {
+        val requested = buildList {
+            if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
                 add(Manifest.permission.ACCESS_FINE_LOCATION)
                 add(Manifest.permission.ACCESS_COARSE_LOCATION)
-                if (Build.VERSION.SDK_INT >= 29) add(Manifest.permission.ACTIVITY_RECOGNITION)
-                if (Build.VERSION.SDK_INT >= 33) add(Manifest.permission.POST_NOTIFICATIONS)
             }
+            if (Build.VERSION.SDK_INT >= 29 &&
+                ContextCompat.checkSelfPermission(context, Manifest.permission.ACTIVITY_RECOGNITION) != PackageManager.PERMISSION_GRANTED) {
+                add(Manifest.permission.ACTIVITY_RECOGNITION)
+            }
+            if (Build.VERSION.SDK_INT >= 33 &&
+                ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                add(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
+        if (requested.isEmpty()) {
+            startWalkOnService(context)
+            walkStatus = "Starting WalkOn GPS and measured step tracking…"
+        } else {
             locationPermissionLauncher.launch(requested.toTypedArray())
         }
     }
