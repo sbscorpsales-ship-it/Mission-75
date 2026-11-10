@@ -33,4 +33,10 @@ for(const id of ["home","journey","record","walk","coach"])if(!shell.includes('i
 if((shell.match(/data-panel=/g)||[]).length<5)fail("Five navigation tabs missing");else pass("Five navigation tabs present");
 for(const id of ["gpsStart","gpsPause","gpsFinish","saveEntry","saveGoal"])if(!shell.includes('id="'+id+'"'))fail("New standalone action missing: "+id);else pass("Standalone action present: "+id);
 if(!fs.readFileSync("sw.js","utf8").includes("./apple-touch-icon.png"))fail("Service worker icon cache missing");else pass("Service worker icon cache valid");
+
+const gpsFinishHandler=shell.split("$('gpsFinish').onclick=()=>{",1)[1]?.split("importAppleHealthShortcut()",1)[0]||"";
+if(!gpsFinishHandler.includes("if(finishButton.disabled)return")||!gpsFinishHandler.includes("navigator.geolocation.clearWatch(watch)")||!gpsFinishHandler.includes("points.map(p=>({...p}))"))fail("GPS Finish must prevent duplicate taps, stop the GPS watch and snapshot the route");else pass("GPS Finish stops tracking and captures a stable route snapshot");
+if(!gpsFinishHandler.includes("Number.isFinite(savedDistance)")||!gpsFinishHandler.includes("savedPoints.length<2"))fail("GPS Finish must reject invalid or unmeasurable routes");else pass("GPS Finish rejects invalid or unmeasurable routes");
+if(!gpsFinishHandler.includes("try{persist();")||!gpsFinishHandler.includes("state.walks.pop()")||!gpsFinishHandler.includes("Your route is still held on this screen"))fail("GPS Finish must roll back failed local saves without discarding the in-memory route");else pass("GPS Finish preserves the route in memory when local persistence fails");
+if(!gpsFinishHandler.includes("if(previousEntry===undefined)delete state.entries[today]")||!gpsFinishHandler.includes("state.entries[today]=previousEntry"))fail("GPS Finish must restore the exact prior daily entry after a failed save");else pass("GPS Finish restores the exact prior daily entry after a failed save");
 if(failed)process.exit(1);
