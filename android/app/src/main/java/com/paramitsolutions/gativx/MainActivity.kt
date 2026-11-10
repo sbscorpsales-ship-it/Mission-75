@@ -145,6 +145,7 @@ private fun GativxAndroidScreen() {
             val requested = buildList {
                 add(Manifest.permission.ACCESS_FINE_LOCATION)
                 add(Manifest.permission.ACCESS_COARSE_LOCATION)
+                if (Build.VERSION.SDK_INT >= 29) add(Manifest.permission.ACTIVITY_RECOGNITION)
                 if (Build.VERSION.SDK_INT >= 33) add(Manifest.permission.POST_NOTIFICATIONS)
             }
             locationPermissionLauncher.launch(requested.toTypedArray())
@@ -569,7 +570,7 @@ private fun GativxAndroidScreen() {
                         }
                         latestWalk?.let { walk ->
                             Text(
-                                "Last route · %.2f km · %d seconds".format(walk.distanceMeters / 1000.0, walk.durationSeconds),
+                                "Last route · %.2f km · %d seconds · %d measured steps".format(walk.distanceMeters / 1000.0, walk.durationSeconds, walk.sessionSteps),
                                 color = Color.White,
                                 fontSize = 12.sp
                             )
@@ -831,7 +832,7 @@ internal object SupabaseApi {
             .put("p_finished_at", walk.finishedAt)
             .put("p_duration_seconds", walk.durationSeconds.coerceIn(0, 86_400))
             .put("p_distance_m", walk.distanceMeters.coerceAtLeast(0.0))
-            .put("p_steps", JSONObject.NULL)
+            .put("p_steps", walk.sessionSteps.takeIf { it > 0 }?.let { it } ?: JSONObject.NULL)
             .put("p_route_points", route)
         var activeSession = session
         var response = request("POST", "/rest/v1/rpc/sync_walk_session_route", activeSession.accessToken, body.toString())
