@@ -241,7 +241,7 @@ function importAppleHealthShortcut(){
   if(energy!==null&&prior.activeEnergySource!=='apple_health'){
    next.activeEnergyKcal=energy;next.activeEnergySource='apple_health_shortcuts';next.activeEnergyUpdatedAt=stamp;changed=true;
   }
-  if(changed){state.entries[importedDate]=next;persist();}
+  if(changed){state.entries[importedDate]=next;persist();if(cloudUser)cloudSync();}
  }
  params.delete('gativx_steps');params.delete('gativx_active_energy');params.delete('gativx_date');
  const clean=window.location.pathname+(params.toString()?'?'+params.toString():'')+window.location.hash;
