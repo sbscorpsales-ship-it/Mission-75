@@ -59,7 +59,7 @@ checks = {
     ),
     "cloud route sync preserves unknown steps": (
         "/rest/v1/rpc/sync_walk_session_route" in activity
-        and '.put("p_steps", JSONObject.NULL)' in activity
+        and '.put("p_steps", walk.sessionSteps.takeIf { it > 0 }?.let { it } ?: JSONObject.NULL)' in activity
     ),
     "route sync keeps retryable local history": (
         "WalkOnStore.markSynced(context, walk.id)" in activity
