@@ -256,6 +256,27 @@ private fun GativxAndroidScreen() {
             !canReadSteps || !canReadEnergy -> "Partial Health Connect access. Available measured values were refreshed; denied metrics remain unknown."
             else -> "Measured Health Connect data refreshed. No estimates have been added."
         }
+
+        // A successful device read should not require a second manual button press
+        // to reach the signed-in member's private GATIVX account.
+        val currentSession = session
+        if (currentSession != null && (steps != null || activeEnergy != null)) {
+            val snapshot = DailyHealthSnapshot(
+                measuredDate,
+                steps,
+                activeEnergy,
+                measuredAt ?: Instant.now().toString()
+            )
+            try {
+                val refreshedSession = SupabaseApi.syncDaily(context, currentSession, snapshot)
+                SessionVault.save(context, refreshedSession)
+                session = refreshedSession
+                status += " Cloud backup complete for $measuredDate."
+            } catch (error: Exception) {
+                session = SessionVault.load(context) ?: currentSession
+                status += " Cloud sync pending: ${error.message ?: "your measured data remains on this device"}."
+            }
+        }
     }
 
     val permissionLauncher = rememberLauncherForActivityResult(
