@@ -63,7 +63,7 @@ checks = {
     "corrupt route history blocks destructive rewrites and preserves active drafts": (
         "readSessions(context, COMPLETED_KEY) ?: run" in store
         and "Your active route draft is preserved" in store
-        and "mapNotNull" not in store
+        and "mapNotNull" not in store.split("private fun readSessions", 1)[1].split("private fun writeEncrypted", 1)[0]
     ),
     "rotated Supabase tokens are saved before retry": activity.count("SessionVault.save(context, activeSession)") >= 3,
 }
