@@ -209,7 +209,7 @@ struct ContentView: View {
                     ProgressView(value: stepProgress).tint(.yellow)
                     Text("Active energy: " + (health.todayActiveEnergyKcal.map { "\($0) kcal" } ?? "—") + " · Apple Health measured active calories, not total calories.")
                         .font(.caption).foregroundStyle(.secondary)
-                    Text("GATIVX shows Apple Health when available; otherwise it shows the separate iPhone motion total. Sources are never added together.")
+                    Text("Daily total is read from Apple Health so it can include supported iPhone and paired-device steps. The live sensor preview is separate and is never substituted or added.")
                         .font(.caption2).foregroundStyle(.secondary).multilineTextAlignment(.center)
                     HStack {
                         Label("Live iPhone motion", systemImage: "figure.walk")
