@@ -74,6 +74,7 @@ import java.time.ZoneId
 private const val SUPABASE_URL = "https://crarbbsvcczwmtvxyrxo.supabase.co"
 private const val SUPABASE_PUBLISHABLE_KEY = "sb_publishable_XAGRFtrWrFqJ-SfXh2WbRQ_jCcPnr-6"
 private const val HEALTH_CONNECT_PROVIDER = "com.google.android.apps.healthdata"
+private const val ACTION_GATIVX_APP_RESUMED = "com.paramitsolutions.gativx.APP_RESUMED"
 
 data class GativxSession(val userId: String, val accessToken: String, val refreshToken: String)
 data class DailyHealthSnapshot(val date: String, val steps: Long?, val activeEnergyKcal: Double?, val measuredAt: String)
@@ -82,6 +83,11 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent { GativxAndroidScreen() }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        sendBroadcast(Intent(ACTION_GATIVX_APP_RESUMED).setPackage(packageName))
     }
 }
 
@@ -279,6 +285,42 @@ private fun GativxAndroidScreen() {
         }
     }
 
+    // Reconnect silently on launch when the member previously granted Health Connect access.
+    // No permission dialog is ever started from this automatic path.
+    LaunchedEffect(Unit) {
+        val sdkStatus = HealthConnectClient.getSdkStatus(context, HEALTH_CONNECT_PROVIDER)
+        if (sdkStatus == HealthConnectClient.SDK_AVAILABLE) {
+            try {
+                val client = HealthConnectClient.getOrCreate(context)
+                val granted = client.permissionController.getGrantedPermissions()
+                if (healthPermissions.any { it in granted }) {
+                    healthClient = client
+                    refreshHealthData()
+                }
+            } catch (error: Exception) {
+                status = error.message ?: "Could not reconnect to Health Connect."
+            }
+        }
+    }
+
+    // Refresh measured aggregates whenever the app returns to the foreground.
+    // This never launches a permission prompt: it only reads permissions already granted.
+    DisposableEffect(context, healthClient) {
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(receiverContext: Context?, intent: Intent?) {
+                if (healthClient != null) {
+                    scope.launch {
+                        try { refreshHealthData() }
+                        catch (error: Exception) {
+                            status = error.message ?: "Could not refresh Health Connect data."
+                        }
+                    }
+                }
+            }
+        }
+        ContextCompat.registerReceiver(context, receiver, IntentFilter(ACTION_GATIVX_APP_RESUMED), ContextCompat.RECEIVER_NOT_EXPORTED)
+        onDispose { runCatching { context.unregisterReceiver(receiver) } }
+    }
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = PermissionController.createRequestPermissionResultContract()
     ) { granted ->
