@@ -222,9 +222,11 @@ async function cloudSync(){
   const walks=await cloudClient.from('walk_sessions').select('id,started_at,finished_at,duration_seconds,distance_m,route_points,steps').eq('user_id',syncAccountId);
   if(!isCurrent())return;
   if(walks.error)throw walks.error;
-  const remoteWalks=(walks.data||[]).map(w=>({cloudId:w.id,date:String(w.started_at||'').slice(0,10),distance:Number(w.distance_m||0)/1000,points:Array.isArray(w.route_points)?w.route_points:[],createdAt:w.started_at,finishedAt:w.finished_at,durationSeconds:Number(w.duration_seconds||0),steps:w.steps}));
+  const localDayFromTimestamp=value=>{const d=new Date(value);if(!Number.isFinite(d.getTime()))return '';return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
+  const timestampMs=value=>{if(typeof value==='number'&&Number.isFinite(value))return value>0&&value<100000000000?value*1000:value;const parsed=Date.parse(value||'');return Number.isFinite(parsed)?parsed:NaN};
+  const remoteWalks=(walks.data||[]).map(w=>({cloudId:w.id,date:localDayFromTimestamp(w.started_at),distance:Number(w.distance_m||0)/1000,points:Array.isArray(w.route_points)?w.route_points:[],createdAt:w.started_at,startedAt:w.started_at,finishedAt:w.finished_at,durationSeconds:Number(w.duration_seconds||0),steps:w.steps}));
   const localWalks=state.walks.slice();
-  const walkStartMs=w=>{const raw=w.points&&w.points.length?(w.points[0].time||w.points[0].timestamp||w.startedAt||w.createdAt):(w.startedAt||w.createdAt);return typeof raw==='number'?raw:Date.parse(raw||'')};
+  const walkStartMs=w=>{const first=w.points&&w.points.length?(w.points[0].time??w.points[0].timestamp):null;return timestampMs(first??w.startedAt??w.createdAt)};
   const matches=(a,b)=>Math.abs(walkStartMs(a)-walkStartMs(b))<=10000&&Math.abs((Number(a.distance)||0)-(Number(b.distance)||0))<=0.02;
   for(const rw of remoteWalks){const i=localWalks.findIndex(l=>matches(l,rw));if(i>=0)localWalks[i]={...localWalks[i],...rw};else localWalks.push(rw)}
   const syncedKey='gativx.v2.cloud.walks.'+syncAccountId;
