@@ -7,7 +7,7 @@ import Combine
 final class AutomaticWalkDetector: ObservableObject {
     @Published private(set) var status = "Automatic walk detection is starting…"
 
-    var onWalkDetected: (() -> Void)?
+    var onWalkDetected: ((Date) -> Void)?
     var onStationaryDetected: (() -> Void)?
 
     private let motion = CMMotionActivityManager()
@@ -15,8 +15,9 @@ final class AutomaticWalkDetector: ObservableObject {
     private var stopWork: DispatchWorkItem?
     private var sessionIsActive = false
     private var monitoring = false
+    private var detectedWalkStart: Date?
 
-    private let walkConfirmation: TimeInterval = 25
+    // A short confirmation avoids most false starts while limiting missed session steps.\n    private let walkConfirmation: TimeInterval = 10
     private let stationaryGrace: TimeInterval = 180
 
     func startMonitoring() {
@@ -65,13 +66,13 @@ final class AutomaticWalkDetector: ObservableObject {
             stopWork?.cancel()
             stopWork = nil
             guard !sessionIsActive, startWork == nil else { return }
-            status = "Walking detected · confirming movement…"
+            detectedWalkStart = activity.startDate\n            status = "Walking detected · confirming for 10 seconds…"
             let work = DispatchWorkItem { [weak self] in
                 guard let self, !self.sessionIsActive else { return }
                 self.startWork = nil
                 self.sessionIsActive = true
                 self.status = "Walk confirmed · starting GPS recording."
-                self.onWalkDetected?()
+                self.onWalkDetected?(self.detectedWalkStart ?? Date())\n                self.detectedWalkStart = nil
             }
             startWork = work
             DispatchQueue.main.asyncAfter(deadline: .now() + walkConfirmation, execute: work)
