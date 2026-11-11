@@ -17,7 +17,8 @@ final class AutomaticWalkDetector: ObservableObject {
     private var monitoring = false
     private var detectedWalkStart: Date?
 
-    // A short confirmation avoids most false starts while limiting missed session steps.\n    private let walkConfirmation: TimeInterval = 10
+    // A short confirmation avoids most false starts while limiting missed session steps.
+    private let walkConfirmation: TimeInterval = 10
     private let stationaryGrace: TimeInterval = 180
 
     func startMonitoring() {
@@ -66,13 +67,15 @@ final class AutomaticWalkDetector: ObservableObject {
             stopWork?.cancel()
             stopWork = nil
             guard !sessionIsActive, startWork == nil else { return }
-            detectedWalkStart = activity.startDate\n            status = "Walking detected · confirming for 10 seconds…"
+            detectedWalkStart = activity.startDate
+            status = "Walking detected · confirming for 10 seconds…"
             let work = DispatchWorkItem { [weak self] in
                 guard let self, !self.sessionIsActive else { return }
                 self.startWork = nil
                 self.sessionIsActive = true
                 self.status = "Walk confirmed · starting GPS recording."
-                self.onWalkDetected?(self.detectedWalkStart ?? Date())\n                self.detectedWalkStart = nil
+                self.onWalkDetected?(self.detectedWalkStart ?? Date())
+                self.detectedWalkStart = nil
             }
             startWork = work
             DispatchQueue.main.asyncAfter(deadline: .now() + walkConfirmation, execute: work)
