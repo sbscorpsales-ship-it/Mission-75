@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#08111d">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="RunJeet">
+  <meta name="description" content="RunJeet — your goals, your movement, your Gati. A private, local-first fitness companion.">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="apple-touch-icon" href="../apple-touch-icon.png">
+  <link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+  <title>RunJeet — Your Gati, Your Goals</title>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="#" aria-label="RunJeet home"><span class="brand-mark">R</span><span>Run<span class="accent">Jeet</span><small>YOUR GATI. YOUR GOALS.</small></span></a>
+      <div class="top-actions"><span id="save-status" class="save-status">● Saved on this device</span><button class="icon-btn" id="install-btn" hidden aria-label="Install RunJeet">＋</button></div>
+    </header>
+    <main>
+      <section class="view active" id="view-dashboard">
+        <div class="welcome"><div><p class="eyebrow" id="today-label">YOUR DAILY PULSE</p><h1>Keep your <span class="accent">Gati.</span></h1><p class="muted">Small steps. Meaningful change.</p></div><div class="avatar" id="avatar-initial">R</div></div>
+        <article class="hero-card">
+          <div class="hero-head"><div><span class="eyebrow">TODAY'S MOVEMENT</span><h2 id="dash-name">Your progress starts here</h2></div><span class="live-dot">● LOCAL</span></div>
+          <div class="metrics-grid">
+            <div class="metric primary"><span>STEPS</span><strong id="metric-steps">0</strong><small id="steps-source">No source connected</small></div>
+            <div class="metric"><span>DISTANCE</span><strong id="metric-distance">0.00 <i>km</i></strong><small>GPS sessions</small></div>
+            <div class="metric"><span>ACTIVE TIME</span><strong id="metric-minutes">0 <i>min</i></strong><small>Recorded activity</small></div>
+            <div class="metric"><span>ENERGY</span><strong id="metric-kcal">0 <i>kcal</i></strong><small>Estimate only</small></div>
+          </div>
+          <div class="goal-line"><div><span class="eyebrow">STEP GOAL</span><b id="goal-progress-text">0 / 6,000</b></div><div class="progress-track"><span id="goal-progress-bar"></span></div></div>
+        </article>
+        <div class="section-row"><div><p class="eyebrow">DAILY CARE</p><h2>Hydration</h2></div><span class="muted" id="water-total">0 / 2,000 ml</span></div>
+        <article class="panel hydration"><div class="water-cup">◒</div><div class="water-content"><strong id="water-glasses">0 ml</strong><p class="muted">Log what you actually drink.</p><div class="button-row"><button class="btn btn-soft" data-water="250">＋ 250 ml</button><button class="btn btn-outline" id="water-custom">Custom</button></div></div></article>
+        <div class="section-row"><div><p class="eyebrow">YOUR NEXT ACTION</p><h2>Move with purpose</h2></div><button class="text-btn" data-tab="roadmap">View roadmap →</button></div>
+        <article class="panel guru-teaser"><div class="guru-icon">✦</div><div><span class="eyebrow">GURU · YOUR COMPANION</span><h3 id="guru-teaser-title">What matters to you today?</h3><p class="muted" id="guru-teaser-text">Set a meaningful goal. GURU will help you turn it into one achievable next action.</p><button class="text-btn" data-tab="guru">Talk to GURU →</button></div></article>
+      </section>
+
+      <section class="view" id="view-track">
+        <div class="page-heading"><p class="eyebrow">OUTDOOR MOVEMENT</p><h1>Track your <span class="accent">walk.</span></h1><p class="muted">GPS tracking works while this page remains active. Keep your screen awake during a walk.</p></div>
+        <div class="tracker-metrics"><div><span>DISTANCE</span><b id="track-distance">0.00 km</b></div><div><span>TIME</span><b id="track-time">00:00</b></div><div><span>PACE</span><b id="track-pace">—</b></div></div>
+        <div id="map" role="img" aria-label="GPS route map"><div class="map-placeholder" id="map-placeholder">Map loads when you have an internet connection.<br>GPS permission is requested only when you start.</div></div>
+        <div class="tracker-controls"><button class="btn btn-primary btn-large" id="gps-start">Start walk</button><button class="btn btn-soft" id="gps-pause" disabled>Pause</button><button class="btn btn-danger" id="gps-finish" disabled>Finish & save</button></div>
+        <p class="hint" id="gps-status">GPS is off. No location is collected until you start a walk.</p>
+        <div class="panel compact"><h3>Motion step counter</h3><p class="muted">Counts detected movement while this screen is open. Sensor access varies by browser and device.</p><div class="button-row"><button class="btn btn-soft" id="motion-start">Enable motion steps</button><span class="pill" id="motion-status">Not enabled</span></div><strong class="motion-count" id="motion-count">0</strong><span class="muted">detected steps today · shown separately from imported totals</span></div>
+        <div class="panel compact"><h3>Import a GPX route</h3><p class="muted">Add an existing GPS activity. Re-importing the same file is prevented.</p><input type="file" id="gpx-file" accept=".gpx,application/gpx+xml"><p class="hint" id="gpx-status"></p></div>
+        <div id="session-list" class="stack"></div>
+      </section>
+
+      <section class="view" id="view-roadmap">
+        <div class="page-heading"><p class="eyebrow">CONSISTENCY OVER INTENSITY</p><h1>Your daily <span class="accent">roadmap.</span></h1></div>
+        <article class="panel"><div class="section-row"><h2>Training checklist</h2><span class="pill" id="task-count">0 completed</span></div><div id="task-list" class="check-list"></div><form id="task-form" class="inline-form"><input id="task-input" placeholder="Add an exercise or habit" maxlength="90" required><button class="btn btn-primary">Add</button></form></article>
+        <article class="panel"><div class="section-row"><h2>Nutrition log</h2><span class="muted">Only what you enter</span></div><div class="macro-grid"><div><span>CALORIES</span><b id="macro-kcal">0</b></div><div><span>PROTEIN</span><b id="macro-protein">0 g</b></div><div><span>CARBS</span><b id="macro-carbs">0 g</b></div><div><span>FAT</span><b id="macro-fat">0 g</b></div></div><form id="food-form" class="form-grid"><input id="food-name" placeholder="Food / meal" maxlength="80" required><input id="food-kcal" type="number" min="0" max="10000" placeholder="kcal" required><input id="food-protein" type="number" min="0" max="1000" step=".1" placeholder="Protein g"><input id="food-carbs" type="number" min="0" max="1000" step=".1" placeholder="Carbs g"><input id="food-fat" type="number" min="0" max="1000" step=".1" placeholder="Fat g"><button class="btn btn-primary">Log food</button></form><div id="food-list" class="stack"></div></article>
+      </section>
+
+      <section class="view" id="view-guru">
+        <div class="page-heading"><p class="eyebrow">PURPOSE · PATIENCE · PROGRESS</p><h1>Meet <span class="accent">GURU.</span></h1><p class="muted">A thoughtful guide, not a judge. Coaching is based only on the information you provide.</p></div>
+        <article class="guru-banner"><div class="guru-icon big">✦</div><div><span class="eyebrow">YOUR GATI COMPANION</span><h2 id="guru-greeting">Every journey begins with a reason.</h2><p id="guru-purpose-display">Tell GURU what you want to change and why it matters.</p></div></article>
+        <article class="panel"><h2>Your purpose</h2><form id="goal-form" class="stack"><label>What is your main goal?<input id="goal-title" placeholder="e.g. Build a stronger, healthier body" maxlength="120"></label><label>Why does this matter to you?<textarea id="goal-why" rows="3" placeholder="The real reason behind your goal..."></textarea></label><label>What will change when you achieve it?<textarea id="goal-change" rows="2" placeholder="How will life be different?"></textarea></label><label>Target date<input id="goal-date" type="date"></label><button class="btn btn-primary">Save my purpose</button></form></article>
+        <article class="panel"><div class="section-row"><h2>GURU's reflection</h2><span class="pill">Offline coach</span></div><p id="guru-reflection" class="guru-reflection">Once you share your purpose, GURU will help you choose a small next action.</p><button class="btn btn-soft" id="guru-refresh">Reflect on my progress</button></article>
+        <p class="hint">GURU in this free version uses transparent, local coaching rules. It is not a medical professional or a cloud AI service.</p>
+      </section>
+
+      <section class="view" id="view-profile">
+        <div class="page-heading"><p class="eyebrow">YOUR PERSONAL SPACE</p><h1>Your <span class="accent">profile.</span></h1></div>
+        <article class="panel"><form id="profile-form" class="stack"><label>Your name<input id="profile-name" maxlength="60" placeholder="Your name"></label><label>Daily step goal<input id="profile-step-goal" type="number" min="100" max="100000" step="100" required></label><label>Preferred units<select id="profile-units"><option value="metric">Metric (km, kg)</option><option value="imperial">Imperial (mi, lb)</option></select></label><label>Body weight (optional, kg)<input id="profile-weight" type="number" min="20" max="400" step=".1" placeholder="Not entered"></label><label>Height (optional, cm)<input id="profile-height" type="number" min="80" max="250" step=".1" placeholder="Not entered"></label><button class="btn btn-primary">Save profile</button></form></article>
+        <article class="panel"><h2>Activity data sources</h2><div class="source-row"><div><b>Motion sensor</b><small>Foreground browser access, if supported</small></div><span class="pill" id="profile-motion">Not enabled</span></div><div class="source-row"><div><b>Apple Health</b><small>Export from Health app and import supported files; direct HealthKit access needs a native iOS app.</small></div><span class="pill">File import</span></div><div class="source-row"><div><b>Google Fit / Garmin / Strava</b><small>No false connected status. Provider API access requires supported authorization.</small></div><span class="pill">Not connected</span></div><h3>Import exact daily steps</h3><form id="steps-form" class="inline-form"><input type="date" id="steps-date" required><input type="number" id="steps-value" min="0" step="1" placeholder="Exact total" required><select id="steps-source"><option value="health-export">Health export</option><option value="manual">Manual exact</option><option value="garmin-import">Garmin import</option><option value="google-import">Google import</option></select><button class="btn btn-primary">Save total</button></form><p class="hint">Daily totals from different providers are reconciled, never added together. The displayed total uses the largest valid source total for that day. Replace a source's total by importing it again with the same source.</p></article>
+        <article class="panel"><h2>Your data belongs to you</h2><p class="muted">All entries are stored in this browser on this device. Clear browser data only after exporting a backup.</p><div class="button-row wrap"><button class="btn btn-soft" id="export-data">Export backup</button><label class="btn btn-outline file-button">Restore backup<input type="file" id="restore-data" accept="application/json"></label><button class="btn btn-danger" id="delete-data">Delete all app data</button></div></article>
+        <p class="hint">RunJeet does not send your personal fitness records to a server. Keep a backup if you change or reset your phone.</p>
+      </section>
+    </main>
+    <nav class="bottom-nav" aria-label="Main navigation">
+      <button class="nav-item selected" data-tab="dashboard"><span>⌂</span>Today</button><button class="nav-item" data-tab="track"><span>⌖</span>Track</button><button class="nav-item" data-tab="roadmap"><span>▤</span>Roadmap</button><button class="nav-item" data-tab="guru"><span>✦</span>GURU</button><button class="nav-item" data-tab="profile"><span>◉</span>Profile</button>
+    </nav>
+    <div id="toast" role="status" aria-live="polite"></div>
+  </div>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script src="./app.js"></script>
+</body>
+</html>
