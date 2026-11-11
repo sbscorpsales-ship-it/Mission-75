@@ -221,7 +221,8 @@ struct ContentView: View {
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 20) {
+            ScrollView {
+                VStack(spacing: 20) {
                 Text("GATIVX").font(.system(size: 34, weight: .black, design: .rounded))
                 Text("From Goals to Xcellence").font(.subheadline).foregroundStyle(.secondary)
 
@@ -354,7 +355,12 @@ struct ContentView: View {
                         Button("Sign in and sync") {
                             Task { await cloud.signIn(email: email, password: password) }
                         }
-                        .buttonStyle(.bordered)
+                        .buttonStyle(.borderedProminent)
+                        .disabled(email.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || password.isEmpty)
+                        Text(cloud.status)
+                            .font(.caption)
+                            .foregroundStyle(cloud.status.lowercased().contains("failed") || cloud.status.lowercased().contains("pending") ? .orange : .secondary)
+                            .multilineTextAlignment(.center)
                     }
                 } else {
                     Label("Cloud account connected", systemImage: "checkmark.icloud")
@@ -376,6 +382,7 @@ struct ContentView: View {
                 Spacer()
                 Text("Fitness guidance, not medical diagnosis or treatment.")
                     .font(.caption2).foregroundStyle(.secondary)
+                }
             }
             .padding()
             .navigationBarTitleDisplayMode(.inline)
