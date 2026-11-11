@@ -241,9 +241,10 @@ struct ContentView: View {
                         Text("steps this session").font(.subheadline).foregroundStyle(.secondary)
                     }
                     Text(sessionStatus).font(.caption).foregroundStyle(.secondary)
-                    Label(autoWalk.status, systemImage: "figure.walk.motion")
+                    Label(autoWalk.status, systemImage: "figure.walk")
                         .font(.caption2).foregroundStyle(.secondary)
-                    Button("Enable / resume automatic walk detection") {
+                    Button("Enable automatic walks + background GPS") {
+                        routeRecorder.requestBackgroundLocationAccess()
                         autoWalk.startMonitoring()
                     }
                     .font(.caption)
