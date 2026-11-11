@@ -1,7 +1,8 @@
 import SwiftUI
 import CoreMotion
+import CoreLocation
 
-private struct ActivitySessionRecord: Codable { let id: UUID; let activity: String; let startedAt: Date; let finishedAt: Date; let steps: Int?; let routePoints: [GATIVXRoutePoint]? }
+private struct ActivitySessionRecord: Codable, Identifiable { let id: UUID; let activity: String; let startedAt: Date; let finishedAt: Date; let steps: Int?; let routePoints: [GATIVXRoutePoint]?; let motionDistanceMeters: Double?; var gpsDistanceMeters: Double { guard let routePoints, routePoints.count > 1 else { return 0 }; return zip(routePoints, routePoints.dropFirst()).reduce(0.0) { total, pair in guard !pair.1.breakBefore else { return total }; let a = CLLocation(latitude: pair.0.latitude, longitude: pair.0.longitude); let b = CLLocation(latitude: pair.1.latitude, longitude: pair.1.longitude); return total + b.distance(from: a) } }; var durationText: String { let seconds = max(0, Int(finishedAt.timeIntervalSince(startedAt))); return String(format: "%d:%02d", seconds / 60, seconds % 60) } }
 
 struct ContentView: View {
     @Environment(\.scenePhase) private var scenePhase
@@ -14,6 +15,9 @@ struct ContentView: View {
     @State private var livePedometer = CMPedometer()
     @State private var selectedActivity = "Walking"
     @State private var sessionSteps: Int?
+    @State private var sessionMotionDistanceMeters: Double?
+    @State private var activityHistory: [ActivitySessionRecord] = []
+    @State private var historyStatus = ""
     @State private var sessionStarted: Date?
     @State private var sessionStatus = "Start a session to count steps."
     @State private var liveMotionSteps: Int?
@@ -53,6 +57,13 @@ struct ContentView: View {
                 }
             }
         }
+    }
+
+    private func loadActivityHistory() {
+        let key = "gativx.activitySessions.v1"
+        guard let data = UserDefaults.standard.data(forKey: key) else { historyStatus = "No completed activities saved yet."; return }
+        do { activityHistory = try JSONDecoder().decode([ActivitySessionRecord].self, from: data); historyStatus = "Loaded saved activities from this iPhone." }
+        catch { historyStatus = "Saved activity history could not be read. Existing data has been left untouched." }
     }
 
     private func syncCurrentMotionSnapshotToCloud() {
@@ -98,6 +109,7 @@ struct ContentView: View {
         let start = Date()
         sessionStarted = start
         sessionSteps = nil
+        sessionMotionDistanceMeters = nil
         // GPS recording is independent of the motion sensor. A device without
         // CMPedometer must still be able to record and save a complete route.
         routeRecorder.start(activity: selectedActivity)
@@ -111,6 +123,7 @@ struct ContentView: View {
             DispatchQueue.main.async {
                 if let error { self.sessionStatus = "GPS is recording; motion step count unavailable: " + error.localizedDescription; return }
                 self.sessionSteps = data?.numberOfSteps.intValue
+                self.sessionMotionDistanceMeters = data?.distance?.doubleValue
             }
         }
     }
@@ -122,7 +135,7 @@ struct ContentView: View {
         routeRecorder.stop()
         let routePoints = routeRecorder.points
         // Keep route persistence independent of the optional pedometer result.
-        let saveRecord: (Int?) -> Void = { queriedSteps in
+        let saveRecord: (Int?, Double?) -> Void = { queriedSteps, queriedDistance in
             DispatchQueue.main.async {
                 let finalSteps = queriedSteps ?? self.sessionSteps
                 guard finalSteps != nil || !routePoints.isEmpty else {
@@ -132,7 +145,8 @@ struct ContentView: View {
                     self.sessionStarted = nil
                     return
                 }
-                let record = ActivitySessionRecord(id: UUID(), activity: activity, startedAt: start, finishedAt: finishedAt, steps: finalSteps, routePoints: routePoints)
+                let finalDistance = queriedDistance ?? self.sessionMotionDistanceMeters
+                let record = ActivitySessionRecord(id: UUID(), activity: activity, startedAt: start, finishedAt: finishedAt, steps: finalSteps, routePoints: routePoints, motionDistanceMeters: finalDistance)
                 let storageKey = "gativx.activitySessions.v1"
                 let existingData = UserDefaults.standard.data(forKey: storageKey)
                 var history: [ActivitySessionRecord]
@@ -148,6 +162,8 @@ struct ContentView: View {
                 do {
                     let encodedHistory = try JSONEncoder().encode(history)
                     UserDefaults.standard.set(encodedHistory, forKey: storageKey)
+                    self.activityHistory = history
+                    self.historyStatus = "Saved on this iPhone · \(history.count) activities"
                     guard UserDefaults.standard.data(forKey: storageKey) != nil else {
                         throw NSError(domain: "GATIVXActivityStorage", code: 1, userInfo: [NSLocalizedDescriptionKey: "Local activity history could not be verified after saving."])
                     }
@@ -156,7 +172,7 @@ struct ContentView: View {
                     self.routeRecorder.clearDraft()
                     self.sessionSteps = finalSteps
                     let stepSummary = finalSteps.map { $0.formatted() + " steps" } ?? "step count unavailable"
-                    let routeSummary = routePoints.isEmpty ? "no GPS route points" : "GPS route saved"
+                    let routeSummary = routePoints.isEmpty ? "GPS route unavailable (0 points)" : "GPS route saved · " + String(format: "%.2f km", record.gpsDistanceMeters / 1000)
                     self.sessionStatus = activity + " saved · " + stepSummary + " · " + routeSummary
                     self.sessionStarted = nil
                     self.syncSavedActivitySessions()
@@ -170,10 +186,10 @@ struct ContentView: View {
         // motion samples are included even if the last callback was delayed.
         if CMPedometer.isStepCountingAvailable() {
             pedometer.queryPedometerData(from: start, to: finishedAt) { data, _ in
-                saveRecord(data?.numberOfSteps.intValue)
+                saveRecord(data?.numberOfSteps.intValue, data?.distance?.doubleValue)
             }
         } else {
-            saveRecord(nil)
+            saveRecord(nil, nil)
         }
     }
 
@@ -220,7 +236,7 @@ struct ContentView: View {
                     }
                     .font(.caption)
                     if let meters = liveMotionDistanceMeters {
-                        Text("Motion distance · \(String(format: "%.2f", meters / 1000)) km")
+                        Text("Today's iPhone motion distance · \(String(format: "%.2f", meters / 1000)) km")
                             .font(.caption2).foregroundStyle(.secondary)
                     }
                 }
@@ -237,7 +253,7 @@ struct ContentView: View {
                         Text("steps this session").font(.subheadline).foregroundStyle(.secondary)
                     }
                     Text(sessionStatus).font(.caption).foregroundStyle(.secondary)
-                    Text("GPS route distance · " + String(format: "%.2f", routeRecorder.routeDistanceMeters / 1000) + " km · " + routeRecorder.points.count.formatted() + " GPS points").font(.caption2).foregroundStyle(.secondary)
+                    Text("This session · GPS distance · " + String(format: "%.2f", routeRecorder.routeDistanceMeters / 1000) + " km · " + routeRecorder.points.count.formatted() + " GPS points").font(.caption2).foregroundStyle(.secondary)
                     if routeRecorder.authorization == .authorizedWhenInUse {
                         Button("Enable background GPS (Always location)") {
                             routeRecorder.requestBackgroundLocationAccess()
@@ -275,6 +291,26 @@ struct ContentView: View {
                         .font(.caption2).foregroundStyle(.secondary)
                 }.padding().frame(maxWidth: .infinity, alignment: .leading)
                  .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 20))
+
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("RECENT ACTIVITIES").font(.caption.weight(.bold)).foregroundStyle(.secondary)
+                    if activityHistory.isEmpty {
+                        Text(historyStatus.isEmpty ? "Completed walks will appear here with steps, GPS distance and duration." : historyStatus).font(.caption).foregroundStyle(.secondary)
+                    } else {
+                        ForEach(activityHistory.prefix(10)) { item in
+                            VStack(alignment: .leading, spacing: 4) {
+                                HStack { Text(item.activity).fontWeight(.semibold); Spacer(); Text(item.startedAt.formatted(date: .abbreviated, time: .shortened)).font(.caption2).foregroundStyle(.secondary) }
+                                HStack(spacing: 12) {
+                                    Label(item.steps.map { $0.formatted() } ?? "—", systemImage: "figure.walk")
+                                    Label(String(format: "%.2f km", item.gpsDistanceMeters / 1000), systemImage: "location")
+                                    Label(item.durationText, systemImage: "clock")
+                                }.font(.caption).foregroundStyle(.secondary)
+                                Text("GPS points: \((item.routePoints ?? []).count)" + (item.motionDistanceMeters.map { " · Motion: " + String(format: "%.2f km", $0 / 1000) } ?? "")).font(.caption2).foregroundStyle(.secondary)
+                            }.padding(.vertical, 6)
+                            Divider()
+                        }
+                    }
+                }.padding().frame(maxWidth: .infinity, alignment: .leading).background(.thinMaterial, in: RoundedRectangle(cornerRadius: 20))
 
                 Button("Connect Apple Health") {
                     health.requestReadAccessAndStart()
@@ -346,6 +382,7 @@ struct ContentView: View {
                 health.resumeIfPreviouslyConnected()
                 health.refreshOnForeground()
                 startLiveMotionMonitor()
+                loadActivityHistory()
                 // A Keychain-restored session is already signed in before onChange fires.
                 if cloud.isSignedIn { syncSavedActivitySessions() }
                 if let recoveredStart = routeRecorder.recoveredStartedAt {
