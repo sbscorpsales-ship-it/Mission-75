@@ -56,10 +56,16 @@ jobs:
           cloud = Path("ios/GATIVX/Cloud/SupabaseRESTClient.swift").read_text()
           migration = Path("supabase/migrations/20261109113101_allow_gps_route_sync_without_step_count.sql").read_text()
           start_activity = view.split("private func startActivitySession()", 1)[1].split("private func finishActivitySession()", 1)[0]
+          daily_display = view.split("private var displayedDailySteps", 1)[1].split("private var displayedStepSource", 1)[0]
+          motion_monitor = view.split("private func startLiveMotionMonitor()", 1)[1].split("private func loadActivityHistory()", 1)[0]
           finish_activity = view.split("private func finishActivitySession()", 1)[1].split("/// Prefer HealthKit", 1)[0]
           auth_handler = gps.split("func locationManagerDidChangeAuthorization", 1)[1].split("func locationManager(", 1)[0]
 
           checks = {
+              "Native daily total falls back to the live iPhone pedometer": "health.todaySteps ?? liveMotionSteps" in daily_display,
+              "Core Motion authorization state is surfaced": "CMPedometer.authorizationStatus()" in motion_monitor and "Motion & Fitness access is denied" in motion_monitor,
+              "Core Motion sensor errors are not silently discarded": "iPhone pedometer error:" in motion_monitor,
+              "Core Motion live daily steps remain a separate sensor source": "self.liveMotionSteps = steps" in motion_monitor and "syncMotionDailySteps" in motion_monitor,
               "GPS activity starts even without pedometer": "routeRecorder.start(activity: selectedActivity)" in start_activity and start_activity.index("routeRecorder.start(activity: selectedActivity)") < start_activity.index("guard CMPedometer.isStepCountingAvailable()"),
               "GPS-only activity button remains enabled without pedometer": 'Button(selectedActivity == "Walking" ? "Start WalkOn" : "Start activity") { startActivitySession() }' in view and ".disabled(!CMPedometer.isStepCountingAvailable())" not in view,
               "GPS route is saved when pedometer is unavailable": "saveRecord(nil, nil)" in finish_activity or "saveRecord(nil,nil)" in finish_activity and "routePoints: routePoints" in finish_activity,
