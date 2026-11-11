@@ -14,7 +14,7 @@ if(!fs.existsSync("app-v2.html")||!shell.includes('id="gpsStart"'))fail("GATIVX 
 if(!entry.includes('id="vActiveEnergy"')||!entry.includes("active_energy_kcal"))fail("Apple Health active-energy dashboard sync missing");else pass("Measured Apple Health active-energy tile and cloud mapping present");
 if(shell.includes("mission75.logs.v1")||shell.includes("mission75.gps.sessions.v1")){
  const migration=shell.split("function migrateLegacyActivity(){")[1]?.split("migrateLegacyActivity();")[0]||"";
- if(!migration.includes("localStorage.getItem('mission75.logs.v1')")||!migration.includes("localStorage.getItem('mission75.gps.sessions.v1')")||(migration.includes("localStorage.setItem('mission75.")||migration.includes('localStorage.setItem("mission75.'))||!migration.includes("distanceMeters/1000"))fail("Legacy activity migration must read-only import logs and GPS walks without modifying source records");
+ if(!migration.includes("read('mission75.logs.v1'")||!migration.includes("read('mission75.gps.sessions.v1'")||(migration.includes("localStorage.setItem('mission75.")||migration.includes('localStorage.setItem("mission75.'))||!migration.includes("distanceMeters/1000"))fail("Legacy activity migration must read-only import logs and GPS walks without modifying source records");
  else pass("Legacy daily logs and GPS walks are imported read-only and preserved");
 }else fail("Safe legacy activity migration missing");
 if(shell.includes("gativx.goal.v1")||shell.includes("gativx.motionDaily.v1"))fail("New app must not overwrite legacy goal or motion namespaces");else pass("Legacy goal and motion namespaces remain untouched");
