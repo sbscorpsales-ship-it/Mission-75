@@ -177,7 +177,7 @@ struct ContentView: View {
         }
     }
 
-    /// The daily total must come only from HealthKit's all-source aggregate.
+    /// Prefer HealthKit's all-source aggregate as the only displayed daily total.
     /// CoreMotion remains a separate iPhone-only live preview and is never
     /// presented as a substitute for the member's complete daily total.
     private var displayedDailySteps: Int? {
