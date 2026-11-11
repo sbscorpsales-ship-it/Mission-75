@@ -87,7 +87,48 @@ body{background:#050605;color:var(--ink)}
 <script async src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 (()=>{'use strict';const KEY='gativx.v2.fresh.state';// Keep legacy Mission-75/GATIVX browser records and auth sessions untouched.
-const $=id=>document.getElementById(id);const date=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};const blank=()=>({goal:null,entries:{},walks:[]});const ACCOUNT_MIGRATED_KEY='gativx.v2.account-local-migrated';let stateStorageKey=KEY;try{if(localStorage.getItem(ACCOUNT_MIGRATED_KEY)==='1')stateStorageKey=KEY+'.device'}catch{};let state=blank();try{const saved=JSON.parse(localStorage.getItem(stateStorageKey)||'null');if(saved&&saved.version===2)state={...blank(),...saved}}catch{};let activeAccountId=null;const persist=()=>localStorage.setItem(stateStorageKey,JSON.stringify({...state,version:2}));const fmt=n=>Number(n||0).toLocaleString('en-IN');let watch=null,paused=false,points=[],distance=0,lastAcceptedFix=null,segmentBreak=true,walkStartedAt=null,pausedAt=null,pausedMilliseconds=0;
+const $=id=>document.getElementById(id);const date=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};const blank=()=>({goal:null,entries:{},walks:[]});const ACCOUNT_MIGRATED_KEY='gativx.v2.account-local-migrated';let stateStorageKey=KEY;try{if(localStorage.getItem(ACCOUNT_MIGRATED_KEY)==='1')stateStorageKey=KEY+'.device'}catch{};let state=blank();try{const saved=JSON.parse(localStorage.getItem(stateStorageKey)||'null');if(saved&&saved.version===2)state={...blank(),...saved}}catch{};let activeAccountId=null;const persist=()=>localStorage.setItem(stateStorageKey,JSON.stringify({...state,version:2}));
+const LEGACY_IMPORT_KEY='gativx.v2.legacy-activity-import.v1';
+function migrateLegacyActivity(){
+ let done=false;try{done=localStorage.getItem(LEGACY_IMPORT_KEY)==='1'}catch{}if(done)return;
+ const read=(key,fallback)=>{try{const value=JSON.parse(localStorage.getItem(key)||'null');return value??fallback}catch{return fallback}};
+ const legacyLogs=read('mission75.logs.v1',{});
+ const legacyWalks=read('mission75.gps.sessions.v1',[]);
+ let changed=false;
+ if(legacyLogs&&typeof legacyLogs==='object'&&!Array.isArray(legacyLogs)){
+  for(const [day,old] of Object.entries(legacyLogs)){
+   if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(day)||!old||typeof old!=='object')continue;
+   const next={...old};if(Number(next.steps)===36){delete next.steps;delete next.stepsSource;delete next.stepsUpdatedAt}
+   const prior=state.entries[day]||{};const merged={...next,...prior};
+   if(Object.keys(merged).length){state.entries[day]=merged;changed=true}
+  }
+ }
+ if(Array.isArray(legacyWalks)){
+  for(const old of legacyWalks){
+   if(!old||typeof old!=='object')continue;
+   const started=old.startedAt||old.started_at||null;
+   const startedDate=started?new Date(started):null;
+   if(!startedDate||!Number.isFinite(startedDate.getTime()))continue;
+   const distanceMeters=Number(old.distanceMeters??old.distance_m);
+   if(!Number.isFinite(distanceMeters)||distanceMeters<=0)continue;
+   const id=String(old.id||('legacy-'+startedDate.getTime()+'-'+Math.round(distanceMeters)));
+   const exists=state.walks.some(w=>w.id===id||(Math.abs(Date.parse(w.startedAt||'')-startedDate.getTime())<=5000&&Math.abs((Number(w.distance)||0)*1000-distanceMeters)<=15));
+   if(exists)continue;
+   const rawPoints=Array.isArray(old.points)?old.points:[];
+   const points=rawPoints.map(p=>({lat:Number(p.lat??p.latitude),lon:Number(p.lon??p.longitude),time:Number(p.time??p.timestamp),accuracy:Number(p.accuracy)||0})).filter(p=>Number.isFinite(p.lat)&&Number.isFinite(p.lon)&&Math.abs(p.lat)<=90&&Math.abs(p.lon)<=180);
+   const distance=Number((distanceMeters/1000).toFixed(3));
+   const finished=old.finishedAt||old.finished_at||null;
+   const durationSeconds=Math.max(0,Math.min(86400,Number(old.durationSeconds??old.duration_seconds)||0));
+   const day=startedDate.getFullYear()+'-'+String(startedDate.getMonth()+1).padStart(2,'0')+'-'+String(startedDate.getDate()).padStart(2,'0');
+   state.walks.push({id,date:day,distance,gpsStepsEstimate:Math.round(distanceMeters/0.73),steps:null,points,startedAt:startedDate.toISOString(),finishedAt:finished&&Number.isFinite(Date.parse(finished))?new Date(finished).toISOString():null,durationSeconds,importedFromLegacy:true});
+   changed=true;
+  }
+ }
+ if(changed)persist();
+ try{localStorage.setItem(LEGACY_IMPORT_KEY,'1')}catch{}
+}
+migrateLegacyActivity();
+const fmt=n=>Number(n||0).toLocaleString('en-IN');let watch=null,paused=false,points=[],distance=0,lastAcceptedFix=null,segmentBreak=true,walkStartedAt=null,pausedAt=null,pausedMilliseconds=0;
 function show(name){document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('active',p.id===name));document.querySelectorAll('[data-panel]').forEach(b=>b.classList.toggle('active',b.dataset.panel===name));if(name==='walk')renderWalk();if(name==='journey')renderJourney()}document.querySelectorAll('[data-panel]').forEach(b=>b.onclick=()=>show(b.dataset.panel));document.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>show(b.dataset.go));$('profile').onclick=()=>show('journey');
 $('dateLine').textContent=new Intl.DateTimeFormat('en-IN',{weekday:'long',month:'long',day:'numeric'}).format(new Date()).toUpperCase();$('todayDate').textContent=date();
 function gpsStepsForDay(day){return state.walks.filter(w=>w.date===day).reduce((sum,w)=>sum+Math.max(0,Math.round(Number(w.gpsStepsEstimate??((Number(w.distance)||0)*1000/0.73))||0)),0)}
