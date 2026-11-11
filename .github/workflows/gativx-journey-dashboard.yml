@@ -1,0 +1,25 @@
+name: GATIVX Journey Dashboard Checks
+on:
+  pull_request:
+    paths:
+      - 'legacy-runtime.html'
+      - 'scripts/check-journey-dashboard.mjs'
+      - '.github/workflows/gativx-journey-dashboard.yml'
+  push:
+    branches:
+      - main
+      - feat/integrated-member-journey-dashboard
+    paths:
+      - 'legacy-runtime.html'
+      - 'scripts/check-journey-dashboard.mjs'
+      - '.github/workflows/gativx-journey-dashboard.yml'
+jobs:
+  dashboard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Validate integrated member dashboard
+        run: node scripts/check-journey-dashboard.mjs
