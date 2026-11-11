@@ -95,10 +95,10 @@ struct ContentView: View {
             }
         }
     }
-    private func startActivitySession() {
+    private func startActivitySession(startedAt detectedStart: Date? = nil) {
         guard sessionStarted == nil else { return }
         autoWalk.markSessionStarted()
-        let start = Date()
+        let start = detectedStart ?? Date()
         sessionStarted = start
         sessionSteps = nil
         // GPS recording is independent of the motion sensor. A device without
@@ -340,10 +340,10 @@ struct ContentView: View {
             .padding()
             .navigationBarTitleDisplayMode(.inline)
             .onAppear {
-                autoWalk.onWalkDetected = {
+                autoWalk.onWalkDetected = { detectedStart in
                     guard sessionStarted == nil else { return }
                     selectedActivity = "Walking"
-                    startActivitySession()
+                    startActivitySession(startedAt: detectedStart)
                 }
                 autoWalk.onStationaryDetected = {
                     finishActivitySession()
