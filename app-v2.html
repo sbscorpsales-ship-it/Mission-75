@@ -212,10 +212,10 @@ async function cloudSync(){
   const remoteByDay={};
   (daily.data||[]).forEach(row=>{const day=String(row.log_date);if(!validDay(day))return;remoteByDay[day]={steps:row.steps==null?null:Number(row.steps),stepsSource:row.steps_source||null,stepsUpdatedAt:row.steps_updated_at||null,activeEnergyKcal:row.active_energy_kcal==null?null:Number(row.active_energy_kcal),activeEnergySource:row.active_energy_source||null,activeEnergyUpdatedAt:row.active_energy_updated_at||null,distance:row.walking_km==null?null:Number(row.walking_km),water:row.water_ml==null?null:Number(row.water_ml),protein:row.protein_g==null?null:Number(row.protein_g),weight:row.weight_kg==null?null:Number(row.weight_kg)}});
   Object.keys(remoteByDay).forEach(day=>{state.entries[day]=mergeCloudDaily(remoteByDay[day],state.entries[day]||{})});
-  const motionResult=await cloudClient.from('motion_daily_steps').select('log_date,steps,distance_m,measured_at').eq('user_id',syncAccountId).eq('log_date',date()).maybeSingle();
+  const motionResult=await cloudClient.from('motion_daily_steps').select('log_date,steps,distance_m,measured_at').eq('user_id',syncAccountId);
   if(!isCurrent())return;
   if(motionResult.error)throw motionResult.error;
-  if(motionResult.data)motionDaily[date()]={steps:Number(motionResult.data.steps)||0,distanceMeters:motionResult.data.distance_m==null?null:Number(motionResult.data.distance_m),measuredAt:motionResult.data.measured_at||null};else delete motionDaily[date()];
+  const todayMotion=(motionResult.data||[]).find(row=>String(row.log_date)===date());if(todayMotion)motionDaily[date()]={steps:Number(todayMotion.steps)||0,distanceMeters:todayMotion.distance_m==null?null:Number(todayMotion.distance_m),measuredAt:todayMotion.measured_at||null};else delete motionDaily[date()];
   persist();
   const rows=Object.keys(state.entries).filter(validDay).map(day=>cloudDailyRow(day,state.entries[day],syncAccountId));
   if(rows.length){const up=await cloudClient.from('daily_logs').upsert(rows,{onConflict:'user_id,log_date'});if(!isCurrent())return;if(up.error)throw up.error;}
@@ -267,7 +267,7 @@ function initCloud(){
  cloudClient.auth.onAuthStateChange((event,session)=>{activateCloudUser(session&&session.user||null);cloudUi();if(cloudUser&&event==='SIGNED_IN')setTimeout(cloudSync,0)});
 }
 initCloud();
-async function refreshPedometerFromCloud(){if(!cloudClient||!cloudUser)return;const userId=cloudUser.id;try{const r=await cloudClient.from('motion_daily_steps').select('log_date,steps,distance_m,measured_at').eq('user_id',userId).eq('log_date',date()).maybeSingle();if(r.error)throw r.error;if(!cloudUser||cloudUser.id!==userId)return;if(r.data)motionDaily[date()]={steps:Number(r.data.steps)||0,distanceMeters:r.data.distance_m==null?null:Number(r.data.distance_m),measuredAt:r.data.measured_at||null};else delete motionDaily[date()];render()}catch(error){console.warn('GATIVX pedometer refresh unavailable',error)}}
+async function refreshPedometerFromCloud(){if(!cloudClient||!cloudUser)return;const userId=cloudUser.id;try{const r=await cloudClient.from('motion_daily_steps').select('log_date,steps,distance_m,measured_at').eq('user_id',userId);if(r.error)throw r.error;if(!cloudUser||cloudUser.id!==userId)return;const todayMotion=(r.data||[]).find(row=>String(row.log_date)===date());if(todayMotion)motionDaily[date()]={steps:Number(todayMotion.steps)||0,distanceMeters:todayMotion.distance_m==null?null:Number(todayMotion.distance_m),measuredAt:todayMotion.measured_at||null};else delete motionDaily[date()];render()}catch(error){console.warn('GATIVX pedometer refresh unavailable',error)}}
 window.setInterval(()=>{if(!document.hidden)refreshPedometerFromCloud()},60000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshPedometerFromCloud()});
 const cloudScript=document.querySelector('script[src*="supabase-js"]');
