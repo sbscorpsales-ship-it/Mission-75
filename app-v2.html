@@ -151,6 +151,7 @@ function activateCloudUser(user){
    if(deviceSaved){try{const parsed=JSON.parse(deviceSaved);state=parsed&&parsed.version===2?{...blank(),...parsed}:blank()}catch{state=blank()}}
    else state=blank();
    cloudUser=null;
+   motionDaily={};
    persist();
    render();renderWalk();
   }else cloudUser=null;
@@ -158,6 +159,7 @@ function activateCloudUser(user){
  }
  if(activeAccountId===user.id){cloudUser=user;return}
  if(activeAccountId)persist();
+ motionDaily={};
  const key=KEY+'.user.'+user.id;
  let saved=null;
  try{saved=localStorage.getItem(key)}catch{}
