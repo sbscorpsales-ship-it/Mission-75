@@ -8,6 +8,7 @@ struct ContentView: View {
     @StateObject private var health = HealthKitManager()
     @StateObject private var cloud = SupabaseRESTClient()
     @StateObject private var routeRecorder = GPSRouteRecorder()
+    @StateObject private var autoWalk = AutomaticWalkDetector()
     @State private var email = ""
     @State private var password = ""
     @State private var pedometer = CMPedometer()
@@ -95,6 +96,8 @@ struct ContentView: View {
         }
     }
     private func startActivitySession() {
+        guard sessionStarted == nil else { return }
+        autoWalk.markSessionStarted()
         let start = Date()
         sessionStarted = start
         sessionSteps = nil
@@ -116,6 +119,7 @@ struct ContentView: View {
     }
     private func finishActivitySession() {
         guard let start = sessionStarted else { return }
+        autoWalk.markSessionFinished()
         let finishedAt = Date()
         let activity = selectedActivity
         pedometer.stopUpdates()
@@ -237,6 +241,12 @@ struct ContentView: View {
                         Text("steps this session").font(.subheadline).foregroundStyle(.secondary)
                     }
                     Text(sessionStatus).font(.caption).foregroundStyle(.secondary)
+                    Label(autoWalk.status, systemImage: "figure.walk.motion")
+                        .font(.caption2).foregroundStyle(.secondary)
+                    Button("Enable / resume automatic walk detection") {
+                        autoWalk.startMonitoring()
+                    }
+                    .font(.caption)
                     Text("GPS route distance · " + String(format: "%.2f", routeRecorder.routeDistanceMeters / 1000) + " km · " + routeRecorder.points.count.formatted() + " GPS points").font(.caption2).foregroundStyle(.secondary)
                     if routeRecorder.authorization == .authorizedWhenInUse {
                         Button("Enable background GPS (Always location)") {
@@ -329,6 +339,15 @@ struct ContentView: View {
             .padding()
             .navigationBarTitleDisplayMode(.inline)
             .onAppear {
+                autoWalk.onWalkDetected = {
+                    guard sessionStarted == nil else { return }
+                    selectedActivity = "Walking"
+                    startActivitySession()
+                }
+                autoWalk.onStationaryDetected = {
+                    finishActivitySession()
+                }
+                autoWalk.startMonitoring()
                 health.onDailyTotal = { day, total in
                     guard cloud.isSignedIn else { return }
                     Task { await cloud.syncSteps(date: day, steps: total) }
@@ -363,6 +382,7 @@ struct ContentView: View {
             }
             .onChange(of: scenePhase) { _, phase in
                 if phase == .active {
+                    autoWalk.startMonitoring()
                     health.refreshOnForeground()
                     startLiveMotionMonitor()
                     if cloud.isSignedIn {
