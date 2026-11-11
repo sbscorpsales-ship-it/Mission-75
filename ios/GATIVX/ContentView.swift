@@ -290,6 +290,12 @@ struct ContentView: View {
                 .buttonStyle(.bordered)
                 .disabled(!health.isAvailable || health.isRefreshing)
 
+                Text(health.statusMessage)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .accessibilityIdentifier("apple-health-status")
+
                 if !cloud.isSignedIn {
                     VStack(spacing: 10) {
                         Text("Sign in with your existing GATIVX account")
