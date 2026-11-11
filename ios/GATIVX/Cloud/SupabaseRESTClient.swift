@@ -90,8 +90,9 @@ final class SupabaseRESTClient: ObservableObject {
     /// Store the iPhone-only CoreMotion total separately from Apple's
     /// aggregated HealthKit total. These two sources must never overwrite or
     /// be added together in daily_logs.
-    func syncMotionDailySteps(date: Date, steps: Int, distanceMeters: Double?, retryAfterRefresh: Bool = true) async {
-        guard steps >= 0 else { return }
+    @discardableResult
+    func syncMotionDailySteps(date: Date, steps: Int, distanceMeters: Double?, retryAfterRefresh: Bool = true) async -> Bool {
+        guard steps >= 0 else { return false }
         do {
             guard let token = accessToken else { throw ClientError.notSignedIn }
             var request = URLRequest(url: baseURL.appendingPathComponent("rest/v1/rpc/sync_motion_daily_steps"))
@@ -117,13 +118,14 @@ final class SupabaseRESTClient: ObservableObject {
             guard let http = response as? HTTPURLResponse else { throw ClientError.invalidResponse }
             if http.statusCode == 401 && retryAfterRefresh {
                 try await refreshSession()
-                await syncMotionDailySteps(date: date, steps: steps, distanceMeters: distanceMeters, retryAfterRefresh: false)
-                return
+                return await syncMotionDailySteps(date: date, steps: steps, distanceMeters: distanceMeters, retryAfterRefresh: false)
             }
             guard (200..<300).contains(http.statusCode) else { throw Self.serverError(data) }
             status = "iPhone motion steps synced separately from Apple Health."
+            return true
         } catch {
             status = "Motion sync pending: " + error.localizedDescription
+            return false
         }
     }
 

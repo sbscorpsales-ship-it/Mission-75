@@ -62,9 +62,19 @@ struct ContentView: View {
                 let enoughTime = self.lastMotionCloudSyncAt.map { now.timeIntervalSince($0) >= 60 } ?? true
                 let meaningfulChange = self.lastMotionCloudSteps < 0 || steps - self.lastMotionCloudSteps >= 100
                 if self.cloud.isSignedIn && (enoughTime || meaningfulChange) {
-                    self.lastMotionCloudSyncAt = now
-                    self.lastMotionCloudSteps = steps
-                    Task { await self.cloud.syncMotionDailySteps(date: now, steps: steps, distanceMeters: distance) }
+                    Task {
+                        let synced = await self.cloud.syncMotionDailySteps(date: now, steps: steps, distanceMeters: distance)
+                        if synced {
+                            self.lastMotionCloudSyncAt = now
+                            self.lastMotionCloudSteps = steps
+                        } else {
+                            // Leave the last-success markers unchanged so the next
+                            // sensor update retries instead of treating a failed
+                            // upload as completed.
+                            self.lastMotionCloudSyncAt = nil
+                            self.lastMotionCloudSteps = -1
+                        }
+                    }
                 }
             }
         }
@@ -78,12 +88,21 @@ struct ContentView: View {
 
     private func syncCurrentMotionSnapshotToCloud() {
         guard cloud.isSignedIn, let steps = liveMotionSteps else { return }
+        let snapshotDate = Date()
+        let distance = liveMotionDistanceMeters
         Task {
-            await cloud.syncMotionDailySteps(
-                date: Date(),
+            let synced = await cloud.syncMotionDailySteps(
+                date: snapshotDate,
                 steps: steps,
-                distanceMeters: liveMotionDistanceMeters
+                distanceMeters: distance
             )
+            if synced {
+                lastMotionCloudSyncAt = snapshotDate
+                lastMotionCloudSteps = steps
+            } else {
+                lastMotionCloudSyncAt = nil
+                lastMotionCloudSteps = -1
+            }
         }
     }
 
