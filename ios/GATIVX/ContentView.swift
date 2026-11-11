@@ -177,16 +177,17 @@ struct ContentView: View {
         }
     }
 
-    /// Prefer HealthKit's deduplicated all-source total. Use the iPhone-only
-    /// CoreMotion total only when HealthKit has no value; never add the sources.
+    /// Prefer HealthKit's all-source aggregate as the only displayed daily total.
+    /// CoreMotion remains a separate iPhone-only live preview and is never
+    /// presented as a substitute for the member's complete daily total.
     private var displayedDailySteps: Int? {
-        health.todaySteps ?? liveMotionSteps
+        health.todaySteps
     }
 
     private var displayedStepSource: String {
-        if health.todaySteps != nil { return "Apple Health · combined supported sources" }
-        if liveMotionSteps != nil { return "iPhone motion · GATIVX fallback" }
-        return "Waiting for step data"
+        if health.todaySteps != nil { return "Apple Health · combined available sources" }
+        if !health.isAvailable { return "Apple Health is unavailable on this iPhone" }
+        return "Connect Apple Health to show your measured daily total"
     }
 
     private var stepProgress: Double {
@@ -209,7 +210,7 @@ struct ContentView: View {
                     ProgressView(value: stepProgress).tint(.yellow)
                     Text("Active energy: " + (health.todayActiveEnergyKcal.map { "\($0) kcal" } ?? "—") + " · Apple Health measured active calories, not total calories.")
                         .font(.caption).foregroundStyle(.secondary)
-                    Text("GATIVX shows Apple Health when available; otherwise it shows the separate iPhone motion total. Sources are never added together.")
+                    Text("The daily total comes only from Apple Health. The iPhone motion reading below is a separate live preview and is not substituted for the all-source daily total.")
                         .font(.caption2).foregroundStyle(.secondary).multilineTextAlignment(.center)
                     HStack {
                         Label("Live iPhone motion", systemImage: "figure.walk")
