@@ -22,43 +22,53 @@ struct ContentView: View {
     @State private var sessionStatus = "Start a session to count steps."
     @State private var liveMotionSteps: Int?
     @State private var liveMotionDistanceMeters: Double?
+    @State private var motionStatus = "Checking iPhone pedometer…"
     @State private var lastMotionCloudSyncAt: Date?
     @State private var lastMotionCloudSteps: Int = -1
 
     /// Foreground live sensor feed. This is shown separately from HealthKit's
     /// deduplicated all-source daily total; never add the two together.
     private func startLiveMotionMonitor() {
-        guard CMPedometer.isStepCountingAvailable() else { return }
+        guard CMPedometer.isStepCountingAvailable() else {
+            motionStatus = "This iPhone does not report step counting through Core Motion."
+            return
+        }
+        switch CMPedometer.authorizationStatus() {
+        case .denied:
+            motionStatus = "Motion & Fitness access is denied. Enable it for GATIVX in iPhone Settings."
+        case .restricted:
+            motionStatus = "Motion & Fitness access is restricted on this iPhone."
+        default:
+            motionStatus = "Requesting iPhone pedometer readings…"
+        }
         let start = Calendar.current.startOfDay(for: Date())
         livePedometer.stopUpdates()
         livePedometer.startUpdates(from: start) { data, error in
             DispatchQueue.main.async {
-                guard error == nil, let data else { return }
+                if let error {
+                    self.motionStatus = "iPhone pedometer error: " + error.localizedDescription
+                    return
+                }
+                guard let data else {
+                    self.motionStatus = "Waiting for the iPhone pedometer to return today's steps."
+                    return
+                }
                 let steps = data.numberOfSteps.intValue
                 let distance = data.distance?.doubleValue
                 self.liveMotionSteps = steps
                 self.liveMotionDistanceMeters = distance
-
-                // Persist a separate iPhone-only observation. Throttle writes
-                // to avoid sending every sensor callback to Supabase.
+                self.motionStatus = "iPhone pedometer · updated " + Date().formatted(date: .omitted, time: .shortened)
                 let now = Date()
                 let enoughTime = self.lastMotionCloudSyncAt.map { now.timeIntervalSince($0) >= 60 } ?? true
                 let meaningfulChange = self.lastMotionCloudSteps < 0 || steps - self.lastMotionCloudSteps >= 100
                 if self.cloud.isSignedIn && (enoughTime || meaningfulChange) {
                     self.lastMotionCloudSyncAt = now
                     self.lastMotionCloudSteps = steps
-                    Task {
-                        await self.cloud.syncMotionDailySteps(
-                            date: now,
-                            steps: steps,
-                            distanceMeters: distance
-                        )
-                    }
+                    Task { await self.cloud.syncMotionDailySteps(date: now, steps: steps, distanceMeters: distance) }
                 }
             }
         }
     }
-
     private func loadActivityHistory() {
         let key = "gativx.activitySessions.v1"
         guard let data = UserDefaults.standard.data(forKey: key) else { historyStatus = "No completed activities saved yet."; return }
@@ -196,14 +206,12 @@ struct ContentView: View {
     /// Prefer HealthKit's all-source aggregate as the only displayed daily total.
     /// CoreMotion remains a separate iPhone-only live preview and is never
     /// presented as a substitute for the member's complete daily total.
-    private var displayedDailySteps: Int? {
-        health.todaySteps
-    }
+    private var displayedDailySteps: Int? { health.todaySteps ?? liveMotionSteps }
 
     private var displayedStepSource: String {
         if health.todaySteps != nil { return "Apple Health · combined available sources" }
-        if !health.isAvailable { return "Apple Health is unavailable on this iPhone" }
-        return "Connect Apple Health to show your measured daily total"
+        if let liveMotionSteps { return "iPhone pedometer · since midnight · " + liveMotionSteps.formatted() + " steps" }
+        return motionStatus
     }
 
     private var stepProgress: Double {
@@ -235,6 +243,7 @@ struct ContentView: View {
                             .monospacedDigit().fontWeight(.semibold)
                     }
                     .font(.caption)
+                    Text(motionStatus).font(.caption2).foregroundStyle(.secondary)
                     if let meters = liveMotionDistanceMeters {
                         Text("Today's iPhone motion distance · \(String(format: "%.2f", meters / 1000)) km")
                             .font(.caption2).foregroundStyle(.secondary)
