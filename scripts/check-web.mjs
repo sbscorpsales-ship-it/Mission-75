@@ -12,7 +12,12 @@ if(!fs.existsSync("apple-touch-icon.png")||!shell.includes('rel="apple-touch-ico
 if(!entry.includes('id="brandIntro"')||!entry.includes('id="skipBrandIntro"')||!entry.includes("From Goals to Xcellence")||!entry.includes('window.location.replace("./app-v2.html")'))fail("Original approved GATIVX intro or new summary-home route missing");else pass("Original GATIVX intro routes into the new summary home");
 if(!fs.existsSync("app-v2.html")||!shell.includes('id="gpsStart"'))fail("GATIVX v2 GPS beta route missing");else pass("GATIVX v2 GPS beta remains available as a separate page");
 if(!entry.includes('id="vActiveEnergy"')||!entry.includes("active_energy_kcal"))fail("Apple Health active-energy dashboard sync missing");else pass("Measured Apple Health active-energy tile and cloud mapping present");
-if(shell.includes("mission75.")||shell.includes("gativx.goal.v1")||shell.includes("gativx.motionDaily.v1"))fail("New app reads or writes legacy data keys");else pass("No legacy data keys are read or written by the new app");
+if(shell.includes("mission75.logs.v1")||shell.includes("mission75.gps.sessions.v1")){
+ const migration=shell.split("function migrateLegacyActivity(){")[1]?.split("migrateLegacyActivity();")[0]||"";
+ if(!migration.includes("localStorage.getItem('mission75.logs.v1')")||!migration.includes("localStorage.getItem('mission75.gps.sessions.v1')")||/localStorage\\.setItem\\(['"]mission75\\./.test(migration)||!migration.includes("distanceMeters/1000"))fail("Legacy activity migration must read-only import logs and GPS walks without modifying source records");
+ else pass("Legacy daily logs and GPS walks are imported read-only and preserved");
+}else fail("Safe legacy activity migration missing");
+if(shell.includes("gativx.goal.v1")||shell.includes("gativx.motionDaily.v1"))fail("New app must not overwrite legacy goal or motion namespaces");else pass("Legacy goal and motion namespaces remain untouched");
 if(!shell.includes('href="./legacy-runtime.html"'))fail("Existing account and saved-record access link missing");else pass("Existing account and saved-record access link present");
 if(!shell.includes("gativx.v2.fresh.state"))fail("Fresh v2 data namespace missing");else pass("Isolated fresh v2 data store present");
 if(!shell.includes('id="cloudAccount"')||!shell.includes("auth.signInWithPassword")||!shell.includes("daily_logs")||!shell.includes("walk_sessions"))fail("GATIVX v2 account login or cloud sync integration missing");else pass("GATIVX v2 account login, daily journal and GPS cloud sync present");
