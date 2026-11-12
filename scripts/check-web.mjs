@@ -10,7 +10,7 @@ if(manifest.short_name!=="GATIVX"||manifest.display!=="standalone")fail("Standal
 for(const icon of manifest.icons||[]){const p=icon.src.split(/[?#]/,1)[0].replace(/^\.\//,"");if(!fs.existsSync(p))fail("Manifest icon missing: "+icon.src)}
 if(!fs.existsSync("apple-touch-icon.png")||!shell.includes('rel="apple-touch-icon"'))fail("iPhone icon missing");else pass("iPhone Home Screen icon linked");
 if(!entry.includes('<link rel="canonical" href="./app-v2.html">')||!entry.includes('http-equiv="refresh" content="0;url=./app-v2.html"')||!entry.includes('window.location.replace("./app-v2.html")')||!entry.includes('href="./legacy-runtime.html"')||!fs.existsSync("app-v2.html")||!fs.existsSync("legacy-runtime.html"))fail("Published GATIVX entry must open the tested v2 application and retain a legacy-dashboard fallback");else pass("Published GATIVX entry opens tested v2 and preserves legacy-dashboard access");
-if(!fs.existsSync("app-v2.html")||!shell.includes('id="gpsStart"'))fail("GATIVX v2 GPS beta route missing");else pass("GATIVX v2 GPS beta remains available as a separate page");
+if(!fs.existsSync("app-v2.html")||!shell.includes('id="gpsStart"'))fail("GATIVX v2 GPS tracker missing");else pass("GATIVX v2 GPS tracker is present in the published application");
 if(!shell.includes('id="vActiveEnergy"')||!shell.includes("active_energy_kcal"))fail("Apple Health active-energy dashboard sync missing from the v2 application");else pass("Measured Apple Health active-energy tile and cloud mapping present in the v2 application");
 if(shell.includes("mission75.logs.v1")||shell.includes("mission75.gps.sessions.v1")){
  const migration=shell.split("function migrateLegacyActivity(){")[1]?.split("migrateLegacyActivity();")[0]||"";
