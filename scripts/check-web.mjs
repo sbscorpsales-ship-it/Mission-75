@@ -9,7 +9,7 @@ const manifest=JSON.parse(fs.readFileSync("manifest.webmanifest","utf8"));
 if(manifest.short_name!=="GATIVX"||manifest.display!=="standalone")fail("Standalone manifest invalid");else pass("Standalone manifest valid");
 for(const icon of manifest.icons||[]){const p=icon.src.split(/[?#]/,1)[0].replace(/^\.\//,"");if(!fs.existsSync(p))fail("Manifest icon missing: "+icon.src)}
 if(!fs.existsSync("apple-touch-icon.png")||!shell.includes('rel="apple-touch-icon"'))fail("iPhone icon missing");else pass("iPhone Home Screen icon linked");
-if(!entry.includes('<link rel="canonical" href="./legacy-runtime.html">')||!entry.includes('http-equiv="refresh" content="0;url=./legacy-runtime.html"')||!entry.includes('window.location.replace("./legacy-runtime.html")')||!fs.existsSync("legacy-runtime.html"))fail("Published GATIVX entry must preserve the existing member dashboard and provide a working fallback");else pass("Published GATIVX entry safely preserves the existing member dashboard");
+if(!entry.includes('<link rel="canonical" href="./app-v2.html">')||!entry.includes('http-equiv="refresh" content="0;url=./app-v2.html"')||!entry.includes('window.location.replace("./app-v2.html")')||!entry.includes('href="./legacy-runtime.html"')||!fs.existsSync("app-v2.html")||!fs.existsSync("legacy-runtime.html"))fail("Published GATIVX entry must open the tested v2 application and retain a legacy-dashboard fallback");else pass("Published GATIVX entry opens tested v2 and preserves legacy-dashboard access");
 if(!fs.existsSync("app-v2.html")||!shell.includes('id="gpsStart"'))fail("GATIVX v2 GPS beta route missing");else pass("GATIVX v2 GPS beta remains available as a separate page");
 if(!shell.includes('id="vActiveEnergy"')||!shell.includes("active_energy_kcal"))fail("Apple Health active-energy dashboard sync missing from the v2 application");else pass("Measured Apple Health active-energy tile and cloud mapping present in the v2 application");
 if(shell.includes("mission75.logs.v1")||shell.includes("mission75.gps.sessions.v1")){
@@ -40,7 +40,7 @@ if(scripts.length&&!failed)pass("V2 JavaScript syntax valid");
 for(const id of ["home","journey","record","walk","coach"])if(!shell.includes('id="'+id+'"'))fail("Missing panel "+id);
 if((shell.match(/data-panel=/g)||[]).length<5)fail("Five navigation tabs missing");else pass("Five navigation tabs present");
 for(const id of ["gpsStart","gpsPause","gpsFinish","saveEntry","saveGoal"])if(!shell.includes('id="'+id+'"'))fail("New standalone action missing: "+id);else pass("Standalone action present: "+id);
-if(!fs.readFileSync("sw.js","utf8").includes("./apple-touch-icon.png"))fail("Service worker icon cache missing");else pass("Service worker icon cache valid");
+const worker=fs.readFileSync("sw.js","utf8");if(!worker.includes("./apple-touch-icon.png")||!worker.includes("./app-v2.html")||!worker.includes("./apple-health-shortcut.html"))fail("Service worker must precache GATIVX v2, Apple Health guide and Home Screen icon");else pass("Service worker precaches GATIVX v2, Apple Health guide and Home Screen icon");
 
 const gpsFinishHandler=shell.split("$('gpsFinish').onclick=()=>{")[1]?.split("importAppleHealthShortcut()")[0]||"";
 if(!gpsFinishHandler.includes("if(finishButton.disabled)return")||!gpsFinishHandler.includes("navigator.geolocation.clearWatch(watch)")||!gpsFinishHandler.includes("points.map(p=>({...p}))"))fail("GPS Finish must prevent duplicate taps, stop the GPS watch and snapshot the route");else pass("GPS Finish stops tracking and captures a stable route snapshot");
