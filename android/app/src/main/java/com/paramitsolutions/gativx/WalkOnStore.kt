@@ -87,9 +87,11 @@ internal object WalkOnStore {
     }
 
     fun clearActive(context: Context) {
+        // Commit synchronously so a completed route is not orphaned by an
+        // asynchronous draft deletion racing application termination.
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
             .remove(ACTIVE_KEY)
-            .apply()
+            .commit()
     }
 
     fun finishActive(
@@ -114,8 +116,12 @@ internal object WalkOnStore {
                     return null
                 }
             history.add(0, finished)
-            writeEncrypted(context, COMPLETED_KEY, encodeSessions(history.take(100)))
-            setStatus(context, "WalkOn route saved on this device. Cloud backup is pending.")
+            val encodedHistory = encodeSessions(history.take(100))
+            if (!writeEncrypted(context, COMPLETED_KEY, encodedHistory)) {
+                setStatus(context, "WalkOn could not verify the completed route history write. Your active GPS draft is preserved; do not clear app data.")
+                return null
+            }
+            setStatus(context, "WalkOn route saved and verified on this device. Cloud backup is pending.")
         } else {
             setStatus(context, "No reliable GPS points were recorded. No route was saved.")
         }
@@ -152,15 +158,21 @@ internal object WalkOnStore {
         }
     }
 
-    private fun writeEncrypted(context: Context, key: String, plain: String) {
-        val cipher = Cipher.getInstance("AES/GCM/NoPadding")
-        cipher.init(Cipher.ENCRYPT_MODE, getOrCreateKey())
-        val encrypted = cipher.doFinal(plain.toByteArray(Charsets.UTF_8))
-        val packed = Base64.encodeToString(cipher.iv, Base64.NO_WRAP) + ":" +
-            Base64.encodeToString(encrypted, Base64.NO_WRAP)
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
-            .putString(key, packed)
-            .apply()
+    private fun writeEncrypted(context: Context, key: String, plain: String): Boolean {
+        return try {
+            val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+            cipher.init(Cipher.ENCRYPT_MODE, getOrCreateKey())
+            val encrypted = cipher.doFinal(plain.toByteArray(Charsets.UTF_8))
+            val packed = Base64.encodeToString(cipher.iv, Base64.NO_WRAP) + ":" +
+                Base64.encodeToString(encrypted, Base64.NO_WRAP)
+            val committed = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+                .putString(key, packed)
+                .commit()
+            committed && readEncrypted(context, key) == plain
+        } catch (error: Exception) {
+            setStatus(context, "Encrypted WalkOn data could not be saved and verified: " + (error.message ?: "storage error") + ". The active route draft has been retained.")
+            false
+        }
     }
 
     private fun readEncrypted(context: Context, key: String): String? {
