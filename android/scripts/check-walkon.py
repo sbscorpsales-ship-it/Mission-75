@@ -62,6 +62,16 @@ checks = {
         "points.isNotEmpty() -> \"WalkOn could not verify the completed route history write" in service
         and "Your active GPS draft has been retained" in service
     ),
+    "GPS recording starts only after the initial encrypted draft is verified": (
+        "val initialDraftSaved = WalkOnStore.saveActive(" in service
+        and "if (!initialDraftSaved)" in service
+        and "GPS was not started, so no route can be lost" in service
+    ),
+    "ongoing GPS draft writes detect failed encrypted persistence": (
+        ".onSuccess { saved ->" in service
+        and "if (saved) lastPersistedPointCount = points.size" in service
+        and "encrypted draft storage could not be verified" in service
+    ),
     "route history is isolated by account": (
         "ownerUserId" in store
         and "pendingFor(context, currentSession.userId)" in activity
