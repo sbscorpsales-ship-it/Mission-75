@@ -35,12 +35,12 @@ final class SupabaseRESTClient: ObservableObject {
     private var refreshToken: String?
 
     init() {
-        pendingHealthSyncCount = loadHealthOutbox().count
         if let saved = readSession() {
             accessToken = saved.accessToken
             refreshToken = saved.refreshToken
             isSignedIn = accessToken != nil
         }
+        pendingHealthSyncCount = loadHealthOutbox().filter { $0.ownerID == currentUserID }.count
     }
 
 
@@ -79,7 +79,7 @@ final class SupabaseRESTClient: ObservableObject {
     private func saveHealthOutbox(_ items: [PendingHealthSync]) {
         if let data = try? JSONEncoder().encode(items) {
             UserDefaults.standard.set(data, forKey: healthOutboxKey)
-            pendingHealthSyncCount = items.count
+            pendingHealthSyncCount = items.filter { $0.ownerID == currentUserID }.count
         }
     }
 
