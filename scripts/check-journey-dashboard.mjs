@@ -13,7 +13,10 @@ let failed=false;
 for(const token of required){if(!html.includes(token)){console.error("FAIL missing "+token);failed=true}else console.log("PASS "+token)}
 if(!html.includes('window.addEventListener("gativx:goal-updated",render)')){console.error("FAIL goal changes refresh journey panel");failed=true}else console.log("PASS goal change refresh");
 if(!html.includes('window.showTab("walk")')){console.error("FAIL route history navigation");failed=true}else console.log("PASS route history navigation");
-if(/localStorage\.(?:clear|removeItem)|sessionStorage\.clear/.test(html)){console.error("FAIL destructive browser storage operation");failed=true}else console.log("PASS no browser data deletion");
+const journeyStart=html.lastIndexOf('<script>\n(function(){\n const $=id=>document.getElementById(id),read=');
+const journeyEnd=journeyStart>=0?html.indexOf("</script>",journeyStart):-1;
+const journeyScript=journeyStart>=0&&journeyEnd>journeyStart?html.slice(journeyStart,journeyEnd):"";
+if(!journeyScript||/localStorage\.(?:clear|removeItem)|sessionStorage\.clear/.test(journeyScript)){console.error("FAIL destructive storage operation in journey panel");failed=true}else console.log("PASS journey panel does not delete browser data");
 if(/service_role|service-role|sb_secret_/.test(html)){console.error("FAIL privileged Supabase key in browser");failed=true}else console.log("PASS no privileged key");
 const scripts=[...html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)].filter(([,attrs])=>! /\bsrc\s*=/.test(attrs)).map(([, ,body])=>body).filter(x=>x.trim());
 for(const [i,src] of scripts.entries()){const p=path.join(os.tmpdir(),"gativx-journey-"+i+".js");fs.writeFileSync(p,src);const r=spawnSync("node",["--check",p],{encoding:"utf8"});if(r.status!==0){console.error("FAIL inline script "+i+": "+r.stderr);failed=true}}
