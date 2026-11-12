@@ -91,8 +91,12 @@ final class SupabaseRESTClient: ObservableObject {
         saveHealthOutbox(items)
     }
 
-    private func acknowledgeHealthSync(_ id: String) {
-        saveHealthOutbox(loadHealthOutbox().filter { $0.id != id })
+    private func acknowledgeHealthSync(_ item: PendingHealthSync) {
+        // An older in-flight request must not remove a newer reading for the
+        // same member/day that was queued while the request was awaiting I/O.
+        saveHealthOutbox(loadHealthOutbox().filter {
+            !($0.id == item.id && $0.queuedAt == item.queuedAt)
+        })
     }
 
     /// Retry durable daily sensor writes after sign-in, foregrounding, or a
@@ -103,7 +107,7 @@ final class SupabaseRESTClient: ObservableObject {
         let pending = loadHealthOutbox().filter { $0.ownerID == ownerID }
         for item in pending {
             guard let day = dateForLocalDay(item.localDay) else {
-                acknowledgeHealthSync(item.id)
+                acknowledgeHealthSync(item)
                 continue
             }
             switch item.kind {
@@ -149,7 +153,7 @@ final class SupabaseRESTClient: ObservableObject {
         enqueueHealthSync(item)
         do {
             try await performStepSync(date: date, steps: steps, retryAfterRefresh: true)
-            acknowledgeHealthSync(item.id)
+            acknowledgeHealthSync(item)
             status = "Apple Health steps synced to your GATIVX account."
         } catch {
             status = "Step sync pending: \(error.localizedDescription). Open the app later to retry."
@@ -185,7 +189,7 @@ final class SupabaseRESTClient: ObservableObject {
                 return
             }
             guard (200..<300).contains(http.statusCode) else { throw Self.serverError(data) }
-            acknowledgeHealthSync(item.id)
+            acknowledgeHealthSync(item)
             status = "Apple Health active calories synced to your GATIVX account."
         } catch {
             status = "Active calorie sync pending: " + error.localizedDescription + ". Open the app later to retry."
@@ -229,7 +233,7 @@ final class SupabaseRESTClient: ObservableObject {
                 return await syncMotionDailySteps(date: date, steps: steps, distanceMeters: distanceMeters, retryAfterRefresh: false)
             }
             guard (200..<300).contains(http.statusCode) else { throw Self.serverError(data) }
-            acknowledgeHealthSync(item.id)
+            acknowledgeHealthSync(item)
             status = "iPhone motion steps synced separately from Apple Health."
             return true
         } catch {
