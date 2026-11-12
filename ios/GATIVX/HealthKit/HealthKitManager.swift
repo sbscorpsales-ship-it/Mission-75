@@ -105,6 +105,7 @@ final class HealthKitManager: ObservableObject {
                     return
                 }
 
+                self.todaySteps = nil
                 var importedDays = 0
                 collection.enumerateStatistics(from: start, to: end) { statistics, _ in
                     guard let quantity = statistics.sumQuantity() else { return }
