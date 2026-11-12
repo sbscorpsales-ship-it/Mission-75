@@ -17,9 +17,10 @@ This directory is the native iPhone implementation track. It does not replace th
 2. Query up to 30 local calendar days with HKStatisticsCollectionQuery. Import only days with measured samples; never convert missing days into zero. Do not add individual samples manually; HealthKit performs source/device aggregation.
 3. Register an HKObserverQuery for step-count changes and request hourly background delivery.
 4. When HealthKit notifies the app, re-query the day's cumulative total and sync the aggregate to the signed-in user's daily record.
-5. Display the last successful sync time and a clear state when HealthKit access, sign-in, network, or background delivery is unavailable.
+5. Persist daily HealthKit and Core Motion writes in a member-scoped local retry queue before upload. Remove each item only after a successful server response, and only if the acknowledged version is still the latest queued value for that member/day.
+6. Retry queued measurements after sign-in and when the app returns to the foreground. Display the pending count for the active account only.
 
-Background delivery is best-effort and controlled by iOS. It is not a promise of second-by-second updates. The app refreshes on launch/foreground and after observer notifications. Background observer behaviour must be tested on a physical iPhone, not only the Simulator. Failed daily uploads are retried by a later HealthKit refresh; a general-purpose durable network outbox is still outstanding.
+Background delivery is best-effort and controlled by iOS. It is not a promise of second-by-second updates. The app refreshes on launch/foreground and after observer notifications. Background observer behaviour must be tested on a physical iPhone, not only the Simulator. A general-purpose outbox for route and activity-session uploads, plus network-aware retries, remains outstanding.
 
 ## Data compatibility and protection
 
