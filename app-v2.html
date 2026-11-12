@@ -89,6 +89,19 @@ body{background:#050605;color:var(--ink)}
 <script>
 (()=>{'use strict';const KEY='gativx.v2.fresh.state';// Keep legacy Mission-75/GATIVX browser records and auth sessions untouched.
 const $=id=>document.getElementById(id);const date=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};const blank=()=>({goal:null,entries:{},walks:[]});const ACCOUNT_MIGRATED_KEY='gativx.v2.account-local-migrated';let stateStorageKey=KEY;try{if(localStorage.getItem(ACCOUNT_MIGRATED_KEY)==='1')stateStorageKey=KEY+'.device'}catch{};let state=blank();try{const saved=JSON.parse(localStorage.getItem(stateStorageKey)||'null');if(saved&&saved.version===2)state={...blank(),...saved}}catch{};let activeAccountId=null;let motionDaily={};const persist=()=>localStorage.setItem(stateStorageKey,JSON.stringify({...state,version:2}));
+function expireStaleTodayShortcut(entry,day=date()){
+ if(!entry||entry.stepsSource!=='apple_health_shortcuts')return false;
+ const stamp=Date.parse(entry.stepsUpdatedAt||''),age=Date.now()-stamp;
+ if(day!==date()||!Number.isFinite(stamp)||age>15*60*1000||age<0){
+  delete entry.steps;delete entry.stepsSource;delete entry.stepsUpdatedAt;
+  if(entry.activeEnergySource==='apple_health_shortcuts'){delete entry.activeEnergyKcal;delete entry.activeEnergySource;delete entry.activeEnergyUpdatedAt}
+  return true;
+ }
+ return false;
+}
+let expiredShortcutOnLoad=false;
+for(const entry of Object.values(state.entries||{})){if(expireStaleTodayShortcut(entry))expiredShortcutOnLoad=true}
+if(expiredShortcutOnLoad)persist();
 const LEGACY_IMPORT_KEY='gativx.v2.legacy-activity-import.v1';
 function migrateLegacyActivity(){
  let done=false;try{done=localStorage.getItem(LEGACY_IMPORT_KEY)==='1'}catch{}if(done)return;
@@ -194,6 +207,11 @@ function cloudDailyRow(day,x,userId){
  return {user_id:userId,log_date:day,steps:bounded(x.steps,0,200000)==null?null:Math.round(Number(x.steps)),steps_source:x.stepsSource||null,steps_updated_at:x.stepsUpdatedAt||null,active_energy_kcal:bounded(x.activeEnergyKcal,0,2147483647)==null?null:Math.round(Number(x.activeEnergyKcal)),active_energy_source:x.activeEnergySource||null,active_energy_updated_at:x.activeEnergyUpdatedAt||null,walking_km:bounded(x.distance,0,300),water_ml:bounded(x.water,0,20000)==null?null:Math.round(Number(x.water)),protein_g:bounded(x.protein,0,500),weight_kg:bounded(x.weight,25,400)};
 }
 function mergeCloudDaily(remote,local){
+ remote={...remote};
+ if(remote.stepsSource==='apple_health_shortcuts'&&expireStaleTodayShortcut({steps:remote.steps,stepsSource:remote.stepsSource,stepsUpdatedAt:remote.stepsUpdatedAt,activeEnergyKcal:remote.activeEnergyKcal,activeEnergySource:remote.activeEnergySource,activeEnergyUpdatedAt:remote.activeEnergyUpdatedAt},remote.date||date())){
+  remote.steps=null;remote.stepsSource=null;remote.stepsUpdatedAt=null;
+  if(remote.activeEnergySource==='apple_health_shortcuts'){remote.activeEnergyKcal=null;remote.activeEnergySource=null;remote.activeEnergyUpdatedAt=null}
+ }
  const merged={...remote},remoteStepTime=Date.parse(remote.stepsUpdatedAt||'')||0,localStepTime=Date.parse(local.stepsUpdatedAt||'')||0,remoteEnergyTime=Date.parse(remote.activeEnergyUpdatedAt||'')||0,localEnergyTime=Date.parse(local.activeEnergyUpdatedAt||'')||0;
  const keepRemoteSteps=remote.steps!=null&&(remoteStepTime>localStepTime||(remote.stepsSource==='manual'&&remoteStepTime===localStepTime));
  const keepRemoteEnergy=remote.activeEnergyKcal!=null&&remoteEnergyTime>localEnergyTime;
