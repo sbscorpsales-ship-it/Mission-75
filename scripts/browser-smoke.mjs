@@ -47,6 +47,7 @@ const healthErrors=[];healthImport.on("pageerror",e=>healthErrors.push(e.message
 await healthImport.route("https://**/*",r=>r.abort());
 const now=new Date(),localDay=now.getFullYear()+"-"+String(now.getMonth()+1).padStart(2,"0")+"-"+String(now.getDate()).padStart(2,"0");
 await healthImport.goto(pathToFileURL(path.resolve("app-v2.html")).href+"?gativx_steps=1240&gativx_active_energy=345&gativx_date="+localDay,{waitUntil:"domcontentloaded"});
+await healthImport.waitForFunction(()=>document.querySelector("#steps")?.textContent.trim()==="1,240",{timeout:12000});
 assert((await healthImport.locator("#steps").textContent()).trim()==="1,240","Apple Health Shortcut steps did not reach the new GATIVX home");
 assert((await healthImport.locator("#vActiveEnergy").textContent()).trim()==="345 kcal","Measured active energy did not reach the new GATIVX home");
 assert((await healthImport.locator("#stepNote").textContent()).includes("Apple Health via Shortcuts"),"Shortcut step source was not labelled");
