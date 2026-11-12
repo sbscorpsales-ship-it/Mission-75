@@ -50,7 +50,8 @@ final class HealthKitManager: ObservableObject {
         }
     }
 
-    /// Query one local calendar-day cumulative aggregate. Missing data remains nil, never a fabricated zero.
+    /// Import measured daily aggregates for the requested local-calendar window.
+    /// Empty days are skipped rather than uploaded as fabricated zero values.
     func refreshRecentDays(days: Int = 30, onComplete: (() -> Void)? = nil) {
         guard UserDefaults.standard.bool(forKey: connectionRequestedKey), isAvailable else {
             onComplete?()
@@ -58,11 +59,29 @@ final class HealthKitManager: ObservableObject {
         }
         if let onComplete { pendingCompletions.append(onComplete) }
         guard !isRefreshing else { refreshAgain = true; return }
+
         isRefreshing = true
-        let start = Calendar.current.startOfDay(for: Date())
-        let end = min(Date(), Calendar.current.date(byAdding: .day, value: 1, to: start) ?? Date())
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        let safeDays = max(1, min(days, 365))
+        guard let start = calendar.date(byAdding: .day, value: -(safeDays - 1), to: today) else {
+            isRefreshing = false
+            let completions = pendingCompletions
+            pendingCompletions.removeAll()
+            completions.forEach { $0() }
+            statusMessage = "Could not calculate the Apple Health import date range."
+            return
+        }
+        let end = Date()
         let predicate = HKQuery.predicateForSamples(withStart: start, end: end, options: .strictStartDate)
-        let query = HKStatisticsQuery(quantityType: stepType, quantitySamplePredicate: predicate, options: .cumulativeSum) { [weak self] _, statistics, error in
+        let query = HKStatisticsCollectionQuery(
+            quantityType: stepType,
+            quantitySamplePredicate: predicate,
+            options: .cumulativeSum,
+            anchorDate: today,
+            intervalComponents: DateComponents(day: 1)
+        )
+        query.initialResultsHandler = { [weak self] _, collection, error in
             Task { @MainActor in
                 guard let self else { onComplete?(); return }
                 defer {
@@ -72,24 +91,39 @@ final class HealthKitManager: ObservableObject {
                     completions.forEach { $0() }
                     if self.refreshAgain {
                         self.refreshAgain = false
-                        self.refreshRecentDays(days: days)
+                        self.refreshRecentDays(days: safeDays)
                     }
                 }
                 if let error {
                     self.statusMessage = "Apple Health read failed: \(error.localizedDescription)"
                     return
                 }
-                guard let quantity = statistics?.sumQuantity() else {
+                guard let collection else {
                     self.todaySteps = nil
                     self.lastRefresh = Date()
-                    self.statusMessage = "No step samples returned for today. No zero has been assumed."
+                    self.statusMessage = "Apple Health returned no daily statistics. No zero has been assumed."
                     return
                 }
-                let total = max(0, Int(quantity.doubleValue(for: .count()).rounded()))
-                self.todaySteps = total
-                self.lastRefresh = Date()
-                self.statusMessage = "Apple Health daily aggregate refreshed."
-                self.onDailyTotal?(start, total)
+
+                var importedDays = 0
+                collection.enumerateStatistics(from: start, to: end) { statistics, _ in
+                    guard let quantity = statistics.sumQuantity() else { return }
+                    let total = max(0, Int(quantity.doubleValue(for: .count()).rounded()))
+                    importedDays += 1
+                    if self.calendar.isDate(statistics.startDate, inSameDayAs: today) {
+                        self.todaySteps = total
+                    }
+                    self.onDailyTotal?(statistics.startDate, total)
+                }
+                if self.todaySteps == nil {
+                    self.lastRefresh = Date()
+                    self.statusMessage = importedDays == 0
+                        ? "No step samples returned for the requested period. No zero has been assumed."
+                        : "Historical Apple Health totals imported; no measured steps are available today."
+                } else {
+                    self.lastRefresh = Date()
+                    self.statusMessage = "Imported measured Apple Health steps for \(importedDays) day(s), including today's total."
+                }
             }
         }
         store.execute(query)
