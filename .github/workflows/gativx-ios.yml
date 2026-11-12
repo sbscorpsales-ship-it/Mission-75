@@ -104,6 +104,7 @@ jobs:
               "Core Motion write is queued and acknowledged only after server success": "enqueueHealthSync(item)" in motion_sync and motion_sync.index("enqueueHealthSync(item)") < motion_sync.index("URLSession.shared.data") and motion_sync.index("URLSession.shared.data") < motion_sync.index("acknowledgeHealthSync(item.id)"),
               "Queued sensor writes retry after sign-in and on foreground": "await retryPendingHealthSyncs()" in cloud and "await cloud.retryPendingHealthSyncs()" in view,
               "Member can see pending sensor-sync count": "pendingHealthSyncCount" in cloud and "pendingHealthSyncCount" in view,
+              "Pending sync count never exposes another account's queue": "items.filter { $0.ownerID == currentUserID }.count" in cloud,
               "GPS cloud distance skips discontinuous segments": "if cloudPoints[index].breakBefore { continue }" in cloud,
               "Database allows unknown route steps without writing zero": "alter column steps drop not null" in migration and "steps = coalesce(excluded.steps, public.walk_sessions.steps)" in migration,
           }
