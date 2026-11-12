@@ -79,7 +79,10 @@ await signedShortcut.addInitScript(()=>{
 });
 await signedShortcut.route("https://**/*",r=>r.abort());
 await signedShortcut.goto(pathToFileURL(path.resolve("app-v2.html")).href+"?gativx_steps=1855&gativx_date="+localDay,{waitUntil:"domcontentloaded"});
-await signedShortcut.waitForFunction(()=>document.querySelector("#cloudState")?.textContent==="BACKUP CURRENT"&&document.querySelector("#steps")?.textContent.trim()==="1,855",{timeout:7000});
+await signedShortcut.waitForFunction(()=>document.querySelector("#steps")?.textContent.trim()==="1,855",{timeout:3000});
+await signedShortcut.waitForTimeout(500);
+const signedShortcutDebug=await signedShortcut.evaluate(()=>({cloudState:document.querySelector("#cloudState")?.textContent,cloudStatus:document.querySelector("#cloudStatus")?.textContent,steps:document.querySelector("#steps")?.textContent,stepNote:document.querySelector("#stepNote")?.textContent,uploads:window.__shortcutCloud.uploads,account:localStorage.getItem("gativx.v2.fresh.state.user.shortcut-member"),device:localStorage.getItem("gativx.v2.fresh.state.device")}));
+assert(signedShortcutDebug.cloudState==="BACKUP CURRENT","Shortcut did not finish cloud sync for restored member: "+JSON.stringify(signedShortcutDebug));
 assert((await signedShortcut.locator("#stepNote").textContent()).includes("Apple Health via Shortcuts"),"Signed-in Shortcut sample lost its Health source");
 const signedShortcutData=await signedShortcut.evaluate(()=>({uploads:window.__shortcutCloud.uploads,account:JSON.parse(localStorage.getItem("gativx.v2.fresh.state.user.shortcut-member")||"null"),device:JSON.parse(localStorage.getItem("gativx.v2.fresh.state.device")||"null")}));
 assert(signedShortcutData.uploads.some(row=>row.steps===1855&&row.steps_source==="apple_health_shortcuts"),"Fresh Shortcut sample was not uploaded to the restored signed-in account");
