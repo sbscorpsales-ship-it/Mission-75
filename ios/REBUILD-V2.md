@@ -19,6 +19,7 @@
 - HKStatisticsCollectionQuery imports up to 30 local calendar days of measured step totals. Missing days are skipped; today's display is cleared before refresh to avoid stale readings.
 - HealthKit observer queries and best-effort background delivery are registered for steps and active energy. iOS controls delivery timing; this is not a real-time guarantee.
 - Core Motion daily totals are kept separate from HealthKit totals and synced to a separate table.
+- Daily HealthKit steps, active energy and Core Motion totals enter a persistent, per-account local retry queue before network upload. Successful server acknowledgements remove only the exact queued version, so an older in-flight request cannot erase a newer measurement. Pending counts are private to the signed-in account; retries run after sign-in and when the app returns to the foreground.
 - GPS rejects inaccurate/stale fixes, implausible jumps and long-gap distance bridges.
 - Unfinished GPS route drafts are written atomically to Application Support. Legacy UserDefaults drafts are migrated only after the file write succeeds.
 - Native GPS route and activity history are retained locally and synced to the signed-in account.
@@ -58,7 +59,7 @@ These results validate source builds and automated browser/native build checks. 
 1. Sign the iOS IPA with a valid Apple provisioning profile and verify whether the HealthKit and HealthKit Background Delivery entitlements are permitted for that signing account.
 2. Install and test on the actual iPhone: Core Motion, HealthKit values, lock-screen GPS, app interruption/recovery, offline upload and relaunch persistence.
 3. Install and test the Android APK on physical hardware: Health Connect permission, screen-locked GPS, battery restrictions, reboot recovery and cloud sync.
-4. Add a general-purpose durable cloud outbox with explicit acknowledgements/retries for all sensor and route writes.
+4. Extend the durable daily-sensor outbox to every cloud write type, including route and activity-session uploads, with explicit acknowledgements, network-aware retry scheduling and per-record sync visibility. Daily HealthKit/Core Motion totals are already queued and retried; route/activity history currently relies on local persistence plus retry on sign-in/foreground.
 5. Add automated unit tests for local-day/time-zone boundaries, source precedence, route segmentation and retry/idempotency.
 6. Enable Supabase leaked-password protection; the current project security advisor reports it disabled.
 7. Complete community, challenge, referral, rewards, subscription and partner/wearable integrations.
