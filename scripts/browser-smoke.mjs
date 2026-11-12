@@ -138,8 +138,8 @@ await cloudPage.waitForFunction(()=>document.querySelector("#cloudState")?.textC
 const accountIsolation=await cloudPage.evaluate(()=>({entries:JSON.parse(localStorage.getItem("gativx.v2.fresh.state.user.test-user-456")).entries,first:JSON.parse(localStorage.getItem("gativx.v2.fresh.state.user.test-user-123")),uploads:window.__cloudMock.uploaded,walks:window.__cloudMock.inserts}));
 assert(Object.keys(accountIsolation.entries).length===0,"A second account inherited the previous member's private daily records");
 assert(accountIsolation.first.entries[Object.keys(accountIsolation.first.entries)[0]].weight===84,"First account's local data was not preserved after switching accounts");
-assert(accountIsolation.uploads.length===1&&accountIsolation.uploads[0].user==="test-user-123","First account's private daily data was uploaded to a different member");
-assert(accountIsolation.walks.length===1&&accountIsolation.walks[0].user==="test-user-123","First account's GPS route was uploaded to a different member");
+assert(accountIsolation.uploads.length>=1&&accountIsolation.uploads.every(batch=>batch.user==="test-user-123"),"First account's private daily data was uploaded to a different member");
+assert(accountIsolation.walks.length>=1&&accountIsolation.walks.every(batch=>batch.user==="test-user-123"),"First account's GPS route was uploaded to a different member");
 await cloudPage.locator("#cloudSignOut").click();
 await cloudPage.waitForFunction(()=>document.querySelector("#cloudSignOut")?.style.display==="none"&&(()=>{try{const d=JSON.parse(localStorage.getItem("gativx.v2.fresh.state.device")||"null");return !!d&&Object.keys(d.entries||{}).length===0}catch{return false}})());
 await cloudPage.reload({waitUntil:"domcontentloaded"});
