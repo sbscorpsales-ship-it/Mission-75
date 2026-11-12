@@ -144,7 +144,7 @@ $('saveEntry').onclick=()=>{const v={};for(const [k,id] of [['weight','weightIn'
 
 const SUPABASE_URL='https://crarbbsvcczwmtvxyrxo.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY='sb_publishable_XAGRFtrWrFqJ-SfXh2WbRQ_jCcPnr-6';
-let cloudClient=null,cloudUser=null,cloudBusy=false,cloudSyncQueued=false,signupReady=false,shortcutImportHandled=false;
+let cloudClient=null,cloudUser=null,cloudBusy=false,cloudSyncQueued=false,signupReady=false;
 function activateCloudUser(user){
  if(!user){
   if(activeAccountId){
@@ -265,7 +265,7 @@ async function cloudSync(){
    if(profileWrite.error)throw profileWrite.error;
   }
   persist();render();renderWalk();
-  cloudMsg('Sync complete. Your goal, journal and walks are backed up to your account.','BACKUP CURRENT');
+  try{sessionStorage.removeItem('gativx.pending-health-shortcut.v1')}catch{}cloudMsg('Sync complete. Your goal, journal and walks are backed up to your account.','BACKUP CURRENT');
  }catch(error){if(isCurrent()){console.error('GATIVX cloud sync failed',error);cloudMsg('Cloud sync issue: '+(error&&error.message?error.message:'Please retry when connected.'),'SYNC ISSUE')}}
  finally{cloudBusy=false;if(cloudSyncQueued){cloudSyncQueued=false;queueMicrotask(()=>cloudSync())}}
 }
@@ -279,7 +279,7 @@ async function cloudAuth(mode){
  const result=mode==='signup'?await cloudClient.auth.signUp({email,password,options:{data:{display_name:name}}}):await cloudClient.auth.signInWithPassword({email,password});
  if(result.error){cloudMsg(result.error.message,'SIGN-IN ISSUE');return}
  if(mode==='signup'&&!result.data.session){cloudMsg('Account created. Confirm your email, then sign in here.','CONFIRM EMAIL');return}
- activateCloudUser(result.data.user);cloudUi();await cloudSync();
+ activateCloudUser(result.data.user);applyPendingShortcutToActiveAccount();cloudUi();await cloudSync();
 }
 $('cloudSignIn').onclick=()=>cloudAuth('signin');
 $('cloudSignUp').onclick=()=>{if(!signupReady){signupReady=true;$('cloudNameWrap').style.display='block';$('cloudSignUp').textContent='Confirm account creation';cloudMsg('Enter your name, then confirm account creation.','CREATE ACCOUNT');return}cloudAuth('signup')};
@@ -288,37 +288,43 @@ $('cloudSignOut').onclick=async()=>{const r=await cloudClient.auth.signOut();if(
 function initCloud(){
  if(!cloudClient&&window.supabase&&window.supabase.createClient)cloudClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
  if(!cloudClient)return;
- cloudClient.auth.getSession().then(r=>{if(r.error)throw r.error;activateCloudUser(r.data.session&&r.data.session.user||null);cloudUi();finishShortcutImport();if(cloudUser)cloudSync()}).catch(e=>{finishShortcutImport();cloudMsg(e.message||'Could not restore your account session.','SESSION ISSUE')});
- cloudClient.auth.onAuthStateChange((event,session)=>{activateCloudUser(session&&session.user||null);cloudUi();if(cloudUser&&event==='SIGNED_IN')setTimeout(cloudSync,0)});
+ cloudClient.auth.getSession().then(r=>{if(r.error)throw r.error;activateCloudUser(r.data.session&&r.data.session.user||null);cloudUi();applyPendingShortcutToActiveAccount();if(cloudUser)cloudSync()}).catch(e=>cloudMsg(e.message||'Could not restore your account session.','SESSION ISSUE'));
+ cloudClient.auth.onAuthStateChange((event,session)=>{activateCloudUser(session&&session.user||null);cloudUi();if(cloudUser&&event==='SIGNED_IN'){applyPendingShortcutToActiveAccount();setTimeout(cloudSync,0)}});
 }
 initCloud();
 async function refreshPedometerFromCloud(){if(!cloudClient||!cloudUser)return;const userId=cloudUser.id,day=date();try{const [motion,daily]=await Promise.all([cloudClient.from('motion_daily_steps').select('log_date,steps,distance_m,measured_at').eq('user_id',userId),cloudClient.from('daily_logs').select('log_date,steps,steps_source,steps_updated_at,active_energy_kcal,active_energy_source,active_energy_updated_at,walking_km,water_ml,protein_g,weight_kg').eq('user_id',userId)]);if(motion.error)throw motion.error;if(daily.error)throw daily.error;if(!cloudUser||cloudUser.id!==userId||date()!==day)return;motionDaily={};(motion.data||[]).forEach(item=>{const key=String(item.log_date);if(validDay(key))motionDaily[key]={steps:Number(item.steps)||0,distanceMeters:item.distance_m==null?null:Number(item.distance_m),measuredAt:item.measured_at||null}});(daily.data||[]).forEach(item=>{const key=String(item.log_date);if(!validDay(key))return;const remote={steps:item.steps==null?null:Number(item.steps),stepsSource:item.steps_source||null,stepsUpdatedAt:item.steps_updated_at||null,activeEnergyKcal:item.active_energy_kcal==null?null:Number(item.active_energy_kcal),activeEnergySource:item.active_energy_source||null,activeEnergyUpdatedAt:item.active_energy_updated_at||null,distance:item.walking_km==null?null:Number(item.walking_km),water:item.water_ml==null?null:Number(item.water_ml),protein:item.protein_g==null?null:Number(item.protein_g),weight:item.weight_kg==null?null:Number(item.weight_kg)};state.entries[key]=mergeCloudDaily(remote,state.entries[key]||{})});persist();render()}catch(error){console.warn('GATIVX measured activity refresh unavailable',error)}}
 window.setInterval(()=>{if(!document.hidden)refreshPedometerFromCloud()},60000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshPedometerFromCloud()});
 const cloudScript=document.querySelector('script[src*="supabase-js"]');
-if(cloudScript){cloudScript.addEventListener('load',initCloud,{once:true});cloudScript.addEventListener('error',()=>{finishShortcutImport();cloudMsg('Cloud library could not load. Your device data remains available offline.','OFFLINE')},{once:true})}
+if(cloudScript){cloudScript.addEventListener('load',initCloud,{once:true});cloudScript.addEventListener('error',()=>cloudMsg('Cloud library could not load. Your device data remains available offline.','OFFLINE'),{once:true})}
 
-function finishShortcutImport(){if(shortcutImportHandled)return;shortcutImportHandled=true;importAppleHealthShortcut()}
+function applyShortcutPayload(payload){
+ const importedDate=payload.date,steps=payload.steps,energy=payload.energy,stamp=payload.receivedAt||new Date().toISOString();
+ if(!validDay(importedDate)||(steps===null&&energy===null))return false;
+ const prior=state.entries[importedDate]||{},next={...prior};let changed=false;
+ // A fresh, permissioned Health Samples result supersedes manual journal values.
+ // Keep native HealthKit values authoritative if they already exist.
+ if(steps!==null&&prior.stepsSource!=='apple_health'){next.steps=steps;next.stepsSource='apple_health_shortcuts';next.stepsUpdatedAt=stamp;changed=true}
+ if(energy!==null&&prior.activeEnergySource!=='apple_health'){next.activeEnergyKcal=energy;next.activeEnergySource='apple_health_shortcuts';next.activeEnergyUpdatedAt=stamp;changed=true}
+ if(changed){state.entries[importedDate]=next;persist();render()}
+ return changed;
+}
+function applyPendingShortcutToActiveAccount(){
+ if(!cloudUser)return;
+ try{const payload=JSON.parse(sessionStorage.getItem('gativx.pending-health-shortcut.v1')||'null');if(payload)applyShortcutPayload(payload)}catch(error){console.warn('Could not apply pending Apple Health Shortcut reading to this account',error)}
+}
 function importAppleHealthShortcut(){
- const params=new URLSearchParams(window.location.search);
- const hasSteps=params.has('gativx_steps'),hasEnergy=params.has('gativx_active_energy');
+ const params=new URLSearchParams(window.location.search),hasSteps=params.has('gativx_steps'),hasEnergy=params.has('gativx_active_energy');
  if(!hasSteps&&!hasEnergy)return;
- const importedDate=params.get('gativx_date')||date();
- const parts=importedDate.split('-').map(Number);
- const parsed=parts.length===3?new Date(parts[0],parts[1]-1,parts[2]):new Date(NaN);
- const validDate=/^\d{4}-\d{2}-\d{2}$/.test(importedDate)&&parsed.getFullYear()===parts[0]&&parsed.getMonth()===parts[1]-1&&parsed.getDate()===parts[2];
- const numeric=(raw,max)=>{if(raw==null)return null;const clean=raw.trim().replace(/,/g,'');if(!/^\d+(?:\.\d+)?$/.test(clean))return null;const n=Number(clean);return Number.isFinite(n)&&n>=0&&n<=max?Math.round(n):null};
- const steps=hasSteps?numeric(params.get('gativx_steps'),100000):null;
- const energy=hasEnergy?numeric(params.get('gativx_active_energy'),20000):null;
+ const importedDate=params.get('gativx_date')||date(),parts=importedDate.split('-').map(Number),parsed=parts.length===3?new Date(parts[0],parts[1]-1,parts[2]):new Date(NaN);
+ const validDate=/^\\d{4}-\\d{2}-\\d{2}$/.test(importedDate)&&parsed.getFullYear()===parts[0]&&parsed.getMonth()===parts[1]-1&&parsed.getDate()===parts[2];
+ const numeric=(raw,max)=>{if(raw==null)return null;const clean=raw.trim().replace(/,/g,'');if(!/^\\d+(?:\\.\\d+)?$/.test(clean))return null;const n=Number(clean);return Number.isFinite(n)&&n>=0&&n<=max?Math.round(n):null};
+ const steps=hasSteps?numeric(params.get('gativx_steps'),100000):null,energy=hasEnergy?numeric(params.get('gativx_active_energy'),20000):null;
  if(validDate&&(steps!==null||energy!==null)){
-  const prior=state.entries[importedDate]||{},next={...prior},stamp=new Date().toISOString();let changed=false;
-  if(steps!==null&&prior.stepsSource!=='apple_health'){
-   next.steps=steps;next.stepsSource='apple_health_shortcuts';next.stepsUpdatedAt=stamp;changed=true;
-  }
-  if(energy!==null&&prior.activeEnergySource!=='apple_health'){
-   next.activeEnergyKcal=energy;next.activeEnergySource='apple_health_shortcuts';next.activeEnergyUpdatedAt=stamp;changed=true;
-  }
-  if(changed){state.entries[importedDate]=next;persist();if(cloudUser)cloudSync();}
+  const payload={date:importedDate,steps,energy,receivedAt:new Date().toISOString()};
+  try{sessionStorage.setItem('gativx.pending-health-shortcut.v1',JSON.stringify(payload))}catch{}
+  applyShortcutPayload(payload);
+  if(cloudUser)cloudSync();
  }
  params.delete('gativx_steps');params.delete('gativx_active_energy');params.delete('gativx_date');
  const clean=window.location.pathname+(params.toString()?'?'+params.toString():'')+window.location.hash;
@@ -332,6 +338,6 @@ function addFix(pos){if(paused)return;const c=pos&&pos.coords;if(!c||!Number.isF
 $('gpsStart').onclick=()=>{if(!navigator.geolocation){alert('GPS is not available in this browser.');return}points=[];distance=0;lastAcceptedFix=null;segmentBreak=true;paused=false;walkStartedAt=new Date();pausedAt=null;pausedMilliseconds=0;$('gpsDistance').textContent='0.00 km';$('gpsFixes').textContent='0';$('gpsSteps').textContent='0';$('gpsMap').innerHTML='<div class="mapEmpty">Waiting for accurate GPS fixes…</div>';$('walkStatus').textContent='Requesting GPS…';$('gpsStart').disabled=true;$('gpsPause').disabled=false;$('gpsFinish').disabled=false;watch=navigator.geolocation.watchPosition(pos=>{addFix(pos);$('gpsMap').innerHTML=routeGraphic(points)},e=>{$('walkStatus').textContent=e.code===1?'LOCATION PERMISSION DENIED · Allow Safari to access Location.':e.code===2?'GPS SIGNAL UNAVAILABLE · Move outdoors and retry.':'GPS SIGNAL TIMED OUT · Keep this screen open and wait for a clearer signal.';if(e.code===1){if(watch!==null)navigator.geolocation.clearWatch(watch);watch=null;$('gpsStart').disabled=false;$('gpsPause').disabled=true;$('gpsFinish').disabled=true}},{enableHighAccuracy:true,maximumAge:0,timeout:30000});$('walkStatus').textContent='WALK STARTED ✓ · Waiting for GPS signal'};
 $('gpsPause').onclick=()=>{paused=!paused;if(paused){pausedAt=Date.now()}else{if(pausedAt!==null)pausedMilliseconds+=Date.now()-pausedAt;pausedAt=null;lastAcceptedFix=null;segmentBreak=true}$('gpsPause').textContent=paused?'Resume':'Pause';$('walkStatus').textContent=paused?'WALK PAUSED':'WALK RESUMED ✓ · GPS tracking active'};
 $('gpsFinish').onclick=()=>{const finishButton=$('gpsFinish');if(finishButton.disabled)return;finishButton.disabled=true;try{if(watch!==null)navigator.geolocation.clearWatch(watch);watch=null;const savedPoints=points.map(p=>({...p}));const savedDistance=distance/1000;const savedGpsSteps=Math.round(distance/0.73);$('gpsStart').disabled=false;$('gpsPause').disabled=true;$('gpsPause').textContent='Pause';if(savedPoints.length<2||!Number.isFinite(savedDistance)||savedDistance<=0){$('walkStatus').textContent='WALK FINISHED · Not saved: at least two accurate GPS fixes and measurable distance are required. Try again outdoors with Location enabled.';finishButton.disabled=true;return}const today=date();const previousEntry=state.entries[today];const finishedAt=new Date();const startedAt=walkStartedAt||finishedAt;const totalPaused=pausedMilliseconds+(pausedAt===null?0:Date.now()-pausedAt);const durationSeconds=Math.max(0,Math.round((finishedAt-startedAt-totalPaused)/1000));const walk={date:today,distance:Number(savedDistance.toFixed(3)),gpsStepsEstimate:savedGpsSteps,steps:null,points:savedPoints,startedAt:startedAt.toISOString(),finishedAt:finishedAt.toISOString(),durationSeconds,createdAt:finishedAt.toISOString()};state.walks.push(walk);const x=previousEntry||{};state.entries[today]={...x,distance:Number(((x.distance||0)+savedDistance).toFixed(3))};try{persist();$('walkStatus').textContent='WALK FINISHED & SAVED ✓ · '+savedDistance.toFixed(2)+' km · ~'+fmt(savedGpsSteps)+' estimated steps';finishButton.disabled=true;render();renderWalk();if(cloudUser)cloudSync()}catch(saveError){state.walks.pop();if(previousEntry===undefined)delete state.entries[today];else state.entries[today]=previousEntry;finishButton.disabled=false;$('walkStatus').textContent='Could not save this walk on this device: '+(saveError&&saveError.message?saveError.message:'storage error')+'. Your route is still held on this screen; do not refresh.';console.error('GATIVX walk save failed',saveError)}}catch(error){finishButton.disabled=false;$('walkStatus').textContent='Could not finish GPS session: '+(error&&error.message?error.message:'unknown error');console.error('GATIVX GPS finish failed',error)}};
-render();if(state.walks.length)renderWalk();window.setTimeout(()=>{if(!shortcutImportHandled)finishShortcutImport()},10000);})()
+importAppleHealthShortcut();render();if(state.walks.length)renderWalk();})()
 if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{}));}
 </script></body></html>
