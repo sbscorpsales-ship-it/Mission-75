@@ -10,6 +10,7 @@ await page.route("https://**/*",r=>r.abort());
 await page.goto(pathToFileURL(path.resolve("index.html")).href,{waitUntil:"domcontentloaded"});await page.waitForURL(url=>url.pathname.endsWith("/app-v2.html"),{timeout:10000});await page.waitForTimeout(300);
 const assert=(v,m)=>{if(!v)throw new Error(m)};
 assert(await page.locator("#steps").textContent().then(x=>x.trim())==="1,948","Fresh-store step value did not render");
+assert(await page.locator('a[href="shortcuts://run-shortcut?name=try%202"]').filter({hasText:"Sync Apple Health now"}).count()===1,"One-tap Apple Health Shortcut launcher is missing or has the wrong shortcut name");
 assert((await page.locator("#missionTitle").textContent()).includes("Build strength"),"Fresh-store mission did not render");
 assert((await page.locator("#missionPct").textContent()).includes("MISSION ACTIVE"),"Mission status missing");
 assert((await page.locator("#missionPct").textContent()).includes("1/90 CHECK-IN DAYS"),"Mission progress must count real saved check-in days, not a decorative percentage");
