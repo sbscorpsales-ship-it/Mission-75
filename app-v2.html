@@ -92,7 +92,8 @@ const $=id=>document.getElementById(id);const date=()=>{const d=new Date();retur
 function expireStaleTodayShortcut(entry,day=date()){
  if(!entry||entry.stepsSource!=='apple_health_shortcuts')return false;
  const stamp=Date.parse(entry.stepsUpdatedAt||''),age=Date.now()-stamp;
- if(day!==date()||!Number.isFinite(stamp)||age>15*60*1000||age<0){
+ if(day!==date())return false;
+ if(!Number.isFinite(stamp)||age>15*60*1000||age<0){
   delete entry.steps;delete entry.stepsSource;delete entry.stepsUpdatedAt;
   if(entry.activeEnergySource==='apple_health_shortcuts'){delete entry.activeEnergyKcal;delete entry.activeEnergySource;delete entry.activeEnergyUpdatedAt}
   return true;
