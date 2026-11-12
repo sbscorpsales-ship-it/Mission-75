@@ -3,23 +3,106 @@ import CoreLocation
 import Security
 import Combine
 
+private enum PendingHealthSyncKind: String, Codable {
+    case healthSteps
+    case activeEnergy
+    case motionSteps
+}
+
+private struct PendingHealthSync: Codable, Identifiable {
+    let kind: PendingHealthSyncKind
+    let localDay: String
+    var steps: Int?
+    var activeEnergyKcal: Int?
+    var distanceMeters: Double?
+    let queuedAt: Date
+    var id: String { kind.rawValue + ":" + localDay }
+}
+
 @MainActor
 final class SupabaseRESTClient: ObservableObject {
     @Published private(set) var isSignedIn = false
     @Published private(set) var status = "Sign in with your existing GATIVX web-app account."
+    @Published private(set) var pendingHealthSyncCount = 0
 
     private let baseURL = URL(string: "https://crarbbsvcczwmtvxyrxo.supabase.co")!
     // Supabase publishable key is a client-side key. Never place a service-role key in the app.
     private let publishableKey = "sb_publishable_XAGRFtrWrFqJ-JSfXh2WbRQ_jCcPnr-6"
     private let sessionStore = "com.paramitsolutions.gativx.session"
+    private let healthOutboxKey = "com.paramitsolutions.gativx.health-sync-outbox.v1"
     private var accessToken: String?
     private var refreshToken: String?
 
     init() {
+        pendingHealthSyncCount = loadHealthOutbox().count
         if let saved = readSession() {
             accessToken = saved.accessToken
             refreshToken = saved.refreshToken
             isSignedIn = accessToken != nil
+        }
+    }
+
+
+    private func localDayString(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone.current
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter.string(from: date)
+    }
+
+    private func dateForLocalDay(_ day: String) -> Date? {
+        let parts = day.split(separator: "-").compactMap { Int($0) }
+        guard parts.count == 3 else { return nil }
+        return Calendar.current.date(from: DateComponents(year: parts[0], month: parts[1], day: parts[2]))
+    }
+
+    private func loadHealthOutbox() -> [PendingHealthSync] {
+        guard let data = UserDefaults.standard.data(forKey: healthOutboxKey),
+              let items = try? JSONDecoder().decode([PendingHealthSync].self, from: data) else { return [] }
+        return items
+    }
+
+    private func saveHealthOutbox(_ items: [PendingHealthSync]) {
+        if let data = try? JSONEncoder().encode(items) {
+            UserDefaults.standard.set(data, forKey: healthOutboxKey)
+            pendingHealthSyncCount = items.count
+        }
+    }
+
+    private func enqueueHealthSync(_ item: PendingHealthSync) {
+        var items = loadHealthOutbox()
+        items.removeAll { $0.id == item.id }
+        items.append(item)
+        items.sort { $0.queuedAt < $1.queuedAt }
+        saveHealthOutbox(items)
+    }
+
+    private func acknowledgeHealthSync(_ id: String) {
+        saveHealthOutbox(loadHealthOutbox().filter { $0.id != id })
+    }
+
+    /// Retry durable daily sensor writes after sign-in, foregrounding, or a
+    /// previous network failure. Each successful server acknowledgement is
+    /// removed independently; failed items remain on this device.
+    func retryPendingHealthSyncs() async {
+        guard isSignedIn else { return }
+        let pending = loadHealthOutbox()
+        for item in pending {
+            guard let day = dateForLocalDay(item.localDay) else {
+                acknowledgeHealthSync(item.id)
+                continue
+            }
+            switch item.kind {
+            case .healthSteps:
+                if let steps = item.steps { await syncSteps(date: day, steps: steps) }
+            case .activeEnergy:
+                if let kcal = item.activeEnergyKcal { await syncActiveEnergy(date: day, kilocalories: kcal) }
+            case .motionSteps:
+                if let steps = item.steps {
+                    _ = await syncMotionDailySteps(date: day, steps: steps, distanceMeters: item.distanceMeters)
+                }
+            }
         }
     }
 
@@ -40,6 +123,7 @@ final class SupabaseRESTClient: ObservableObject {
             saveSession(session)
             isSignedIn = true
             status = "Signed in. Your existing cloud records can be shared with GATIVX."
+            await retryPendingHealthSyncs()
         } catch {
             status = "Sign-in failed: \(error.localizedDescription)"
         }
@@ -47,8 +131,11 @@ final class SupabaseRESTClient: ObservableObject {
 
     func syncSteps(date: Date, steps: Int) async {
         guard steps >= 0 else { return }
+        let item = PendingHealthSync(kind: .healthSteps, localDay: localDayString(date), steps: steps, activeEnergyKcal: nil, distanceMeters: nil, queuedAt: Date())
+        enqueueHealthSync(item)
         do {
             try await performStepSync(date: date, steps: steps, retryAfterRefresh: true)
+            acknowledgeHealthSync(item.id)
             status = "Apple Health steps synced to your GATIVX account."
         } catch {
             status = "Step sync pending: \(error.localizedDescription). Open the app later to retry."
@@ -57,6 +144,8 @@ final class SupabaseRESTClient: ObservableObject {
 
     func syncActiveEnergy(date: Date, kilocalories: Int, retryAfterRefresh: Bool = true) async {
         guard kilocalories >= 0 else { return }
+        let item = PendingHealthSync(kind: .activeEnergy, localDay: localDayString(date), steps: nil, activeEnergyKcal: kilocalories, distanceMeters: nil, queuedAt: Date())
+        enqueueHealthSync(item)
         do {
             guard let token = accessToken else { throw ClientError.notSignedIn }
             var request = URLRequest(url: baseURL.appendingPathComponent("rest/v1/rpc/sync_healthkit_daily_energy"))
@@ -81,6 +170,7 @@ final class SupabaseRESTClient: ObservableObject {
                 return
             }
             guard (200..<300).contains(http.statusCode) else { throw Self.serverError(data) }
+            acknowledgeHealthSync(item.id)
             status = "Apple Health active calories synced to your GATIVX account."
         } catch {
             status = "Active calorie sync pending: " + error.localizedDescription + ". Open the app later to retry."
@@ -93,6 +183,8 @@ final class SupabaseRESTClient: ObservableObject {
     @discardableResult
     func syncMotionDailySteps(date: Date, steps: Int, distanceMeters: Double?, retryAfterRefresh: Bool = true) async -> Bool {
         guard steps >= 0 else { return false }
+        let item = PendingHealthSync(kind: .motionSteps, localDay: localDayString(date), steps: steps, activeEnergyKcal: nil, distanceMeters: distanceMeters, queuedAt: Date())
+        enqueueHealthSync(item)
         do {
             guard let token = accessToken else { throw ClientError.notSignedIn }
             var request = URLRequest(url: baseURL.appendingPathComponent("rest/v1/rpc/sync_motion_daily_steps"))
@@ -121,6 +213,7 @@ final class SupabaseRESTClient: ObservableObject {
                 return await syncMotionDailySteps(date: date, steps: steps, distanceMeters: distanceMeters, retryAfterRefresh: false)
             }
             guard (200..<300).contains(http.statusCode) else { throw Self.serverError(data) }
+            acknowledgeHealthSync(item.id)
             status = "iPhone motion steps synced separately from Apple Health."
             return true
         } catch {
