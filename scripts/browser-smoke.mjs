@@ -54,6 +54,19 @@ assert(await healthImport.evaluate(()=>!location.search.includes("gativx_active_
 assert(healthErrors.length===0,"Apple Health import browser errors: "+healthErrors.join("; "));
 await healthImport.close();
 
+// The real iPhone Shortcut opens the GitHub Pages root, not app-v2.html.
+// The landing redirect must preserve the Apple Health query until import runs.
+const shortcutLanding=await browser.newPage({viewport:{width:390,height:844}});
+const shortcutLandingErrors=[];shortcutLanding.on("pageerror",e=>shortcutLandingErrors.push(e.message));
+await shortcutLanding.route("https://**/*",r=>r.abort());
+await shortcutLanding.goto(pathToFileURL(path.resolve("index.html")).href+"?gativx_steps=1855&gativx_date="+localDay,{waitUntil:"domcontentloaded"});
+await shortcutLanding.waitForURL(url=>url.pathname.endsWith("/app-v2.html"),{timeout:5000});
+await shortcutLanding.waitForFunction(()=>document.querySelector("#steps")?.textContent.trim()==="1,855");
+assert((await shortcutLanding.locator("#stepNote").textContent()).includes("Apple Health via Shortcuts"),"Root shortcut link did not preserve the Apple Health source");
+assert(await shortcutLanding.evaluate(()=>!location.search.includes("gativx_steps")&&!location.search.includes("gativx_date")),"Imported shortcut parameters were not cleaned after successful import");
+assert(shortcutLandingErrors.length===0,"Shortcut landing errors: "+shortcutLandingErrors.join("; "));
+await shortcutLanding.close();
+
 // Account login and cloud sync are exercised with an isolated Supabase client double.
 const cloudPage=await browser.newPage({viewport:{width:390,height:844}});
 const cloudErrors=[];cloudPage.on("pageerror",e=>cloudErrors.push(e.message));
