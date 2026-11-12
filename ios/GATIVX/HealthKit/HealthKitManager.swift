@@ -111,7 +111,7 @@ final class HealthKitManager: ObservableObject {
                     guard let quantity = statistics.sumQuantity() else { return }
                     let total = max(0, Int(quantity.doubleValue(for: .count()).rounded()))
                     importedDays += 1
-                    if self.calendar.isDate(statistics.startDate, inSameDayAs: today) {
+                    if calendar.isDate(statistics.startDate, inSameDayAs: today) {
                         self.todaySteps = total
                     }
                     self.onDailyTotal?(statistics.startDate, total)
