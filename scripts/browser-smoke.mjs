@@ -106,6 +106,41 @@ const reloadedDeviceState=await cloudPage.evaluate(()=>({
 assert(reloadedDeviceState.steps==="—","Signed-out device exposed cached records after reload: "+JSON.stringify(reloadedDeviceState));
 await cloudPage.close();
 
+// Goal and personal purpose must survive a sign-in on another device through the shared profile row.
+const goalCloudPage=await browser.newPage({viewport:{width:390,height:844}});
+const goalCloudErrors=[];goalCloudPage.on("pageerror",e=>goalCloudErrors.push(e.message));
+await goalCloudPage.addInitScript(()=>{
+ localStorage.setItem("gativx.v2.fresh.state",JSON.stringify({version:2,goal:{type:"Weight loss",duration:"90 days",purpose:"I want to stay active with my family.",feeling:"energetic",createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()},entries:{},walks:[]}));
+ window.__goalCloud={profile:null,writes:[],currentUser:null};
+ window.supabase={createClient:()=>({auth:{getSession:async()=>({data:{session:null},error:null}),onAuthStateChange:()=>({data:{subscription:{unsubscribe(){}}}}),signInWithPassword:async()=>{window.__goalCloud.currentUser="goal-user";return {data:{user:{id:"goal-user"}},error:null}},signUp:async()=>({data:{user:null,session:null},error:null}),signOut:async()=>{window.__goalCloud.currentUser=null;return {error:null}}},from(table){return {select(){return {eq:async()=>({data:table==="profiles"?(window.__goalCloud.profile?[window.__goalCloud.profile]:[]):[],error:null})}},upsert:async(row)=>{if(table==="profiles")window.__goalCloud.profile=row;window.__goalCloud.writes.push({table,row});return {error:null}},insert:async()=>({error:null})}}})};
+});
+await goalCloudPage.route("https://**/*",r=>r.abort());
+await goalCloudPage.goto(pathToFileURL(path.resolve("app-v2.html")).href,{waitUntil:"domcontentloaded"});
+await goalCloudPage.locator("#cloudEmail").fill("goal@example.com");
+await goalCloudPage.locator("#cloudPassword").fill("not-a-real-password");
+await goalCloudPage.locator("#cloudSignIn").click();
+await goalCloudPage.waitForFunction(()=>document.querySelector("#cloudState")?.textContent==="BACKUP CURRENT");
+const savedGoal=await goalCloudPage.evaluate(()=>window.__goalCloud.profile);
+assert(savedGoal?.goal_type==="Weight loss"&&savedGoal.goal_purpose==="I want to stay active with my family."&&savedGoal.goal_feeling==="energetic","Goal and personal purpose were not saved to the member's Supabase profile");
+await goalCloudPage.close();
+
+const secondDevicePage=await browser.newPage({viewport:{width:390,height:844}});
+const secondDeviceErrors=[];secondDevicePage.on("pageerror",e=>secondDeviceErrors.push(e.message));
+await secondDevicePage.addInitScript(()=>{
+ window.__goalCloud={profile:{id:"goal-user",goal_type:"Weight loss",goal_duration:"90 days",goal_purpose:"I want to stay active with my family.",goal_feeling:"energetic",goal_started_at:new Date().toISOString(),goal_updated_at:new Date().toISOString()},currentUser:null,writes:[]};
+ window.supabase={createClient:()=>({auth:{getSession:async()=>({data:{session:null},error:null}),onAuthStateChange:()=>({data:{subscription:{unsubscribe(){}}}}),signInWithPassword:async()=>{window.__goalCloud.currentUser="goal-user";return {data:{user:{id:"goal-user"}},error:null}},signUp:async()=>({data:{user:null,session:null},error:null}),signOut:async()=>({error:null})},from(table){return {select(){return {eq:async()=>({data:table==="profiles"?(window.__goalCloud.profile?[window.__goalCloud.profile]:[]):[],error:null})}},upsert:async(row)=>{window.__goalCloud.writes.push({table,row});return {error:null}},insert:async()=>({error:null})}}})};
+});
+await secondDevicePage.route("https://**/*",r=>r.abort());
+await secondDevicePage.goto(pathToFileURL(path.resolve("app-v2.html")).href,{waitUntil:"domcontentloaded"});
+await secondDevicePage.locator("#cloudEmail").fill("goal@example.com");
+await secondDevicePage.locator("#cloudPassword").fill("not-a-real-password");
+await secondDevicePage.locator("#cloudSignIn").click();
+await secondDevicePage.waitForFunction(()=>document.querySelector("#cloudState")?.textContent==="BACKUP CURRENT");
+assert((await secondDevicePage.locator("#missionTitle").textContent()).includes("Weight loss"),"Second device did not restore the member's cloud goal");
+assert((await secondDevicePage.locator("#guruPurpose").textContent()).includes("stay active with my family"),"Second device did not restore the member's personal purpose");
+assert(secondDeviceErrors.length===0,"Goal cloud sync browser errors: "+secondDeviceErrors.join("; "));
+await secondDevicePage.close();
+
 // A member switch during an in-flight request must cancel the old member's
 // merge/upload work before the new member's sync is allowed to proceed.
 const racePage=await browser.newPage({viewport:{width:390,height:844}});
