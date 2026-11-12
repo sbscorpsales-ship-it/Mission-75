@@ -233,7 +233,7 @@ await v2.locator("#gpsFinish").click();
 assert((await v2.locator("#walkStatus").textContent()).includes("0.03 km"),"Saved GPS walk distance did not match filtered route distance");
 assert(v2Errors.length===0,"GATIVX v2 browser errors: "+v2Errors.join("; "));
 await v2.close();
-console.log("PASS: Original approved GATIVX intro and dashboard render and can be skipped");
+console.log("PASS: Published GATIVX root entry opens the tested v2 fitness application");
 console.log("PASS: Apple Health Shortcut imports measured steps and active energy into the new GATIVX home");
 console.log("PASS: GATIVX v2 account sign-in, private cloud backup and HealthKit source reconciliation");
 console.log("PASS: GATIVX v2 uses its own namespaced data store");
