@@ -81,9 +81,16 @@ assert(accountIsolation.uploads.length===1&&accountIsolation.uploads[0].user==="
 assert(accountIsolation.walks.length===1&&accountIsolation.walks[0].user==="test-user-123","First account's GPS route was uploaded to a different member");
 await cloudPage.locator("#cloudSignOut").click();
 await cloudPage.waitForFunction(()=>document.querySelector("#cloudSignOut")?.style.display==="none"&&(()=>{try{const d=JSON.parse(localStorage.getItem("gativx.v2.fresh.state.device")||"null");return !!d&&Object.keys(d.entries||{}).length===0}catch{return false}})());
-await cloudPage.reload();
-await cloudPage.waitForFunction(()=>document.querySelector("#steps")?.textContent.trim()==="—");
-assert((await cloudPage.locator("#steps").textContent()).trim()==="—","Signed-out device exposed cached records from a previous member");
+await cloudPage.reload({waitUntil:"domcontentloaded"});
+await cloudPage.locator("#steps").waitFor();
+await cloudPage.waitForTimeout(250);
+const reloadedDeviceState=await cloudPage.evaluate(()=>({
+ steps:document.querySelector("#steps")?.textContent.trim()||"",
+ cloudState:document.querySelector("#cloudState")?.textContent.trim()||"",
+ migrated:localStorage.getItem("gativx.v2.account-local-migrated"),
+ device:localStorage.getItem("gativx.v2.fresh.state.device")
+}));
+assert(reloadedDeviceState.steps==="—","Signed-out device exposed cached records after reload: "+JSON.stringify(reloadedDeviceState));
 await cloudPage.close();
 
 // A member switch during an in-flight request must cancel the old member's
