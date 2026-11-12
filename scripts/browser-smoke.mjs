@@ -35,7 +35,7 @@ assert(await page.locator(".bottom button").count()===5,"Expected five navigatio
 assert(await page.locator('a[href="./legacy-runtime.html"]').count()===1,"Existing account and saved-record access link missing");
 assert(await page.locator("#cloudAccount").count()===1,"New GATIVX account and cloud backup panel missing");
 for(const tab of ["home","journey","record","walk","coach"]){await page.locator('[data-panel="'+tab+'"]').click();assert(await page.locator("#"+tab+".panel.active").count()===1,"Navigation failed: "+tab)}
-await page.locator('[data-panel="home"]').click();assert(await page.locator("#missionTitle").textContent().then(x=>x.includes("Build strength")),"Mission changed after navigation");
+await page.locator('[data-panel="home"]').click();assert(await page.locator("#missionTitle").textContent().then(x=>x.includes("Weight loss")),"Saved mission changed after navigation");
 assert(errors.length===0,"Browser errors: "+errors.join("; "));
 
 const healthImport=await browser.newPage({viewport:{width:390,height:844}});
