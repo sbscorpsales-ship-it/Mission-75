@@ -107,7 +107,7 @@ class WalkOnLocationService : Service(), LocationListener, SensorEventListener {
             lastPersistedPointCount = 0
             sessionSteps = 0L
             lastStepCounterValue = null
-            WalkOnStore.saveActive(
+            val initialDraftSaved = WalkOnStore.saveActive(
                 this,
                 WalkOnSession(
                     id = sessionId,
@@ -122,6 +122,13 @@ class WalkOnLocationService : Service(), LocationListener, SensorEventListener {
                     ownerUserId = ownerUserId
                 )
             )
+            if (!initialDraftSaved) {
+                WalkOnStore.setStatus(this, "WalkOn could not verify encrypted draft storage. GPS was not started, so no route can be lost.")
+                broadcastUpdate()
+                stopForeground(STOP_FOREGROUND_REMOVE)
+                stopSelf()
+                return
+            }
         } else {
             sessionId = existing.id
             ownerUserId = existing.ownerUserId
@@ -256,7 +263,10 @@ class WalkOnLocationService : Service(), LocationListener, SensorEventListener {
             ownerUserId = ownerUserId
         )
         runCatching { WalkOnStore.saveActive(this, session) }
-            .onSuccess { lastPersistedPointCount = points.size }
+            .onSuccess { saved ->
+                if (saved) lastPersistedPointCount = points.size
+                else WalkOnStore.setStatus(this, "Route is still recording, but encrypted draft storage could not be verified. Keep GATIVX open and finish only after storage recovers.")
+            }
             .onFailure { WalkOnStore.setStatus(this, "Route is still recording, but encrypted draft storage needs attention.") }
     }
 
