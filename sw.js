@@ -1,4 +1,4 @@
-const CACHE="gativx-v35";
+const CACHE="gativx-v36";
 const CORE=["./","./index.html","./app-v2.html","./apple-health-shortcut.html","./legacy-runtime.html","./manifest.webmanifest","./icon.svg","./apple-touch-icon.png","./gativx-logo.jpg","./gativx-master.png","./gativx-runner.svg"];
 self.addEventListener("install",event=>{event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(CORE)).then(()=>self.skipWaiting()));});
 self.addEventListener("activate",event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim()));});
