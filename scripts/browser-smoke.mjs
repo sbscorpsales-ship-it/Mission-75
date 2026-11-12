@@ -22,7 +22,7 @@ await page.locator("#saveGoal").click();
 await page.waitForFunction(()=>document.querySelector("#coach")?.classList.contains("active"));
 assert((await page.locator("#guruGoal").textContent()).includes("Weight loss"),"GURU did not receive the saved goal");
 assert((await page.locator("#guruPurpose").textContent()).includes("stay active with my family"),"GURU did not reconnect the user's stated purpose");
-assert((await page.locator("#guruNextAction").textContent()).includes("10-minute walk"),"GURU did not provide a small goal-relevant next action");
+assert((await page.locator("#guruNextAction").textContent()).toLowerCase().includes("small step"),"GURU did not provide a manageable next action based on the member's recorded activity");
 await page.locator("#reconnectGuru").click();
 assert((await page.locator("#guruNextAction").textContent()).includes("Remember why you started"),"GURU reconnect action did not repeat the user's purpose");
 assert((await page.locator("#distance").textContent()).includes("0.40 km"),"Fresh-store distance did not render");
