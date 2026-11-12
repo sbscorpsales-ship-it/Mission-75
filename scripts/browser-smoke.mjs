@@ -58,6 +58,19 @@ assert(await healthImport.evaluate(()=>!location.search.includes("gativx_active_
 assert(healthErrors.length===0,"Apple Health import browser errors: "+healthErrors.join("; "));
 await healthImport.close();
 
+// A previously imported Shortcut count must not masquerade as a fresh reading.
+const staleShortcut=await browser.newPage({viewport:{width:390,height:844}});
+await staleShortcut.addInitScript(()=>{
+ const d=new Date(),day=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+ const old=new Date(Date.now()-2*60*60*1000).toISOString();
+ localStorage.setItem("gativx.v2.fresh.state",JSON.stringify({version:2,goal:null,entries:{[day]:{steps:1855,stepsSource:"apple_health_shortcuts",stepsUpdatedAt:old}},walks:[]}));
+});
+await staleShortcut.route("https://**/*",r=>r.abort());
+await staleShortcut.goto(pathToFileURL(path.resolve("app-v2.html")).href,{waitUntil:"domcontentloaded"});
+assert((await staleShortcut.locator("#steps").textContent()).trim()==="—","Stale 1,855 Shortcut sample was displayed as a current reading");
+assert((await staleShortcut.locator("#stepNote").textContent()).includes("No iPhone sensor reading"),"Stale Shortcut source label was not cleared");
+await staleShortcut.close();
+
 // The real iPhone Shortcut opens the GitHub Pages root, not app-v2.html.
 // The landing redirect must preserve the Apple Health query until import runs.
 const shortcutLanding=await browser.newPage({viewport:{width:390,height:844}});
