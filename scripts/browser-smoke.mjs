@@ -73,10 +73,10 @@ await shortcutLanding.close();
 // the correct account store has been activated (no device-store race).
 const signedShortcut=await browser.newPage({viewport:{width:390,height:844}});
 const signedShortcutErrors=[];signedShortcut.on("pageerror",e=>signedShortcutErrors.push(e.message));
-await signedShortcut.addInitScript(()=>{
+await signedShortcut.addInitScript((day)=>{
  window.__shortcutCloud={uploads:[]};
- window.supabase={createClient:()=>({auth:{getSession:async()=>({data:{session:{user:{id:"shortcut-member"}}},error:null}),onAuthStateChange:()=>({data:{subscription:{unsubscribe(){}}}})},from(table){return {select(){return {eq:async()=>({data:table==="daily_logs"?[{log_date:localDay,steps:0,steps_source:"manual",steps_updated_at:null,active_energy_kcal:null,active_energy_source:null,active_energy_updated_at:null,walking_km:null,water_ml:null,protein_g:null,weight_kg:null}]:[],error:null})}},upsert:async(rows)=>{if(table==="daily_logs")window.__shortcutCloud.uploads.push(...rows);return {error:null}},insert:async()=>({error:null})}}})};
-});
+ window.supabase={createClient:()=>({auth:{getSession:async()=>({data:{session:{user:{id:"shortcut-member"}}},error:null}),onAuthStateChange:()=>({data:{subscription:{unsubscribe(){}}}})},from(table){return {select(){return {eq:async()=>({data:table==="daily_logs"?[{log_date:day,steps:0,steps_source:"manual",steps_updated_at:null,active_energy_kcal:null,active_energy_source:null,active_energy_updated_at:null,walking_km:null,water_ml:null,protein_g:null,weight_kg:null}]:[],error:null})}},upsert:async(rows)=>{if(table==="daily_logs")window.__shortcutCloud.uploads.push(...rows);return {error:null}},insert:async()=>({error:null})}}})};
+},localDay);
 await signedShortcut.route("https://**/*",r=>r.abort());
 await signedShortcut.goto(pathToFileURL(path.resolve("app-v2.html")).href+"?gativx_steps=1855&gativx_date="+localDay,{waitUntil:"domcontentloaded"});
 await signedShortcut.waitForFunction(()=>document.querySelector("#steps")?.textContent.trim()==="1,855",{timeout:3000});
