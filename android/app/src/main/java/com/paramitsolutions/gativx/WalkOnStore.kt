@@ -82,9 +82,8 @@ internal object WalkOnStore {
             .apply()
     }
 
-    fun saveActive(context: Context, session: WalkOnSession) {
+    fun saveActive(context: Context, session: WalkOnSession): Boolean =
         writeEncrypted(context, ACTIVE_KEY, encodeSession(session))
-    }
 
     fun clearActive(context: Context) {
         // Commit synchronously so a completed route is not orphaned by an
