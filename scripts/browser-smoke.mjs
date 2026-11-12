@@ -67,6 +67,25 @@ assert(await shortcutLanding.evaluate(()=>!location.search.includes("gativx_step
 assert(shortcutLandingErrors.length===0,"Shortcut landing errors: "+shortcutLandingErrors.join("; "));
 await shortcutLanding.close();
 
+// A returning signed-in member must receive the Shortcut sample only after
+// the correct account store has been activated (no device-store race).
+const signedShortcut=await browser.newPage({viewport:{width:390,height:844}});
+const signedShortcutErrors=[];signedShortcut.on("pageerror",e=>signedShortcutErrors.push(e.message));
+await signedShortcut.addInitScript(()=>{
+ window.__shortcutCloud={uploads:[]};
+ window.supabase={createClient:()=>({auth:{getSession:async()=>({data:{session:{user:{id:"shortcut-member"}}},error:null}),onAuthStateChange:()=>({data:{subscription:{unsubscribe(){}}}})},from(table){return {select(){return {eq:async()=>({data:[],error:null})}},upsert:async(rows)=>{if(table==="daily_logs")window.__shortcutCloud.uploads.push(...rows);return {error:null}},insert:async()=>({error:null})}}})};
+});
+await signedShortcut.route("https://**/*",r=>r.abort());
+await signedShortcut.goto(pathToFileURL(path.resolve("app-v2.html")).href+"?gativx_steps=1855&gativx_date="+localDay,{waitUntil:"domcontentloaded"});
+await signedShortcut.waitForFunction(()=>document.querySelector("#cloudState")?.textContent==="BACKUP CURRENT"&&document.querySelector("#steps")?.textContent.trim()==="1,855",{timeout:7000});
+assert((await signedShortcut.locator("#stepNote").textContent()).includes("Apple Health via Shortcuts"),"Signed-in Shortcut sample lost its Health source");
+const signedShortcutData=await signedShortcut.evaluate(()=>({uploads:window.__shortcutCloud.uploads,account:JSON.parse(localStorage.getItem("gativx.v2.fresh.state.user.shortcut-member")||"null"),device:JSON.parse(localStorage.getItem("gativx.v2.fresh.state.device")||"null")}));
+assert(signedShortcutData.uploads.some(row=>row.steps===1855&&row.steps_source==="apple_health_shortcuts"),"Fresh Shortcut sample was not uploaded to the restored signed-in account");
+assert(signedShortcutData.account?.entries?.[localDay]?.steps===1855,"Fresh Shortcut sample was not saved in the correct member's local record");
+assert(!signedShortcutData.device?.entries?.[localDay],"Shortcut sample leaked into the shared device-only store");
+assert(signedShortcutErrors.length===0,"Signed-in Shortcut import errors: "+signedShortcutErrors.join("; "));
+await signedShortcut.close();
+
 // Account login and cloud sync are exercised with an isolated Supabase client double.
 const cloudPage=await browser.newPage({viewport:{width:390,height:844}});
 const cloudErrors=[];cloudPage.on("pageerror",e=>cloudErrors.push(e.message));
