@@ -390,6 +390,10 @@ struct ContentView: View {
                 VStack(alignment: .leading, spacing: 6) {
                     Text(health.statusMessage)
                     Text(cloud.status)
+                    if cloud.pendingHealthSyncCount > 0 {
+                        Text("\(cloud.pendingHealthSyncCount) measured sensor update(s) safely queued for cloud retry.")
+                            .foregroundStyle(.orange)
+                    }
                     if let last = health.lastRefresh {
                         Text("Last Health refresh: \(last.formatted(date: .omitted, time: .shortened))")
                     }
@@ -419,7 +423,10 @@ struct ContentView: View {
                 startLiveMotionMonitor()
                 loadActivityHistory()
                 // A Keychain-restored session is already signed in before onChange fires.
-                if cloud.isSignedIn { syncSavedActivitySessions() }
+                if cloud.isSignedIn {
+                    Task { await cloud.retryPendingHealthSyncs() }
+                    syncSavedActivitySessions()
+                }
                 if let recoveredStart = routeRecorder.recoveredStartedAt {
                     selectedActivity = routeRecorder.recoveredActivity ?? "Walking"
                     sessionStatus = "Unfinished activity recovered from \\(recoveredStart.formatted(date: .abbreviated, time: .shortened))."
@@ -433,6 +440,7 @@ struct ContentView: View {
                     health.onActiveEnergy = { day, total in
                         Task { await cloud.syncActiveEnergy(date: day, kilocalories: total) }
                     }
+                    Task { await cloud.retryPendingHealthSyncs() }
                     health.refreshRecentDays()
                     health.refreshTodayEnergy()
                     syncCurrentMotionSnapshotToCloud()
@@ -444,6 +452,7 @@ struct ContentView: View {
                     health.refreshOnForeground()
                     startLiveMotionMonitor()
                     if cloud.isSignedIn {
+                        Task { await cloud.retryPendingHealthSyncs() }
                         syncCurrentMotionSnapshotToCloud()
                         syncSavedActivitySessions()
                     }
