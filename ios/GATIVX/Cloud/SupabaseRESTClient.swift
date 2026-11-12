@@ -11,6 +11,7 @@ private enum PendingHealthSyncKind: String, Codable {
 
 private struct PendingHealthSync: Codable, Identifiable {
     let ownerID: String
+    let revisionID: UUID
     let kind: PendingHealthSyncKind
     let localDay: String
     var steps: Int?
@@ -95,7 +96,7 @@ final class SupabaseRESTClient: ObservableObject {
         // An older in-flight request must not remove a newer reading for the
         // same member/day that was queued while the request was awaiting I/O.
         saveHealthOutbox(loadHealthOutbox().filter {
-            !($0.id == item.id && $0.queuedAt == item.queuedAt)
+            !($0.id == item.id && $0.revisionID == item.revisionID)
         })
     }
 
@@ -150,7 +151,7 @@ final class SupabaseRESTClient: ObservableObject {
     func syncSteps(date: Date, steps: Int) async {
         guard steps >= 0 else { return }
         guard let ownerID = currentUserID else { status = "Step sync pending until a valid account session is available."; return }
-        let item = PendingHealthSync(ownerID: ownerID, kind: .healthSteps, localDay: localDayString(date), steps: steps, activeEnergyKcal: nil, distanceMeters: nil, queuedAt: Date())
+        let item = PendingHealthSync(ownerID: ownerID, revisionID: UUID(), kind: .healthSteps, localDay: localDayString(date), steps: steps, activeEnergyKcal: nil, distanceMeters: nil, queuedAt: Date())
         enqueueHealthSync(item)
         do {
             try await performStepSync(date: date, steps: steps, retryAfterRefresh: true)
@@ -164,7 +165,7 @@ final class SupabaseRESTClient: ObservableObject {
     func syncActiveEnergy(date: Date, kilocalories: Int, retryAfterRefresh: Bool = true) async {
         guard kilocalories >= 0 else { return }
         guard let ownerID = currentUserID else { status = "Active-energy sync pending until a valid account session is available."; return }
-        let item = PendingHealthSync(ownerID: ownerID, kind: .activeEnergy, localDay: localDayString(date), steps: nil, activeEnergyKcal: kilocalories, distanceMeters: nil, queuedAt: Date())
+        let item = PendingHealthSync(ownerID: ownerID, revisionID: UUID(), kind: .activeEnergy, localDay: localDayString(date), steps: nil, activeEnergyKcal: kilocalories, distanceMeters: nil, queuedAt: Date())
         enqueueHealthSync(item)
         do {
             guard let token = accessToken else { throw ClientError.notSignedIn }
@@ -204,7 +205,7 @@ final class SupabaseRESTClient: ObservableObject {
     func syncMotionDailySteps(date: Date, steps: Int, distanceMeters: Double?, retryAfterRefresh: Bool = true) async -> Bool {
         guard steps >= 0 else { return false }
         guard let ownerID = currentUserID else { status = "Motion sync pending until a valid account session is available."; return false }
-        let item = PendingHealthSync(ownerID: ownerID, kind: .motionSteps, localDay: localDayString(date), steps: steps, activeEnergyKcal: nil, distanceMeters: distanceMeters, queuedAt: Date())
+        let item = PendingHealthSync(ownerID: ownerID, revisionID: UUID(), kind: .motionSteps, localDay: localDayString(date), steps: steps, activeEnergyKcal: nil, distanceMeters: distanceMeters, queuedAt: Date())
         enqueueHealthSync(item)
         do {
             guard let token = accessToken else { throw ClientError.notSignedIn }
