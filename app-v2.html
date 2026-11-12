@@ -300,7 +300,8 @@ if(cloudScript){cloudScript.addEventListener('load',initCloud,{once:true});cloud
 
 function applyShortcutPayload(payload){
  const importedDate=payload.date,steps=payload.steps,energy=payload.energy,stamp=payload.receivedAt||new Date().toISOString();
- if(!validDay(importedDate)||(steps===null&&energy===null))return false;
+ const dayParts=String(importedDate||'').split('-').map(Number),dayCheck=dayParts.length===3?new Date(dayParts[0],dayParts[1]-1,dayParts[2]):new Date(NaN);
+ if(dayParts.length!==3||dayCheck.getFullYear()!==dayParts[0]||dayCheck.getMonth()!==dayParts[1]-1||dayCheck.getDate()!==dayParts[2]||(steps===null&&energy===null))return false;
  const prior=state.entries[importedDate]||{},next={...prior};let changed=false;
  // A fresh, permissioned Health Samples result supersedes manual journal values.
  // Keep native HealthKit values authoritative if they already exist.
@@ -317,8 +318,8 @@ function importAppleHealthShortcut(){
  const params=new URLSearchParams(window.location.search),hasSteps=params.has('gativx_steps'),hasEnergy=params.has('gativx_active_energy');
  if(!hasSteps&&!hasEnergy)return;
  const importedDate=params.get('gativx_date')||date(),parts=importedDate.split('-').map(Number),parsed=parts.length===3?new Date(parts[0],parts[1]-1,parts[2]):new Date(NaN);
- const validDate=/^\\d{4}-\\d{2}-\\d{2}$/.test(importedDate)&&parsed.getFullYear()===parts[0]&&parsed.getMonth()===parts[1]-1&&parsed.getDate()===parts[2];
- const numeric=(raw,max)=>{if(raw==null)return null;const clean=raw.trim().replace(/,/g,'');if(!/^\\d+(?:\\.\\d+)?$/.test(clean))return null;const n=Number(clean);return Number.isFinite(n)&&n>=0&&n<=max?Math.round(n):null};
+ const validDate=parts.length===3&&parsed.getFullYear()===parts[0]&&parsed.getMonth()===parts[1]-1&&parsed.getDate()===parts[2];
+ const numeric=(raw,max)=>{if(raw==null||raw.trim()==='')return null;const n=Number(raw.replace(/,/g,''));return Number.isFinite(n)&&n>=0&&n<=max?Math.round(n):null};
  const steps=hasSteps?numeric(params.get('gativx_steps'),100000):null,energy=hasEnergy?numeric(params.get('gativx_active_energy'),20000):null;
  if(validDate&&(steps!==null||energy!==null)){
   const payload={date:importedDate,steps,energy,receivedAt:new Date().toISOString()};
