@@ -90,24 +90,49 @@ final class GPSRouteRecorder: NSObject, ObservableObject, CLLocationManagerDeleg
     }
 
     private func restoreDraft() {
-        guard let data = UserDefaults.standard.data(forKey: draftKey),
-              let draft = try? JSONDecoder().decode(GATIVXActiveRouteDraft.self, from: data) else { return }
+        let url = draftURL
+        let fileData = url.flatMap { try? Data(contentsOf: $0) }
+        let legacyData = UserDefaults.standard.data(forKey: draftKey)
+        guard let data = fileData ?? legacyData,
+              let draft = try? JSONDecoder().decode(GATIVXActiveRouteDraft.self, from: data) else {
+            if fileData != nil || legacyData != nil {
+                status = "An unfinished GPS draft could not be decoded. Its original data was preserved for recovery."
+            }
+            return
+        }
         points = draft.points
         recoveredStartedAt = draft.startedAt
         recoveredActivity = draft.activity
         activeStartedAt = draft.startedAt
         activeActivity = draft.activity
         status = "Recovered unfinished activity · \(points.count) GPS points. Resume or finish to save it."
+
+        // Migrate older UserDefaults drafts to an atomic file without deleting
+        // the legacy copy until the file write succeeds.
+        if fileData == nil, let legacyData, let url {
+            do {
+                try legacyData.write(to: url, options: .atomic)
+                UserDefaults.standard.removeObject(forKey: draftKey)
+            } catch {
+                status = "Recovered legacy GPS draft. File migration is pending; the original draft remains preserved."
+            }
+        }
     }
 
     private func persistDraft() {
         guard let startedAt = activeStartedAt else { return }
-        let draft = GATIVXActiveRouteDraft(startedAt: startedAt, activity: activeActivity, points: points)
-        guard let data = try? JSONEncoder().encode(draft) else {
-            status = "Could not persist the active route safely."
+        guard let url = draftURL else {
+            status = "Could not access the local GPS draft folder. The route remains in memory; do not force-quit GATIVX."
             return
         }
-        UserDefaults.standard.set(data, forKey: draftKey)
+        let draft = GATIVXActiveRouteDraft(startedAt: startedAt, activity: activeActivity, points: points)
+        do {
+            let data = try JSONEncoder().encode(draft)
+            try data.write(to: url, options: .atomic)
+            UserDefaults.standard.removeObject(forKey: draftKey)
+        } catch {
+            status = "Could not persist the active route safely: \(error.localizedDescription)"
+        }
     }
 
     func start(activity: String) {
