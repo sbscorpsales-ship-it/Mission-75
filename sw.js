@@ -1,5 +1,5 @@
-const CACHE="gativx-v34";
-const CORE=["./","./index.html","./legacy-runtime.html","./manifest.webmanifest","./icon.svg","./apple-touch-icon.png","./gativx-logo.jpg","./gativx-master.png","./gativx-runner.svg"];
+const CACHE="gativx-v35";
+const CORE=["./","./index.html","./app-v2.html","./apple-health-shortcut.html","./legacy-runtime.html","./manifest.webmanifest","./icon.svg","./apple-touch-icon.png","./gativx-logo.jpg","./gativx-master.png","./gativx-runner.svg"];
 self.addEventListener("install",event=>{event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(CORE)).then(()=>self.skipWaiting()));});
 self.addEventListener("activate",event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim()));});
 self.addEventListener("fetch",event=>{
@@ -10,7 +10,7 @@ self.addEventListener("fetch",event=>{
   event.respondWith(fetch(event.request,{cache:"no-store"}).then(response=>{
    if(response&&response.ok){const copy=response.clone();caches.open(CACHE).then(cache=>cache.put(event.request,copy));}
    return response;
-  }).catch(()=>caches.match(event.request).then(cached=>cached||caches.match("./legacy-runtime.html")||caches.match("./index.html"))));
+  }).catch(()=>caches.match(event.request).then(cached=>cached||caches.match("./app-v2.html")||caches.match("./legacy-runtime.html")||caches.match("./index.html"))));
   return;
  }
  event.respondWith(caches.match(event.request).then(cached=>cached||fetch(event.request).then(response=>{
