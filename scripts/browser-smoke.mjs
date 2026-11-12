@@ -12,6 +12,7 @@ const assert=(v,m)=>{if(!v)throw new Error(m)};
 assert(await page.locator("#steps").textContent().then(x=>x.trim())==="1,948","Fresh-store step value did not render");
 assert((await page.locator("#missionTitle").textContent()).includes("Build strength"),"Fresh-store mission did not render");
 assert((await page.locator("#missionPct").textContent()).includes("MISSION ACTIVE"),"Mission status missing");
+assert((await page.locator("#missionPct").textContent()).includes("1/90 CHECK-IN DAYS"),"Mission progress must count real saved check-in days, not a decorative percentage");
 await page.locator('[data-panel="journey"]').click();
 await page.locator("#goalType").selectOption({label:"Weight loss"});
 await page.locator("#goalDuration").selectOption({label:"90 days"});
