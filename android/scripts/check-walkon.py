@@ -51,6 +51,13 @@ checks = {
         'Cipher.getInstance("AES/GCM/NoPadding")' in store
         and 'KeyStore.getInstance(KEYSTORE)' in store
     ),
+    "completed GPS history is synchronously committed and read back before active draft deletion": (
+        "val committed = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()" in store
+        and ".commit()" in store
+        and "committed && readEncrypted(context, key) == plain" in store
+        and "if (!writeEncrypted(context, COMPLETED_KEY, encodedHistory))" in store
+        and store.index("if (!writeEncrypted(context, COMPLETED_KEY, encodedHistory))") < store.index("clearActive(context)", store.index("fun finishActive"))
+    ),
     "route history is isolated by account": (
         "ownerUserId" in store
         and "pendingFor(context, currentSession.userId)" in activity
