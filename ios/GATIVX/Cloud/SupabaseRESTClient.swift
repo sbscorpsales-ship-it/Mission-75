@@ -139,6 +139,7 @@ final class SupabaseRESTClient: ObservableObject {
             refreshToken = session.refreshToken
             saveSession(session)
             isSignedIn = true
+            pendingHealthSyncCount = loadHealthOutbox().filter { $0.ownerID == currentUserID }.count
             status = "Signed in. Your existing cloud records can be shared with GATIVX."
             await retryPendingHealthSyncs()
         } catch {
@@ -413,6 +414,7 @@ final class SupabaseRESTClient: ObservableObject {
         accessToken = nil
         refreshToken = nil
         isSignedIn = false
+        pendingHealthSyncCount = 0
     }
 
     private static func serverError(_ data: Data) -> Error {
