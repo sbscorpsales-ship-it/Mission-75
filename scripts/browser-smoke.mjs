@@ -29,7 +29,8 @@ assert((await page.locator("#guruNextAction").textContent()).includes("Remember 
 assert((await page.locator("#distance").textContent()).includes("0.40 km"),"Fresh-store distance did not render");
 assert(await page.locator(".summaryHero").count()===1,"Fitness summary hero missing");
 assert(await page.locator(".summaryTile").count()===4,"Expected four summary metric tiles");
-assert(await page.locator('.tileSteps a[href="./apple-health-shortcut.html"]').count()===1,"Step tile must offer the Apple Health Shortcut path");
+assert(await page.locator('.tileSteps a[href="shortcuts://run-shortcut?name=try%202"]').filter({hasText:"Sync Apple Health now"}).count()===1,"Step tile must launch the configured Apple Health Shortcut directly");
+assert(await page.locator('.tileSteps a[href="./apple-health-shortcut.html"]').filter({hasText:"Shortcut setup guide"}).count()===1,"Step tile must retain access to the Shortcut setup guide");
 await page.locator('[data-panel="home"]').click();
 await page.locator('.quick [data-go="walk"]').click();
 assert(await page.locator("#walk").evaluate(el=>el.classList.contains("active")),"Today's Walk action did not open the GPS recorder");
