@@ -324,8 +324,9 @@ function storePendingHealthShortcut(payload){
  return saved;
 }
 function clearPendingHealthShortcut(){
- try{localStorage.removeItem(PENDING_HEALTH_SHORTCUT_KEY)}catch{}
- try{sessionStorage.removeItem('gativx.pending-health-shortcut.v1')}catch{}
+ // Preserve browser storage namespaces; an empty value marks the queue as cleared.
+ try{localStorage.setItem(PENDING_HEALTH_SHORTCUT_KEY,'')}catch{}
+ try{sessionStorage.setItem('gativx.pending-health-shortcut.v1','')}catch{}
 }
 function applyPendingShortcutToActiveAccount(){
  if(!cloudUser)return;
