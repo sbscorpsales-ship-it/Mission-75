@@ -58,6 +58,10 @@ checks = {
         and "if (!writeEncrypted(context, COMPLETED_KEY, encodedHistory))" in store
         and store.index("if (!writeEncrypted(context, COMPLETED_KEY, encodedHistory))") < store.index("clearActive(context)", store.index("fun finishActive"))
     ),
+    "route-save verification failure is not mislabeled as an empty GPS recording": (
+        "points.isNotEmpty() -> \"WalkOn could not verify the completed route history write" in service
+        and "Your active GPS draft has been retained" in service
+    ),
     "route history is isolated by account": (
         "ownerUserId" in store
         and "pendingFor(context, currentSession.userId)" in activity
