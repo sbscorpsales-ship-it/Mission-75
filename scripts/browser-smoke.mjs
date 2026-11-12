@@ -7,7 +7,7 @@ const errors=[];page.on("pageerror",e=>errors.push(e.message));
 const legacyFixtures={"mission75.dailyLogs":"preserve-existing-records-fixture","sb-crarbbsvcczwmtvxyrxo-auth-token":"preserve-auth-session-fixture"};
 await page.addInitScript((legacy)=>{for(const [key,value] of Object.entries(legacy))localStorage.setItem(key,value);sessionStorage.setItem("gativx.session.fixture","preserve-session-fixture");localStorage.setItem("gativx.v2.fresh.state",JSON.stringify({version:2,goal:{type:"Build strength",duration:"90 days"},entries:{[new Date().getFullYear()+"-"+String(new Date().getMonth()+1).padStart(2,"0")+"-"+String(new Date().getDate()).padStart(2,"0")]:{steps:1948,water:1500,protein:65,distance:.4}},walks:[]}));},legacyFixtures);
 await page.route("https://**/*",r=>r.abort());
-await page.goto(pathToFileURL(path.resolve("app-v2.html")).href,{waitUntil:"domcontentloaded"});await page.waitForTimeout(300);
+await page.goto(pathToFileURL(path.resolve("index.html")).href,{waitUntil:"domcontentloaded"});await page.waitForURL(url=>url.pathname.endsWith("/app-v2.html"),{timeout:10000});await page.waitForTimeout(300);
 const assert=(v,m)=>{if(!v)throw new Error(m)};
 assert(await page.locator("#steps").textContent().then(x=>x.trim())==="1,948","Fresh-store step value did not render");
 assert((await page.locator("#missionTitle").textContent()).includes("Build strength"),"Fresh-store mission did not render");
