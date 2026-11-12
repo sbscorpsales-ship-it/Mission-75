@@ -296,7 +296,7 @@ async function refreshPedometerFromCloud(){if(!cloudClient||!cloudUser)return;co
 window.setInterval(()=>{if(!document.hidden)refreshPedometerFromCloud()},60000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshPedometerFromCloud()});
 const cloudScript=document.querySelector('script[src*="supabase-js"]');
-if(cloudScript){cloudScript.addEventListener('load',initCloud,{once:true});cloudScript.addEventListener('error',()=>cloudMsg('Cloud library could not load. Your device data remains available offline.','OFFLINE'),{once:true})}
+if(cloudScript){cloudScript.addEventListener('load',initCloud,{once:true});cloudScript.addEventListener('error',()=>{if(!cloudClient)cloudMsg('Cloud library could not load. Your device data remains available offline.','OFFLINE')},{once:true})}
 
 function applyShortcutPayload(payload){
  const importedDate=payload.date,steps=payload.steps,energy=payload.energy,stamp=payload.receivedAt||new Date().toISOString();
