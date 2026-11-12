@@ -30,7 +30,7 @@ assert(await page.locator(".summaryHero").count()===1,"Fitness summary hero miss
 assert(await page.locator(".summaryTile").count()===4,"Expected four summary metric tiles");
 assert(await page.locator('.tileSteps a[href="./apple-health-shortcut.html"]').count()===1,"Step tile must offer the Apple Health Shortcut path");
 await page.locator('[data-panel="home"]').click();
-await page.locator('.tileDistance [data-go="walk"]').click();
+await page.locator('.quick [data-go="walk"]').click();
 assert(await page.locator("#walk").evaluate(el=>el.classList.contains("active")),"Today's Walk action did not open the GPS recorder");
 assert(await page.locator("#home .guruCard").count()===1,"GURU mode home card missing");
 assert(await page.locator("#vActiveEnergy").textContent().then(x=>x.trim())==="—","Active calories must not be fabricated before HealthKit data");
