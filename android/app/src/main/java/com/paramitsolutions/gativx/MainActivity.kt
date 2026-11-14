@@ -58,7 +58,9 @@ import androidx.health.connect.client.PermissionController
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.ActiveCaloriesBurnedRecord
 import androidx.health.connect.client.records.StepsRecord
+import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.request.AggregateRequest
+import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -67,6 +69,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
+import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -77,7 +80,38 @@ private const val HEALTH_CONNECT_PROVIDER = "com.google.android.apps.healthdata"
 private const val ACTION_GATIVX_APP_RESUMED = "com.paramitsolutions.gativx.APP_RESUMED"
 
 data class GativxSession(val userId: String, val accessToken: String, val refreshToken: String)
-data class DailyHealthSnapshot(val date: String, val steps: Long?, val activeEnergyKcal: Double?, val measuredAt: String)
+data class DailyHealthSnapshot(val date: String, val steps: Long?, val activeEnergyKcal: Double?, val sleepMinutes: Long?, val measuredAt: String)
+
+private fun measuredSleepMinutes(records: List<SleepSessionRecord>, day: LocalDate, zone: ZoneId): Long? {
+    val asleepStages = setOf(
+        SleepSessionRecord.STAGE_TYPE_SLEEPING,
+        SleepSessionRecord.STAGE_TYPE_LIGHT,
+        SleepSessionRecord.STAGE_TYPE_DEEP,
+        SleepSessionRecord.STAGE_TYPE_REM
+    )
+    val intervals = records
+        .filter { it.endTime.atZone(zone).toLocalDate() == day }
+        .flatMap { record ->
+            record.stages.filter { it.stage in asleepStages && it.endTime > it.startTime }
+                .map { it.startTime to it.endTime }
+        }
+        .sortedBy { it.first }
+    if (intervals.isEmpty()) return null
+    var mergedStart = intervals.first().first
+    var mergedEnd = intervals.first().second
+    var totalMillis = 0L
+    intervals.drop(1).forEach { (start, end) ->
+        if (start <= mergedEnd) {
+            if (end > mergedEnd) mergedEnd = end
+        } else {
+            totalMillis += Duration.between(mergedStart, mergedEnd).toMillis()
+            mergedStart = start
+            mergedEnd = end
+        }
+    }
+    totalMillis += Duration.between(mergedStart, mergedEnd).toMillis()
+    return (totalMillis / 60_000.0).toLong().takeIf { it > 0 }
+}
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -98,13 +132,15 @@ private fun GativxAndroidScreen() {
     val healthPermissions = remember {
         setOf(
             HealthPermission.getReadPermission(StepsRecord::class),
-            HealthPermission.getReadPermission(ActiveCaloriesBurnedRecord::class)
+            HealthPermission.getReadPermission(ActiveCaloriesBurnedRecord::class),
+            HealthPermission.getReadPermission(SleepSessionRecord::class)
         )
     }
     var healthClient by remember { mutableStateOf<HealthConnectClient?>(null) }
     var healthReady by remember { mutableStateOf(false) }
     var steps by remember { mutableStateOf<Long?>(null) }
     var activeEnergy by remember { mutableStateOf<Double?>(null) }
+    var sleepMinutes by remember { mutableStateOf<Long?>(null) }
     var measuredDate by remember { mutableStateOf(LocalDate.now().toString()) }
     var measuredAt by remember { mutableStateOf<String?>(null) }
     var email by remember { mutableStateOf("") }
@@ -242,9 +278,10 @@ private fun GativxAndroidScreen() {
         val granted = client.permissionController.getGrantedPermissions()
         val canReadSteps = HealthPermission.getReadPermission(StepsRecord::class) in granted
         val canReadEnergy = HealthPermission.getReadPermission(ActiveCaloriesBurnedRecord::class) in granted
-        if (!canReadSteps && !canReadEnergy) {
+        val canReadSleep = HealthPermission.getReadPermission(SleepSessionRecord::class) in granted
+        if (!canReadSteps && !canReadEnergy && !canReadSleep) {
             healthReady = false
-            status = "No Health Connect read permission is enabled. Grant Steps or Active Calories to continue."
+            status = "No Health Connect read permission is enabled. Grant Steps, Active Calories or Sleep to continue."
             return
         }
         val zone = ZoneId.systemDefault()
@@ -263,12 +300,17 @@ private fun GativxAndroidScreen() {
             )
             response[ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL]?.inKilocalories
         } else null
+        val sleepRecords = if (canReadSleep) {
+            val sleepStart = Instant.now().minus(Duration.ofHours(36))
+            client.readRecords(ReadRecordsRequest(SleepSessionRecord::class, timeRangeFilter = TimeRangeFilter.between(sleepStart, Instant.now()))).records
+        } else emptyList()
+        sleepMinutes = measuredSleepMinutes(sleepRecords, today, zone)
         measuredDate = today.toString()
         measuredAt = Instant.now().toString()
         healthReady = true
         status = when {
-            steps == null && activeEnergy == null -> "Health Connect is connected, but it has no measured values for the permitted data types today."
-            !canReadSteps || !canReadEnergy -> "Partial Health Connect access. Available measured values were refreshed; denied metrics remain unknown."
+            steps == null && activeEnergy == null && sleepMinutes == null -> "Health Connect is connected, but no measured values were returned for the permitted data types today."
+            !canReadSteps || !canReadEnergy || !canReadSleep -> "Partial Health Connect access. Available measured values were refreshed; unavailable metrics remain unknown."
             else -> "Measured Health Connect data refreshed. No estimates have been added."
         }
 
@@ -280,6 +322,7 @@ private fun GativxAndroidScreen() {
                 measuredDate,
                 steps,
                 activeEnergy,
+                sleepMinutes,
                 measuredAt ?: Instant.now().toString()
             )
             try {
@@ -438,11 +481,11 @@ private fun GativxAndroidScreen() {
             status = "Sign in before syncing your health readings."
             return
         }
-        if (!healthReady || (steps == null && activeEnergy == null)) {
+        if (!healthReady || (steps == null && activeEnergy == null && sleepMinutes == null)) {
             status = "Refresh measured Health Connect data before syncing. Unknown values will remain empty."
             return
         }
-        val snapshot = DailyHealthSnapshot(measuredDate, steps, activeEnergy, measuredAt ?: Instant.now().toString())
+        val snapshot = DailyHealthSnapshot(measuredDate, steps, activeEnergy, sleepMinutes, measuredAt ?: Instant.now().toString())
         scope.launch {
             busy = true
             try {
@@ -523,6 +566,17 @@ private fun GativxAndroidScreen() {
                     }
                 }
                 Text("Android Health Connect", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF17232A))) {
+                    Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text("SLEEP LAST NIGHT", color = Color(0xFF9DAEB6), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Text(sleepMinutes?.let { "${it / 60}h ${it % 60}m" } ?: "—", color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Bold)
+                        Text(
+                            if (sleepMinutes != null) "Measured asleep stages from Health Connect · attributed to local wake-up day"
+                            else "No measured sleep stages available yet. GATIVX will not estimate or invent sleep hours.",
+                            color = Color(0xFF9DAEB6), fontSize = 11.sp
+                        )
+                    }
+                }
 
                 Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF17232A))) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -857,7 +911,7 @@ internal object SupabaseApi {
 
     suspend fun syncDaily(context: Context, session: GativxSession, snapshot: DailyHealthSnapshot): GativxSession = withContext(Dispatchers.IO) {
         var activeSession = session
-        val lookupPath = "/rest/v1/daily_logs?select=steps,steps_source,steps_updated_at,active_energy_kcal,active_energy_source,active_energy_updated_at&user_id=eq.${session.userId}&log_date=eq.${snapshot.date}"
+        val lookupPath = "/rest/v1/daily_logs?select=steps,steps_source,steps_updated_at,active_energy_kcal,active_energy_source,active_energy_updated_at,sleep_minutes,sleep_source,sleep_updated_at&user_id=eq.${session.userId}&log_date=eq.${snapshot.date}"
         var lookup = request("GET", lookupPath, activeSession.accessToken, "")
         if (lookup.first == 401) {
             activeSession = refresh(activeSession)
@@ -880,6 +934,12 @@ internal object SupabaseApi {
         // Keep energy from another source (including legacy rows) intact.
         val preserveRemoteEnergy = remoteHasEnergy && remoteEnergySource != "health_connect" ||
             (remoteEnergySource == "health_connect" && remoteEnergyAt.isAfter(localMeasuredAt))
+        val remoteSleepSource = remote?.optString("sleep_source")?.takeIf { it.isNotBlank() }
+        val remoteSleepAt = parseTimestamp(remote?.optString("sleep_updated_at"))
+        val remoteHasSleep = remote != null && !remote.isNull("sleep_minutes")
+        // Keep manual or unknown-provenance sleep values, and never overwrite a newer trusted reading.
+        val preserveRemoteSleep = remoteHasSleep &&
+            (remoteSleepSource !in setOf("health_connect", "apple_health") || remoteSleepAt.isAfter(localMeasuredAt))
 
         val row = JSONObject().put("user_id", session.userId).put("log_date", snapshot.date)
         if (snapshot.steps != null && !preserveRemoteSteps) {
@@ -891,6 +951,11 @@ internal object SupabaseApi {
             row.put("active_energy_kcal", snapshot.activeEnergyKcal.toInt())
                 .put("active_energy_source", "health_connect")
                 .put("active_energy_updated_at", snapshot.measuredAt)
+        }
+        if (snapshot.sleepMinutes != null && !preserveRemoteSleep) {
+            row.put("sleep_minutes", snapshot.sleepMinutes.toInt())
+                .put("sleep_source", "health_connect")
+                .put("sleep_updated_at", snapshot.measuredAt)
         }
         if (row.length() <= 2) return@withContext activeSession
 
