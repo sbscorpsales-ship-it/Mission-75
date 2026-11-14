@@ -45,6 +45,25 @@ jobs:
       - name: Validate project and scheme
         run: xcodebuild -list -project ios/GATIVX.xcodeproj
 
+      - name: Verify generated HealthKit target signing configuration
+        run: |
+          SETTINGS="$(xcodebuild -showBuildSettings -project ios/GATIVX.xcodeproj -scheme GATIVX)"
+          echo "$SETTINGS" | grep -F 'CODE_SIGN_ENTITLEMENTS = GATIVX/GATIVX.entitlements'
+          python3 - <<'PY'
+          from pathlib import Path
+          import plistlib
+
+          spec = Path("ios/gativx-project.yml").read_text()
+          if "CODE_SIGN_ENTITLEMENTS: GATIVX/GATIVX.entitlements" not in spec:
+              raise SystemExit("Generated GATIVX target is not configured to sign with its HealthKit entitlements file")
+          with Path("ios/GATIVX/GATIVX.entitlements").open("rb") as stream:
+              entitlements = plistlib.load(stream)
+          if entitlements.get("com.apple.developer.healthkit") is not True:
+              raise SystemExit("HealthKit capability is absent from GATIVX source entitlements")
+          print("Generated target points to the HealthKit entitlement file.")
+          print("Note: this CI job is unsigned; only a device-signed build with a HealthKit-enabled provisioning profile can prove the installed entitlement.")
+          PY
+
       - name: Verify real-time tracking safeguards
         run: |
           python3 - <<'PY'
@@ -140,6 +159,7 @@ jobs:
               info = plistlib.load(stream)
           for key in (
               "NSHealthShareUsageDescription",
+              "NSHealthUpdateUsageDescription",
               "NSMotionUsageDescription",
               "NSLocationWhenInUseUsageDescription",
               "NSLocationAlwaysAndWhenInUseUsageDescription",

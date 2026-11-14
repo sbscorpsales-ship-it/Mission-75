@@ -14,6 +14,7 @@ targets:
       path: GATIVX/Info.plist
       properties:
         NSHealthShareUsageDescription: "GATIVX reads your daily step count and active energy from Apple Health to show your fitness progress."
+        NSHealthUpdateUsageDescription: "GATIVX can save a walking workout to Apple Health when you choose to export it."
         NSMotionUsageDescription: "GATIVX uses motion activity to display live step and walking-distance estimates while you use the app."
         NSLocationWhenInUseUsageDescription: "GATIVX records your GPS route only while you explicitly start an activity."
         NSLocationAlwaysAndWhenInUseUsageDescription: "GATIVX uses location during an active walk so route recording can continue when your iPhone screen is locked."
