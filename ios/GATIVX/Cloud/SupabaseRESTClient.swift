@@ -7,6 +7,7 @@ private enum PendingHealthSyncKind: String, Codable {
     case healthSteps
     case activeEnergy
     case motionSteps
+    case sleep
 }
 
 private struct PendingHealthSync: Codable, Identifiable {
@@ -17,6 +18,7 @@ private struct PendingHealthSync: Codable, Identifiable {
     var steps: Int?
     var activeEnergyKcal: Int?
     var distanceMeters: Double?
+    var sleepMinutes: Int? = nil
     let queuedAt: Date
     var id: String { ownerID + ":" + kind.rawValue + ":" + localDay }
 }
@@ -120,6 +122,8 @@ final class SupabaseRESTClient: ObservableObject {
                 if let steps = item.steps {
                     _ = await syncMotionDailySteps(date: day, steps: steps, distanceMeters: item.distanceMeters)
                 }
+            case .sleep:
+                if let minutes = item.sleepMinutes { await syncSleep(date: day, minutes: minutes) }
             }
         }
     }
@@ -195,6 +199,50 @@ final class SupabaseRESTClient: ObservableObject {
             status = "Apple Health active calories synced to your GATIVX account."
         } catch {
             status = "Active calorie sync pending: " + error.localizedDescription + ". Open the app later to retry."
+        }
+    }
+
+    func syncSleep(date: Date, minutes: Int, retryAfterRefresh: Bool = true) async {
+        guard (0...1440).contains(minutes) else { return }
+        guard let ownerID = currentUserID else {
+            status = "Measured sleep sync pending until a valid account session is available."
+            return
+        }
+        let item = PendingHealthSync(
+            ownerID: ownerID, revisionID: UUID(), kind: .sleep,
+            localDay: localDayString(date), steps: nil, activeEnergyKcal: nil,
+            distanceMeters: nil, sleepMinutes: minutes, queuedAt: Date()
+        )
+        enqueueHealthSync(item)
+        do {
+            guard let token = accessToken else { throw ClientError.notSignedIn }
+            var request = URLRequest(url: baseURL.appendingPathComponent("rest/v1/rpc/sync_health_sleep"))
+            request.httpMethod = "POST"
+            request.setValue(publishableKey, forHTTPHeaderField: "apikey")
+            request.setValue("Bearer " + token, forHTTPHeaderField: "Authorization")
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            let formatter = DateFormatter()
+            formatter.locale = Locale(identifier: "en_US_POSIX")
+            formatter.timeZone = TimeZone.current
+            formatter.dateFormat = "yyyy-MM-dd"
+            request.httpBody = try JSONSerialization.data(withJSONObject: [
+                "p_log_date": formatter.string(from: date),
+                "p_sleep_minutes": minutes,
+                "p_source": "apple_health",
+                "p_updated_at": ISO8601DateFormatter().string(from: Date())
+            ])
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let http = response as? HTTPURLResponse else { throw ClientError.invalidResponse }
+            if http.statusCode == 401 && retryAfterRefresh {
+                try await refreshSession()
+                await syncSleep(date: date, minutes: minutes, retryAfterRefresh: false)
+                return
+            }
+            guard (200..<300).contains(http.statusCode) else { throw Self.serverError(data) }
+            acknowledgeHealthSync(item)
+            status = "Measured Apple Health sleep synced to your GATIVX account."
+        } catch {
+            status = "Sleep sync pending: \(error.localizedDescription). Open GATIVX later to retry."
         }
     }
 
