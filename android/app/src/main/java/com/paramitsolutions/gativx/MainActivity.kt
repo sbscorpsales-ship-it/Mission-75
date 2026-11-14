@@ -110,7 +110,7 @@ private fun measuredSleepMinutes(records: List<SleepSessionRecord>, day: LocalDa
         }
     }
     totalMillis += Duration.between(mergedStart, mergedEnd).toMillis()
-    return (totalMillis / 60_000.0).toLong().takeIf { it > 0 }
+    return (totalMillis / 60_000.0).toLong().coerceAtMost(1440L).takeIf { it > 0 }
 }
 
 class MainActivity : ComponentActivity() {
