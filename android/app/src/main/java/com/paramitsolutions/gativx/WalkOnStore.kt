@@ -108,24 +108,36 @@ internal object WalkOnStore {
             points = points.toList(),
             synced = false
         )
-        if (finished.points.isNotEmpty()) {
-            val history = readSessions(context, COMPLETED_KEY)?.filterNot { it.id == finished.id }
-                ?.toMutableList() ?: run {
-                    setStatus(context, "Saved route history could not be read. Your active route draft is preserved; no history was replaced.")
-                    return null
-                }
-            history.add(0, finished)
-            val encodedHistory = encodeSessions(history.take(100))
-            if (!writeEncrypted(context, COMPLETED_KEY, encodedHistory)) {
-                setStatus(context, "WalkOn could not verify the completed route history write. Your active GPS draft is preserved; do not clear app data.")
+        // A walk is valid activity data even when GPS never returned a fix.
+        // Preserve measured steps/distance locally instead of discarding the session
+        // solely because the optional route-point list is empty.
+        val hasActivityData = finished.points.isNotEmpty() || finished.sessionSteps > 0 || finished.distanceMeters > 0.0
+        if (!hasActivityData) {
+            setStatus(context, "WalkOn finished without measured steps, distance or GPS points. The active draft is retained for recovery.")
+            return null
+        }
+
+        val history = readSessions(context, COMPLETED_KEY)?.filterNot { it.id == finished.id }
+            ?.toMutableList() ?: run {
+                setStatus(context, "Saved route history could not be read. Your active route draft is preserved; no history was replaced.")
                 return null
             }
-            setStatus(context, "WalkOn route saved and verified on this device. Cloud backup is pending.")
-        } else {
-            setStatus(context, "No reliable GPS points were recorded. No route was saved.")
+        history.add(0, finished)
+        val encodedHistory = encodeSessions(history.take(100))
+        if (!writeEncrypted(context, COMPLETED_KEY, encodedHistory)) {
+            setStatus(context, "WalkOn could not verify the completed activity history write. Your active draft is preserved; do not clear app data.")
+            return null
         }
+        setStatus(
+            context,
+            if (finished.points.isNotEmpty()) {
+                "WalkOn activity and GPS route saved and verified on this device. Cloud backup is pending."
+            } else {
+                "WalkOn activity saved and verified on this device · ${finished.sessionSteps} measured steps · GPS route unavailable. Cloud backup is pending."
+            }
+        )
         clearActive(context)
-        return finished.takeIf { it.points.isNotEmpty() }
+        return finished
     }
 
     fun markSynced(context: Context, id: String) {
