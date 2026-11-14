@@ -42,7 +42,7 @@ begin
   set sleep_hours = excluded.sleep_hours,
       sleep_source = excluded.sleep_source,
       sleep_updated_at = excluded.sleep_updated_at
-  where (public.daily_logs.sleep_source is null or public.daily_logs.sleep_source in ('apple_health', 'health_connect'))
+  where (public.daily_logs.sleep_hours is null or public.daily_logs.sleep_source in ('apple_health', 'health_connect'))
     and (
       public.daily_logs.sleep_updated_at is null
       or excluded.sleep_updated_at >= public.daily_logs.sleep_updated_at
