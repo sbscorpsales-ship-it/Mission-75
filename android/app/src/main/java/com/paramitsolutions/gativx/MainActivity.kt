@@ -818,8 +818,42 @@ internal object SupabaseApi {
     }
 
     suspend fun syncWalkSessionRoute(context: Context, session: GativxSession, walk: WalkOnSession): GativxSession = withContext(Dispatchers.IO) {
-        require(walk.ownerUserId == session.userId) { "This WalkOn route belongs to a different account." }
-        if (walk.points.isEmpty() || walk.finishedAt == null) return@withContext session
+        require(walk.ownerUserId == session.userId) { "This WalkOn activity belongs to a different account." }
+        val finishedAt = walk.finishedAt ?: return@withContext session
+        var activeSession = session
+
+        // Sync measured session steps independently of GPS. A valid walk must not
+        // disappear from cloud activity history just because the GPS provider
+        // returned no route fixes during that session.
+        if (walk.sessionSteps > 0) {
+            require(walk.sessionSteps <= 200_000) { "WalkOn step count exceeds the supported per-session limit; local history is preserved." }
+            val stepBody = JSONObject()
+                .put("p_session_id", walk.id)
+                .put("p_activity", walk.activity)
+                .put("p_started_at", walk.startedAt)
+                .put("p_finished_at", finishedAt)
+                .put("p_steps", walk.sessionSteps.toInt())
+            var stepResponse = request(
+                "POST", "/rest/v1/rpc/sync_activity_session_steps",
+                activeSession.accessToken, stepBody.toString()
+            )
+            if (stepResponse.first == 401) {
+                activeSession = refresh(activeSession)
+                SessionVault.save(context, activeSession)
+                stepResponse = request(
+                    "POST", "/rest/v1/rpc/sync_activity_session_steps",
+                    activeSession.accessToken, stepBody.toString()
+                )
+            }
+            if (stepResponse.first !in 200..299) {
+                throw IllegalStateException(parseError(stepResponse.second, "WalkOn step history cloud sync failed."))
+            }
+        }
+
+        // A step-only walk has already been backed up above. GPS is an optional
+        // companion record and is uploaded only when at least one valid fix exists.
+        if (walk.points.isEmpty()) return@withContext activeSession
+
         val cloudPoints = if (walk.points.size > 20_000) {
             (0 until 20_000).map { index -> walk.points[index * (walk.points.size - 1) / 19_999] }
         } else walk.points
@@ -837,12 +871,11 @@ internal object SupabaseApi {
         val body = JSONObject()
             .put("p_session_id", walk.id)
             .put("p_started_at", walk.startedAt)
-            .put("p_finished_at", walk.finishedAt)
+            .put("p_finished_at", finishedAt)
             .put("p_duration_seconds", walk.durationSeconds.coerceIn(0, 86_400))
             .put("p_distance_m", walk.distanceMeters.coerceAtLeast(0.0))
             .put("p_steps", walk.sessionSteps.takeIf { it > 0 }?.let { it } ?: JSONObject.NULL)
             .put("p_route_points", route)
-        var activeSession = session
         var response = request("POST", "/rest/v1/rpc/sync_walk_session_route", activeSession.accessToken, body.toString())
         if (response.first == 401) {
             activeSession = refresh(activeSession)
