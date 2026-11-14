@@ -227,7 +227,7 @@ final class SupabaseRESTClient: ObservableObject {
             formatter.dateFormat = "yyyy-MM-dd"
             request.httpBody = try JSONSerialization.data(withJSONObject: [
                 "p_log_date": formatter.string(from: date),
-                "p_sleep_minutes": minutes,
+                "p_sleep_hours": Double(minutes) / 60.0,
                 "p_source": "apple_health",
                 "p_updated_at": ISO8601DateFormatter().string(from: Date())
             ])
