@@ -22,7 +22,7 @@ checks = {
         and 'HealthPermission.getReadPermission(SleepSessionRecord::class)' in activity
         and 'ReadRecordsRequest(SleepSessionRecord::class' in activity
         and 'SleepSessionRecord.STAGE_TYPE_LIGHT' in activity
-        and 'sleep_minutes' in activity
+        and 'sleep_hours' in activity
         and 'sleep_source' in activity
         and 'measuredSleepMinutes' in activity
     ),
