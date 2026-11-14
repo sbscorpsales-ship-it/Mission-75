@@ -912,7 +912,7 @@ internal object SupabaseApi {
 
     suspend fun syncDaily(context: Context, session: GativxSession, snapshot: DailyHealthSnapshot): GativxSession = withContext(Dispatchers.IO) {
         var activeSession = session
-        val lookupPath = "/rest/v1/daily_logs?select=steps,steps_source,steps_updated_at,active_energy_kcal,active_energy_source,active_energy_updated_at,sleep_minutes,sleep_source,sleep_updated_at&user_id=eq.${session.userId}&log_date=eq.${snapshot.date}"
+        val lookupPath = "/rest/v1/daily_logs?select=steps,steps_source,steps_updated_at,active_energy_kcal,active_energy_source,active_energy_updated_at,sleep_hours,sleep_source,sleep_updated_at&user_id=eq.${session.userId}&log_date=eq.${snapshot.date}"
         var lookup = request("GET", lookupPath, activeSession.accessToken, "")
         if (lookup.first == 401) {
             activeSession = refresh(activeSession)
@@ -937,7 +937,7 @@ internal object SupabaseApi {
             (remoteEnergySource == "health_connect" && remoteEnergyAt.isAfter(localMeasuredAt))
         val remoteSleepSource = remote?.optString("sleep_source")?.takeIf { it.isNotBlank() }
         val remoteSleepAt = parseTimestamp(remote?.optString("sleep_updated_at"))
-        val remoteHasSleep = remote != null && !remote.isNull("sleep_minutes")
+        val remoteHasSleep = remote != null && !remote.isNull("sleep_hours")
         // Keep manual or unknown-provenance sleep values, and never overwrite a newer trusted reading.
         val preserveRemoteSleep = remoteHasSleep &&
             (remoteSleepSource !in setOf("health_connect", "apple_health") || remoteSleepAt.isAfter(localMeasuredAt))
@@ -954,7 +954,7 @@ internal object SupabaseApi {
                 .put("active_energy_updated_at", snapshot.measuredAt)
         }
         if (snapshot.sleepMinutes != null && !preserveRemoteSleep) {
-            row.put("sleep_minutes", snapshot.sleepMinutes.toInt())
+            row.put("sleep_hours", snapshot.sleepMinutes.toDouble() / 60.0)
                 .put("sleep_source", "health_connect")
                 .put("sleep_updated_at", snapshot.measuredAt)
         }
