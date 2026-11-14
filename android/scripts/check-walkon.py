@@ -17,6 +17,15 @@ checks = {
         and "remoteEnergySource != \"health_connect\"" in activity
         and "remoteEnergyAt.isAfter(localMeasuredAt)" in activity
     ),
+    "Health Connect sleep permission and measured asleep-stage aggregation": (
+        'android.permission.health.READ_SLEEP' in manifest
+        and 'HealthPermission.getReadPermission(SleepSessionRecord::class)' in activity
+        and 'ReadRecordsRequest(SleepSessionRecord::class' in activity
+        and 'SleepSessionRecord.STAGE_TYPE_LIGHT' in activity
+        and 'sleep_minutes' in activity
+        and 'sleep_source' in activity
+        and 'measuredSleepMinutes' in activity
+    ),
     "location foreground-service permissions": (
         'android.permission.FOREGROUND_SERVICE_LOCATION' in manifest
         and 'android:foregroundServiceType="location"' in manifest
