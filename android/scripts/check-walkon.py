@@ -58,6 +58,18 @@ checks = {
         and "if (!writeEncrypted(context, COMPLETED_KEY, encodedHistory))" in store
         and store.index("if (!writeEncrypted(context, COMPLETED_KEY, encodedHistory))") < store.index("clearActive(context)", store.index("fun finishActive"))
     ),
+    "completed walks are retained when measured steps exist but GPS returned no points": (
+        "finished.points.isNotEmpty() || finished.sessionSteps > 0 || finished.distanceMeters > 0.0" in store
+        and "WalkOn activity saved and verified on this device" in store
+        and "clearActive(context)" in store
+        and store.index("if (!writeEncrypted(context, COMPLETED_KEY, encodedHistory))") < store.index("clearActive(context)", store.index("fun finishActive"))
+    ),
+    "Android cloud sync uploads measured walk steps independently of optional GPS points": (
+        '"/rest/v1/rpc/sync_activity_session_steps"' in activity
+        and '"/rest/v1/rpc/sync_walk_session_route"' in activity
+        and "if (walk.points.isEmpty()) return@withContext activeSession" in activity
+        and activity.index('"/rest/v1/rpc/sync_activity_session_steps"') < activity.index("if (walk.points.isEmpty()) return@withContext activeSession")
+    ),
     "route-save verification failure is not mislabeled as an empty GPS recording": (
         "points.isNotEmpty() -> \"WalkOn could not verify the completed route history write" in service
         and "Your active GPS draft has been retained" in service
