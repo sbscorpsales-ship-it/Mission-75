@@ -314,9 +314,10 @@ class WalkOnLocationService : Service(), LocationListener, SensorEventListener {
         WalkOnStore.setStatus(
             this,
             when {
-                finished != null -> "WalkOn saved · %.2f km · %d GPS points. Sync it to your GATIVX account when signed in.".format(distanceMeters / 1000.0, points.size)
-                points.isNotEmpty() -> "WalkOn could not verify the completed route history write. Your active GPS draft has been retained; reopen GATIVX and retry saving."
-                else -> "WalkOn finished. No reliable route points were available to save."
+                finished != null && points.isNotEmpty() -> "WalkOn saved · %.2f km · %d GPS points · %d measured steps. Sync it to your GATIVX account when signed in.".format(distanceMeters / 1000.0, points.size, sessionSteps)
+                finished != null -> "WalkOn activity saved · %d measured steps. GPS route unavailable; sync the activity to your GATIVX account when signed in.".format(sessionSteps)
+                points.isNotEmpty() || sessionSteps > 0 || distanceMeters > 0.0 -> "WalkOn could not verify the completed activity history write. Your active draft has been retained; reopen GATIVX and retry saving."
+                else -> "WalkOn finished without measured steps, distance or GPS points. Its draft remains available for recovery."
             }
         )
         broadcastUpdate()
