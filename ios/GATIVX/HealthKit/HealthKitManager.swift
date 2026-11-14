@@ -183,6 +183,7 @@ final class HealthKitManager: ObservableObject {
                     return
                 }
                 let asleepValues: Set<Int> = [
+                    HKCategoryValueSleepAnalysis.asleep.rawValue,
                     HKCategoryValueSleepAnalysis.asleepUnspecified.rawValue,
                     HKCategoryValueSleepAnalysis.asleepCore.rawValue,
                     HKCategoryValueSleepAnalysis.asleepDeep.rawValue,
@@ -227,7 +228,7 @@ final class HealthKitManager: ObservableObject {
                     }
                 }
                 seconds += mergedEnd.timeIntervalSince(mergedStart)
-                let minutes = max(0, Int((seconds / 60).rounded()))
+                let minutes = min(1440, max(0, Int((seconds / 60).rounded())))
                 self.todaySleepMinutes = minutes > 0 ? minutes : nil
                 if minutes > 0 {
                     self.sleepStatusMessage = "Measured Apple Health sleep: \(minutes / 60)h \(minutes % 60)m, attributed to the local wake-up day."
