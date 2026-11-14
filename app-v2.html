@@ -218,7 +218,7 @@ function mergeCloudDaily(remote,local){
  }
  const merged={...remote},remoteStepTime=Date.parse(remote.stepsUpdatedAt||'')||0,localStepTime=Date.parse(local.stepsUpdatedAt||'')||0,remoteEnergyTime=Date.parse(remote.activeEnergyUpdatedAt||'')||0,localEnergyTime=Date.parse(local.activeEnergyUpdatedAt||'')||0,remoteSleepTime=Date.parse(remote.sleepUpdatedAt||'')||0,localSleepTime=Date.parse(local.sleepUpdatedAt||'')||0;
  const keepRemoteSteps=remote.steps!=null&&(remoteStepTime>localStepTime||(remote.stepsSource==='manual'&&remoteStepTime===localStepTime));
- const keepRemoteEnergy=remote.activeEnergyKcal!=null&&remoteEnergyTime>localEnergyTime,keepRemoteSleep=remote.sleepMinutes!=null&&(remote.sleepSource==='manual'||remoteSleepTime>localSleepTime);
+ const keepRemoteEnergy=remote.activeEnergyKcal!=null&&remoteEnergyTime>localEnergyTime,keepRemoteSleep=remote.sleepMinutes!=null&&(!['apple_health','health_connect'].includes(remote.sleepSource)||remoteSleepTime>localSleepTime);
  for(const [k,v] of Object.entries(local||{})){
   if(v===null||v===undefined||v==='')continue;
   if(keepRemoteSteps&&['steps','stepsSource','stepsUpdatedAt'].includes(k))continue;
