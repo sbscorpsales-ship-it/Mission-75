@@ -29,7 +29,7 @@ begin
   if p_log_date is null or p_sleep_minutes is null or p_sleep_minutes < 0 or p_sleep_minutes > 1440 then
     raise exception 'A valid local date and sleep duration between 0 and 1440 minutes are required';
   end if;
-  if p_source not in ('apple_health', 'health_connect') then
+  if p_source is null or p_source not in ('apple_health', 'health_connect') then
     raise exception 'Unsupported sleep data source';
   end if;
 
