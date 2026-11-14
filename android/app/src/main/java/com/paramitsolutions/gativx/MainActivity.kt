@@ -317,7 +317,7 @@ private fun GativxAndroidScreen() {
         // A successful device read should not require a second manual button press
         // to reach the signed-in member's private GATIVX account.
         val currentSession = session
-        if (currentSession != null && (steps != null || activeEnergy != null)) {
+        if (currentSession != null && (steps != null || activeEnergy != null || sleepMinutes != null)) {
             val snapshot = DailyHealthSnapshot(
                 measuredDate,
                 steps,
@@ -529,7 +529,7 @@ private fun GativxAndroidScreen() {
                                         name = feature,
                                         status = when (feature) {
                                             "Home", "Activity", "Profile" -> "Available"
-                                            "Mission" -> "Testing"
+                                            "Mission", "Wellness" -> "Testing"
                                             else -> "Coming soon"
                                         },
                                         selected = selectedFeature == feature,
@@ -541,7 +541,7 @@ private fun GativxAndroidScreen() {
                                                 "Activity" -> "Activity tracking: WalkOn GPS is available for testing. Health data depends on device permissions."
                                                 "Mission" -> "Mission setup is being tested. Full goal planning and milestones are expanding soon."
                                                 "Profile" -> "Profile and account access are available in the cloud backup section below."
-                                                "Wellness" -> "Wellness journal, food, water and sleep tracking — coming soon."
+                                                "Wellness" -> "Sleep tracking reads measured Health Connect asleep stages. Food and water journaling are still being built."
                                                 "Strength" -> "Strength workouts and guided exercise library — expanding soon."
                                                 "GURU" -> "GURU personal guidance and daily coaching — under development."
                                                 "Community" -> "Friends, groups and community challenges — coming soon."
@@ -558,6 +558,7 @@ private fun GativxAndroidScreen() {
                         Text(
                             when (selectedFeature) {
                                 "Home", "Activity", "Profile" -> "SELECTED: $selectedFeature · AVAILABLE FOR TESTING"
+                                "Wellness" -> "SELECTED: WELLNESS · SLEEP TRACKING AVAILABLE FOR TESTING"
                                 "Mission" -> "SELECTED: MISSION · TESTING IN PROGRESS"
                                 else -> "SELECTED: $selectedFeature · COMING SOON"
                             },
