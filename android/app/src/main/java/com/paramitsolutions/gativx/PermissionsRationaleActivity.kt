@@ -22,7 +22,7 @@ class PermissionsRationaleActivity : ComponentActivity() {
                     Column(Modifier.padding(24.dp)) {
                         Text("GATIVX · Health Connect", color = Color(0xFFD8FF3E))
                         Text(
-                            "GATIVX requests read-only access to daily steps and active calories so it can display your measured activity and, when you choose, back it up to your private GATIVX account. We do not write health records to Health Connect or estimate missing values. You can revoke access at any time in Android Health Connect settings.",
+                            "GATIVX requests read-only access to daily steps, active calories and sleep stages so it can display your measured activity and, when you choose, back it up to your private GATIVX account. We do not write health records to Health Connect or estimate missing values. You can revoke access at any time in Android Health Connect settings.",
                             color = Color.White,
                             modifier = Modifier.padding(top = 16.dp)
                         )

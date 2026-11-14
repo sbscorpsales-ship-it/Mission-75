@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
     <key>NSHealthShareUsageDescription</key>
-    <string>GATIVX reads your daily step count and active energy from Apple Health to show your fitness progress.</string>
+    <string>GATIVX reads your daily step count, active energy and sleep stages from Apple Health to show your fitness and recovery progress.</string>
     <key>NSMotionUsageDescription</key>
     <string>GATIVX uses motion activity to display live step and walking-distance estimates while you use the app.</string>
     <key>NSLocationWhenInUseUsageDescription</key>

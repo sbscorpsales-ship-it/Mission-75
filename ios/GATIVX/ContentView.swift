@@ -253,6 +253,8 @@ struct ContentView: View {
                         .font(.subheadline).foregroundStyle(.secondary)
                     ProgressView(value: stepProgress).tint(.yellow)
                     Text("Active energy: " + (health.todayActiveEnergyKcal.map { "\($0) kcal" } ?? "—") + " · Apple Health measured active calories, not total calories.")
+                    Text("Sleep last night: " + (health.todaySleepMinutes.map { "\($0 / 60)h \($0 % 60)m" } ?? "—") + " · measured asleep stages from Apple Health.")
+                    Text(health.sleepStatusMessage).font(.caption2).foregroundStyle(.secondary)
                         .font(.caption).foregroundStyle(.secondary)
                     Text("The daily total comes only from Apple Health. The iPhone motion reading below is a separate live preview and is not substituted for the all-source daily total.")
                         .font(.caption2).foregroundStyle(.secondary).multilineTextAlignment(.center)
@@ -351,6 +353,7 @@ struct ContentView: View {
                 Button("Refresh Apple Health now") {
                     health.refreshRecentDays()
                     health.refreshTodayEnergy()
+                    health.refreshTodaySleep()
                 }
                 .buttonStyle(.bordered)
                 .disabled(!health.isAvailable || health.isRefreshing)
@@ -418,6 +421,10 @@ struct ContentView: View {
                     guard cloud.isSignedIn else { return }
                     Task { await cloud.syncActiveEnergy(date: day, kilocalories: total) }
                 }
+                health.onSleep = { day, minutes in
+                    guard cloud.isSignedIn else { return }
+                    Task { await cloud.syncSleep(date: day, minutes: minutes) }
+                }
                 health.resumeIfPreviouslyConnected()
                 health.refreshOnForeground()
                 startLiveMotionMonitor()
@@ -440,9 +447,13 @@ struct ContentView: View {
                     health.onActiveEnergy = { day, total in
                         Task { await cloud.syncActiveEnergy(date: day, kilocalories: total) }
                     }
+                    health.onSleep = { day, minutes in
+                        Task { await cloud.syncSleep(date: day, minutes: minutes) }
+                    }
                     Task { await cloud.retryPendingHealthSyncs() }
                     health.refreshRecentDays()
                     health.refreshTodayEnergy()
+                    health.refreshTodaySleep()
                     syncCurrentMotionSnapshotToCloud()
                     syncSavedActivitySessions()
                 }
