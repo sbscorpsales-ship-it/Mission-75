@@ -51,5 +51,5 @@ end;
 $$;
 
 revoke all on function public.sync_health_sleep(date, numeric, text, timestamptz) from public;
-revoke all on function public.sync_health_sleep(date, integer, text, timestamptz) from anon;
-grant execute on function public.sync_health_sleep(date, integer, text, timestamptz) to authenticated;
+revoke all on function public.sync_health_sleep(date, numeric, text, timestamptz) from anon;
+grant execute on function public.sync_health_sleep(date, numeric, text, timestamptz) to authenticated;
