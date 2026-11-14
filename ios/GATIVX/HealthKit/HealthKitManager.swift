@@ -8,17 +8,21 @@ import Combine
 final class HealthKitManager: ObservableObject {
     @Published private(set) var todaySteps: Int?
     @Published private(set) var todayActiveEnergyKcal: Int?
+    @Published private(set) var todaySleepMinutes: Int?
+    @Published private(set) var sleepStatusMessage = "No measured sleep data available yet."
     @Published private(set) var isAvailable = HKHealthStore.isHealthDataAvailable()
     @Published private(set) var isRefreshing = false
     @Published private(set) var lastRefresh: Date?
     @Published private(set) var statusMessage = "Apple Health is not connected."
     var onDailyTotal: ((Date, Int) -> Void)?
     var onActiveEnergy: ((Date, Int) -> Void)?
+    var onSleep: ((Date, Int) -> Void)?
 
     private let store = HKHealthStore()
     private let connectionRequestedKey = "gativx.healthkit.connectionRequested"
     private let stepType = HKObjectType.quantityType(forIdentifier: .stepCount)!
     private let energyType = HKObjectType.quantityType(forIdentifier: .activeEnergyBurned)!
+    private let sleepType = HKObjectType.categoryType(forIdentifier: .sleepAnalysis)!
     private var observers: [HKObserverQuery] = []
     private var refreshAgain = false
     private var pendingCompletions: [() -> Void] = []
@@ -29,11 +33,12 @@ final class HealthKitManager: ObservableObject {
         startObserving()
         refreshRecentDays()
         refreshTodayEnergy()
+        refreshTodaySleep()
     }
 
     func requestReadAccessAndStart() {
         guard isAvailable else { statusMessage = "Apple Health is unavailable on this iPhone."; return }
-        store.requestAuthorization(toShare: [], read: [stepType, energyType]) { [weak self] _, error in
+        store.requestAuthorization(toShare: [], read: [stepType, energyType, sleepType]) { [weak self] _, error in
             Task { @MainActor in
                 guard let self else { return }
                 if let error {
@@ -46,6 +51,7 @@ final class HealthKitManager: ObservableObject {
                 self.startObserving()
                 self.refreshRecentDays()
                 self.refreshTodayEnergy()
+                self.refreshTodaySleep()
             }
         }
     }
@@ -156,11 +162,90 @@ final class HealthKitManager: ObservableObject {
         store.execute(query)
     }
 
+    /// Reads asleep stages from the previous 36 hours. Overlapping records are
+    /// merged, and the latest sleep episode is attributed to its local wake-up day.
+    func refreshTodaySleep(onComplete: (() -> Void)? = nil) {
+        guard UserDefaults.standard.bool(forKey: connectionRequestedKey), isAvailable else {
+            onComplete?()
+            return
+        }
+        let now = Date()
+        let start = Calendar.current.date(byAdding: .hour, value: -36, to: now) ?? now.addingTimeInterval(-36 * 3600)
+        let predicate = HKQuery.predicateForSamples(withStart: start, end: now, options: .strictStartDate)
+        let sort = NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: true)
+        let query = HKSampleQuery(sampleType: sleepType, predicate: predicate, limit: HKObjectQueryNoLimit, sortDescriptors: [sort]) { [weak self] _, samples, error in
+            Task { @MainActor in
+                guard let self else { onComplete?(); return }
+                defer { onComplete?() }
+                if let error {
+                    self.todaySleepMinutes = nil
+                    self.sleepStatusMessage = "Apple Health sleep read failed: \(error.localizedDescription)"
+                    return
+                }
+                let asleepValues: Set<Int> = [
+                    HKCategoryValueSleepAnalysis.asleepUnspecified.rawValue,
+                    HKCategoryValueSleepAnalysis.asleepCore.rawValue,
+                    HKCategoryValueSleepAnalysis.asleepDeep.rawValue,
+                    HKCategoryValueSleepAnalysis.asleepREM.rawValue
+                ]
+                let intervals = (samples as? [HKCategorySample] ?? []).compactMap { sample -> DateInterval? in
+                    guard asleepValues.contains(sample.value), sample.endDate > sample.startDate else { return nil }
+                    return DateInterval(start: sample.startDate, end: sample.endDate)
+                }.sorted { $0.start < $1.start }
+
+                var episodes: [[DateInterval]] = []
+                for interval in intervals {
+                    if let last = episodes.indices.last,
+                       let previous = episodes[last].last,
+                       interval.start.timeIntervalSince(previous.end) <= 90 * 60 {
+                        episodes[last].append(interval)
+                    } else {
+                        episodes.append([interval])
+                    }
+                }
+                let calendar = Calendar.current
+                let today = calendar.startOfDay(for: now)
+                let latestEpisode = episodes
+                    .filter { episode in episode.last.map { calendar.isDate($0.end, inSameDayAs: today) } ?? false }
+                    .max { ($0.last?.end ?? .distantPast) < ($1.last?.end ?? .distantPast) }
+
+                guard let episode = latestEpisode, let first = episode.first else {
+                    self.todaySleepMinutes = nil
+                    self.sleepStatusMessage = "No measured asleep stages were returned for the latest local wake-up day. No sleep duration has been assumed."
+                    return
+                }
+                var mergedStart = first.start
+                var mergedEnd = first.end
+                var seconds: TimeInterval = 0
+                for interval in episode.dropFirst() {
+                    if interval.start <= mergedEnd {
+                        mergedEnd = max(mergedEnd, interval.end)
+                    } else {
+                        seconds += mergedEnd.timeIntervalSince(mergedStart)
+                        mergedStart = interval.start
+                        mergedEnd = interval.end
+                    }
+                }
+                seconds += mergedEnd.timeIntervalSince(mergedStart)
+                let minutes = max(0, Int((seconds / 60).rounded()))
+                self.todaySleepMinutes = minutes > 0 ? minutes : nil
+                if minutes > 0 {
+                    self.sleepStatusMessage = "Measured Apple Health sleep: \(minutes / 60)h \(minutes % 60)m, attributed to the local wake-up day."
+                    self.onSleep?(today, minutes)
+                } else {
+                    self.sleepStatusMessage = "No measured sleep duration is available. No zero has been assumed."
+                }
+            }
+        }
+        store.execute(query)
+    }
+
     func startObserving() {
         guard observers.isEmpty, isAvailable else { return }
         // Observe both quantities so a change in active energy refreshes calories
         // even when no new step sample is written at the same time.
-        for type in [stepType, energyType] {
+        let observedTypes: [HKSampleType] = [stepType, energyType, sleepType]
+        for type in observedTypes {
             let observedType = type
             let query = HKObserverQuery(sampleType: observedType, predicate: nil) { [weak self] _, completion, error in
                 guard let self else { completion(); return }
@@ -168,6 +253,8 @@ final class HealthKitManager: ObservableObject {
                 Task { @MainActor in
                     if observedType.identifier == HKQuantityTypeIdentifier.activeEnergyBurned.rawValue {
                         self.refreshTodayEnergy(onComplete: completion)
+                    } else if observedType.identifier == HKCategoryTypeIdentifier.sleepAnalysis.rawValue {
+                        self.refreshTodaySleep(onComplete: completion)
                     } else {
                         self.refreshRecentDays(onComplete: completion)
                     }
@@ -187,6 +274,7 @@ final class HealthKitManager: ObservableObject {
     func refreshOnForeground() {
         refreshRecentDays()
         refreshTodayEnergy()
+        refreshTodaySleep()
     }
 
     func disconnect() {
@@ -195,8 +283,11 @@ final class HealthKitManager: ObservableObject {
         observers.removeAll()
         store.disableBackgroundDelivery(for: stepType) { _, _ in }
         store.disableBackgroundDelivery(for: energyType) { _, _ in }
+        store.disableBackgroundDelivery(for: sleepType) { _, _ in }
         todaySteps = nil
         todayActiveEnergyKcal = nil
+        todaySleepMinutes = nil
+        sleepStatusMessage = "Apple Health disconnected in GATIVX."
         lastRefresh = nil
         statusMessage = "Apple Health disconnected in GATIVX."
     }
