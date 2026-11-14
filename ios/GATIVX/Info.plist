@@ -4,6 +4,8 @@
 <dict>
     <key>NSHealthShareUsageDescription</key>
     <string>GATIVX reads your daily step count and active energy from Apple Health to show your fitness progress.</string>
+    <key>NSHealthUpdateUsageDescription</key>
+    <string>GATIVX can save a walking workout to Apple Health when you choose to export it.</string>
     <key>NSMotionUsageDescription</key>
     <string>GATIVX uses motion activity to display live step and walking-distance estimates while you use the app.</string>
     <key>NSLocationWhenInUseUsageDescription</key>
