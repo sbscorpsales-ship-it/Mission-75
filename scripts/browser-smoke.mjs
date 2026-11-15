@@ -200,7 +200,7 @@ assert((await androidHealthPage.locator("#steps").textContent()).trim()==="3,200
 assert((await androidHealthPage.locator("#stepNote").textContent()).trim()==="Android Health Connect","Android Health Connect source label was not displayed");
 assert((await androidHealthPage.locator("#source").textContent()).trim()==="ANDROID HEALTH CONNECT","Android Health Connect summary source was not displayed");
 assert((await androidHealthPage.locator("#vActiveEnergy").textContent()).trim()==="250 kcal","Newer Android active energy was not reconciled");
-assert((await androidHealthPage.locator("#activeEnergySourceLabel").textContent()).trim()==="Health Connect · active energy","Android active-energy source label was not displayed");
+assert((await androidHealthPage.locator("#activeEnergySourceLabel").textContent()).trim()==="Health Connect · measured active energy","Android active-energy source label was not displayed");
 const androidRows=await androidHealthPage.evaluate(()=>window.__hcMock.uploaded);
 assert(androidRows.find(r=>r.steps_source==="health_connect"&&r.steps===3200),"Android Health Connect values were not preserved in the cloud upsert");
 assert(androidRows.find(r=>r.steps_source==="manual"&&r.steps===1200),"A manual entry was overwritten by an older Android reading");
