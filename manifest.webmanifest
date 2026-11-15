@@ -10,15 +10,15 @@
     "minimal-ui"
   ],
   "orientation": "portrait",
-  "background_color": "#062D24",
-  "theme_color": "#062D24",
-  "description": "GATIVX — Goal. Ambition. Transform. Inspire. Vitality. Xcellence.",
+  "background_color": "#FF5A1F",
+  "theme_color": "#FF5A1F",
+  "description": "Goal. Action. Track. Improve. Vitality. eXcel.",
   "icons": [
     {
-      "src": "./gativx-master.png?v=20261107",
-      "sizes": "256x256",
-      "type": "image/png",
-      "purpose": "any maskable"
+      "src": "./assets/brand/gativx-app-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
     }
   ]
 }
