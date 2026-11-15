@@ -37,10 +37,13 @@ jobs:
           xcodebuild -version
 
       - name: Install XcodeGen
-        run: brew install xcodegen
+        run: brew install xcodegen librsvg
 
       - name: Generate GATIVX project
         run: xcodegen generate --spec ios/gativx-project.yml --project ios
+
+      - name: Generate 1024px iOS app icon from vector master
+        run: bash scripts/generate-gativx-ios-icon.sh
 
       - name: Validate project and scheme
         run: xcodebuild -list -project ios/GATIVX.xcodeproj
