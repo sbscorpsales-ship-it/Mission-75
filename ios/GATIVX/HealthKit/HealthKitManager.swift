@@ -10,6 +10,7 @@ final class HealthKitManager: ObservableObject {
     @Published private(set) var todayActiveEnergyKcal: Int?
     @Published private(set) var isAvailable = HKHealthStore.isHealthDataAvailable()
     @Published private(set) var isRefreshing = false
+    @Published private(set) var hasRequestedAccess = UserDefaults.standard.bool(forKey: "gativx.healthkit.connectionRequested")
     @Published private(set) var lastRefresh: Date?
     @Published private(set) var statusMessage = "Apple Health is not connected."
     var onDailyTotal: ((Date, Int) -> Void)?
@@ -42,6 +43,7 @@ final class HealthKitManager: ObservableObject {
                 }
                 // HealthKit intentionally does not reveal whether read access was denied.
                 UserDefaults.standard.set(true, forKey: self.connectionRequestedKey)
+                self.hasRequestedAccess = true
                 self.statusMessage = "Apple Health access was requested. Checking today's measured steps…"
                 self.startObserving()
                 self.refreshRecentDays()
@@ -191,6 +193,7 @@ final class HealthKitManager: ObservableObject {
 
     func disconnect() {
         UserDefaults.standard.removeObject(forKey: connectionRequestedKey)
+        hasRequestedAccess = false
         observers.forEach { store.stop($0) }
         observers.removeAll()
         store.disableBackgroundDelivery(for: stepType) { _, _ in }
