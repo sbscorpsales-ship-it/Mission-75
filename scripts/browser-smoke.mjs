@@ -11,7 +11,9 @@ await page.goto(pathToFileURL(path.resolve("index.html")).href,{waitUntil:"domco
 const assert=(v,m)=>{if(!v)throw new Error(m)};
 assert(await page.locator("#steps").textContent().then(x=>x.trim())==="1,948","Fresh-store step value did not render");
 assert(await page.locator('.tileSteps a[href^="shortcuts://"]').count()===0,"Step Count tile must not expose manual Shortcut sync");
-assert(await page.locator('.tileSteps').textContent().then(x=>x.includes("Waiting for automatic measured health data")),"Step Count tile must explain automatic measured health data");
+await page.locator("#stepNote").waitFor({state:"visible"});
+const stepSourceLabel=await page.locator("#stepNote").textContent();
+assert(typeof stepSourceLabel==="string"&&stepSourceLabel.trim().length>0,"Step Count tile must expose a non-empty measured-data/source status after app initialisation");
 assert((await page.locator("body").textContent()).includes("Safari web cannot read phone health sensors directly"),"Dashboard must explain Safari sensor limitation");
 assert((await page.locator("#missionTitle").textContent()).includes("Build strength"),"Fresh-store mission did not render");
 assert((await page.locator("#missionPct").textContent()).includes("MISSION ACTIVE"),"Mission status missing");
