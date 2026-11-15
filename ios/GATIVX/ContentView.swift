@@ -357,19 +357,23 @@ struct ContentView: View {
                     }
                 }.padding().frame(maxWidth: .infinity, alignment: .leading).background(.thinMaterial, in: RoundedRectangle(cornerRadius: 20))
 
-                Button("Connect Apple Health") {
-                    health.requestReadAccessAndStart()
+                if !health.hasRequestedAccess {
+                    Button("Enable automatic Apple Health sync") {
+                        health.requestReadAccessAndStart()
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(.black)
+                    .foregroundStyle(.yellow)
+                    .disabled(!health.isAvailable || health.isRefreshing)
+                } else {
+                    Label("Apple Health automatic sync enabled", systemImage: "checkmark.circle.fill")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.green)
+                    Text("GATIVX refreshes measured steps and active calories when Apple Health reports updates and whenever the app returns to the foreground. iOS may batch background updates.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(.black)
-                .foregroundStyle(.yellow)
-
-                Button("Refresh Apple Health now") {
-                    health.refreshRecentDays()
-                    health.refreshTodayEnergy()
-                }
-                .buttonStyle(.bordered)
-                .disabled(!health.isAvailable || health.isRefreshing)
 
                 Text(health.statusMessage)
                     .font(.footnote)
