@@ -319,6 +319,7 @@ await v2.close();
  await desktop.locator('.desktopSidebar [data-panel="coach"]').click();
  assert(await desktop.locator("#coach.panel.active").count()===1,"Desktop sidebar GURU navigation did not open GURU mode");
  assert(desktopErrors.length===0,"Desktop browser errors: "+desktopErrors.join("; "));
+ await desktop.screenshot({path:"gativx-desktop-preview.png",fullPage:true});
  await desktop.close();
  console.log("PASS: GATIVX desktop laptop mode — approved logo, dedicated sidebar, responsive dashboard grid and working navigation");
 
