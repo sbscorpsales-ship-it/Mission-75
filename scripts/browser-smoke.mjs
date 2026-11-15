@@ -313,13 +313,26 @@ await v2.close();
  const desktopGeometry=await desktop.locator(".app").evaluate(el=>({display:getComputedStyle(el).display,columns:getComputedStyle(el).gridTemplateColumns,sidebar:el.querySelector(".desktopSidebar").getBoundingClientRect().width,main:el.querySelector(".appMain").getBoundingClientRect().width}));
  assert(desktopGeometry.display==="grid"&&desktopGeometry.sidebar>180&&desktopGeometry.main>800,"Desktop dashboard did not use the intended sidebar/content grid: "+JSON.stringify(desktopGeometry));
  assert(await desktop.locator("#home .summaryTile").count()===4,"Desktop home must retain all four measured summary tiles");
+
  assert(await desktop.locator("#home .healthRingCard").count()===3,"Desktop home must retain all three measured health rings");
+ // Explicitly test both approved appearance modes and capture each desktop preview.
+ await desktop.locator("#themeToggle").click();
+ assert(await desktop.locator("body").getAttribute("data-theme")==="light","Day Mode toggle did not apply the light theme");
+ const daySidebar=await desktop.locator(".desktopSidebar").evaluate(el=>getComputedStyle(el).backgroundColor+" "+getComputedStyle(el).backgroundImage);
+ assert(daySidebar.includes("rgb(255, 255, 255)")||daySidebar.includes("linear-gradient"),"Day Mode desktop sidebar did not receive its light appearance");
+ await desktop.screenshot({path:"gativx-desktop-day.png",fullPage:true});
+ assert(await desktop.evaluate(()=>localStorage.getItem("gativx.appearance.v1"))==="light","Day Mode preference was not persisted");
+ await desktop.locator("#themeToggle").click();
+ assert(await desktop.locator("body").getAttribute("data-theme")==="dark","Night Mode toggle did not restore the dark theme");
+ assert(await desktop.evaluate(()=>localStorage.getItem("gativx.appearance.v1"))==="dark","Night Mode preference was not persisted");
+ await desktop.screenshot({path:"gativx-desktop-night.png",fullPage:true});
+
  await desktop.locator('.desktopSidebar [data-panel="walk"]').click();
  assert(await desktop.locator("#walk.panel.active").count()===1,"Desktop sidebar GPS Activity navigation did not open the GPS panel");
  await desktop.locator('.desktopSidebar [data-panel="coach"]').click();
  assert(await desktop.locator("#coach.panel.active").count()===1,"Desktop sidebar GURU navigation did not open GURU mode");
  assert(desktopErrors.length===0,"Desktop browser errors: "+desktopErrors.join("; "));
- await desktop.screenshot({path:"gativx-desktop-preview.png",fullPage:true});
+ 
  await desktop.close();
  console.log("PASS: GATIVX desktop laptop mode — approved logo, dedicated sidebar, responsive dashboard grid and working navigation");
 
