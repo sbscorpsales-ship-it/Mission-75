@@ -207,6 +207,18 @@ assert(androidRows.find(r=>r.steps_source==="manual"&&r.steps===1200),"A manual 
 assert(androidHealthErrors.length===0,"Android Health Connect browser integration errors: "+androidHealthErrors.join("; "));
 await androidHealthPage.close();
 
+// Device-measured steps provide a fallback estimate when GPS distance is not available.
+const stepCaloriePage=await browser.newPage({viewport:{width:390,height:844}});
+await stepCaloriePage.addInitScript(()=>{
+ const d=new Date(),day=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+ localStorage.setItem("gativx.v2.fresh.state",JSON.stringify({version:2,goal:null,entries:{[day]:{weight:80,steps:10000,stepsSource:"apple_health"}},walks:[]}));
+});
+await stepCaloriePage.route("https://**/*",r=>r.abort());
+await stepCaloriePage.goto(pathToFileURL(path.resolve("app-v2.html")).href,{waitUntil:"domcontentloaded"});
+assert((await stepCaloriePage.locator("#vActiveEnergy").textContent()).trim()==="292 kcal","10,000 measured steps should estimate 292 kcal using 0.73 m stride and 0.5 kcal/kg/km");
+assert((await stepCaloriePage.locator("#activeEnergySourceLabel").textContent()).includes("measured steps"),"Step-derived calorie estimate was not labelled");
+await stepCaloriePage.close();
+
 // Measured active energy must win; otherwise completed GPS distance and latest recorded weight drive a labelled estimate.
 const caloriePage=await browser.newPage({viewport:{width:390,height:844}});
 await caloriePage.addInitScript(()=>{
