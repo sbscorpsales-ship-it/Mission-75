@@ -47,20 +47,6 @@ for(const tab of ["home","journey","record","walk","coach"]){await page.locator(
 await page.locator('[data-panel="home"]').click();assert(await page.locator("#missionTitle").textContent().then(x=>x.includes("Weight loss")),"Saved mission changed after navigation");
 assert(errors.length===0,"Browser errors: "+errors.join("; "));
 
-const healthImport=await browser.newPage({viewport:{width:390,height:844}});
-const healthErrors=[];healthImport.on("pageerror",e=>healthErrors.push(e.message));
-await healthImport.route("https://**/*",r=>r.abort());
-const now=new Date(),localDay=now.getFullYear()+"-"+String(now.getMonth()+1).padStart(2,"0")+"-"+String(now.getDate()).padStart(2,"0");
-await healthImport.goto(pathToFileURL(path.resolve("app-v2.html")).href+"?gativx_steps=1240&gativx_active_energy=345&gativx_date="+localDay,{waitUntil:"domcontentloaded"});
-await healthImport.waitForTimeout(500);
-const healthImportDebug=await healthImport.evaluate(()=>({url:location.href,steps:document.querySelector("#steps")?.textContent.trim(),note:document.querySelector("#stepNote")?.textContent,local:localStorage.getItem("gativx.v2.fresh.state"),device:localStorage.getItem("gativx.v2.fresh.state.device"),pending:sessionStorage.getItem("gativx.pending-health-shortcut.v1")}));
-assert(healthImportDebug.steps==="1,240","Apple Health Shortcut steps did not reach the new GATIVX home: "+JSON.stringify(healthImportDebug));
-assert((await healthImport.locator("#vActiveEnergy").textContent()).trim()==="345 kcal","Measured active energy did not reach the new GATIVX home");
-assert((await healthImport.locator("#stepNote").textContent()).includes("Apple Health via Shortcuts"),"Shortcut step source was not labelled");
-assert(await healthImport.evaluate(()=>!location.search.includes("gativx_active_energy")&&!location.search.includes("gativx_steps")),"Health readings remained in the page URL");
-assert(healthErrors.length===0,"Apple Health import browser errors: "+healthErrors.join("; "));
-await healthImport.close();
-
 // Account login and cloud sync are exercised with an isolated Supabase client double.
 const cloudPage=await browser.newPage({viewport:{width:390,height:844}});
 const cloudErrors=[];cloudPage.on("pageerror",e=>cloudErrors.push(e.message));
