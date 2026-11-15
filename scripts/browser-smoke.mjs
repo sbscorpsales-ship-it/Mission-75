@@ -300,6 +300,7 @@ await v2.close();
  // Desktop laptop mode: validate approved artwork, desktop navigation and wide dashboard geometry.
  const desktop=await browser.newPage({viewport:{width:1440,height:1000},deviceScaleFactor:1});
  const desktopErrors=[];desktop.on("pageerror",e=>desktopErrors.push(e.message));
+ await desktop.addInitScript(()=>localStorage.setItem("gativx.appearance.v1","dark"));
  await desktop.route("https://**/*",r=>r.abort());
  await desktop.goto(pathToFileURL(path.resolve("app-v2.html")).href,{waitUntil:"domcontentloaded"});
  await desktop.waitForTimeout(250);
