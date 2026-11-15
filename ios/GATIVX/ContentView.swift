@@ -258,6 +258,11 @@ struct ContentView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 20) {
+                Image("GATIVXMark")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 78, height: 78)
+                    .accessibilityLabel("GATIVX running mark")
                 HStack(spacing: 0) {
                     Text("Gativ").foregroundStyle(Color.primary)
                     Text("X").foregroundStyle(Color(red: 0.04, green: 0.10, blue: 0.31))
