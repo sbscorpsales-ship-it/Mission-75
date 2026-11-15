@@ -45,6 +45,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: GATIVX-Desktop-Preview
-          path: gativx-desktop-preview.png
+          path: |
+            gativx-desktop-day.png
+            gativx-desktop-night.png
           if-no-files-found: error
           retention-days: 14
