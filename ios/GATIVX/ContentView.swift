@@ -258,7 +258,12 @@ struct ContentView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 20) {
-                Text("GATIVX").font(.system(size: 34, weight: .black, design: .rounded))
+                HStack(spacing: 0) {
+                    Text("Gativ").foregroundStyle(Color.primary)
+                    Text("X").foregroundStyle(Color(red: 0.04, green: 0.10, blue: 0.31))
+                }.font(.system(size: 34, weight: .black, design: .rounded))
+                Text("GOAL | ACTION | TRACK | IMPROVE | VITALITY | eXCEL")
+                    .font(.system(size: 9, weight: .bold, design: .rounded)).foregroundStyle(Color.secondary).tracking(0.6)
                 Text("From Goals to Xcellence").font(.subheadline).foregroundStyle(.secondary)
 
                 VStack(spacing: 8) {
@@ -267,7 +272,7 @@ struct ContentView: View {
                         .font(.system(size: 48, weight: .bold, design: .rounded))
                     Text(displayedStepSource + (displayedDailySteps == nil ? "" : " · Goal: 10,000"))
                         .font(.subheadline).foregroundStyle(.secondary)
-                    ProgressView(value: stepProgress).tint(.yellow)
+                    ProgressView(value: stepProgress).tint(Color(red: 1.0, green: 0.35, blue: 0.12))
                     Text("Active energy: " + (health.todayActiveEnergyKcal.map { "\($0) kcal" } ?? "—") + " · Apple Health measured active calories, not total calories.")
                         .font(.caption).foregroundStyle(.secondary)
                     Text("The daily total comes only from Apple Health. The iPhone motion reading below is a separate live preview and is not substituted for the all-source daily total.")
