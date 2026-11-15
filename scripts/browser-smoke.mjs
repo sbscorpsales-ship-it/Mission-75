@@ -10,7 +10,11 @@ await page.route("https://**/*",r=>r.abort());
 await page.goto(pathToFileURL(path.resolve("index.html")).href,{waitUntil:"domcontentloaded"});await page.waitForURL(url=>url.pathname.endsWith("/app-v2.html"),{timeout:10000});await page.waitForTimeout(300);
 const assert=(v,m)=>{if(!v)throw new Error(m)};
 assert(await page.locator("#steps").textContent().then(x=>x.trim())==="1,948","Fresh-store step value did not render");
-assert(await page.locator("a").filter({hasText:"Sync Apple Health now"}).evaluateAll(links=>links.some(link=>link.getAttribute("href")==="shortcuts://run-shortcut?name=try%202")),"One-tap Apple Health Shortcut launcher is missing or has the wrong shortcut name");
+assert(await page.locator('.tileSteps a[href^="shortcuts://"]').count()===0,"Step Count tile must not expose manual Shortcut sync");
+await page.locator("#stepNote").waitFor({state:"visible"});
+const stepSourceLabel=await page.locator("#stepNote").textContent();
+assert(typeof stepSourceLabel==="string"&&stepSourceLabel.trim().length>0,"Step Count tile must expose a non-empty measured-data/source status after app initialisation");
+assert((await page.locator("body").textContent()).includes("Safari web cannot read phone health sensors directly"),"Dashboard must explain Safari sensor limitation");
 assert((await page.locator("#missionTitle").textContent()).includes("Build strength"),"Fresh-store mission did not render");
 assert((await page.locator("#missionPct").textContent()).includes("MISSION ACTIVE"),"Mission status missing");
 assert((await page.locator("#missionPct").textContent()).includes("1/90 CHECK-IN DAYS"),"Mission progress must count real saved check-in days, not a decorative percentage");
@@ -29,8 +33,7 @@ assert((await page.locator("#guruNextAction").textContent()).includes("Remember 
 assert((await page.locator("#distance").textContent()).includes("0.40 km"),"Fresh-store distance did not render");
 assert(await page.locator(".summaryHero").count()===1,"Fitness summary hero missing");
 assert(await page.locator(".summaryTile").count()===4,"Expected four summary metric tiles");
-assert(await page.locator('.tileSteps a[href="shortcuts://run-shortcut?name=try%202"]').filter({hasText:"Sync Apple Health now"}).count()===1,"Step tile must launch the configured Apple Health Shortcut directly");
-assert(await page.locator('.tileSteps a[href="./apple-health-shortcut.html"]').filter({hasText:"Shortcut setup guide"}).count()===1,"Step tile must retain access to the Shortcut setup guide");
+assert(await page.locator('.tileSteps a[href^="shortcuts://"],.tileSteps a[href="./apple-health-shortcut.html"]').count()===0,"Step Count tile must not show manual Shortcut sync or setup links");
 await page.locator('[data-panel="home"]').click();
 await page.locator('.quick [data-go="walk"]').click();
 assert(await page.locator("#walk").evaluate(el=>el.classList.contains("active")),"Today's Walk action did not open the GPS recorder");
@@ -43,68 +46,6 @@ assert(await page.locator("#cloudAccount").count()===1,"New GATIVX account and c
 for(const tab of ["home","journey","record","walk","coach"]){await page.locator('[data-panel="'+tab+'"]').click();assert(await page.locator("#"+tab+".panel.active").count()===1,"Navigation failed: "+tab)}
 await page.locator('[data-panel="home"]').click();assert(await page.locator("#missionTitle").textContent().then(x=>x.includes("Weight loss")),"Saved mission changed after navigation");
 assert(errors.length===0,"Browser errors: "+errors.join("; "));
-
-const healthImport=await browser.newPage({viewport:{width:390,height:844}});
-const healthErrors=[];healthImport.on("pageerror",e=>healthErrors.push(e.message));
-await healthImport.route("https://**/*",r=>r.abort());
-const now=new Date(),localDay=now.getFullYear()+"-"+String(now.getMonth()+1).padStart(2,"0")+"-"+String(now.getDate()).padStart(2,"0");
-await healthImport.goto(pathToFileURL(path.resolve("app-v2.html")).href+"?gativx_steps=1240&gativx_active_energy=345&gativx_date="+localDay,{waitUntil:"domcontentloaded"});
-await healthImport.waitForTimeout(500);
-const healthImportDebug=await healthImport.evaluate(()=>({url:location.href,steps:document.querySelector("#steps")?.textContent.trim(),note:document.querySelector("#stepNote")?.textContent,local:localStorage.getItem("gativx.v2.fresh.state"),device:localStorage.getItem("gativx.v2.fresh.state.device"),pending:sessionStorage.getItem("gativx.pending-health-shortcut.v1")}));
-assert(healthImportDebug.steps==="1,240","Apple Health Shortcut steps did not reach the new GATIVX home: "+JSON.stringify(healthImportDebug));
-assert((await healthImport.locator("#vActiveEnergy").textContent()).trim()==="345 kcal","Measured active energy did not reach the new GATIVX home");
-assert((await healthImport.locator("#stepNote").textContent()).includes("Apple Health via Shortcuts"),"Shortcut step source was not labelled");
-assert(await healthImport.evaluate(()=>!location.search.includes("gativx_active_energy")&&!location.search.includes("gativx_steps")),"Health readings remained in the page URL");
-assert(healthErrors.length===0,"Apple Health import browser errors: "+healthErrors.join("; "));
-await healthImport.close();
-
-// A previously imported Shortcut count must not masquerade as a fresh reading.
-const staleShortcut=await browser.newPage({viewport:{width:390,height:844}});
-await staleShortcut.addInitScript(()=>{
- const d=new Date(),day=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
- const old=new Date(Date.now()-2*60*60*1000).toISOString();
- localStorage.setItem("gativx.v2.fresh.state",JSON.stringify({version:2,goal:null,entries:{[day]:{steps:1855,stepsSource:"apple_health_shortcuts",stepsUpdatedAt:old}},walks:[]}));
-});
-await staleShortcut.route("https://**/*",r=>r.abort());
-await staleShortcut.goto(pathToFileURL(path.resolve("app-v2.html")).href,{waitUntil:"domcontentloaded"});
-assert((await staleShortcut.locator("#steps").textContent()).trim()==="—","Stale 1,855 Shortcut sample was displayed as a current reading");
-assert((await staleShortcut.locator("#stepNote").textContent()).includes("No iPhone sensor reading"),"Stale Shortcut source label was not cleared");
-await staleShortcut.close();
-
-// The real iPhone Shortcut opens the GitHub Pages root, not app-v2.html.
-// The landing redirect must preserve the Apple Health query until import runs.
-const shortcutLanding=await browser.newPage({viewport:{width:390,height:844}});
-const shortcutLandingErrors=[];shortcutLanding.on("pageerror",e=>shortcutLandingErrors.push(e.message));
-await shortcutLanding.route("https://**/*",r=>r.abort());
-await shortcutLanding.goto(pathToFileURL(path.resolve("index.html")).href+"?gativx_steps=1855&gativx_date="+localDay,{waitUntil:"domcontentloaded"});
-await shortcutLanding.waitForURL(url=>url.pathname.endsWith("/app-v2.html"),{timeout:5000});
-await shortcutLanding.waitForFunction(()=>document.querySelector("#steps")?.textContent.trim()==="1,855");
-assert((await shortcutLanding.locator("#stepNote").textContent()).includes("Apple Health via Shortcuts"),"Root shortcut link did not preserve the Apple Health source");
-assert(await shortcutLanding.evaluate(()=>!location.search.includes("gativx_steps")&&!location.search.includes("gativx_date")),"Imported shortcut parameters were not cleaned after successful import");
-assert(shortcutLandingErrors.length===0,"Shortcut landing errors: "+shortcutLandingErrors.join("; "));
-await shortcutLanding.close();
-
-// A returning signed-in member must receive the Shortcut sample only after
-// the correct account store has been activated (no device-store race).
-const signedShortcut=await browser.newPage({viewport:{width:390,height:844}});
-const signedShortcutErrors=[];signedShortcut.on("pageerror",e=>signedShortcutErrors.push(e.message));
-await signedShortcut.addInitScript((day)=>{
- window.__shortcutCloud={uploads:[]};
- window.supabase={createClient:()=>({auth:{getSession:async()=>({data:{session:{user:{id:"shortcut-member"}}},error:null}),onAuthStateChange:()=>({data:{subscription:{unsubscribe(){}}}})},from(table){return {select(){return {eq:async()=>({data:table==="daily_logs"?[{log_date:day,steps:0,steps_source:"manual",steps_updated_at:null,active_energy_kcal:null,active_energy_source:null,active_energy_updated_at:null,walking_km:null,water_ml:null,protein_g:null,weight_kg:null}]:[],error:null})}},upsert:async(rows)=>{if(table==="daily_logs")window.__shortcutCloud.uploads.push(...rows);return {error:null}},insert:async()=>({error:null})}}})};
-},localDay);
-await signedShortcut.route("https://**/*",r=>r.abort());
-await signedShortcut.goto(pathToFileURL(path.resolve("app-v2.html")).href+"?gativx_steps=1855&gativx_date="+localDay,{waitUntil:"domcontentloaded"});
-await signedShortcut.waitForFunction(()=>document.querySelector("#steps")?.textContent.trim()==="1,855",{timeout:3000});
-await signedShortcut.waitForTimeout(500);
-const signedShortcutDebug=await signedShortcut.evaluate(()=>({cloudState:document.querySelector("#cloudState")?.textContent,cloudStatus:document.querySelector("#cloudStatus")?.textContent,steps:document.querySelector("#steps")?.textContent,stepNote:document.querySelector("#stepNote")?.textContent,uploads:window.__shortcutCloud.uploads,account:localStorage.getItem("gativx.v2.fresh.state.user.shortcut-member"),device:localStorage.getItem("gativx.v2.fresh.state.device")}));
-assert(signedShortcutDebug.cloudState==="BACKUP CURRENT","Shortcut did not finish cloud sync for restored member: "+JSON.stringify(signedShortcutDebug));
-assert((await signedShortcut.locator("#stepNote").textContent()).includes("Apple Health via Shortcuts"),"Signed-in Shortcut sample lost its Health source");
-const signedShortcutData=await signedShortcut.evaluate(()=>({uploads:window.__shortcutCloud.uploads,account:JSON.parse(localStorage.getItem("gativx.v2.fresh.state.user.shortcut-member")||"null"),device:JSON.parse(localStorage.getItem("gativx.v2.fresh.state.device")||"null")}));
-assert(signedShortcutData.uploads.some(row=>row.steps===1855&&row.steps_source==="apple_health_shortcuts"),"Fresh Shortcut sample did not override the stale manual zero in cloud");
-assert(signedShortcutData.account?.entries?.[localDay]?.steps===1855,"Fresh Shortcut sample was not saved in the correct member's local record");
-assert(!signedShortcutData.device?.entries?.[localDay],"Shortcut sample leaked into the shared device-only store");
-assert(signedShortcutErrors.length===0,"Signed-in Shortcut import errors: "+signedShortcutErrors.join("; "));
-await signedShortcut.close();
 
 // Account login and cloud sync are exercised with an isolated Supabase client double.
 const cloudPage=await browser.newPage({viewport:{width:390,height:844}});
@@ -259,12 +200,50 @@ assert((await androidHealthPage.locator("#steps").textContent()).trim()==="3,200
 assert((await androidHealthPage.locator("#stepNote").textContent()).trim()==="Android Health Connect","Android Health Connect source label was not displayed");
 assert((await androidHealthPage.locator("#source").textContent()).trim()==="ANDROID HEALTH CONNECT","Android Health Connect summary source was not displayed");
 assert((await androidHealthPage.locator("#vActiveEnergy").textContent()).trim()==="250 kcal","Newer Android active energy was not reconciled");
-assert((await androidHealthPage.locator("#activeEnergySourceLabel").textContent()).trim()==="Health Connect · active energy","Android active-energy source label was not displayed");
+assert((await androidHealthPage.locator("#activeEnergySourceLabel").textContent()).trim()==="Health Connect · measured active energy","Android active-energy source label was not displayed");
 const androidRows=await androidHealthPage.evaluate(()=>window.__hcMock.uploaded);
 assert(androidRows.find(r=>r.steps_source==="health_connect"&&r.steps===3200),"Android Health Connect values were not preserved in the cloud upsert");
 assert(androidRows.find(r=>r.steps_source==="manual"&&r.steps===1200),"A manual entry was overwritten by an older Android reading");
 assert(androidHealthErrors.length===0,"Android Health Connect browser integration errors: "+androidHealthErrors.join("; "));
 await androidHealthPage.close();
+
+// Device-measured steps provide a fallback estimate when GPS distance is not available.
+const stepCaloriePage=await browser.newPage({viewport:{width:390,height:844}});
+await stepCaloriePage.addInitScript(()=>{
+ const d=new Date(),day=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+ localStorage.setItem("gativx.v2.fresh.state",JSON.stringify({version:2,goal:null,entries:{[day]:{weight:80,steps:10000,stepsSource:"apple_health"}},walks:[]}));
+});
+await stepCaloriePage.route("https://**/*",r=>r.abort());
+await stepCaloriePage.goto(pathToFileURL(path.resolve("app-v2.html")).href,{waitUntil:"domcontentloaded"});
+assert((await stepCaloriePage.locator("#vActiveEnergy").textContent()).trim()==="292 kcal","10,000 measured steps should estimate 292 kcal using 0.73 m stride and 0.5 kcal/kg/km");
+assert((await stepCaloriePage.locator("#activeEnergySourceLabel").textContent()).includes("measured steps"),"Step-derived calorie estimate was not labelled");
+await stepCaloriePage.close();
+
+// Measured active energy must win; otherwise completed GPS distance and latest recorded weight drive a labelled estimate.
+const caloriePage=await browser.newPage({viewport:{width:390,height:844}});
+await caloriePage.addInitScript(()=>{
+ const d=new Date(),day=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+ localStorage.setItem("gativx.v2.fresh.state",JSON.stringify({version:2,goal:null,entries:{[day]:{weight:80}},walks:[{date:day,distance:.5,points:[]}]}));
+});
+await caloriePage.route("https://**/*",r=>r.abort());
+await caloriePage.goto(pathToFileURL(path.resolve("app-v2.html")).href,{waitUntil:"domcontentloaded"});
+assert((await caloriePage.locator("#vActiveEnergy").textContent()).trim()==="20 kcal","GPS walking energy estimate should be 0.5 × 80 kg × 0.5 km");
+assert((await caloriePage.locator("#activeEnergySourceLabel").textContent()).includes("Estimated walking energy"),"Fallback calorie estimate was not labelled");
+assert((await caloriePage.locator("#ringCalories").textContent()).trim()==="20","Calorie ring did not use the estimated value");
+await caloriePage.close();
+
+// A separate clean page verifies measured HealthKit energy takes priority over any estimate.
+const measuredCaloriePage=await browser.newPage({viewport:{width:390,height:844}});
+await measuredCaloriePage.addInitScript(()=>{
+ const d=new Date(),day=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+ localStorage.setItem("gativx.v2.fresh.state",JSON.stringify({version:2,goal:null,entries:{[day]:{weight:80,activeEnergyKcal:123,activeEnergySource:"apple_health"}},walks:[{date:day,distance:.5,points:[]}]}));
+});
+await measuredCaloriePage.route("https://**/*",r=>r.abort());
+await measuredCaloriePage.goto(pathToFileURL(path.resolve("app-v2.html")).href,{waitUntil:"domcontentloaded"});
+assert((await measuredCaloriePage.locator("#vActiveEnergy").textContent()).trim()==="123 kcal","Measured HealthKit energy did not take priority over the GPS estimate");
+assert((await measuredCaloriePage.locator("#activeEnergySourceLabel").textContent()).includes("measured active energy"),"Measured HealthKit calories were not labelled");
+assert((await measuredCaloriePage.locator("#ringCalories").textContent()).trim()==="123","Calorie ring did not prioritize measured active energy");
+await measuredCaloriePage.close();
 
 const storage=await page.evaluate(()=>({keys:Object.keys(localStorage),dailyLogs:localStorage.getItem("mission75.dailyLogs"),auth:localStorage.getItem("sb-crarbbsvcczwmtvxyrxo-auth-token"),session:sessionStorage.getItem("gativx.session.fixture")}));
 assert(storage.keys.includes("gativx.v2.fresh.state"),"Fresh GATIVX store was not used");
@@ -297,7 +276,7 @@ assert((await v2.locator("#walkStatus").textContent()).includes("0.03 km"),"Save
 assert(v2Errors.length===0,"GATIVX v2 browser errors: "+v2Errors.join("; "));
 await v2.close();
 console.log("PASS: Published GATIVX root entry opens the tested v2 fitness application");
-console.log("PASS: Apple Health Shortcut imports measured steps and active energy into the new GATIVX home");
+console.log("PASS: GATIVX no longer exposes legacy manual Apple Health Shortcut imports");
 console.log("PASS: GATIVX v2 account sign-in, private cloud backup and HealthKit source reconciliation");
 console.log("PASS: GATIVX v2 uses its own namespaced data store");
 console.log("PASS: existing Mission-75 records and auth/session storage are preserved");
