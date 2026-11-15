@@ -399,13 +399,15 @@ function initCloud(){
  if(!cloudClient&&window.supabase&&window.supabase.createClient)cloudClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
  if(!cloudClient)return;
  cloudClient.auth.getSession().then(r=>{if(r.error)throw r.error;activateCloudUser(r.data.session&&r.data.session.user||null);cloudUi();applyPendingShortcutToActiveAccount();if(cloudUser)cloudSync()}).catch(e=>cloudMsg(e.message||'Could not restore your account session.','SESSION ISSUE'));
- cloudClient.auth.onAuthStateChange(async(event,session)=>{
+ cloudClient.auth.onAuthStateChange((event,session)=>{
   if(event==='PASSWORD_RECOVERY'){
-   const nextPassword=window.prompt('Create a new GATIVX password (at least 6 characters):');
-   if(nextPassword&&nextPassword.length>=6){
-    const {error}=await cloudClient.auth.updateUser({password:nextPassword});
-    cloudMsg(error?error.message:'Password updated. You can now sign in with your new password.',error?'RESET ISSUE':'PASSWORD UPDATED');
-   }else cloudMsg('Password was not changed. Request another reset link when ready.','RESET NOT COMPLETED');
+   setTimeout(async()=>{
+    const nextPassword=window.prompt('Create a new GATIVX password (at least 6 characters):');
+    if(nextPassword&&nextPassword.length>=6){
+     const {error}=await cloudClient.auth.updateUser({password:nextPassword});
+     cloudMsg(error?error.message:'Password updated. You can now sign in with your new password.',error?'RESET ISSUE':'PASSWORD UPDATED');
+    }else cloudMsg('Password was not changed. Request another reset link when ready.','RESET NOT COMPLETED');
+   },0);
   }
   activateCloudUser(session&&session.user||null);cloudUi();
   if(cloudUser&&event==='SIGNED_IN'){applyPendingShortcutToActiveAccount();setTimeout(cloudSync,0)}
