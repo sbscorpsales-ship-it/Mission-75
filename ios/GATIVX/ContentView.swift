@@ -19,6 +19,8 @@ struct ContentView: View {
     @State private var activityHistory: [ActivitySessionRecord] = []
     @State private var historyStatus = ""
     @State private var sessionStarted: Date?
+    @State private var isFinishingSession = false
+    @State private var activeSessionID: UUID?
     @State private var sessionStatus = "Start a session to count steps."
     @State private var liveMotionSteps: Int?
     @State private var liveMotionDistanceMeters: Double?
@@ -135,8 +137,10 @@ struct ContentView: View {
         }
     }
     private func startActivitySession() {
+        guard sessionStarted == nil, !isFinishingSession else { return }
         let start = Date()
         sessionStarted = start
+        activeSessionID = UUID()
         sessionSteps = nil
         sessionMotionDistanceMeters = nil
         // GPS recording is independent of the motion sensor. A device without
@@ -157,7 +161,11 @@ struct ContentView: View {
         }
     }
     private func finishActivitySession() {
-        guard let start = sessionStarted else { return }
+        guard !isFinishingSession, let start = sessionStarted else { return }
+        isFinishingSession = true
+        let recordID = activeSessionID ?? UUID()
+        activeSessionID = recordID
+        sessionStatus = "Finishing activity and saving your route…"
         let finishedAt = Date()
         let activity = selectedActivity
         pedometer.stopUpdates()
@@ -166,16 +174,19 @@ struct ContentView: View {
         // Keep route persistence independent of the optional pedometer result.
         let saveRecord: (Int?, Double?) -> Void = { queriedSteps, queriedDistance in
             DispatchQueue.main.async {
+                guard self.isFinishingSession, self.sessionStarted == start else { return }
                 let finalSteps = queriedSteps ?? self.sessionSteps
                 guard finalSteps != nil || !routePoints.isEmpty else {
                     self.routeRecorder.clearDraft()
                     self.sessionSteps = nil
                     self.sessionStatus = "No step count or GPS route points were recorded."
                     self.sessionStarted = nil
+                    self.activeSessionID = nil
+                    self.isFinishingSession = false
                     return
                 }
                 let finalDistance = queriedDistance ?? self.sessionMotionDistanceMeters
-                let record = ActivitySessionRecord(id: UUID(), activity: activity, startedAt: start, finishedAt: finishedAt, steps: finalSteps, routePoints: routePoints, motionDistanceMeters: finalDistance)
+                let record = ActivitySessionRecord(id: recordID, activity: activity, startedAt: start, finishedAt: finishedAt, steps: finalSteps, routePoints: routePoints, motionDistanceMeters: finalDistance)
                 let storageKey = "gativx.activitySessions.v1"
                 let existingData = UserDefaults.standard.data(forKey: storageKey)
                 var history: [ActivitySessionRecord]
@@ -183,11 +194,13 @@ struct ContentView: View {
                     history = try existingData.map { try JSONDecoder().decode([ActivitySessionRecord].self, from: $0) } ?? []
                 } catch {
                     // Never replace an unreadable history with an empty array.
-                    self.sessionStatus = "Could not read existing activity history. Your current route draft is preserved; no saved history was replaced."
-                    self.sessionStarted = nil
+                    self.sessionStatus = "Could not read existing activity history. Your current route draft is preserved; no saved history was replaced. You can retry saving."
+                    self.isFinishingSession = false
                     return
                 }
-                history.insert(record, at: 0)
+                if !history.contains(where: { $0.id == recordID }) {
+                    history.insert(record, at: 0)
+                }
                 do {
                     let encodedHistory = try JSONEncoder().encode(history)
                     UserDefaults.standard.set(encodedHistory, forKey: storageKey)
@@ -204,10 +217,13 @@ struct ContentView: View {
                     let routeSummary = routePoints.isEmpty ? "GPS route unavailable (0 points)" : "GPS route saved · " + String(format: "%.2f km", record.gpsDistanceMeters / 1000)
                     self.sessionStatus = activity + " saved · " + stepSummary + " · " + routeSummary
                     self.sessionStarted = nil
+                    self.activeSessionID = nil
+                    self.isFinishingSession = false
                     self.syncSavedActivitySessions()
                 } catch {
-                    self.sessionStatus = "Could not save this activity on this iPhone: " + error.localizedDescription + ". Your GPS draft remains preserved; do not clear app data."
-                    self.sessionStarted = nil
+                    self.sessionStatus = "Could not save this activity on this iPhone: " + error.localizedDescription + ". Your GPS draft remains preserved; tap Finish & save activity to retry."
+                    self.sessionStarted = start
+                    self.isFinishingSession = false
                 }
             }
         }
@@ -305,16 +321,16 @@ struct ContentView: View {
                                 }
                                 sessionStatus = "Recovered activity resumed. Finish to save the route."
                             }.buttonStyle(.borderedProminent).tint(.orange)
-                            Button("Save recovered route now") {
+                            Button(isFinishingSession ? "Saving recovered route…" : "Save recovered route now") {
                                 selectedActivity = routeRecorder.recoveredActivity ?? "Walking"
                                 sessionStarted = recoveredStart
                                 sessionSteps = nil
                                 finishActivitySession()
-                            }.buttonStyle(.bordered)
+                            }.buttonStyle(.bordered).disabled(isFinishingSession)
                         }
                         Button(selectedActivity == "Walking" ? "Start WalkOn" : "Start activity") { startActivitySession() }.buttonStyle(.borderedProminent).tint(.green)
                     } else {
-                        Button("Finish & save activity", role: .destructive) { finishActivitySession() }.buttonStyle(.bordered)
+                        Button(isFinishingSession ? "Saving activity…" : "Finish & save activity", role: .destructive) { finishActivitySession() }.buttonStyle(.bordered).disabled(isFinishingSession)
                     }
                     Text("Session steps use iPhone motion data. GPS route is recorded separately while an activity is active. Allow location access for route tracking.")
                         .font(.caption2).foregroundStyle(.secondary)
