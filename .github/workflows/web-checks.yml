@@ -41,3 +41,10 @@ jobs:
         run: npx playwright install chromium
       - name: Run mobile browser smoke test
         run: node scripts/browser-smoke.mjs
+      - name: Upload desktop browser preview
+        uses: actions/upload-artifact@v4
+        with:
+          name: GATIVX-Desktop-Preview
+          path: gativx-desktop-preview.png
+          if-no-files-found: error
+          retention-days: 14
