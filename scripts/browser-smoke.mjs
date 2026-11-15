@@ -230,15 +230,20 @@ await caloriePage.goto(pathToFileURL(path.resolve("app-v2.html")).href,{waitUnti
 assert((await caloriePage.locator("#vActiveEnergy").textContent()).trim()==="20 kcal","GPS walking energy estimate should be 0.5 × 80 kg × 0.5 km");
 assert((await caloriePage.locator("#activeEnergySourceLabel").textContent()).includes("Estimated walking energy"),"Fallback calorie estimate was not labelled");
 assert((await caloriePage.locator("#ringCalories").textContent()).trim()==="20","Calorie ring did not use the estimated value");
-await caloriePage.evaluate(()=>{
- const d=new Date(),day=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
- const key="gativx.v2.fresh.state",s=JSON.parse(localStorage.getItem(key));s.entries[day].activeEnergyKcal=123;s.entries[day].activeEnergySource="apple_health";localStorage.setItem(key,JSON.stringify(s));
-});
-await caloriePage.reload({waitUntil:"domcontentloaded"});
-await caloriePage.waitForFunction(()=>document.querySelector("#vActiveEnergy")?.textContent.trim()==="123 kcal");
-assert((await caloriePage.locator("#activeEnergySourceLabel").textContent()).includes("measured active energy"),"Measured HealthKit calories did not override the estimate");
-assert((await caloriePage.locator("#ringCalories").textContent()).trim()==="123","Calorie ring did not prioritize measured active energy");
 await caloriePage.close();
+
+// A separate clean page verifies measured HealthKit energy takes priority over any estimate.
+const measuredCaloriePage=await browser.newPage({viewport:{width:390,height:844}});
+await measuredCaloriePage.addInitScript(()=>{
+ const d=new Date(),day=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+ localStorage.setItem("gativx.v2.fresh.state",JSON.stringify({version:2,goal:null,entries:{[day]:{weight:80,activeEnergyKcal:123,activeEnergySource:"apple_health"}},walks:[{date:day,distance:.5,points:[]}]}));
+});
+await measuredCaloriePage.route("https://**/*",r=>r.abort());
+await measuredCaloriePage.goto(pathToFileURL(path.resolve("app-v2.html")).href,{waitUntil:"domcontentloaded"});
+assert((await measuredCaloriePage.locator("#vActiveEnergy").textContent()).trim()==="123 kcal","Measured HealthKit energy did not take priority over the GPS estimate");
+assert((await measuredCaloriePage.locator("#activeEnergySourceLabel").textContent()).includes("measured active energy"),"Measured HealthKit calories were not labelled");
+assert((await measuredCaloriePage.locator("#ringCalories").textContent()).trim()==="123","Calorie ring did not prioritize measured active energy");
+await measuredCaloriePage.close();
 
 const storage=await page.evaluate(()=>({keys:Object.keys(localStorage),dailyLogs:localStorage.getItem("mission75.dailyLogs"),auth:localStorage.getItem("sb-crarbbsvcczwmtvxyrxo-auth-token"),session:sessionStorage.getItem("gativx.session.fixture")}));
 assert(storage.keys.includes("gativx.v2.fresh.state"),"Fresh GATIVX store was not used");
