@@ -296,6 +296,32 @@ await v2.locator("#gpsFinish").click();
 assert((await v2.locator("#walkStatus").textContent()).includes("0.03 km"),"Saved GPS walk distance did not match filtered route distance");
 assert(v2Errors.length===0,"GATIVX v2 browser errors: "+v2Errors.join("; "));
 await v2.close();
+
+ // Desktop laptop mode: validate approved artwork, desktop navigation and wide dashboard geometry.
+ const desktop=await browser.newPage({viewport:{width:1440,height:1000},deviceScaleFactor:1});
+ const desktopErrors=[];desktop.on("pageerror",e=>desktopErrors.push(e.message));
+ await desktop.route("https://**/*",r=>r.abort());
+ await desktop.goto(pathToFileURL(path.resolve("app-v2.html")).href,{waitUntil:"domcontentloaded"});
+ await desktop.waitForTimeout(250);
+ assert(await desktop.locator(".desktopSidebar").isVisible(),"Desktop sidebar is not visible at laptop width");
+ assert(await desktop.locator(".desktopHero").isVisible(),"Approved desktop welcome hero is not visible at laptop width");
+ assert(await desktop.locator(".desktopHero img").evaluate(img=>img.getAttribute("src")==="./gativx-logo.jpg"),"Desktop hero is not using the approved logo artwork");
+ assert(await desktop.locator(".desktopHero img").evaluate(img=>img.complete&&img.naturalWidth>0),"Approved desktop logo did not load");
+ assert(await desktop.locator(".bottom").isHidden(),"Mobile bottom navigation should be hidden in desktop mode");
+ assert(await desktop.locator(".desktopSidebar [data-panel]").count()===5,"Desktop sidebar must have five navigation destinations");
+ assert(await desktop.locator("#home.panel.active").count()===1,"Desktop dashboard did not open on Home");
+ const desktopGeometry=await desktop.locator(".app").evaluate(el=>({display:getComputedStyle(el).display,columns:getComputedStyle(el).gridTemplateColumns,sidebar:el.querySelector(".desktopSidebar").getBoundingClientRect().width,main:el.querySelector(".appMain").getBoundingClientRect().width}));
+ assert(desktopGeometry.display==="grid"&&desktopGeometry.sidebar>180&&desktopGeometry.main>800,"Desktop dashboard did not use the intended sidebar/content grid: "+JSON.stringify(desktopGeometry));
+ assert(await desktop.locator("#home .summaryTile").count()===4,"Desktop home must retain all four measured summary tiles");
+ assert(await desktop.locator("#home .healthRingCard").count()===3,"Desktop home must retain all three measured health rings");
+ await desktop.locator('.desktopSidebar [data-panel="walk"]').click();
+ assert(await desktop.locator("#walk.panel.active").count()===1,"Desktop sidebar GPS Activity navigation did not open the GPS panel");
+ await desktop.locator('.desktopSidebar [data-panel="coach"]').click();
+ assert(await desktop.locator("#coach.panel.active").count()===1,"Desktop sidebar GURU navigation did not open GURU mode");
+ assert(desktopErrors.length===0,"Desktop browser errors: "+desktopErrors.join("; "));
+ await desktop.close();
+ console.log("PASS: GATIVX desktop laptop mode — approved logo, dedicated sidebar, responsive dashboard grid and working navigation");
+
 console.log("PASS: Published GATIVX root entry opens the tested v2 fitness application");
 console.log("PASS: Apple Health Shortcut imports measured steps and active energy into the new GATIVX home");
 console.log("PASS: GATIVX v2 account sign-in, private cloud backup and HealthKit source reconciliation");
