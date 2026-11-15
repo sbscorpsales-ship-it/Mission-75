@@ -61,54 +61,6 @@ assert(await healthImport.evaluate(()=>!location.search.includes("gativx_active_
 assert(healthErrors.length===0,"Apple Health import browser errors: "+healthErrors.join("; "));
 await healthImport.close();
 
-// A previously imported Shortcut count must not masquerade as a fresh reading.
-const staleShortcut=await browser.newPage({viewport:{width:390,height:844}});
-await staleShortcut.addInitScript(()=>{
- const d=new Date(),day=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
- const old=new Date(Date.now()-2*60*60*1000).toISOString();
- localStorage.setItem("gativx.v2.fresh.state",JSON.stringify({version:2,goal:null,entries:{[day]:{steps:1855,stepsSource:"apple_health_shortcuts",stepsUpdatedAt:old}},walks:[]}));
-});
-await staleShortcut.route("https://**/*",r=>r.abort());
-await staleShortcut.goto(pathToFileURL(path.resolve("app-v2.html")).href,{waitUntil:"domcontentloaded"});
-assert((await staleShortcut.locator("#steps").textContent()).trim()==="—","Stale 1,855 Shortcut sample was displayed as a current reading");
-assert((await staleShortcut.locator("#stepNote").textContent()).includes("No iPhone sensor reading"),"Stale Shortcut source label was not cleared");
-await staleShortcut.close();
-
-// The real iPhone Shortcut opens the GitHub Pages root, not app-v2.html.
-// The landing redirect must preserve the Apple Health query until import runs.
-const shortcutLanding=await browser.newPage({viewport:{width:390,height:844}});
-const shortcutLandingErrors=[];shortcutLanding.on("pageerror",e=>shortcutLandingErrors.push(e.message));
-await shortcutLanding.route("https://**/*",r=>r.abort());
-await shortcutLanding.goto(pathToFileURL(path.resolve("index.html")).href+"?gativx_steps=1855&gativx_date="+localDay,{waitUntil:"domcontentloaded"});
-await shortcutLanding.waitForURL(url=>url.pathname.endsWith("/app-v2.html"),{timeout:5000});
-await shortcutLanding.waitForFunction(()=>document.querySelector("#steps")?.textContent.trim()==="1,855");
-assert((await shortcutLanding.locator("#stepNote").textContent()).includes("Apple Health via Shortcuts"),"Root shortcut link did not preserve the Apple Health source");
-assert(await shortcutLanding.evaluate(()=>!location.search.includes("gativx_steps")&&!location.search.includes("gativx_date")),"Imported shortcut parameters were not cleaned after successful import");
-assert(shortcutLandingErrors.length===0,"Shortcut landing errors: "+shortcutLandingErrors.join("; "));
-await shortcutLanding.close();
-
-// A returning signed-in member must receive the Shortcut sample only after
-// the correct account store has been activated (no device-store race).
-const signedShortcut=await browser.newPage({viewport:{width:390,height:844}});
-const signedShortcutErrors=[];signedShortcut.on("pageerror",e=>signedShortcutErrors.push(e.message));
-await signedShortcut.addInitScript((day)=>{
- window.__shortcutCloud={uploads:[]};
- window.supabase={createClient:()=>({auth:{getSession:async()=>({data:{session:{user:{id:"shortcut-member"}}},error:null}),onAuthStateChange:()=>({data:{subscription:{unsubscribe(){}}}})},from(table){return {select(){return {eq:async()=>({data:table==="daily_logs"?[{log_date:day,steps:0,steps_source:"manual",steps_updated_at:null,active_energy_kcal:null,active_energy_source:null,active_energy_updated_at:null,walking_km:null,water_ml:null,protein_g:null,weight_kg:null}]:[],error:null})}},upsert:async(rows)=>{if(table==="daily_logs")window.__shortcutCloud.uploads.push(...rows);return {error:null}},insert:async()=>({error:null})}}})};
-},localDay);
-await signedShortcut.route("https://**/*",r=>r.abort());
-await signedShortcut.goto(pathToFileURL(path.resolve("app-v2.html")).href+"?gativx_steps=1855&gativx_date="+localDay,{waitUntil:"domcontentloaded"});
-await signedShortcut.waitForFunction(()=>document.querySelector("#steps")?.textContent.trim()==="1,855",{timeout:3000});
-await signedShortcut.waitForTimeout(500);
-const signedShortcutDebug=await signedShortcut.evaluate(()=>({cloudState:document.querySelector("#cloudState")?.textContent,cloudStatus:document.querySelector("#cloudStatus")?.textContent,steps:document.querySelector("#steps")?.textContent,stepNote:document.querySelector("#stepNote")?.textContent,uploads:window.__shortcutCloud.uploads,account:localStorage.getItem("gativx.v2.fresh.state.user.shortcut-member"),device:localStorage.getItem("gativx.v2.fresh.state.device")}));
-assert(signedShortcutDebug.cloudState==="BACKUP CURRENT","Shortcut did not finish cloud sync for restored member: "+JSON.stringify(signedShortcutDebug));
-assert((await signedShortcut.locator("#stepNote").textContent()).includes("Apple Health via Shortcuts"),"Signed-in Shortcut sample lost its Health source");
-const signedShortcutData=await signedShortcut.evaluate(()=>({uploads:window.__shortcutCloud.uploads,account:JSON.parse(localStorage.getItem("gativx.v2.fresh.state.user.shortcut-member")||"null"),device:JSON.parse(localStorage.getItem("gativx.v2.fresh.state.device")||"null")}));
-assert(signedShortcutData.uploads.some(row=>row.steps===1855&&row.steps_source==="apple_health_shortcuts"),"Fresh Shortcut sample did not override the stale manual zero in cloud");
-assert(signedShortcutData.account?.entries?.[localDay]?.steps===1855,"Fresh Shortcut sample was not saved in the correct member's local record");
-assert(!signedShortcutData.device?.entries?.[localDay],"Shortcut sample leaked into the shared device-only store");
-assert(signedShortcutErrors.length===0,"Signed-in Shortcut import errors: "+signedShortcutErrors.join("; "));
-await signedShortcut.close();
-
 // Account login and cloud sync are exercised with an isolated Supabase client double.
 const cloudPage=await browser.newPage({viewport:{width:390,height:844}});
 const cloudErrors=[];cloudPage.on("pageerror",e=>cloudErrors.push(e.message));
@@ -300,7 +252,7 @@ assert((await v2.locator("#walkStatus").textContent()).includes("0.03 km"),"Save
 assert(v2Errors.length===0,"GATIVX v2 browser errors: "+v2Errors.join("; "));
 await v2.close();
 console.log("PASS: Published GATIVX root entry opens the tested v2 fitness application");
-console.log("PASS: Apple Health Shortcut imports measured steps and active energy into the new GATIVX home");
+console.log("PASS: GATIVX no longer exposes legacy manual Apple Health Shortcut imports");
 console.log("PASS: GATIVX v2 account sign-in, private cloud backup and HealthKit source reconciliation");
 console.log("PASS: GATIVX v2 uses its own namespaced data store");
 console.log("PASS: existing Mission-75 records and auth/session storage are preserved");
