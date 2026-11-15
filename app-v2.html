@@ -100,9 +100,100 @@ body[data-theme="light"] .mission p,
 body[data-theme="light"] .mission .eyebrow{color:#0A1A4F}
 @media(prefers-reduced-motion:no-preference){.themeToggle{transition:background .18s ease,color .18s ease,border-color .18s ease}.summaryTile,.card,.action,.bottom{transition:background-color .18s ease,border-color .18s ease}}
 
+
+/* DESKTOP WEB HUB — laptop/desktop only; mobile navigation and layout stay intact. */
+.desktopSidebar,.desktopHero{display:none}
+.desktopSidebar{background:linear-gradient(180deg,#0D1B36,#08142B);border:1px solid #2B4168;border-radius:26px;padding:18px 14px}
+.desktopSideBrand{display:flex;align-items:center;gap:10px;padding:5px 8px 18px;border-bottom:1px solid #2B4168;margin-bottom:16px}
+.desktopSideBrand img{width:46px;height:46px;object-fit:contain;border-radius:12px}
+.desktopSideBrand strong{font-size:20px;letter-spacing:-.7px}
+.desktopSideBrand strong span{color:#FF5A1F;font-style:italic}
+.desktopSideBrand small{display:block;color:#B7C5D9;font-size:9px;letter-spacing:1.2px;margin-top:2px}
+.desktopNavLabel{font-size:9px;font-weight:900;letter-spacing:1.8px;color:#B7C5D9;padding:8px 10px}
+.desktopSidebar nav{display:grid;gap:6px}
+.desktopSidebar button[data-panel]{width:100%;display:flex;align-items:center;gap:12px;text-align:left;border:0;border-radius:13px;padding:12px 13px;background:transparent;color:#DCE6F5;font-size:13px;font-weight:750}
+.desktopSidebar button[data-panel] i{width:21px;font-style:normal;font-size:18px;text-align:center;color:#B7C5D9}
+.desktopSidebar button[data-panel].active{background:linear-gradient(100deg,#FF5A1F,#FF7A24);color:#fff;box-shadow:0 8px 22px #FF5A1F33}
+.desktopSidebar button[data-panel].active i{color:#fff}
+.desktopSideFoot{margin-top:auto;padding:16px 9px 5px;border-top:1px solid #2B4168;color:#B7C5D9;font-size:10px;line-height:1.6}
+.desktopSideFoot strong{color:#fff;display:block;font-size:11px}
+.desktopHero{grid-template-columns:minmax(210px,270px) minmax(0,1fr);align-items:center;gap:24px;margin:4px 0 18px;padding:20px 26px;min-height:214px;border-radius:25px;overflow:hidden;background:linear-gradient(112deg,#EF3F00 0%,#FF5A1F 48%,#FF9A52 100%);color:#fff;box-shadow:0 15px 40px #FF5A1F20}
+.desktopHeroLogo{display:grid;place-items:center;min-width:0}
+.desktopHeroLogo img{display:block;width:100%;max-width:250px;height:184px;object-fit:contain;border-radius:15px}
+.desktopHeroCopy .eyebrow{color:#fff;opacity:.88;font-size:10px}
+.desktopHeroCopy h1{font-size:clamp(27px,2.4vw,38px);line-height:1.05;letter-spacing:-1.2px;margin:8px 0 10px;color:#fff}
+.desktopHeroCopy p{margin:0;color:#fff;font-size:14px;max-width:650px}
+.desktopAcronym{margin-top:17px;font-size:11px;font-weight:900;letter-spacing:1.2px;line-height:1.8;color:#fff}
+.desktopAttribution{margin-top:8px;font-size:11px;font-weight:750;color:#fff;opacity:.92}
+.desktopWelcomeDate{display:inline-flex;align-items:center;gap:7px;padding:6px 10px;border:1px solid #FFFFFF66;border-radius:999px;background:#FFFFFF1A;font-size:10px;font-weight:800;letter-spacing:1px}
+@media(min-width:1100px){
+ body{padding:0 0 28px}
+ .app{width:min(100%,1660px);max-width:1660px;margin:0 auto;padding:22px 28px;display:grid;grid-template-columns:232px minmax(0,1fr);gap:25px;align-items:start}
+ .desktopSidebar{display:flex;flex-direction:column;position:sticky;top:22px;height:calc(100vh - 44px);min-height:680px}
+ .appMain{min-width:0}
+ .top{height:66px;margin-bottom:8px}
+ .brand img{width:38px;height:38px}
+ .intro{display:none}
+ .desktopHero{display:grid}
+ .notice{font-size:12px}
+ #cloudAccount{margin-bottom:18px!important}
+ .summaryHero{grid-template-columns:140px minmax(0,1fr);padding:22px 26px;min-height:150px}
+ .ring{width:126px;height:126px}
+ .healthRings{grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:16px}
+ .healthRingCard{padding:16px 12px}
+ .healthRing{width:88px;height:88px}
+ .summaryGrid{grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+ .summaryTile{min-height:180px;padding:18px}
+ .tileSteps,.tileDistance{min-height:210px}
+ .panel#home.active{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:0 16px;align-items:start}
+ #home.panel.active>.summaryHero,#home.panel.active>.healthRings,#home.panel.active>.summaryGrid{grid-column:1/-1}
+ #home.panel.active>:nth-child(n+4):nth-child(-n+12){grid-column:span 6;min-width:0}
+ #home.panel.active>:nth-child(13),#home.panel.active>:nth-child(14){grid-column:1/-1}
+ #home.panel.active>.section{align-self:end}
+ .activityTrendCard,#todayWalkSummary,#recent{min-width:0}
+ .quick{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+ .quick .action{min-height:100px;padding:18px}
+ .mission{min-height:178px;padding:23px}
+ .mission h2{font-size:29px}
+ .guruCard{height:100%;min-height:178px}
+ .bottom{display:none!important}
+ .panel:not(#home).active{max-width:1100px}
+ .panel:not(#home).active>.card{padding:24px}
+ .formgrid{gap:16px}
+}
+@media(min-width:1500px){
+ .app{grid-template-columns:248px minmax(0,1fr);gap:30px;padding-left:34px;padding-right:34px}
+ .desktopHero{min-height:232px;padding:22px 32px}
+ .desktopHeroLogo img{max-width:270px;height:198px}
+ .summaryTile{min-height:190px}
+}
+
 </style></head><body>
-<div class="app"><header class="top"><div class="brand"><img src="./assets/brand/gativx-app-icon.svg" alt="GATIVX"><span>Gativ<b>X</b></span></div><div class="topActions"><button class="themeToggle" id="themeToggle" type="button" aria-label="Switch appearance" title="Switch Day/Night mode">☼</button><button class="avatar" id="profile">G</button></div></header>
+<div class="app">
+<aside class="desktopSidebar" aria-label="Desktop navigation">
+ <div class="desktopSideBrand"><img src="./assets/brand/gativx-app-icon.svg" alt="GATIVX"><div><strong>Gativ<span>X</span></strong><small>YOUR GOALS. YOUR JOURNEY.</small></div></div>
+ <div class="desktopNavLabel">YOUR SPACE</div>
+ <nav>
+  <button class="active" data-panel="home"><i>⌂</i>Dashboard</button>
+  <button data-panel="journey"><i>⌁</i>My Goals</button>
+  <button data-panel="record"><i>＋</i>Daily Journal</button>
+  <button data-panel="walk"><i>↗</i>GPS Activity</button>
+  <button data-panel="coach"><i>ॐ</i>GURU Mode</button>
+ </nav>
+ <div class="desktopSideFoot"><strong>GATIVX</strong>GOAL · ACTION · TRACK<br>IMPROVE · VITALITY · eXCEL<br><br>A Param IT Product™ · Belgaum</div>
+</aside>
+<div class="appMain"><header class="top"><div class="brand"><img src="./assets/brand/gativx-app-icon.svg" alt="GATIVX"><span>Gativ<b>X</b></span></div><div class="topActions"><button class="themeToggle" id="themeToggle" type="button" aria-label="Switch appearance" title="Switch Day/Night mode">☼</button><button class="avatar" id="profile">G</button></div></header>
 <section class="intro"><div class="eyebrow" id="dateLine"></div><h1>Move. Grow. Excel.</h1><p>Your day. Your pace. Your progress.</p></section>
+<section class="desktopHero" aria-label="GATIVX desktop welcome">
+ <div class="desktopHeroLogo"><img src="./gativx-logo.jpg" alt="Official GATIVX desktop logo"></div>
+ <div class="desktopHeroCopy">
+  <div class="desktopWelcomeDate" id="desktopDate">YOUR FITNESS JOURNEY</div>
+  <h1>Welcome to GATIVX.</h1>
+  <p>Your goals. Your movement. Your progress. One connected place to turn daily action into lasting vitality.</p>
+  <div class="desktopAcronym">GOAL&nbsp; | &nbsp;ACTION&nbsp; | &nbsp;TRACK&nbsp; | &nbsp;IMPROVE&nbsp; | &nbsp;VITALITY&nbsp; | &nbsp;eXCEL</div>
+  <div class="desktopAttribution">A Param IT Product™ · Belgaum</div>
+ </div>
+</section>
 <p class="notice" style="margin:4px 0 12px">Already a member? <a href="./legacy-runtime.html" style="color:var(--lime);font-weight:800">Open your existing account & saved records</a>.</p>
 <p class="notice" style="margin:0 0 14px">Using iPhone? <a href="shortcuts://run-shortcut?name=try%202" style="color:var(--lime);font-weight:850">Sync Apple Health now</a>. Your existing Shortcut will return the measured reading to GATIVX. <a href="./apple-health-shortcut.html" style="color:var(--lime);font-weight:850">Shortcut setup guide</a>.</p>
 <article class="card" id="cloudAccount" style="margin:0 0 16px;padding:15px">
@@ -144,7 +235,7 @@ body[data-theme="light"] .mission .eyebrow{color:#0A1A4F}
 <section class="panel" id="journey"><div class="section"><h2>Your journey</h2><span>NEW START</span></div><div class="card"><div class="empty" id="journeyText">Your milestones will appear after your first new entry.</div></div><div class="section"><h2>Set your mission</h2></div><div class="card"><div class="formgrid"><label>Goal<select id="goalType"><option value="">Choose a goal</option><option>Weight loss</option><option>Build strength</option><option>Daily movement</option><option>Improve fitness</option><option>Better health habits</option></select></label><label>Duration<select id="goalDuration"><option value="">Choose duration</option><option>30 days</option><option>90 days</option><option>6 months</option><option>1 year</option></select></label><label class="wide">Why does this goal matter to you?<textarea id="goalPurpose" rows="3" maxlength="500" placeholder="Your health, family, confidence, independence, energy — write the real reason you want this."></textarea></label><label>Target weight (kg, optional)<input id="goalTargetWeight" type="number" min="1" max="500" step=".1" placeholder="e.g. 75"></label><label class="wide">How do you hope to feel when you achieve it?<input id="goalFeeling" maxlength="120" placeholder="e.g. stronger, energetic, confident, independent"></label><button class="primarybtn wide" id="saveGoal">Start my mission</button></div></div></section>
 <section class="panel" id="record"><div class="section"><h2>Daily journal</h2><span>NEW DATA ONLY</span></div><div class="card"><div class="formgrid"><label>Weight (kg)<input id="weightIn" type="number" step=".1" min="1" placeholder="Enter weight"></label><label>Water (ml)<input id="waterIn" type="number" min="0" placeholder="Enter water"></label><label>Protein (g)<input id="proteinIn" type="number" min="0" placeholder="Enter protein"></label><label>Steps<input id="stepsIn" type="number" min="0" placeholder="Only if measured"></label><button class="primarybtn wide" id="saveEntry">Save new entry</button></div><p class="notice">Manually entered steps are labelled as manual. No old records are imported.</p></div></section>
 <section class="panel" id="walk"><div class="section"><h2>GPS walk tracker</h2><span>NEW SESSIONS</span></div><div class="card"><div class="label">LIVE WALK</div><strong id="walkStatus">Ready when you are</strong><div class="metrics" style="margin-top:12px"><div><div class="label">DISTANCE</div><strong id="gpsDistance">0.00 km</strong></div><div><div class="label">FIXES</div><strong id="gpsFixes">0</strong></div><div><div class="label">EST. STEPS</div><strong id="gpsSteps">0</strong></div></div><div class="gpsbuttons"><button class="primarybtn" id="gpsStart">Start</button><button class="secondary" id="gpsPause" disabled>Pause</button><button class="secondary" id="gpsFinish" disabled>Finish</button></div><p class="notice">Keep this screen open during a walk. GPS uses this device's browser location and saves only new sessions on this device.</p><div id="gpsMap" class="routeMap"><div class="mapEmpty">Your live route will appear here after GPS fixes arrive.</div></div><div id="gpsHistory"></div></div></section>
-<section class="panel" id="coach"><div class="section"><h2>GURU Mode</h2><span>YOUR PERSONAL GUIDE</span></div><div class="guruCard"><div class="guruTop"><div class="guruIcon">ॐ</div><div><div class="eyebrow" style="color:#FFB15C">GATIVX INTELLIGENCE</div><h3>Progress over perfection.</h3></div></div><p>When your motivation drops, GURU reconnects you with why you started and helps you choose one manageable next action. Guidance is supportive, not judgemental.</p><div class="card" id="guruPurposeCard"><div class="eyebrow">WHY YOU STARTED</div><h3 id="guruGoal" style="margin:8px 0">Your mission is waiting</h3><p id="guruPurpose" class="notice">Set a goal and write your personal reason in Journey.</p><div class="section"><h2>One small next action</h2></div><p id="guruNextAction" class="notice">Your next step will appear after you define your mission.</p><div class="goalPlan" id="guruPlan"><div class="eyebrow">YOUR DAILY TARGET PLAN</div><p id="guruPlanText" class="notice">Starting targets: 5,000 steps and 250 active kcal. GURU will adjust these using your measured baseline.</p><button class="secondary" id="acceptGuruPlan" type="button" style="width:100%">Use these daily targets</button></div><button class="secondary" id="reconnectGuru" style="width:100%">Reconnect me to my purpose</button></div><button class="guruButton" data-go="walk">START TODAY'S WALK&nbsp; →</button></div></section></div>
+<section class="panel" id="coach"><div class="section"><h2>GURU Mode</h2><span>YOUR PERSONAL GUIDE</span></div><div class="guruCard"><div class="guruTop"><div class="guruIcon">ॐ</div><div><div class="eyebrow" style="color:#FFB15C">GATIVX INTELLIGENCE</div><h3>Progress over perfection.</h3></div></div><p>When your motivation drops, GURU reconnects you with why you started and helps you choose one manageable next action. Guidance is supportive, not judgemental.</p><div class="card" id="guruPurposeCard"><div class="eyebrow">WHY YOU STARTED</div><h3 id="guruGoal" style="margin:8px 0">Your mission is waiting</h3><p id="guruPurpose" class="notice">Set a goal and write your personal reason in Journey.</p><div class="section"><h2>One small next action</h2></div><p id="guruNextAction" class="notice">Your next step will appear after you define your mission.</p><div class="goalPlan" id="guruPlan"><div class="eyebrow">YOUR DAILY TARGET PLAN</div><p id="guruPlanText" class="notice">Starting targets: 5,000 steps and 250 active kcal. GURU will adjust these using your measured baseline.</p><button class="secondary" id="acceptGuruPlan" type="button" style="width:100%">Use these daily targets</button></div><button class="secondary" id="reconnectGuru" style="width:100%">Reconnect me to my purpose</button></div><button class="guruButton" data-go="walk">START TODAY'S WALK&nbsp; →</button></div></section></div></div>
 <nav class="bottom" aria-label="Main navigation"><button class="active" data-panel="home"><i>⌂</i>Home</button><button data-panel="journey"><i>⌁</i>Journey</button><button data-panel="record"><i>＋</i>Record</button><button data-panel="walk"><i>↗</i>Walk</button><button data-panel="coach"><i>ॐ</i>GURU</button></nav>
 <script async src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
