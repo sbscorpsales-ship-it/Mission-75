@@ -44,8 +44,50 @@ body{background:#050605;color:var(--ink)}
 .section.tight{margin-top:18px}
 @media(min-width:700px){.summaryGrid{grid-template-columns:repeat(4,minmax(0,1fr))}.summaryTile{min-height:158px}.summaryHero{grid-template-columns:132px 1fr}.ring{width:124px;height:124px}}
 .tileSteps,.tileDistance{min-height:205px}
+
+/* FINAL GATIVX DESIGN LOCK: same dashboard geometry; Day/Night are appearance-only. */
+.topActions{display:flex;align-items:center;gap:9px}
+.themeToggle{width:42px;height:42px;border-radius:50%;border:1px solid #414541;background:#202120;color:var(--lime);font-size:19px;font-weight:800;display:grid;place-items:center}
+.themeToggle:focus-visible,.avatar:focus-visible,.bottom button:focus-visible{outline:3px solid var(--cyan);outline-offset:3px}
+body[data-theme="light"]{color-scheme:light;--bg:#f4f7f2;--card:#ffffff;--line:#dce5dc;--ink:#17251b;--muted:#657468;--lime:#6d9f00;--cyan:#087fa8;--orange:#c66a12;--violet:#7054b8;background:#f4f7f2;color:#17251b}
+body[data-theme="light"] .themeToggle{background:#fff;border-color:#dce5dc;color:#426b00}
+body[data-theme="light"] .avatar{background:#fff;border-color:#dce5dc;color:#426b00}
+body[data-theme="light"] .summaryHero,
+body[data-theme="light"] .summaryTile,
+body[data-theme="light"] .metric,
+body[data-theme="light"] .card,
+body[data-theme="light"] .action{background:#fff;border-color:#dce5dc;color:#17251b;box-shadow:0 5px 18px #1b34200b}
+body[data-theme="light"] .summaryMove .label{color:#35463a}
+body[data-theme="light"] .summaryMove p,
+body[data-theme="light"] .tileNote,
+body[data-theme="light"] .summaryTile small,
+body[data-theme="light"] .muted,
+body[data-theme="light"] small{color:#657468}
+body[data-theme="light"] .ring:before{background:#fff}
+body[data-theme="light"] .ring{background:conic-gradient(var(--lime) 0deg,#e3eadf 0deg)}
+body[data-theme="light"] .bottom{background:#ffffffed;border-color:#dce5dc;box-shadow:0 10px 36px #243d241c}
+body[data-theme="light"] .bottom button{color:#657468}
+body[data-theme="light"] .bottom button.active{background:#c7ef79;color:#20310b}
+body[data-theme="light"] .guruCard{background:linear-gradient(140deg,#fff8eb,#fff);border-color:#f0d8b5}
+body[data-theme="light"] .guruCard p{color:#6b5c49}
+body[data-theme="light"] .formgrid input,
+body[data-theme="light"] .formgrid select,
+body[data-theme="light"] .formgrid textarea{background:#fff;color:#17251b;border-color:#dce5dc}
+body[data-theme="light"] .secondary{background:#e8eee6;color:#26362a}
+body[data-theme="light"] .routeMap{background:#eef3ed;border-color:#dce5dc}
+body[data-theme="light"] .routeMap svg rect{fill:#edf3eb}
+body[data-theme="light"] .trendTrack{background:#e7ede4}
+body[data-theme="light"] .trendBar{background:#80b918}
+body[data-theme="light"] .notice{color:#657468}
+body[data-theme="light"] .entry{border-color:#e3e9e1}
+body[data-theme="light"] .entry span{color:#657468}
+body[data-theme="light"] .mission{color:#17251b}
+body[data-theme="light"] .mission p,
+body[data-theme="light"] .mission .eyebrow{color:#294b30}
+@media(prefers-reduced-motion:no-preference){.themeToggle{transition:background .18s ease,color .18s ease,border-color .18s ease}.summaryTile,.card,.action,.bottom{transition:background-color .18s ease,border-color .18s ease}}
+
 </style></head><body>
-<div class="app"><header class="top"><div class="brand"><img src="./gativx-master.png" alt="GATIVX"><span>GATI<em>V</em>X</span></div><button class="avatar" id="profile">G</button></header>
+<div class="app"><header class="top"><div class="brand"><img src="./gativx-master.png" alt="GATIVX"><span>GATI<em>V</em>X</span></div><div class="topActions"><button class="themeToggle" id="themeToggle" type="button" aria-label="Switch appearance" title="Switch Day/Night mode">☼</button><button class="avatar" id="profile">G</button></div></header>
 <section class="intro"><div class="eyebrow" id="dateLine"></div><h1>Move. Grow. Excel.</h1><p>Your day. Your pace. Your progress.</p></section>
 <p class="notice" style="margin:4px 0 12px">Already a member? <a href="./legacy-runtime.html" style="color:var(--lime);font-weight:800">Open your existing account & saved records</a>.</p>
 <p class="notice" style="margin:0 0 14px">Using iPhone? <a href="shortcuts://run-shortcut?name=try%202" style="color:var(--lime);font-weight:850">Sync Apple Health now</a>. Your existing Shortcut will return the measured reading to GATIVX. <a href="./apple-health-shortcut.html" style="color:var(--lime);font-weight:850">Shortcut setup guide</a>.</p>
@@ -384,4 +426,13 @@ $('gpsPause').onclick=()=>{paused=!paused;if(paused){pausedAt=Date.now()}else{if
 $('gpsFinish').onclick=()=>{const finishButton=$('gpsFinish');if(finishButton.disabled)return;finishButton.disabled=true;try{if(watch!==null)navigator.geolocation.clearWatch(watch);watch=null;const savedPoints=points.map(p=>({...p}));const savedDistance=distance/1000;const savedGpsSteps=Math.round(distance/0.73);$('gpsStart').disabled=false;$('gpsPause').disabled=true;$('gpsPause').textContent='Pause';if(savedPoints.length<2||!Number.isFinite(savedDistance)||savedDistance<=0){$('walkStatus').textContent='WALK FINISHED · Not saved: at least two accurate GPS fixes and measurable distance are required. Try again outdoors with Location enabled.';finishButton.disabled=true;return}const today=date();const previousEntry=state.entries[today];const finishedAt=new Date();const startedAt=walkStartedAt||finishedAt;const totalPaused=pausedMilliseconds+(pausedAt===null?0:Date.now()-pausedAt);const durationSeconds=Math.max(0,Math.round((finishedAt-startedAt-totalPaused)/1000));const walk={date:today,distance:Number(savedDistance.toFixed(3)),gpsStepsEstimate:savedGpsSteps,steps:null,points:savedPoints,startedAt:startedAt.toISOString(),finishedAt:finishedAt.toISOString(),durationSeconds,createdAt:finishedAt.toISOString()};state.walks.push(walk);const x=previousEntry||{};state.entries[today]={...x,distance:Number(((x.distance||0)+savedDistance).toFixed(3))};try{persist();$('walkStatus').textContent='WALK FINISHED & SAVED ✓ · '+savedDistance.toFixed(2)+' km · ~'+fmt(savedGpsSteps)+' estimated steps';finishButton.disabled=true;render();renderWalk();if(cloudUser)cloudSync()}catch(saveError){state.walks.pop();if(previousEntry===undefined)delete state.entries[today];else state.entries[today]=previousEntry;finishButton.disabled=false;$('walkStatus').textContent='Could not save this walk on this device: '+(saveError&&saveError.message?saveError.message:'storage error')+'. Your route is still held on this screen; do not refresh.';console.error('GATIVX walk save failed',saveError)}}catch(error){finishButton.disabled=false;$('walkStatus').textContent='Could not finish GPS session: '+(error&&error.message?error.message:'unknown error');console.error('GATIVX GPS finish failed',error)}};
 importAppleHealthShortcut();render();if(state.walks.length)renderWalk();})()
 if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{}));}
-</script></body></html>
+</script>
+<script>
+(()=>{const key='gativx.appearance.v1';const root=document.body;const button=document.getElementById('themeToggle');if(!button)return;
+const valid=v=>v==='light'||v==='dark';let saved=null;try{saved=localStorage.getItem(key)}catch{}
+const initial=valid(saved)?saved:(window.matchMedia&&window.matchMedia('(prefers-color-scheme: light)').matches?'light':'dark');
+function apply(theme,save){root.dataset.theme=theme;root.style.colorScheme=theme;button.textContent=theme==='dark'?'☼':'☾';button.setAttribute('aria-label',theme==='dark'?'Switch to Day Mode':'Switch to Night Mode');button.title=theme==='dark'?'Switch to Day Mode':'Switch to Night Mode';const meta=document.querySelector('meta[name="theme-color"]');if(meta)meta.content=theme==='dark'?'#050605':'#f4f7f2';if(save){try{localStorage.setItem(key,theme)}catch{}}}
+apply(initial,false);button.addEventListener('click',()=>apply(root.dataset.theme==='dark'?'light':'dark',true));
+})();
+</script>
+</body></html>
