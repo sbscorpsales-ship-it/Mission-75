@@ -354,7 +354,7 @@ async function cloudSync(){
    if(profileWrite.error)throw profileWrite.error;
   }
   persist();render();renderWalk();
-  clearPendingHealthShortcut();cloudMsg('Sync complete. Apple Health Shortcut readings and your other records are backed up to your account.','BACKUP CURRENT');
+  cloudMsg('Sync complete. Your GATIVX records are backed up to your signed-in account.','BACKUP CURRENT');
  }catch(error){if(isCurrent()){console.error('GATIVX cloud sync failed',error);cloudMsg('Cloud sync issue: '+(error&&error.message?error.message:'Please retry when connected.'),'SYNC ISSUE')}}
  finally{cloudBusy=false;if(cloudSyncQueued){cloudSyncQueued=false;queueMicrotask(()=>cloudSync())}}
 }
@@ -364,11 +364,19 @@ async function cloudAuth(mode){
  if(!email||!password){cloudMsg('Enter your email and password first.','DETAILS NEEDED');return}
  if(password.length<6){cloudMsg('Use a password with at least 6 characters.','DETAILS NEEDED');return}
  if(mode==='signup'&&!name){cloudMsg('Enter your name before creating the account.','DETAILS NEEDED');return}
+ const button=mode==='signup'?$('cloudSignUp'):$('cloudSignIn');
+ button.disabled=true;
  cloudMsg(mode==='signup'?'Creating your account…':'Signing in…','AUTHENTICATING');
- const result=mode==='signup'?await cloudClient.auth.signUp({email,password,options:{data:{display_name:name}}}):await cloudClient.auth.signInWithPassword({email,password});
- if(result.error){cloudMsg(result.error.message,'SIGN-IN ISSUE');return}
- if(mode==='signup'&&!result.data.session){cloudMsg('Account created. Confirm your email, then sign in here.','CONFIRM EMAIL');return}
- activateCloudUser(result.data.user);applyPendingShortcutToActiveAccount();cloudUi();await cloudSync();
+ try{
+  const result=mode==='signup'?await cloudClient.auth.signUp({email,password,options:{data:{display_name:name}}}):await cloudClient.auth.signInWithPassword({email,password});
+  if(result.error)throw result.error;
+  if(mode==='signup'&&!result.data.session){cloudMsg('Account created. Confirm your email, then sign in here.','CONFIRM EMAIL');return}
+  if(!result.data.user)throw new Error('Authentication returned no user. Please retry.');
+  activateCloudUser(result.data.user);cloudUi();await cloudSync();
+ }catch(error){
+  console.error('GATIVX authentication failed',error);
+  cloudMsg(error&&error.message?error.message:'Sign-in failed. Check your connection and try again.','SIGN-IN ISSUE');
+ }finally{button.disabled=false}
 }
 $('cloudSignIn').onclick=()=>cloudAuth('signin');
 $('cloudSignUp').onclick=()=>{if(!signupReady){signupReady=true;$('cloudNameWrap').style.display='block';$('cloudSignUp').textContent='Confirm account creation';cloudMsg('Enter your name, then confirm account creation.','CREATE ACCOUNT');return}cloudAuth('signup')};
@@ -377,71 +385,18 @@ $('cloudSignOut').onclick=async()=>{const r=await cloudClient.auth.signOut();if(
 function initCloud(){
  if(!cloudClient&&window.supabase&&window.supabase.createClient)cloudClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
  if(!cloudClient)return;
- cloudClient.auth.getSession().then(r=>{if(r.error)throw r.error;activateCloudUser(r.data.session&&r.data.session.user||null);cloudUi();applyPendingShortcutToActiveAccount();if(cloudUser)cloudSync()}).catch(e=>cloudMsg(e.message||'Could not restore your account session.','SESSION ISSUE'));
- cloudClient.auth.onAuthStateChange((event,session)=>{activateCloudUser(session&&session.user||null);cloudUi();if(cloudUser&&event==='SIGNED_IN'){applyPendingShortcutToActiveAccount();setTimeout(cloudSync,0)}});
+ cloudClient.auth.getSession().then(r=>{if(r.error)throw r.error;activateCloudUser(r.data.session&&r.data.session.user||null);cloudUi();if(cloudUser)cloudSync()}).catch(e=>cloudMsg(e.message||'Could not restore your account session.','SESSION ISSUE'));
+ cloudClient.auth.onAuthStateChange((event,session)=>{activateCloudUser(session&&session.user||null);cloudUi();if(cloudUser&&event==='SIGNED_IN'){setTimeout(cloudSync,0)}});
 }
 initCloud();
 async function refreshPedometerFromCloud(){if(!cloudClient||!cloudUser)return;const userId=cloudUser.id,day=date();try{const [motion,daily]=await Promise.all([cloudClient.from('motion_daily_steps').select('log_date,steps,distance_m,measured_at').eq('user_id',userId),cloudClient.from('daily_logs').select('log_date,steps,steps_source,steps_updated_at,active_energy_kcal,active_energy_source,active_energy_updated_at,walking_km,water_ml,protein_g,weight_kg').eq('user_id',userId)]);if(motion.error)throw motion.error;if(daily.error)throw daily.error;if(!cloudUser||cloudUser.id!==userId||date()!==day)return;motionDaily={};(motion.data||[]).forEach(item=>{const key=String(item.log_date);if(validDay(key))motionDaily[key]={steps:Number(item.steps)||0,distanceMeters:item.distance_m==null?null:Number(item.distance_m),measuredAt:item.measured_at||null}});(daily.data||[]).forEach(item=>{const key=String(item.log_date);if(!validDay(key))return;const remote={steps:item.steps==null?null:Number(item.steps),stepsSource:item.steps_source||null,stepsUpdatedAt:item.steps_updated_at||null,activeEnergyKcal:item.active_energy_kcal==null?null:Number(item.active_energy_kcal),activeEnergySource:item.active_energy_source||null,activeEnergyUpdatedAt:item.active_energy_updated_at||null,distance:item.walking_km==null?null:Number(item.walking_km),water:item.water_ml==null?null:Number(item.water_ml),protein:item.protein_g==null?null:Number(item.protein_g),weight:item.weight_kg==null?null:Number(item.weight_kg)};state.entries[key]=mergeCloudDaily(remote,state.entries[key]||{})});persist();render()}catch(error){console.warn('GATIVX measured activity refresh unavailable',error)}}
 window.setInterval(()=>{if(!document.hidden)refreshPedometerFromCloud()},60000);
-document.addEventListener('visibilitychange',()=>{if(!document.hidden){refreshPedometerFromCloud();if(cloudUser){applyPendingShortcutToActiveAccount();cloudSync()}}});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden){refreshPedometerFromCloud();if(cloudUser){cloudSync()}}});
 window.addEventListener('online',()=>{if(cloudUser){applyPendingShortcutToActiveAccount();cloudSync()}});
 const cloudScript=document.querySelector('script[src*="supabase-js"]');
 if(cloudScript){cloudScript.addEventListener('load',initCloud,{once:true});cloudScript.addEventListener('error',()=>{if(!cloudClient)cloudMsg('Cloud library could not load. Your device data remains available offline.','OFFLINE')},{once:true})}
 
-function applyShortcutPayload(payload){
- const importedDate=payload.date,steps=payload.steps,energy=payload.energy,stamp=payload.receivedAt||new Date().toISOString();
- const dayParts=String(importedDate||'').split('-').map(Number),dayCheck=dayParts.length===3?new Date(dayParts[0],dayParts[1]-1,dayParts[2]):new Date(NaN);
- if(dayParts.length!==3||dayCheck.getFullYear()!==dayParts[0]||dayCheck.getMonth()!==dayParts[1]-1||dayCheck.getDate()!==dayParts[2]||(steps===null&&energy===null))return false;
- const prior=state.entries[importedDate]||{},next={...prior};let changed=false;
- // A fresh, permissioned Health Samples result supersedes manual journal values.
- // Keep native HealthKit values authoritative if they already exist.
- if(steps!==null&&prior.stepsSource!=='apple_health'){next.steps=steps;next.stepsSource='apple_health_shortcuts';next.stepsUpdatedAt=stamp;changed=true}
- if(energy!==null&&prior.activeEnergySource!=='apple_health'){next.activeEnergyKcal=energy;next.activeEnergySource='apple_health_shortcuts';next.activeEnergyUpdatedAt=stamp;changed=true}
- if(changed){state.entries[importedDate]=next;persist();render()}
- return changed;
-}
-const PENDING_HEALTH_SHORTCUT_KEY='gativx.pending-health-shortcut.v2';
-function readPendingHealthShortcut(){
- try{const raw=localStorage.getItem(PENDING_HEALTH_SHORTCUT_KEY);if(raw)return JSON.parse(raw)}catch(error){console.warn('Could not read saved Apple Health Shortcut import',error)}
- try{const legacy=sessionStorage.getItem('gativx.pending-health-shortcut.v1');if(legacy){const payload=JSON.parse(legacy);localStorage.setItem(PENDING_HEALTH_SHORTCUT_KEY,JSON.stringify(payload));return payload}}catch(error){console.warn('Could not recover previous Apple Health Shortcut import',error)}
- return null;
-}
-function storePendingHealthShortcut(payload){
- const raw=JSON.stringify(payload);let saved=false;
- try{localStorage.setItem(PENDING_HEALTH_SHORTCUT_KEY,raw);saved=true}catch(error){console.warn('Persistent Shortcut storage unavailable',error)}
- try{sessionStorage.setItem('gativx.pending-health-shortcut.v1',raw)}catch{}
- return saved;
-}
-function clearPendingHealthShortcut(){
- // Preserve browser storage namespaces; an empty value marks the queue as cleared.
- try{localStorage.setItem(PENDING_HEALTH_SHORTCUT_KEY,'')}catch{}
- try{sessionStorage.setItem('gativx.pending-health-shortcut.v1','')}catch{}
-}
-function applyPendingShortcutToActiveAccount(){
- if(!cloudUser)return;
- const payload=readPendingHealthShortcut();
- if(payload)applyShortcutPayload(payload);
-}
-function importAppleHealthShortcut(){
- const params=new URLSearchParams(window.location.search),hasSteps=params.has('gativx_steps'),hasEnergy=params.has('gativx_active_energy');
- if(!hasSteps&&!hasEnergy)return;
- const importedDate=params.get('gativx_date')||date(),parts=importedDate.split('-').map(Number),parsed=parts.length===3?new Date(parts[0],parts[1]-1,parts[2]):new Date(NaN);
- const validDate=/^\d{4}-\d{2}-\d{2}$/.test(importedDate)&&parts.length===3&&parsed.getFullYear()===parts[0]&&parsed.getMonth()===parts[1]-1&&parsed.getDate()===parts[2];
- const numeric=(raw,max)=>{if(raw==null||!/^\d+(?:,\d{3})*$/.test(raw.trim()))return null;const n=Number(raw.replace(/,/g,''));return Number.isSafeInteger(n)&&n>=0&&n<=max?n:null};
- const steps=hasSteps?numeric(params.get('gativx_steps'),200000):null,energy=hasEnergy?numeric(params.get('gativx_active_energy'),20000):null;
- if(validDate&&(steps!==null||energy!==null)){
-  const payload={date:importedDate,steps,energy,receivedAt:new Date().toISOString()};
-  storePendingHealthShortcut(payload);
-  applyShortcutPayload(payload);
-  if(cloudUser)cloudSync();
- }else{
-  console.warn('Rejected invalid Apple Health Shortcut URL parameters',{date:importedDate,hasSteps,hasEnergy});
-  const status=$('stepNote');if(status)status.textContent='Apple Health import rejected: check the Shortcut date and numeric values.';
- }
- params.delete('gativx_steps');params.delete('gativx_active_energy');params.delete('gativx_date');
- const clean=window.location.pathname+(params.toString()?'?'+params.toString():'')+window.location.hash;
- window.history.replaceState({},'',clean);
-}
+
 function renderJourney(){const n=Object.keys(state.entries).length;$('journeyText').textContent=n?n+' new days recorded. Keep building from here.':'Your milestones will appear after your first new entry.'}
 function routeGraphic(route){const valid=(Array.isArray(route)?route:[]).map(p=>{if(!p||typeof p!=='object')return null;const lat=Number(p.lat??p.latitude),lon=Number(p.lon??p.longitude),rawTime=p.time??p.timestamp;const time=typeof rawTime==='number'?rawTime:(rawTime?Date.parse(rawTime):null);return {...p,lat,lon,time,breakBefore:!!(p.breakBefore??p.break_before)}}).filter(p=>Number.isFinite(p.lat)&&Number.isFinite(p.lon)&&Math.abs(p.lat)<=90&&Math.abs(p.lon)<=180);if(valid.length<2)return '<div class="mapEmpty">Route preview appears after at least two accurate GPS fixes.</div>';const lats=valid.map(p=>Number(p.lat)),lons=valid.map(p=>Number(p.lon)),minLat=Math.min(...lats),maxLat=Math.max(...lats),minLon=Math.min(...lons),maxLon=Math.max(...lons),dx=maxLon-minLon||0.00001,dy=maxLat-minLat||0.00001,pad=24,w=600,h=190,scale=Math.min((w-2*pad)/dx,(h-2*pad)/dy),usedW=dx*scale,usedH=dy*scale,ox=(w-usedW)/2,oy=(h-usedH)/2,segments=[];valid.forEach(p=>{if(!segments.length||p.breakBefore)segments.push([]);segments[segments.length-1].push(p)});const draw=segments.filter(segment=>segment.length>=2);if(!draw.length)return '<div class="mapEmpty">Route preview appears after two connected accurate GPS fixes.</div>';const xy=p=>(ox+(Number(p.lon)-minLon)*scale).toFixed(1)+','+(h-oy-(Number(p.lat)-minLat)*scale).toFixed(1),first=draw[0][0],last=draw[draw.length-1][draw[draw.length-1].length-1],lines=draw.map(segment=>'<polyline points="'+segment.map(xy).join(' ')+'" fill="none" stroke="#d5ff32" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>').join(''),a=xy(first).split(','),b=xy(last).split(',');return '<svg viewBox="0 0 600 190" role="img" aria-label="Recorded GPS route"><rect width="600" height="190" fill="#17221a"/>'+lines+'<circle cx="'+a[0]+'" cy="'+a[1]+'" r="7" fill="#63d9ff"/><circle cx="'+b[0]+'" cy="'+b[1]+'" r="7" fill="#ff8a26"/></svg>'}
 function renderTodayWalk(){const walks=state.walks.filter(w=>w.date===date()).slice().reverse();$('todayWalkCount').textContent=walks.length+' WALK'+(walks.length===1?'':'S');$('todayWalkSummary').innerHTML=walks.length?walks.map(w=>{const total=Math.max(0,Number(w.durationSeconds||0)),minutes=Math.floor(total/60),seconds=Math.floor(total%60),time=w.startedAt?new Date(w.startedAt).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}):'Time not recorded';return '<div class="entry"><b>'+time+' · '+Number(w.distance||0).toFixed(2)+' km</b><span>'+minutes+':'+String(seconds).padStart(2,'0')+' · '+fmt(w.gpsStepsEstimate||0)+' GPS-estimated steps</span></div>'}).join(''):'<div class="empty">No walk recorded today. Start a walk when you head out.</div>'}
@@ -450,7 +405,7 @@ function addFix(pos){if(paused)return;const c=pos&&pos.coords;if(!c||!Number.isF
 $('gpsStart').onclick=()=>{if(!navigator.geolocation){alert('GPS is not available in this browser.');return}points=[];distance=0;lastAcceptedFix=null;segmentBreak=true;paused=false;walkStartedAt=new Date();pausedAt=null;pausedMilliseconds=0;$('gpsDistance').textContent='0.00 km';$('gpsFixes').textContent='0';$('gpsSteps').textContent='0';$('gpsMap').innerHTML='<div class="mapEmpty">Waiting for accurate GPS fixes…</div>';$('walkStatus').textContent='Requesting GPS…';$('gpsStart').disabled=true;$('gpsPause').disabled=false;$('gpsFinish').disabled=false;watch=navigator.geolocation.watchPosition(pos=>{addFix(pos);$('gpsMap').innerHTML=routeGraphic(points)},e=>{$('walkStatus').textContent=e.code===1?'LOCATION PERMISSION DENIED · Allow Safari to access Location.':e.code===2?'GPS SIGNAL UNAVAILABLE · Move outdoors and retry.':'GPS SIGNAL TIMED OUT · Keep this screen open and wait for a clearer signal.';if(e.code===1){if(watch!==null)navigator.geolocation.clearWatch(watch);watch=null;$('gpsStart').disabled=false;$('gpsPause').disabled=true;$('gpsFinish').disabled=true}},{enableHighAccuracy:true,maximumAge:0,timeout:30000});$('walkStatus').textContent='WALK STARTED ✓ · Waiting for GPS signal'};
 $('gpsPause').onclick=()=>{paused=!paused;if(paused){pausedAt=Date.now()}else{if(pausedAt!==null)pausedMilliseconds+=Date.now()-pausedAt;pausedAt=null;lastAcceptedFix=null;segmentBreak=true}$('gpsPause').textContent=paused?'Resume':'Pause';$('walkStatus').textContent=paused?'WALK PAUSED':'WALK RESUMED ✓ · GPS tracking active'};
 $('gpsFinish').onclick=()=>{const finishButton=$('gpsFinish');if(finishButton.disabled)return;finishButton.disabled=true;try{if(watch!==null)navigator.geolocation.clearWatch(watch);watch=null;const savedPoints=points.map(p=>({...p}));const savedDistance=distance/1000;const savedGpsSteps=Math.round(distance/0.73);$('gpsStart').disabled=false;$('gpsPause').disabled=true;$('gpsPause').textContent='Pause';if(savedPoints.length<2||!Number.isFinite(savedDistance)||savedDistance<=0){$('walkStatus').textContent='WALK FINISHED · Not saved: at least two accurate GPS fixes and measurable distance are required. Try again outdoors with Location enabled.';finishButton.disabled=true;return}const today=date();const previousEntry=state.entries[today];const finishedAt=new Date();const startedAt=walkStartedAt||finishedAt;const totalPaused=pausedMilliseconds+(pausedAt===null?0:Date.now()-pausedAt);const durationSeconds=Math.max(0,Math.round((finishedAt-startedAt-totalPaused)/1000));const walk={date:today,distance:Number(savedDistance.toFixed(3)),gpsStepsEstimate:savedGpsSteps,steps:null,points:savedPoints,startedAt:startedAt.toISOString(),finishedAt:finishedAt.toISOString(),durationSeconds,createdAt:finishedAt.toISOString()};state.walks.push(walk);const x=previousEntry||{};state.entries[today]={...x,distance:Number(((x.distance||0)+savedDistance).toFixed(3))};try{persist();$('walkStatus').textContent='WALK FINISHED & SAVED ✓ · '+savedDistance.toFixed(2)+' km · ~'+fmt(savedGpsSteps)+' estimated steps';finishButton.disabled=true;render();renderWalk();if(cloudUser)cloudSync()}catch(saveError){state.walks.pop();if(previousEntry===undefined)delete state.entries[today];else state.entries[today]=previousEntry;finishButton.disabled=false;$('walkStatus').textContent='Could not save this walk on this device: '+(saveError&&saveError.message?saveError.message:'storage error')+'. Your route is still held on this screen; do not refresh.';console.error('GATIVX walk save failed',saveError)}}catch(error){finishButton.disabled=false;$('walkStatus').textContent='Could not finish GPS session: '+(error&&error.message?error.message:'unknown error');console.error('GATIVX GPS finish failed',error)}};
-importAppleHealthShortcut();render();if(state.walks.length)renderWalk();})()
+render();if(state.walks.length)renderWalk();})()
 if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{}));}
 </script>
 <script>
