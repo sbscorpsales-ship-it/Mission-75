@@ -14,7 +14,7 @@ assert(await page.locator("a").filter({hasText:"Sync Apple Health now"}).evaluat
 assert((await page.locator("#missionTitle").textContent()).includes("Build strength"),"Fresh-store mission did not render");
 assert((await page.locator("#missionPct").textContent()).includes("MISSION ACTIVE"),"Mission status missing");
 assert((await page.locator("#missionPct").textContent()).includes("1/90 CHECK-IN DAYS"),"Mission progress must count real saved check-in days, not a decorative percentage");
-await page.locator('[data-panel="journey"]').click();
+await page.locator('.bottom [data-panel="journey"]').click();
 await page.locator("#goalType").selectOption({label:"Weight loss"});
 await page.locator("#goalDuration").selectOption({label:"90 days"});
 await page.locator("#goalPurpose").fill("I want to feel energetic and stay active with my family.");
@@ -31,17 +31,17 @@ assert(await page.locator(".summaryHero").count()===1,"Fitness summary hero miss
 assert(await page.locator(".summaryTile").count()===4,"Expected four summary metric tiles");
 assert(await page.locator('.tileSteps a[href="shortcuts://run-shortcut?name=try%202"]').filter({hasText:"Sync Apple Health now"}).count()===1,"Step tile must launch the configured Apple Health Shortcut directly");
 assert(await page.locator('.tileSteps a[href="./apple-health-shortcut.html"]').filter({hasText:"Shortcut setup guide"}).count()===1,"Step tile must retain access to the Shortcut setup guide");
-await page.locator('[data-panel="home"]').click();
+await page.locator('.bottom [data-panel="home"]').click();
 await page.locator('.quick [data-go="walk"]').click();
 assert(await page.locator("#walk").evaluate(el=>el.classList.contains("active")),"Today's Walk action did not open the GPS recorder");
 assert(await page.locator("#home .guruCard").count()===1,"GURU mode home card missing");
 assert(await page.locator("#vActiveEnergy").textContent().then(x=>x.trim())==="—","Active calories must not be fabricated before HealthKit data");
-assert((await page.locator('[data-panel="coach"]').textContent()).includes("GURU"),"GURU navigation label missing");
+assert((await page.locator('.bottom [data-panel="coach"]').textContent()).includes("GURU"),"GURU navigation label missing");
 assert(await page.locator(".bottom button").count()===5,"Expected five navigation destinations");
 assert(await page.locator('a[href="./legacy-runtime.html"]').count()===1,"Existing account and saved-record access link missing");
 assert(await page.locator("#cloudAccount").count()===1,"New GATIVX account and cloud backup panel missing");
-for(const tab of ["home","journey","record","walk","coach"]){await page.locator('[data-panel="'+tab+'"]').click();assert(await page.locator("#"+tab+".panel.active").count()===1,"Navigation failed: "+tab)}
-await page.locator('[data-panel="home"]').click();assert(await page.locator("#missionTitle").textContent().then(x=>x.includes("Weight loss")),"Saved mission changed after navigation");
+for(const tab of ["home","journey","record","walk","coach"]){await page.locator('.bottom [data-panel="'+tab+'"]').click();assert(await page.locator("#"+tab+".panel.active").count()===1,"Navigation failed: "+tab)}
+await page.locator('.bottom [data-panel="home"]').click();assert(await page.locator("#missionTitle").textContent().then(x=>x.includes("Weight loss")),"Saved mission changed after navigation");
 assert(errors.length===0,"Browser errors: "+errors.join("; "));
 
 const healthImport=await browser.newPage({viewport:{width:390,height:844}});
@@ -277,7 +277,7 @@ const v2Errors=[];v2.on("pageerror",e=>v2Errors.push(e.message));
 await v2.addInitScript(()=>{let emit;const geo=navigator.geolocation;if(!geo)throw new Error("Browser geolocation API is unavailable in the smoke-test context");Object.defineProperty(geo,"watchPosition",{configurable:true,value(callback){emit=callback;window.__emitGPS=(lat,lon,accuracy=5,time=Date.now())=>emit({coords:{latitude:lat,longitude:lon,accuracy},timestamp:time});return 7;}});Object.defineProperty(geo,"clearWatch",{configurable:true,value(){}});});
 await v2.route("https://**/*",r=>r.abort());
 await v2.goto(pathToFileURL(path.resolve("app-v2.html")).href,{waitUntil:"domcontentloaded"});
-await v2.locator('[data-panel="walk"]').click();
+await v2.locator('.bottom [data-panel="walk"]').click();
 await v2.locator("#gpsStart").click();
 const baseTime=Date.now();
 await v2.evaluate(t=>window.__emitGPS(12.97000,77.59000,5,t),baseTime+1000);
