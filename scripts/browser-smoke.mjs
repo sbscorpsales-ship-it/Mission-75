@@ -232,8 +232,9 @@ assert((await caloriePage.locator("#activeEnergySourceLabel").textContent()).inc
 assert((await caloriePage.locator("#ringCalories").textContent()).trim()==="20","Calorie ring did not use the estimated value");
 await caloriePage.evaluate(()=>{
  const d=new Date(),day=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
- const key="gativx.v2.fresh.state",s=JSON.parse(localStorage.getItem(key));s.entries[day].activeEnergyKcal=123;s.entries[day].activeEnergySource="apple_health";localStorage.setItem(key,JSON.stringify(s));location.reload();
+ const key="gativx.v2.fresh.state",s=JSON.parse(localStorage.getItem(key));s.entries[day].activeEnergyKcal=123;s.entries[day].activeEnergySource="apple_health";localStorage.setItem(key,JSON.stringify(s));
 });
+await caloriePage.reload({waitUntil:"domcontentloaded"});
 await caloriePage.waitForFunction(()=>document.querySelector("#vActiveEnergy")?.textContent.trim()==="123 kcal");
 assert((await caloriePage.locator("#activeEnergySourceLabel").textContent()).includes("measured active energy"),"Measured HealthKit calories did not override the estimate");
 assert((await caloriePage.locator("#ringCalories").textContent()).trim()==="123","Calorie ring did not prioritize measured active energy");
