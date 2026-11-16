@@ -356,7 +356,7 @@ async function cloudSync(){
   }
   persist();render();renderWalk();
   clearPendingHealthShortcut();cloudMsg('Sync complete. Apple Health Shortcut readings and your other records are backed up to your account.','BACKUP CURRENT');
- }catch(error){if(isCurrent()){console.error('GATIVX cloud sync failed',error);cloudMsg('Cloud sync issue: '+(error&&error.message?error.message:'Please retry when connected.'),'SYNC ISSUE')}}
+ }catch(error){if(isCurrent()){console.error('GATIVX cloud sync failed',error);const hasLocalWalks=state.walks.some(w=>!w.cloudId);cloudMsg(hasLocalWalks?'Walk saved on this device. Cloud backup pending; GATIVX will retry automatically when connected.':'Cloud sync issue: '+(error&&error.message?error.message:'Please retry when connected.'),hasLocalWalks?'BACKUP PENDING':'SYNC ISSUE')}}
  finally{cloudBusy=false;if(cloudSyncQueued){cloudSyncQueued=false;queueMicrotask(()=>cloudSync())}}
 }
 async function cloudAuth(mode){
@@ -384,6 +384,8 @@ function initCloud(){
 initCloud();
 async function refreshPedometerFromCloud(){if(!cloudClient||!cloudUser)return;const userId=cloudUser.id,day=date();try{const [motion,daily]=await Promise.all([cloudClient.from('motion_daily_steps').select('log_date,steps,distance_m,measured_at').eq('user_id',userId),cloudClient.from('daily_logs').select('log_date,steps,steps_source,steps_updated_at,active_energy_kcal,active_energy_source,active_energy_updated_at,walking_km,water_ml,protein_g,weight_kg').eq('user_id',userId)]);if(motion.error)throw motion.error;if(daily.error)throw daily.error;if(!cloudUser||cloudUser.id!==userId||date()!==day)return;motionDaily={};(motion.data||[]).forEach(item=>{const key=String(item.log_date);if(validDay(key))motionDaily[key]={steps:Number(item.steps)||0,distanceMeters:item.distance_m==null?null:Number(item.distance_m),measuredAt:item.measured_at||null}});(daily.data||[]).forEach(item=>{const key=String(item.log_date);if(!validDay(key))return;const remote={steps:item.steps==null?null:Number(item.steps),stepsSource:item.steps_source||null,stepsUpdatedAt:item.steps_updated_at||null,activeEnergyKcal:item.active_energy_kcal==null?null:Number(item.active_energy_kcal),activeEnergySource:item.active_energy_source||null,activeEnergyUpdatedAt:item.active_energy_updated_at||null,distance:item.walking_km==null?null:Number(item.walking_km),water:item.water_ml==null?null:Number(item.water_ml),protein:item.protein_g==null?null:Number(item.protein_g),weight:item.weight_kg==null?null:Number(item.weight_kg)};state.entries[key]=mergeCloudDaily(remote,state.entries[key]||{})});persist();render()}catch(error){console.warn('GATIVX measured activity refresh unavailable',error)}}
 window.setInterval(()=>{if(!document.hidden)refreshPedometerFromCloud()},60000);
+// Durable local walk queue: retry cloud backup while signed in and online. Local records are never removed on upload failure.
+window.setInterval(()=>{if(!document.hidden&&navigator.onLine&&cloudUser&&state.walks.some(w=>!w.cloudId))cloudSync()},30000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden){refreshPedometerFromCloud();if(cloudUser){applyPendingShortcutToActiveAccount();cloudSync()}}});
 window.addEventListener('online',()=>{if(cloudUser){applyPendingShortcutToActiveAccount();cloudSync()}});
 const cloudScript=document.querySelector('script[src*="supabase-js"]');
