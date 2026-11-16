@@ -189,6 +189,68 @@ final class HealthKitManager: ObservableObject {
         refreshTodayEnergy()
     }
 
+    /// Export one completed activity to Apple Health. The GATIVX local record is saved first,
+    /// so HealthKit permission or signing failures never discard the member's activity.
+    func saveActivityWorkout(
+        id: UUID,
+        activity: String,
+        startedAt: Date,
+        finishedAt: Date,
+        steps: Int?,
+        distanceMeters: Double?,
+        completion: @escaping (Result<Void, Error>) -> Void
+    ) {
+        guard isAvailable else {
+            completion(.failure(NSError(domain: "GATIVXHealthKit", code: 1, userInfo: [NSLocalizedDescriptionKey: "Apple Health is unavailable on this iPhone."])))
+            return
+        }
+        let workoutType = HKObjectType.workoutType()
+        let stepType = HKObjectType.quantityType(forIdentifier: .stepCount)!
+        let distanceType = HKObjectType.quantityType(forIdentifier: .distanceWalkingRunning)!
+        let shareTypes: Set<HKSampleType> = [workoutType, stepType, distanceType]
+        store.requestAuthorization(toShare: shareTypes, read: [self.stepType, self.energyType]) { [weak self] _, error in
+            guard let self else { return }
+            if let error { DispatchQueue.main.async { completion(.failure(error)) }; return }
+            let syncID = "gativx.activity.\(id.uuidString)"
+            let syncPredicate = HKQuery.predicateForObjects(withMetadataKey: HKMetadataKeySyncIdentifier, allowedValues: [syncID])
+            let existing = HKSampleQuery(sampleType: workoutType, predicate: syncPredicate, limit: 1, sortDescriptors: nil) { [weak self] _, samples, queryError in
+                guard let self else { return }
+                if let queryError { DispatchQueue.main.async { completion(.failure(queryError)) }; return }
+                if samples?.isEmpty == false { DispatchQueue.main.async { completion(.success(())) }; return }
+
+                let type: HKWorkoutActivityType
+                switch activity.lowercased() {
+                case "running": type = .running
+                case "hiking": type = .hiking
+                case "walking": type = .walking
+                default: type = .other
+                }
+                let safeEnd = max(finishedAt, startedAt.addingTimeInterval(1))
+                let metadata: [String: Any] = [HKMetadataKeySyncIdentifier: syncID, HKMetadataKeySyncVersion: 1]
+                let totalDistance = (distanceMeters ?? 0) > 0
+                    ? HKQuantity(unit: .meter(), doubleValue: distanceMeters!) : nil
+                let workout = HKWorkout(activityType: type, start: startedAt, end: safeEnd, workoutEvents: nil, totalEnergyBurned: nil, totalDistance: totalDistance, metadata: metadata)
+                var objects: [HKObject] = [workout]
+                if let steps, steps > 0 {
+                    let stepSample = HKQuantitySample(type: stepType, quantity: HKQuantity(unit: .count(), doubleValue: Double(steps)), start: startedAt, end: safeEnd, metadata: [HKMetadataKeySyncIdentifier: syncID + ".steps", HKMetadataKeySyncVersion: 1])
+                    objects.append(stepSample)
+                }
+                if let distanceMeters, distanceMeters > 0 {
+                    let distanceSample = HKQuantitySample(type: distanceType, quantity: HKQuantity(unit: .meter(), doubleValue: distanceMeters), start: startedAt, end: safeEnd, metadata: [HKMetadataKeySyncIdentifier: syncID + ".distance", HKMetadataKeySyncVersion: 1])
+                    objects.append(distanceSample)
+                }
+                self.store.save(objects) { success, saveError in
+                    DispatchQueue.main.async {
+                        if let saveError { completion(.failure(saveError)) }
+                        else if success { completion(.success(())) }
+                        else { completion(.failure(NSError(domain: "GATIVXHealthKit", code: 2, userInfo: [NSLocalizedDescriptionKey: "Apple Health did not confirm saving this workout."]))) }
+                    }
+                }
+            }
+            self.store.execute(existing)
+        }
+    }
+
     func disconnect() {
         UserDefaults.standard.removeObject(forKey: connectionRequestedKey)
         observers.forEach { store.stop($0) }
