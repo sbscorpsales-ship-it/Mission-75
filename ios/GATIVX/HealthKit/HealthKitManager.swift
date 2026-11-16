@@ -205,13 +205,13 @@ final class HealthKitManager: ObservableObject {
             return
         }
         let workoutType = HKObjectType.workoutType()
-        let stepType = HKObjectType.quantityType(forIdentifier: .stepCount)!
-        let distanceType = HKObjectType.quantityType(forIdentifier: .distanceWalkingRunning)!
-        let shareTypes: Set<HKSampleType> = [workoutType, stepType, distanceType]
+        // Write only the workout. Writing separate step-count or distance samples here
+        // would add a second source for quantities the iPhone may already have recorded.
+        let shareTypes: Set<HKSampleType> = [workoutType]
         store.requestAuthorization(toShare: shareTypes, read: [self.stepType, self.energyType]) { [weak self] _, error in
             guard let self else { return }
             if let error { DispatchQueue.main.async { completion(.failure(error)) }; return }
-            let syncID = "gativx.activity.\(id.uuidString)"
+            let syncID = "gativx.activity.\\(id.uuidString)"
             let syncPredicate = HKQuery.predicateForObjects(withMetadataKey: HKMetadataKeySyncIdentifier, allowedValues: [syncID])
             let existing = HKSampleQuery(sampleType: workoutType, predicate: syncPredicate, limit: 1, sortDescriptors: nil) { [weak self] _, samples, queryError in
                 guard let self else { return }
@@ -226,20 +226,18 @@ final class HealthKitManager: ObservableObject {
                 default: type = .other
                 }
                 let safeEnd = max(finishedAt, startedAt.addingTimeInterval(1))
-                let metadata: [String: Any] = [HKMetadataKeySyncIdentifier: syncID, HKMetadataKeySyncVersion: 1]
+                var metadata: [String: Any] = [
+                    HKMetadataKeySyncIdentifier: syncID,
+                    HKMetadataKeySyncVersion: 1,
+                    "com.paramitsolutions.gativx.measuredSteps": max(0, steps ?? 0)
+                ]
+                if let distanceMeters, distanceMeters > 0 {
+                    metadata["com.paramitsolutions.gativx.measuredDistanceMeters"] = distanceMeters
+                }
                 let totalDistance = (distanceMeters ?? 0) > 0
                     ? HKQuantity(unit: .meter(), doubleValue: distanceMeters!) : nil
                 let workout = HKWorkout(activityType: type, start: startedAt, end: safeEnd, workoutEvents: nil, totalEnergyBurned: nil, totalDistance: totalDistance, metadata: metadata)
-                var objects: [HKObject] = [workout]
-                if let steps, steps > 0 {
-                    let stepSample = HKQuantitySample(type: stepType, quantity: HKQuantity(unit: .count(), doubleValue: Double(steps)), start: startedAt, end: safeEnd, metadata: [HKMetadataKeySyncIdentifier: syncID + ".steps", HKMetadataKeySyncVersion: 1])
-                    objects.append(stepSample)
-                }
-                if let distanceMeters, distanceMeters > 0 {
-                    let distanceSample = HKQuantitySample(type: distanceType, quantity: HKQuantity(unit: .meter(), doubleValue: distanceMeters), start: startedAt, end: safeEnd, metadata: [HKMetadataKeySyncIdentifier: syncID + ".distance", HKMetadataKeySyncVersion: 1])
-                    objects.append(distanceSample)
-                }
-                self.store.save(objects) { success, saveError in
+                self.store.save(workout) { success, saveError in
                     DispatchQueue.main.async {
                         if let saveError { completion(.failure(saveError)) }
                         else if success { completion(.success(())) }
