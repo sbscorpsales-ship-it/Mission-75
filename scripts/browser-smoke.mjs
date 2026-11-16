@@ -296,6 +296,21 @@ await v2.locator("#gpsFinish").click();
 assert((await v2.locator("#walkStatus").textContent()).includes("0.03 km"),"Saved GPS walk distance did not match filtered route distance");
 assert(v2Errors.length===0,"GATIVX v2 browser errors: "+v2Errors.join("; "));
 await v2.close();
+// A completed, timed GPS walk must drive the dashboard's walk-minutes ring.
+const walkRingPage=await browser.newPage({viewport:{width:390,height:844}});
+const walkRingErrors=[];walkRingPage.on("pageerror",e=>walkRingErrors.push(e.message));
+await walkRingPage.addInitScript(()=>{
+ const d=new Date(),day=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+ const start=new Date(Date.now()-2100000).toISOString(),end=new Date(Date.now()-300000).toISOString();
+ localStorage.setItem("gativx.v2.fresh.state",JSON.stringify({version:2,goal:null,entries:{},walks:[{id:"walk-fixture",date:day,distance:2.1,points:[{lat:12.97,lon:77.59,time:Date.parse(start)},{lat:12.971,lon:77.59,time:Date.parse(end)}],startedAt:start,finishedAt:end,durationSeconds:1800,createdAt:end}]}));
+});
+await walkRingPage.route("https://**/*",r=>r.abort());
+await walkRingPage.goto(pathToFileURL(path.resolve("app-v2.html")).href,{waitUntil:"domcontentloaded"});
+assert((await walkRingPage.locator("#ringHeartPoints").textContent()).trim()==="30","Completed 30-minute GPS session did not populate the walk-minutes ring");
+assert((await walkRingPage.locator("#ringHeartPointsNote").textContent()).includes("0 min to 30 min walk target"),"Walk-minutes ring target/progress note is incorrect");
+assert(walkRingErrors.length===0,"Walk-minutes ring browser errors: "+walkRingErrors.join("; "));
+await walkRingPage.close();
+console.log("PASS: Completed GPS walk duration populates the dashboard walk-minutes ring without inventing heart points");
 console.log("PASS: Published GATIVX root entry opens the tested v2 fitness application");
 console.log("PASS: Apple Health Shortcut imports measured steps and active energy into the new GATIVX home");
 console.log("PASS: GATIVX v2 account sign-in, private cloud backup and HealthKit source reconciliation");
