@@ -220,6 +220,22 @@ struct ContentView: View {
                     self.activeSessionID = nil
                     self.isFinishingSession = false
                     self.syncSavedActivitySessions()
+                    self.health.saveActivityWorkout(
+                        id: record.id,
+                        activity: record.activity,
+                        startedAt: record.startedAt,
+                        finishedAt: record.finishedAt,
+                        steps: record.steps,
+                        distanceMeters: record.gpsDistanceMeters > 0 ? record.gpsDistanceMeters : record.motionDistanceMeters
+                    ) { result in
+                        switch result {
+                        case .success:
+                            self.sessionStatus = activity + " saved on this iPhone and exported to Apple Health · " + stepSummary + " · " + routeSummary
+                            self.health.refreshOnForeground()
+                        case .failure(let error):
+                            self.sessionStatus = activity + " saved on this iPhone; Apple Health export needs attention: " + error.localizedDescription
+                        }
+                    }
                 } catch {
                     self.sessionStatus = "Could not save this activity on this iPhone: " + error.localizedDescription + ". Your GPS draft remains preserved; tap Finish & save activity to retry."
                     self.sessionStarted = start
