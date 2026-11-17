@@ -11,6 +11,7 @@ on:
     branches:
       - main
       - "fix/gativx/**"
+      - "fix/gativx-*"
     paths:
       - "ios/GATIVX/**"
       - "ios/gativx-project.yml"
