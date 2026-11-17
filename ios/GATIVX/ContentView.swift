@@ -715,6 +715,21 @@ struct ContentView: View {
                             HStack { Spacer(); Text("Sign in & sync").fontWeight(.bold); Spacer() }
                                 .padding(15).foregroundStyle(.black).background(neon, in: Capsule())
                         }.disabled(email.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || password.isEmpty)
+                        HStack(spacing: 14) {
+                            Button("Create account") {
+                                Task { await cloud.signUp(email: email.trimmingCharacters(in: .whitespacesAndNewlines), password: password) }
+                            }
+                            .font(.subheadline.weight(.semibold))
+                            .disabled(email.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || password.count < 8)
+                            Spacer(minLength: 4)
+                            Button("Forgot password?") {
+                                Task { await cloud.sendPasswordReset(email: email.trimmingCharacters(in: .whitespacesAndNewlines)) }
+                            }
+                            .font(.subheadline.weight(.semibold))
+                            .disabled(email.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                        }
+                        Text("Use at least 8 characters for a new password. Email verification may be required.")
+                            .font(.caption2).foregroundStyle(.secondary)
                         Text(cloud.status).font(.caption).foregroundStyle(.secondary)
                     }.padding(17).background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 22))
                     Button { localModeEntered = true } label: {
