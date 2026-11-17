@@ -19,6 +19,27 @@
 - Keep the approved White + Neon Green identity in Day Mode and adapt surfaces/text for Night Mode while preserving accessible contrast.
 - This is an approved product requirement; native implementation and device verification are still pending.
 
+## Final dashboard visual lock — approved, no redesign
+
+The user has explicitly approved the premium two-mode GATIVX dashboard concept as **full and final** and requested no alterations. Treat the generated premium dashboard mockup shown in the conversation as the visual reference. Do not redesign, rearrange, recolor, or remove approved dashboard elements without explicit user authorization.
+
+### Locked visual direction
+- Brand identity: GATIVX wordmark and green brand accent.
+- Day Mode: premium bright white / soft neutral surfaces with neon-green accents.
+- Night Mode: deep near-black / midnight surfaces with the same neon-green accents.
+- Default appearance: **System / Automatic**, following the iPhone appearance setting; manual Day, Night and Automatic options remain available in Profile → Settings → Appearance.
+- Premium visual language: refined typography, restrained glow, layered/glass-like cards, scenic nature imagery, clear spacing and high-contrast readable text.
+- Header: GATIVX branding, notifications and profile entry.
+- Hero: greeting, purpose-led message, prominent circular step-progress display and Today's Mission card.
+- Metrics: distance, active time, calories and heart rate only when a real supported reading is available. Never display mock or fabricated readings as live data.
+- Primary action: prominent Start Walk / Activity Tracker card.
+- Supporting sections, in order: Gati Guru, My Journey, Community Gati.
+- Bottom navigation, in order: Home, Activity, Missions, Community, Profile.
+- Keep Day and Night layouts structurally consistent; adapt only theme surfaces, text, imagery treatment and contrast.
+
+### Implementation and acceptance rule
+This is a **design lock**, not a claim that the native iOS screen has already been implemented. Implement the approved composition faithfully. Any necessary accessibility, platform-safety or data-integrity correction must preserve the visual direction and be disclosed; ask before making a visible design alteration. Verify both appearances on the physical iPhone before release.
+
 ## What CI can prove
 
 | Check | Result |
