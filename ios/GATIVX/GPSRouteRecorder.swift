@@ -48,7 +48,7 @@ private struct GATIVXActiveRouteDraft: Codable {
 /// Core Location delivers delegate callbacks on the manager's creation run loop.
 /// This recorder is created on the main actor and keeps its location manager and UI state there.
 @MainActor
-final class GPSRouteRecorder: NSObject, ObservableObject, CLLocationManagerDelegate {
+final class GPSRouteRecorder: NSObject, ObservableObject {
     @Published private(set) var points: [GATIVXRoutePoint] = []
     @Published private(set) var status = "GPS ready."
     @Published private(set) var authorization: CLAuthorizationStatus = .notDetermined
@@ -320,3 +320,7 @@ final class GPSRouteRecorder: NSObject, ObservableObject, CLLocationManagerDeleg
         status = "GPS issue: \(error.localizedDescription)"
     }
 }
+
+// Core Location invokes delegates on the run loop where CLLocationManager is created.
+// The manager is created by this main-actor recorder, so delegate state stays on MainActor.
+extension GPSRouteRecorder: @preconcurrency CLLocationManagerDelegate {}
