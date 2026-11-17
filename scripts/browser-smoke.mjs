@@ -302,4 +302,40 @@ console.log("PASS: GATIVX v2 account sign-in, private cloud backup and HealthKit
 console.log("PASS: GATIVX v2 uses its own namespaced data store");
 console.log("PASS: existing Mission-75 records and auth/session storage are preserved");
 console.log("PASS: mission, metrics and all five navigation tabs render without browser errors");
+
+// The ring is a completed-walk-minutes metric, never a fabricated Heart Points value.
+const ringPage=await browser.newPage({viewport:{width:390,height:844}});
+const ringErrors=[];ringPage.on("pageerror",e=>ringErrors.push(e.message));
+await ringPage.addInitScript(()=>{
+ const d=new Date(),day=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+ const start=new Date(Date.now()-2100000).toISOString(),end=new Date(Date.now()-300000).toISOString();
+ localStorage.setItem("gativx.v2.fresh.state",JSON.stringify({version:2,goal:null,entries:{},walks:[{id:"walk-ring-fixture",date:day,distance:2.1,points:[{lat:12.97,lon:77.59,time:Date.parse(start)},{lat:12.971,lon:77.59,time:Date.parse(end)}],startedAt:start,finishedAt:end,durationSeconds:1800,createdAt:end}]}));
+});
+await ringPage.route("https://**/*",r=>r.abort());
+await ringPage.goto(pathToFileURL(path.resolve("app-v2.html")).href,{waitUntil:"domcontentloaded"});
+assert((await ringPage.locator("#ringHeartPoints").textContent()).trim()==="30","Completed 30-minute walk did not populate the third progress ring");
+assert((await ringPage.locator("#ringHeartPointsNote").textContent()).includes("0 min to 30 min walk target"),"Walk-minutes target/progress text is incorrect");
+assert((await ringPage.locator("#walkSaveStatus").textContent()).includes("1 WALKS SAVED"),"Walk history status does not reflect the saved local walk");
+assert(ringErrors.length===0,"Ring dashboard browser errors: "+ringErrors.join("; "));
+await ringPage.close();
+
+// A journaled completion must be replayed after a reload without duplicating it.
+const recoveryPage=await browser.newPage({viewport:{width:390,height:844}});
+const recoveryErrors=[];recoveryPage.on("pageerror",e=>recoveryErrors.push(e.message));
+await recoveryPage.addInitScript(()=>{
+ const d=new Date(),day=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+ const walk={id:"walk-recovery-fixture",date:day,distance:0.42,gpsStepsEstimate:575,steps:null,points:[{lat:12.97,lon:77.59,accuracy:5,time:Date.now()-5000},{lat:12.9702,lon:77.59,accuracy:5,time:Date.now()}],startedAt:new Date(Date.now()-600000).toISOString(),finishedAt:new Date().toISOString(),durationSeconds:600,createdAt:new Date().toISOString()};
+ localStorage.setItem("gativx.v2.fresh.state",JSON.stringify({version:2,goal:null,entries:{},walks:[]}));
+ localStorage.setItem("gativx.v2.walk-recovery.v1",JSON.stringify([{walk,entry:{distance:0.42}}]));
+});
+await recoveryPage.route("https://**/*",r=>r.abort());
+await recoveryPage.goto(pathToFileURL(path.resolve("app-v2.html")).href,{waitUntil:"domcontentloaded"});
+const replay=await recoveryPage.evaluate(()=>({state:JSON.parse(localStorage.getItem("gativx.v2.fresh.state")||"null"),journal:JSON.parse(localStorage.getItem("gativx.v2.walk-recovery.v1")||"[]")}));
+assert(replay.state?.walks?.filter(w=>w.id==="walk-recovery-fixture").length===1,"Pending completed walk was not restored exactly once");
+assert(replay.state?.entries?.[new Date().getFullYear()+"-"+String(new Date().getMonth()+1).padStart(2,"0")+"-"+String(new Date().getDate()).padStart(2,"0")]?.distance===0.42,"Recovered walk did not restore its daily distance");
+assert(replay.journal.length===0,"Successfully replayed recovery journal was not cleared");
+assert(recoveryErrors.length===0,"Recovery replay browser errors: "+recoveryErrors.join("; "));
+await recoveryPage.close();
+console.log("PASS: premium dashboard rings, live status and journal replay");
+
 await browser.close();
