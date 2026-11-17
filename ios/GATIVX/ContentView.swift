@@ -189,8 +189,9 @@ struct ContentView: View {
             sessionStatus = "Recording GPS route for " + selectedActivity.lowercased() + " · step counter unavailable."
             return
         }
-        sessionSteps = 0
-        sessionStatus = "Counting steps and recording GPS for " + selectedActivity.lowercased() + "…"
+        // Keep the count unknown until Core Motion returns a measured value.
+        // Starting a session must never manufacture a zero-step activity record.
+        sessionStatus = "Waiting for iPhone step readings and recording GPS for " + selectedActivity.lowercased() + "…"
         pedometer.startUpdates(from: start) { data, error in
             DispatchQueue.main.async {
                 if let error { self.sessionStatus = "GPS is recording; motion step count unavailable: " + error.localizedDescription; return }
