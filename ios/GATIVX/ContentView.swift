@@ -1,6 +1,5 @@
 import SwiftUI
 import CoreMotion
-import CoreLocation
 
 private struct GATIVXMountainBackdrop: View {
     let isNight: Bool
