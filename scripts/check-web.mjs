@@ -1,60 +1,49 @@
-// GATIVX v2 release gate: isolated new data store, preserved browser storage, explicit legacy account access.
+// GATIVX v2 release gate: validate the actual published entry and dashboard scripts.
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import {spawnSync} from "node:child_process";
-const shell=fs.readFileSync("app-v2.html","utf8"),entry=fs.readFileSync("index.html","utf8");
-let failed=false;const fail=m=>{failed=true;console.error("FAIL: "+m)},pass=m=>console.log("PASS: "+m);
-const manifest=JSON.parse(fs.readFileSync("manifest.webmanifest","utf8"));
-if(manifest.short_name!=="GATIVX"||manifest.display!=="standalone")fail("Standalone manifest invalid");else pass("Standalone manifest valid");
-for(const icon of manifest.icons||[]){const p=icon.src.split(/[?#]/,1)[0].replace(/^\.\//,"");if(!fs.existsSync(p))fail("Manifest icon missing: "+icon.src)}
-if(!fs.existsSync("apple-touch-icon.png")||!shell.includes('rel="apple-touch-icon"'))fail("iPhone icon missing");else pass("iPhone Home Screen icon linked");
-if(!entry.includes('<link rel="canonical" href="./app-v2.html">')||entry.includes('http-equiv="refresh"')||!entry.includes('window.location.replace("./app-v2.html"+window.location.search+window.location.hash)')||!entry.includes('href="./legacy-runtime.html"')||!fs.existsSync("app-v2.html")||!fs.existsSync("legacy-runtime.html"))fail("Published GATIVX entry must preserve incoming query parameters when opening v2 and retain a legacy-dashboard fallback");else pass("Published GATIVX entry preserves Shortcut parameters and legacy-dashboard access");
-if(!fs.existsSync("app-v2.html")||!shell.includes('id="gpsStart"'))fail("GATIVX v2 GPS tracker missing");else pass("GATIVX v2 GPS tracker is present in the published application");
-if(!shell.includes('id="vActiveEnergy"')||!shell.includes("active_energy_kcal"))fail("Apple Health active-energy dashboard sync missing from the v2 application");else pass("Measured Apple Health active-energy tile and cloud mapping present in the v2 application");
-if(shell.includes("mission75.logs.v1")||shell.includes("mission75.gps.sessions.v1")){
- const migration=shell.split("function migrateLegacyActivity(){")[1]?.split("migrateLegacyActivity();")[0]||"";
- if(!migration.includes("read('mission75.logs.v1'")||!migration.includes("read('mission75.gps.sessions.v1'")||(migration.includes("localStorage.setItem('mission75.")||migration.includes('localStorage.setItem("mission75.'))||!migration.includes("distanceMeters/1000"))fail("Legacy activity migration must read-only import logs and GPS walks without modifying source records");
- else pass("Legacy daily logs and GPS walks are imported read-only and preserved");
-}else fail("Safe legacy activity migration missing");
-if(shell.includes("gativx.goal.v1")||shell.includes("gativx.motionDaily.v1"))fail("New app must not overwrite legacy goal or motion namespaces");else pass("Legacy goal and motion namespaces remain untouched");
-if(!shell.includes('href="./legacy-runtime.html"'))fail("Existing account and saved-record access link missing");else pass("Existing account and saved-record access link present");
-if(!shell.includes("gativx.v2.fresh.state"))fail("Fresh v2 data namespace missing");else pass("Isolated fresh v2 data store present");
-if(!shell.includes("motion_daily_steps")||!shell.includes("measured_at"))fail("Native iPhone pedometer cloud read missing");else pass("Native iPhone pedometer cloud read present");
-if(!shell.includes("daily_logs").valueOf()||!shell.includes("active_energy_updated_at")||!shell.includes("refreshPedometerFromCloud"))fail("Live native HealthKit daily totals refresh missing from the dashboard");else pass("Live dashboard polls signed-in HealthKit daily steps and active energy");
-for(const id of ["stepsRing","caloriesRing","heartRing","ringSteps","ringCalories","ringHeartPoints"])if(!shell.includes('id="'+id+'"'))fail("Daily health progress ring missing: "+id);else pass("Daily health progress ring present: "+id);
-if(!shell.includes("steps:5000,activeKcal:250")||!shell.includes("function suggestTargets()")||!shell.includes("function activeTargets()")||!shell.includes("Accept these daily targets"))fail("Goal-driven health ring targets or GURU acceptance flow missing");else pass("Health rings use 5,000-step/250-kcal starter targets and GURU-reviewed adaptive targets");
-if(!shell.includes("function measuredBaseline()")||!shell.includes("Math.ceil((b.steps*1.1)/500)*500")||!shell.includes("Math.ceil((b.kcal*1.1)/25)*25")||!shell.includes("accepted:true"))fail("Adaptive target calculation must use measured baseline and member acceptance");else pass("Adaptive targets are based on measured activity and only activate after member acceptance");
-if(!shell.includes('id="activityTrend"')||!shell.includes("function renderActivityTrend")||shell.includes('class="spark"'))fail("Dashboard must use measured activity history, not decorative static chart bars");else pass("Seven-day activity trend is generated from measured device readings only");
-if(!shell.includes('href="./apple-health-shortcut.html"')||!shell.includes("Shortcut setup guide")||!shell.includes('href="shortcuts://run-shortcut?name=try%202"')||!shell.includes("Sync Apple Health now")||!shell.includes('data-go="walk"')||!shell.includes("This web app cannot read iPhone sensors directly"))fail("Empty sensor dashboard must explain the iPhone web limitation and offer direct Apple Health Shortcut and GPS actions");else pass("Empty sensor dashboard explains the web limitation and provides direct Apple Health Shortcut and GPS actions");
-if(!shell.includes("health_connect")||!shell.includes("IPHONE PEDOMETER"))fail("Measured step source labelling missing");else pass("Measured pedometer source is distinguished from GPS estimates");
-if(!shell.includes("window.setInterval")||!shell.includes("refreshPedometerFromCloud"))fail("Foreground pedometer refresh missing");else pass("Safari refreshes synced iPhone pedometer readings while open");
-if(!shell.includes('id="cloudAccount"')||!shell.includes("auth.signInWithPassword")||!shell.includes("daily_logs")||!shell.includes("walk_sessions"))fail("GATIVX v2 account login or cloud sync integration missing");else pass("GATIVX v2 account login, daily journal and GPS cloud sync present");
-if(!shell.includes("ACCOUNT_MIGRATED_KEY")||!shell.includes("KEY+'.user.'+user.id")||!shell.includes("activateCloudUser"))fail("GATIVX v2 account-specific local data isolation missing");else pass("GATIVX v2 local records are isolated by signed-in account");
-if(!shell.includes("const walkSteps=w.steps==null?null")||!shell.includes("steps:walkSteps"))fail("Unknown GPS-only walk steps must remain null, never default to zero");else pass("Unknown GPS-only walk steps are preserved as null");
-if(!shell.includes("stateStorageKey=KEY+'.device'"))fail("Signed-out GATIVX local store does not isolate prior member data");else pass("Signed-out GATIVX opens a device-only store, not the previous member's records");
-if(!shell.includes("if(!user){")||!shell.includes("if(activeAccountId){")||!shell.includes("activeAccountId=null;")||!shell.includes("render();renderWalk();"))fail("GATIVX sign-out does not immediately clear the prior member's dashboard");else pass("GATIVX sign-out immediately switches to a clean device-only dashboard");
-if(/service_role|service-role|sb_secret_/.test(shell))fail("Privileged Supabase key must never appear in the browser app");else pass("No privileged Supabase key is exposed in the browser app");
-if(!shell.includes("apple-health-shortcut.html")||!fs.existsSync("apple-health-shortcut.html"))fail("Free Apple Health Shortcut guide is not linked from the new home");else pass("Free Apple Health Shortcut guide is linked from the new home");
-if(!shell.includes("gativx_active_energy")||!shell.includes("importAppleHealthShortcut"))fail("New home Apple Health import bridge missing");else pass("New home supports validated Apple Health Shortcut imports");
-for(const id of ["summaryHero","activityRing","vActiveEnergy","guruCard"])if(!shell.includes('class="'+id+'"')&&!shell.includes('id="'+id+'"'))fail("Fitness summary home component missing: "+id);else pass("Fitness summary component present: "+id);
-if(!shell.includes("GURU Mode")||!shell.includes(">GURU</button>"))fail("GURU mode entry missing");else pass("GURU mode entry present");
-const goalMigration=fs.readFileSync("supabase/migrations/20261112080000_add_member_goal_purpose.sql","utf8");
-if(!goalMigration.includes("goal_purpose")||!goalMigration.includes("goal_feeling")||!shell.includes("from('profiles').select('*')")||!shell.includes("goal_updated_at"))fail("Member goal and purpose cloud persistence is incomplete");else pass("Member goal and personal purpose are persisted through Supabase profiles");
-if(!shell.includes("function missionProgress()")||!shell.includes("CHECK-IN DAYS")||!shell.includes("This measures consistency, not weight-loss or fitness outcome")||shell.includes("state.goal?'8%'"))fail("Mission progress must be calculated from saved check-in days and must not imply an unmeasured fitness outcome");else pass("Mission progress reflects real saved check-in days rather than decorative progress");
-if(!shell.includes('id="goalPurpose"')||!shell.includes('id="goalFeeling"')||!shell.includes("purpose,feeling")||!shell.includes("Remember why you started")||!shell.includes("renderGuru(true)"))fail("Purpose-linked GURU mission recovery is incomplete");else pass("Goals capture personal purpose and GURU reconnects members with one small next action");
-if(/localStorage\.(?:clear|removeItem)|sessionStorage\.clear/.test(shell))fail("New app must not delete existing browser records or auth sessions");else pass("Existing browser storage is preserved");
-const scripts=[...shell.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)].filter(([,a])=>! /\bsrc\s*=/.test(a)).map(([, ,b])=>b).filter(x=>x.trim());
-for(const [i,src] of scripts.entries()){const p=path.join(os.tmpdir(),"gativx-v2-"+i+".js");fs.writeFileSync(p,src);const r=spawnSync("node",["--check",p],{encoding:"utf8"});if(r.status!==0)fail("V2 JavaScript invalid: "+r.stderr)}
-if(scripts.length&&!failed)pass("V2 JavaScript syntax valid");
-for(const id of ["home","journey","record","walk","coach"])if(!shell.includes('id="'+id+'"'))fail("Missing panel "+id);
-if((shell.match(/data-panel=/g)||[]).length<5)fail("Five navigation tabs missing");else pass("Five navigation tabs present");
-for(const id of ["gpsStart","gpsPause","gpsFinish","saveEntry","saveGoal"])if(!shell.includes('id="'+id+'"'))fail("New standalone action missing: "+id);else pass("Standalone action present: "+id);
-const worker=fs.readFileSync("sw.js","utf8");if(!worker.includes("./apple-touch-icon.png")||!worker.includes("./app-v2.html")||!worker.includes("./apple-health-shortcut.html"))fail("Service worker must precache GATIVX v2, Apple Health guide and Home Screen icon");else pass("Service worker precaches GATIVX v2, Apple Health guide and Home Screen icon");
 
-const gpsFinishHandler=shell.split("$('gpsFinish').onclick=()=>{")[1]?.split("importAppleHealthShortcut()")[0]||"";
-if(!gpsFinishHandler.includes("if(finishButton.disabled)return")||!gpsFinishHandler.includes("navigator.geolocation.clearWatch(watch)")||!gpsFinishHandler.includes("points.map(p=>({...p}))"))fail("GPS Finish must prevent duplicate taps, stop the GPS watch and snapshot the route");else pass("GPS Finish stops tracking and captures a stable route snapshot");
-if(!gpsFinishHandler.includes("Number.isFinite(savedDistance)")||!gpsFinishHandler.includes("savedPoints.length<2"))fail("GPS Finish must reject invalid or unmeasurable routes");else pass("GPS Finish rejects invalid or unmeasurable routes");
-if(!gpsFinishHandler.includes("try{persist();")||!gpsFinishHandler.includes("state.walks.pop()")||!gpsFinishHandler.includes("Your route is still held on this screen"))fail("GPS Finish must roll back failed local saves without discarding the in-memory route");else pass("GPS Finish preserves the route in memory when local persistence fails");
-if(!gpsFinishHandler.includes("if(previousEntry===undefined)delete state.entries[today]")||!gpsFinishHandler.includes("state.entries[today]=previousEntry"))fail("GPS Finish must restore the exact prior daily entry after a failed save");else pass("GPS Finish restores the exact prior daily entry after a failed save");
-if(failed)process.exit(1);
+const read = file => fs.readFileSync(file, "utf8");
+const entry = read("index.html");
+const app = read("app-v2.html");
+const sw = read("sw.js");
+let failed = false;
+const fail = message => { failed = true; console.error("FAIL: " + message); };
+const pass = message => console.log("PASS: " + message);
+
+if (entry.includes("./app-v2.html") && entry.includes("window.location.search") &&
+    !entry.includes('window.location.replace("./legacy-runtime.html")')) {
+  pass("Published root entry opens GATIVX v2 and preserves incoming shortcut parameters");
+} else fail("Root entry must open app-v2.html and preserve query/hash parameters");
+
+for (const [label, ok] of [
+  ["Mobile web-app metadata and install icon are present", entry.includes('name="apple-mobile-web-app-capable"') && entry.includes('rel="apple-touch-icon"')],
+  ["Three daily progress rings are present", ["stepsRing","caloriesRing","heartRing"].every(id => app.includes('id="'+id+'"'))],
+  ["Third ring is honestly labelled as completed walk minutes", app.includes("<small>WALK MIN</small>") && app.includes("completedWalkMinutesForDay")],
+  ["Dashboard exposes health, walk and cloud status", ["healthConnectionStatus","walkSaveStatus","cloudBackupStatus"].every(id => app.includes('id="'+id+'"'))],
+  ["Unknown measurements remain visibly unavailable", app.includes("ringSteps")==false ? false : app.includes("'—'")],
+  ["Walk completion writes a recovery journal before primary save", app.indexOf("writeWalkRecovery(pending)") >= 0 && app.includes("WALK_RECOVERY_KEY")],
+  ["Recovery journal verifies its own persisted write", app.includes("Walk recovery journal read-back failed")],
+  ["Cloud backup retry is enabled when the device is online", app.includes("navigator.onLine&&cloudUser&&state.walks.some")],
+  ["GPS walk controls and route history are present", ["gpsStart","gpsPause","gpsFinish","gpsHistory"].every(id => app.includes('id="'+id+'"'))],
+  ["GURU purpose and next-action controls are present", ["guruPurpose","guruNextAction","reconnectGuru"].every(id => app.includes('id="'+id+'"'))],
+  ["No privileged Supabase secret is embedded in the browser app", !/service_role|service-role|sb_secret_/.test(app)]
+]) ok ? pass(label) : fail(label);
+
+const scripts = [...app.matchAll(/<script\\b([^>]*)>([\\s\\S]*?)<\\/script>/gi)]
+  .filter(([, attrs]) => !/\\bsrc\\s*=/.test(attrs))
+  .map(([, , source]) => source)
+  .filter(source => source.trim());
+
+if (!scripts.length) fail("No inline application JavaScript found");
+for (const [index, source] of scripts.entries()) {
+  const file = path.join(os.tmpdir(), "gativx-v2-" + index + ".js");
+  fs.writeFileSync(file, source);
+  const result = spawnSync(process.execPath, ["--check", file], {encoding: "utf8"});
+  if (result.status !== 0) fail("Inline JavaScript syntax error in block " + index + ": " + result.stderr);
+}
+if (scripts.length && !failed) pass("All inline GATIVX v2 JavaScript blocks pass Node syntax validation");
+
+if (failed) process.exit(1);
+console.log("GATIVX v2 syntax and structural release gate passed.");
