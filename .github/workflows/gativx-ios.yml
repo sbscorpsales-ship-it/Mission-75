@@ -80,7 +80,7 @@ jobs:
           outbox = cloud.split("enum PendingHealthSyncKind", 1)[1] if "enum PendingHealthSyncKind" in cloud else ""
           activity_outbox = cloud.split("struct PendingActivitySession", 1)[1] if "struct PendingActivitySession" in cloud else ""
           activity_retry = cloud.split("func retryPendingActivitySessions()", 1)[1].split("func signIn", 1)[0] if "func retryPendingActivitySessions()" in cloud else ""
-          step_sync = cloud.split("func syncSteps(date: Date, steps: Int)", 1)[1].split("func syncActiveEnergy", 1)[0]
+          step_sync = cloud.split("func syncSteps(date: Date, steps: Int, pendingItem:", 1)[1].split("func syncActiveEnergy", 1)[0]
           energy_sync = cloud.split("func syncActiveEnergy", 1)[1].split("func syncMotionDailySteps", 1)[0]
           motion_sync = cloud.split("func syncMotionDailySteps", 1)[1].split("private func performStepSync", 1)[0]
           start_activity = view.split("private func startActivitySession()", 1)[1].split("private func finishActivitySession()", 1)[0]
