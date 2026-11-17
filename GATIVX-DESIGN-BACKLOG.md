@@ -67,3 +67,13 @@ Add every new founder idea below as a dated entry. Keep ideas here even when def
 ## Decision log
 
 - 2026-11-09: Founder asked that new design ideas and models be safely retained for later selection, rather than implemented immediately simply because they are exciting. This backlog is the project-level source of truth for deferred ideas.
+
+
+## Release update — 17 November 2026
+
+**Status: Dashboard and web recovery update merged; automated browser release checks passed.**
+
+- PR #105 merged to `main` as `17dff9e`: local GPS walk recovery journal, read-back verification, live Health/Walk/Cloud status, completed-walk-minutes ring, and automatic online retry for cloud backup.
+- Follow-up main-branch polish makes the large mission ring show actual saved check-in progress and labels the third small ring as Walking.
+- GitHub Actions passed the GATIVX v2 syntax/structure gate and Chromium mobile browser smoke tests, including account isolation after sign-out, mission/GURU flows, Health import, GPS route filtering, ring rendering, and recovery-journal replay.
+- GitHub Pages deployment completion and real-device iPhone/Android acceptance are not yet verified. Native background tracking and signed HealthKit export remain separate platform release gates.
