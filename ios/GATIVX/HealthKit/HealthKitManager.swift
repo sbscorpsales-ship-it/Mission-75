@@ -249,7 +249,6 @@ final class HealthKitManager: ObservableObject {
         store.execute(query)
     }
 
-
     /// Read measured daily distance, exercise minutes and average heart rate.
     /// Missing HealthKit samples remain nil; the dashboard must not invent values.
     func refreshTodayMetrics(onComplete: (() -> Void)? = nil) {
@@ -306,8 +305,8 @@ final class HealthKitManager: ObservableObject {
 
     func startObserving() {
         guard observers.isEmpty, isAvailable else { return }
-        // Observe both quantities so a change in active energy refreshes calories
-        // even when no new step sample is written at the same time.
+        // Observe every quantity shown on the dashboard so each metric can
+        // refresh independently when HealthKit reports a change.
         for type in [stepType, energyType, distanceType, exerciseType, heartRateType] {
             let observedType = type
             let query = HKObserverQuery(sampleType: observedType, predicate: nil) { [weak self] _, completion, error in
