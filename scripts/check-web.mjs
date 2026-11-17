@@ -31,7 +31,7 @@ for (const [label, ok] of [
   ["No privileged Supabase secret is embedded in the browser app", !/service_role|service-role|sb_secret_/.test(app)]
 ]) ok ? pass(label) : fail(label);
 
-const scripts = [...app.matchAll(/<script\b([^>]*)>([\s\\S]*?)<\/script>/gi)]
+const scripts = [...app.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)]
   .filter(([, attrs]) => !/\bsrc\s*=/.test(attrs))
   .map(([, , source]) => source)
   .filter(source => source.trim());
