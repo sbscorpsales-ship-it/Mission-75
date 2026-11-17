@@ -42,20 +42,27 @@ This is a **design lock**, not a claim that the native iOS screen has already be
 
 ## What CI can prove
 
-**Latest verified run:** [GATIVX iOS CI run 44131098707](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/44131098707)  
-**Commit:** `a6b707f051aa77d624af7dd1c535aac50dc3eb35`  
-**Result:** All 15 steps in the `build-ios` job completed successfully on 17 November 2026.
+**Latest verified run:** [GATIVX iOS CI pull-request run 44170283091](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/44170283091)  
+**Commit:** `8ef3c5380ea156a83d7b02004c29f3e87916a440`  
+**Result:** All 17 steps in the `build-ios` job completed successfully on 17 November 2026.
 
 | Check | Result |
 |---|---|
-| XcodeGen project generation | Passed in run 44131098707 |
-| Generated GATIVX scheme validation | Passed in run 44131098707 |
-| HealthKit entitlement wiring and permission strings | Passed source/project validation in run 44131098707 |
-| Native tracking safeguard checks | Passed static source safeguards in run 44131098707 |
-| iOS Simulator compile | Passed in run 44131098707 |
-| Unsigned iPhone device-target compile and IPA packaging | Passed in run 44131098707; artifact is unsigned |
+| XcodeGen project generation | Passed in run 44170283091 |
+| Generated GATIVX scheme validation | Passed in run 44170283091 |
+| GATIVX unit tests | 4 executed, 4 passed, 0 failures |
+| HealthKit entitlement wiring and permission strings | Passed source/project validation |
+| Native tracking safeguard checks | All emitted checks passed |
+| iOS Simulator compile | Passed |
+| Unsigned iPhone device-target compile | Passed |
+| Unsigned iPhone IPA packaging and upload | Passed |
 
-The run produced the `GATIVX-iPhone-unsigned-IPA` artifact and an iOS Simulator artifact. A simulator build proves compilation, not physical iPhone behaviour. An unsigned IPA is not installable until signed. An unsigned app cannot prove that the installed app carries the HealthKit entitlement. The static safeguards are source checks, not substitutes for device tests.
+**Artifacts from this run** (not expired when checked on 18 November 2026):
+
+- `GATIVX-iPhone-unsigned-IPA`: artifact ID `14369295109`, 744,896 bytes. [Download from GitHub](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/44170283091/artifacts/14369295109)
+- `GATIVX-iOS-Simulator`: artifact ID `14367868388`, 1,547,891 bytes. [Download from GitHub](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/44170283091/artifacts/14367868388)
+
+A simulator build proves compilation, not physical iPhone behaviour. An unsigned IPA is not installable until signed. An unsigned app cannot prove that the installed app carries the HealthKit entitlement. The static safeguards and four unit tests are not substitutes for physical-device acceptance.
 
 ## Physical iPhone acceptance — all must pass
 
