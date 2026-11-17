@@ -174,6 +174,11 @@ final class HealthKitManager: ObservableObject {
             onComplete?()
             return
         }
+        // Clear prior readings before querying. A failed or denied read must not
+        // leave yesterday's successful value looking like a current measurement.
+        todayWalkingRunningDistanceKm = nil
+        todayExerciseMinutes = nil
+        todayAverageHeartRateBPM = nil
         let start = Calendar.current.startOfDay(for: Date())
         let predicate = HKQuery.predicateForSamples(withStart: start, end: Date(), options: .strictStartDate)
         let group = DispatchGroup()
