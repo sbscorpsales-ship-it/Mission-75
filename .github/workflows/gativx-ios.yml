@@ -105,6 +105,13 @@ jobs:
           motion_monitor = view.split("private func startLiveMotionMonitor()", 1)[1].split("private func loadActivityHistory()", 1)[0]
           finish_activity = view.split("private func finishActivitySession()", 1)[1].split("/// Prefer HealthKit", 1)[0]
           auth_handler = gps.split("func locationManagerDidChangeAuthorization", 1)[1].split("func locationManager(", 1)[0]
+          workout_export = health.split("func saveActivityWorkout(", 1)[1].split("func disconnect()", 1)[0]
+          duplicate_check = workout_export.find("if samples?.isEmpty == false")
+          first_workout_ack = workout_export.find("self.acknowledgeWorkout(id)")
+          finish_workout = workout_export.find("builder.finishWorkout")
+          confirmed_save = workout_export.find("else if workout != nil")
+          second_workout_ack = workout_export.find("self.acknowledgeWorkout(id)", first_workout_ack + 1)
+          confirmed_save_completion = workout_export.find("completion(.success(()))", confirmed_save)
 
           checks = {
               "Native daily total falls back to the live iPhone pedometer": "health.todaySteps ?? liveMotionSteps" in daily_display,
@@ -150,7 +157,7 @@ jobs:
               "Apple Health workout export is durably queued before network or HealthKit work": "enqueueWorkout(pending)" in health and "workout-export-outbox.v1" in health,
               "Apple Health export queue is read-back verified": "verified.map(\\.id) == items.map(\\.id)" in health,
               "Apple Health export queue retains unreadable data": "Pending exports are unknown; original data was preserved" in health,
-              "Apple Health workout export is acknowledged only after duplicate check or confirmed save": "self.acknowledgeWorkout(id)" in health and "else if success { self.acknowledgeWorkout(id)" in health,
+              "Apple Health workout export is acknowledged only after duplicate check or confirmed save": duplicate_check >= 0 and duplicate_check < first_workout_ack < finish_workout < confirmed_save < second_workout_ack < confirmed_save_completion,
               "Apple Health workout export retries are available on foreground": "retryPendingWorkoutExports()" in view,
               "HealthKit refresh clears stale today's value before querying": "self.todaySteps = nil" in health,
               "Daily distance, exercise and heart-rate refresh clears stale values before querying": "todayWalkingRunningDistanceKm = nil" in health and "todayExerciseMinutes = nil" in health and "todayAverageHeartRateBPM = nil" in health,
