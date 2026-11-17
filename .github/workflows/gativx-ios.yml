@@ -90,7 +90,7 @@ jobs:
               "Core Motion sensor errors are not silently discarded": "iPhone pedometer error:" in motion_monitor,
               "Core Motion live daily steps remain a separate sensor source": "self.liveMotionSteps = steps" in motion_monitor and "syncMotionDailySteps" in motion_monitor,
               "GPS activity starts even without pedometer": "routeRecorder.start(activity: selectedActivity)" in start_activity and start_activity.index("routeRecorder.start(activity: selectedActivity)") < start_activity.index("guard CMPedometer.isStepCountingAvailable()"),
-              "GPS-only activity button remains enabled without pedometer": 'Button(selectedActivity == "Walking" ? "Start WalkOn" : "Start activity") { startActivitySession() }' in view and ".disabled(!CMPedometer.isStepCountingAvailable())" not in view,
+              "GPS-only activity button remains enabled without pedometer": 'Button { startActivitySession() } label:' in view and ".disabled(!CMPedometer.isStepCountingAvailable())" not in view,
               "GPS route is saved when pedometer is unavailable": "saveRecord(nil, nil)" in finish_activity or "saveRecord(nil,nil)" in finish_activity and "routePoints: routePoints" in finish_activity,
               "Workout finish rejects duplicate in-flight taps": "guard !isFinishingSession, let start = sessionStarted else { return }" in finish_activity,
               "Workout finish uses a stable idempotency key across retries": "let recordID = activeSessionID ?? UUID()" in finish_activity and "history.contains(where: { $0.id == recordID })" in finish_activity,
