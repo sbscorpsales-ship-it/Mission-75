@@ -556,9 +556,15 @@ struct ContentView: View {
                                 sessionSteps = nil
                                 routeRecorder.resumeRecovered()
                                 pedometer.startUpdates(from: recoveredStart) { data, error in
-                                    DispatchQueue.main.async { if error == nil { self.sessionSteps = data?.numberOfSteps.intValue } }
+                                    DispatchQueue.main.async {
+                                        if let error {
+                                            self.sessionStatus = "Recovered GPS route is retained. Pedometer issue: \(error.localizedDescription)"
+                                        } else {
+                                            self.sessionSteps = data?.numberOfSteps.intValue
+                                        }
+                                    }
                                 }
-                                sessionStatus = "Recovered activity resumed. Finish to save the route."
+                                sessionStatus = routeRecorder.status
                             }.buttonStyle(.bordered)
                             Button("Save recovered route now") {
                                 selectedActivity = routeRecorder.recoveredActivity ?? "Walking"
@@ -610,7 +616,7 @@ struct ContentView: View {
                 }.padding(18).frame(maxWidth: .infinity, alignment: .leading).background(cardBackground, in: RoundedRectangle(cornerRadius: 22))
                 Text("Your goal progress").font(.headline)
                 ProgressView(value: stepProgress).tint(neon)
-                Text(displayedDailySteps.map { "\($0.formatted()) of 10,000 steps" } ?? "Waiting for a step reading").font(.caption).foregroundStyle(.secondary)\n                Button("Open Gati Guru") { selectedTab = 5 }.buttonStyle(.bordered)
+                Text(displayedDailySteps.map { "\($0.formatted()) of \(max(dailyStepGoal, 1).formatted()) steps" } ?? "Waiting for a step reading").font(.caption).foregroundStyle(.secondary)\n                Button("Open Gati Guru") { selectedTab = 5 }.buttonStyle(.bordered)
             }.padding(16)
         }.background(pageBackground.ignoresSafeArea())
     }
