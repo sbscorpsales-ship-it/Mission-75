@@ -223,6 +223,10 @@ final class SupabaseRESTClient: ObservableObject {
         defer { isRetryingActivityOutbox = false }
         for item in pending where item.ownerID == ownerID {
             let record = item.record
+            guard record.steps != nil || !(record.routePoints?.isEmpty ?? true) else {
+                status = "Activity cloud sync paused: a queued session has no verified step count or GPS route. The original record was retained."
+                continue
+            }
             var allAcknowledged = true
             if let steps = record.steps {
                 allAcknowledged = await syncActivitySession(id: record.id, activity: record.activity, startedAt: record.startedAt, finishedAt: record.finishedAt, steps: steps) && allAcknowledged
