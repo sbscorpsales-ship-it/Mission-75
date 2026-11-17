@@ -45,6 +45,8 @@ private struct GATIVXActiveRouteDraft: Codable {
     var points: [GATIVXRoutePoint]
 }
 
+/// Core Location delivers delegate callbacks on the manager's creation run loop.
+/// This recorder is created on the main actor and keeps its location manager and UI state there.
 @MainActor
 final class GPSRouteRecorder: NSObject, ObservableObject, CLLocationManagerDelegate {
     @Published private(set) var points: [GATIVXRoutePoint] = []
