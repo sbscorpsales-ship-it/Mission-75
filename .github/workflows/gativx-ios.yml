@@ -78,6 +78,8 @@ jobs:
           cloud = Path("ios/GATIVX/Cloud/SupabaseRESTClient.swift").read_text()
           migration = Path("supabase/migrations/20261109113101_allow_gps_route_sync_without_step_count.sql").read_text()
           outbox = cloud.split("enum PendingHealthSyncKind", 1)[1] if "enum PendingHealthSyncKind" in cloud else ""
+          activity_outbox = cloud.split("struct PendingActivitySession", 1)[1] if "struct PendingActivitySession" in cloud else ""
+          activity_retry = cloud.split("func retryPendingActivitySessions()", 1)[1].split("func signIn", 1)[0] if "func retryPendingActivitySessions()" in cloud else ""
           step_sync = cloud.split("func syncSteps(date: Date, steps: Int)", 1)[1].split("func syncActiveEnergy", 1)[0]
           energy_sync = cloud.split("func syncActiveEnergy", 1)[1].split("func syncMotionDailySteps", 1)[0]
           motion_sync = cloud.split("func syncMotionDailySteps", 1)[1].split("private func performStepSync", 1)[0]
@@ -149,6 +151,15 @@ jobs:
               "Pending sync count never exposes another account's queue": "items.filter { $0.ownerID == currentUserID }.count" in cloud,
               "Older sensor upload cannot acknowledge a newer queued value": "($0.id == item.id && $0.revisionID == item.revisionID)" in cloud,
               "GPS cloud distance skips discontinuous segments": "if cloudPoints[index].breakBefore { continue }" in cloud,
+              "Completed walks have a dedicated durable cloud outbox": "activity-sync-outbox.v1" in cloud and "struct PendingActivitySession: Codable" in cloud,
+              "Activity outbox write is read back and verified": "UserDefaults.standard.set(data, forKey: activityOutboxKey)" in cloud and "JSONDecoder().decode([PendingActivitySession].self, from: saved)" in cloud,
+              "Activity outbox is isolated to the signed-in member": "for item in pending where item.ownerID == ownerID" in activity_retry and "items.filter { $0.ownerID == currentUserID }.count" in cloud,
+              "Activity retries retain stable session and revision identifiers": "record.id.uuidString" in cloud and "item.revisionID" in activity_retry,
+              "Activity queue item is removed only after all available writes succeed": "guard allAcknowledged else { continue }" in activity_retry and activity_retry.index("syncActivitySessionRoute") < activity_retry.index("guard allAcknowledged else") < activity_retry.index("saveActivityOutbox(current.filter"),
+              "Activity step and route RPCs return explicit acknowledgements": "async -> Bool" in cloud and "return true" in cloud.split("func syncActivitySession(", 1)[1].split("func syncActivitySessionRoute(", 1)[0] and "return true" in cloud.split("func syncActivitySessionRoute(", 1)[1].split("private func refreshSession()", 1)[0],
+              "Existing local walks are backfilled into the activity outbox": "cloud.enqueueActivitySession(record)" in view,
+              "Activity outbox retries on sign-in and foreground": "await cloud.retryPendingActivitySessions()" in view,
+              "Unreadable activity outbox is preserved and not treated as empty": "Original data was preserved; pending count is unknown" in cloud and "return nil" in cloud.split("private func loadActivityOutbox()", 1)[1].split("private func saveActivityOutbox", 1)[0],
               "Database allows unknown route steps without writing zero": "alter column steps drop not null" in migration and "steps = coalesce(excluded.steps, public.walk_sessions.steps)" in migration,
           }
           for name, ok in checks.items():
