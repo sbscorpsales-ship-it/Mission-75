@@ -313,7 +313,7 @@ function activateCloudUser(user){
  persist();
  render();renderWalk();
 }
-const cloudMsg=(message,stateLabel)=>{const e=$('cloudStatus');if(e)e.textContent=message;const s=$('cloudState');if(s)s.textContent=stateLabel||(cloudUser?'ACCOUNT CONNECTED':'DEVICE ONLY')};
+const cloudMsg=(message,stateLabel)=>{const e=$('cloudStatus');if(e)e.textContent=message;const s=$('cloudState');if(s)s.textContent=stateLabel||(cloudUser?'ACCOUNT CONNECTED':'DEVICE ONLY');const badge=$('cloudBackupStatus'),dot=$('cloudStatusDot');if(badge&&s)badge.textContent=s.textContent;if(dot)dot.className='statusDot '+(s&&s.textContent.includes('CURRENT')?'good':s&&s.textContent.includes('PENDING')?'pending':'')};
 function cloudUi(){
  const signed=!!cloudUser;
  $('cloudSignIn').style.display=signed?'none':'block';
