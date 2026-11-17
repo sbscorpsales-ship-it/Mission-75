@@ -598,7 +598,8 @@ struct ContentView: View {
                 }.padding(18).frame(maxWidth: .infinity, alignment: .leading).background(cardBackground, in: RoundedRectangle(cornerRadius: 22))
                 Text("Your goal progress").font(.headline)
                 ProgressView(value: stepProgress).tint(neon)
-                Text(displayedDailySteps.map { "\($0.formatted()) of \(max(dailyStepGoal, 1).formatted()) steps" } ?? "Waiting for a step reading").font(.caption).foregroundStyle(.secondary)\n                Button("Open Gati Guru") { selectedTab = 5 }.buttonStyle(.bordered)
+                Text(displayedDailySteps.map { "\($0.formatted()) of \(max(dailyStepGoal, 1).formatted()) steps" } ?? "Waiting for a step reading").font(.caption).foregroundStyle(.secondary)
+                Button("Open Gati Guru") { selectedTab = 5 }.buttonStyle(.bordered)
             }.padding(16)
         }.background(pageBackground.ignoresSafeArea())
     }
@@ -833,7 +834,9 @@ struct ContentView: View {
                 .tabItem { Label("Activity", systemImage: "figure.walk") }.tag(1)
             NavigationStack { missionsScreen.navigationTitle("Missions") }
                 .tabItem { Label("Missions", systemImage: "target") }.tag(2)
-            NavigationStack { guruScreen.navigationTitle("Gati Guru") }\n                .tabItem { Label("Guru", systemImage: "leaf") }.tag(5)\n            NavigationStack { communityScreen.navigationTitle("Community") }
+            NavigationStack { guruScreen.navigationTitle("Gati Guru") }
+                .tabItem { Label("Guru", systemImage: "leaf") }.tag(5)
+            NavigationStack { communityScreen.navigationTitle("Community") }
                 .tabItem { Label("Community", systemImage: "person.3") }.tag(3)
             NavigationStack { profileScreen.navigationTitle("Profile") }
                 .tabItem { Label("Profile", systemImage: "person.crop.circle") }.tag(4)
