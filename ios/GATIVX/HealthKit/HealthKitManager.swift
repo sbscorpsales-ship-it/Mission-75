@@ -2,6 +2,15 @@ import Foundation
 import HealthKit
 import Combine
 
+private struct PendingHealthWorkout: Codable, Identifiable {
+    let id: UUID
+    let activity: String
+    let startedAt: Date
+    let finishedAt: Date
+    let steps: Int?
+    let distanceMeters: Double?
+}
+
 /// Native, read-only Apple Health daily aggregate.
 /// HealthKit is the authority for the all-source daily total; CoreMotion is never added to it.
 @MainActor
@@ -29,6 +38,80 @@ final class HealthKitManager: ObservableObject {
     private var observers: [HKObserverQuery] = []
     private var refreshAgain = false
     private var pendingCompletions: [() -> Void] = []
+
+    private let workoutOutboxKey = "gativx.healthkit.workout-export-outbox.v1"
+    @Published private(set) var pendingWorkoutExportCount = 0
+    @Published private(set) var isWorkoutOutboxReadable = true
+    private var isRetryingWorkoutOutbox = false
+
+    private func loadPendingWorkouts() -> [PendingHealthWorkout]? {
+        guard let data = UserDefaults.standard.data(forKey: workoutOutboxKey) else {
+            isWorkoutOutboxReadable = true
+            pendingWorkoutExportCount = 0
+            return []
+        }
+        do {
+            let items = try JSONDecoder().decode([PendingHealthWorkout].self, from: data)
+            isWorkoutOutboxReadable = true
+            pendingWorkoutExportCount = items.count
+            return items
+        } catch {
+            isWorkoutOutboxReadable = false
+            statusMessage = "Apple Health export queue could not be read. Pending exports are unknown; original data was preserved."
+            return nil
+        }
+    }
+
+    private func savePendingWorkouts(_ items: [PendingHealthWorkout]) -> Bool {
+        do {
+            let data = try JSONEncoder().encode(items)
+            UserDefaults.standard.set(data, forKey: workoutOutboxKey)
+            guard let saved = UserDefaults.standard.data(forKey: workoutOutboxKey),
+                  let verified = try? JSONDecoder().decode([PendingHealthWorkout].self, from: saved),
+                  verified.map(\.id) == items.map(\.id) else {
+                isWorkoutOutboxReadable = false
+                statusMessage = "Apple Health export queue could not be verified. The export was not marked complete."
+                return false
+            }
+            isWorkoutOutboxReadable = true
+            pendingWorkoutExportCount = verified.count
+            return true
+        } catch {
+            statusMessage = "Apple Health export could not be queued: \(error.localizedDescription)"
+            return false
+        }
+    }
+
+    private func enqueueWorkout(_ item: PendingHealthWorkout) -> Bool {
+        guard var items = loadPendingWorkouts() else { return false }
+        if !items.contains(where: { $0.id == item.id }) { items.append(item) }
+        return savePendingWorkouts(items)
+    }
+
+    private func acknowledgeWorkout(_ id: UUID) {
+        guard let items = loadPendingWorkouts() else { return }
+        _ = savePendingWorkouts(items.filter { $0.id != id })
+    }
+
+    func retryPendingWorkoutExports() {
+        guard !isRetryingWorkoutOutbox, isAvailable else { return }
+        guard let items = loadPendingWorkouts(), !items.isEmpty else { return }
+        isRetryingWorkoutOutbox = true
+        retryNextWorkout(items, index: 0)
+    }
+
+    private func retryNextWorkout(_ items: [PendingHealthWorkout], index: Int) {
+        guard index < items.count else {
+            isRetryingWorkoutOutbox = false
+            return
+        }
+        let item = items[index]
+        saveActivityWorkout(id: item.id, activity: item.activity, startedAt: item.startedAt,
+                            finishedAt: item.finishedAt, steps: item.steps,
+                            distanceMeters: item.distanceMeters) { [weak self] _ in
+            Task { @MainActor in self?.retryNextWorkout(items, index: index + 1) }
+        }
+    }
 
     func resumeIfPreviouslyConnected() {
         guard UserDefaults.standard.bool(forKey: connectionRequestedKey) else { return }
@@ -269,6 +352,13 @@ final class HealthKitManager: ObservableObject {
         distanceMeters: Double?,
         completion: @escaping (Result<Void, Error>) -> Void
     ) {
+        let pending = PendingHealthWorkout(id: id, activity: activity, startedAt: startedAt,
+                                           finishedAt: finishedAt, steps: steps, distanceMeters: distanceMeters)
+        guard enqueueWorkout(pending) else {
+            completion(.failure(NSError(domain: "GATIVXHealthKit", code: 3,
+                userInfo: [NSLocalizedDescriptionKey: "The Apple Health export could not be safely queued. The local activity remains saved."])))
+            return
+        }
         guard isAvailable else {
             completion(.failure(NSError(domain: "GATIVXHealthKit", code: 1, userInfo: [NSLocalizedDescriptionKey: "Apple Health is unavailable on this iPhone."])))
             return
@@ -286,7 +376,7 @@ final class HealthKitManager: ObservableObject {
             let existing = HKSampleQuery(sampleType: workoutType, predicate: syncPredicate, limit: 1, sortDescriptors: nil) { [weak self] _, samples, queryError in
                 guard let self else { return }
                 if let queryError { DispatchQueue.main.async { completion(.failure(queryError)) }; return }
-                if samples?.isEmpty == false { DispatchQueue.main.async { completion(.success(())) }; return }
+                if samples?.isEmpty == false { DispatchQueue.main.async { self.acknowledgeWorkout(id); completion(.success(())) }; return }
 
                 let type: HKWorkoutActivityType
                 switch activity.lowercased() {
@@ -316,7 +406,7 @@ final class HealthKitManager: ObservableObject {
                 self.store.save(workout) { success, saveError in
                     DispatchQueue.main.async {
                         if let saveError { completion(.failure(saveError)) }
-                        else if success { completion(.success(())) }
+                        else if success { self.acknowledgeWorkout(id); completion(.success(())) }
                         else { completion(.failure(NSError(domain: "GATIVXHealthKit", code: 2, userInfo: [NSLocalizedDescriptionKey: "Apple Health did not confirm saving this workout."]))) }
                     }
                 }
