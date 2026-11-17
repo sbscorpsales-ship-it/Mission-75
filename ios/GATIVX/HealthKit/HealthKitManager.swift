@@ -55,6 +55,7 @@ final class HealthKitManager: ObservableObject {
                 self.startObserving()
                 self.refreshRecentDays()
                 self.refreshTodayEnergy()
+                self.refreshTodayMetrics()
             }
         }
     }
@@ -225,10 +226,13 @@ final class HealthKitManager: ObservableObject {
                 guard let self else { completion(); return }
                 guard error == nil else { completion(); return }
                 Task { @MainActor in
-                    if observedType.identifier == HKQuantityTypeIdentifier.activeEnergyBurned.rawValue {
-                        self.refreshTodayEnergy(onComplete: completion)
-                    } else {
+                    switch observedType.identifier {
+                    case HKQuantityTypeIdentifier.stepCount.rawValue:
                         self.refreshRecentDays(onComplete: completion)
+                    case HKQuantityTypeIdentifier.activeEnergyBurned.rawValue:
+                        self.refreshTodayEnergy(onComplete: completion)
+                    default:
+                        self.refreshTodayMetrics(onComplete: completion)
                     }
                 }
             }
@@ -246,6 +250,7 @@ final class HealthKitManager: ObservableObject {
     func refreshOnForeground() {
         refreshRecentDays()
         refreshTodayEnergy()
+        refreshTodayMetrics()
     }
 
     /// Export one completed activity to Apple Health. The GATIVX local record is saved first,
