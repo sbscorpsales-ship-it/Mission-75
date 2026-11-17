@@ -174,7 +174,7 @@ final class SupabaseRESTClient: ObservableObject {
                 status = "Account request accepted. Check your email to verify the account, then sign in."
             }
         } catch {
-            status = "Account creation failed: \\(error.localizedDescription)"
+            status = "Account creation failed: \(error.localizedDescription)"
         }
     }
 
@@ -193,7 +193,7 @@ final class SupabaseRESTClient: ObservableObject {
             }
             status = "If this email belongs to a GATIVX account, password-recovery instructions have been sent."
         } catch {
-            status = "Password recovery could not be requested: \\(error.localizedDescription)"
+            status = "Password recovery could not be requested: \(error.localizedDescription)"
         }
     }
 
