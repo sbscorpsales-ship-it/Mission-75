@@ -151,6 +151,14 @@ body[data-theme="light"] .mission .eyebrow{color:#294b30}
  <article class="healthRingCard"><div class="healthRing caloriesRing" id="caloriesRing"><div class="healthRingCore"><b id="ringCalories">—</b><small>ACTIVE KCAL</small></div></div><div class="healthRingTitle">Energy</div><small id="ringCaloriesNote">Awaiting active energy</small></article>
  <article class="healthRingCard"><div class="healthRing heartRing" id="heartRing"><div class="healthRingCore"><b id="ringHeartPoints">—</b><small>WALK MIN</small></div></div><div class="healthRingTitle">Cardio</div><small id="ringHeartPointsNote">No completed walk time yet</small></article>
 </div>
+<section class="statusPanel" aria-label="GATIVX system status">
+ <div class="statusPanelHead"><b>YOUR DATA STATUS</b><span>LIVE OVERVIEW</span></div>
+ <div class="statusRows">
+  <div class="statusRow"><span class="statusDot" id="healthStatusDot"></span><span class="statusLabel">Health data</span><strong id="healthConnectionStatus">AWAITING SOURCE</strong></div>
+  <div class="statusRow"><span class="statusDot" id="walkStatusDot"></span><span class="statusLabel">Walk history</span><strong id="walkSaveStatus">NO COMPLETED WALKS</strong></div>
+  <div class="statusRow"><span class="statusDot" id="cloudStatusDot"></span><span class="statusLabel">Cloud backup</span><strong id="cloudBackupStatus">DEVICE ONLY</strong></div>
+ </div>
+</section>
 <div class="summaryGrid">
 <article class="summaryTile tileSteps"><div class="tileHead">Step Count <span class="tileArrow">›</span></div><div class="tileNote">Today</div><div class="tileValue" id="steps">—</div><small id="stepNote">No iPhone sensor reading received yet.</small><a class="metricAction" href="shortcuts://run-shortcut?name=try%202">Sync Apple Health now</a><br><a class="metricAction" href="./apple-health-shortcut.html">Shortcut setup guide</a><small id="gpsStepNote">GPS-derived steps are shown separately after a recorded walk.</small></article>
 <article class="summaryTile tileDistance"><div class="tileHead">Today's Walk <span class="tileArrow">›</span></div><div class="tileNote">Today</div><div class="tileValue" id="distance">—</div><small>Only completed GPS walks appear here.</small><button class="metricActionButton" type="button" data-go="walk">Start a GPS walk</button></article>
