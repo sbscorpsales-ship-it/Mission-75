@@ -4,6 +4,45 @@ import CoreLocation
 
 private struct ActivitySessionRecord: Codable, Identifiable { let id: UUID; let activity: String; let startedAt: Date; let finishedAt: Date; let steps: Int?; let routePoints: [GATIVXRoutePoint]?; let motionDistanceMeters: Double?; var gpsDistanceMeters: Double { guard let routePoints, routePoints.count > 1 else { return 0 }; return zip(routePoints, routePoints.dropFirst()).reduce(0.0) { total, pair in guard !pair.1.breakBefore else { return total }; let a = CLLocation(latitude: pair.0.latitude, longitude: pair.0.longitude); let b = CLLocation(latitude: pair.1.latitude, longitude: pair.1.longitude); return total + b.distance(from: a) } }; var durationText: String { let seconds = max(0, Int(finishedAt.timeIntervalSince(startedAt))); return String(format: "%d:%02d", seconds / 60, seconds % 60) } }
 
+private struct GATIVXMountainBackdrop: View {
+    let isNight: Bool
+    var body: some View {
+        GeometryReader { proxy in
+            ZStack {
+                LinearGradient(colors: isNight
+                    ? [Color(red: 0.01, green: 0.06, blue: 0.12), Color(red: 0.02, green: 0.20, blue: 0.31), Color(red: 0.00, green: 0.04, blue: 0.08)]
+                    : [Color(red: 0.98, green: 0.88, blue: 0.68), Color(red: 0.70, green: 0.83, blue: 0.89), Color(red: 0.88, green: 0.94, blue: 0.90)],
+                    startPoint: .topLeading, endPoint: .bottomTrailing)
+                Circle().fill(isNight ? Color.white.opacity(0.8) : Color.orange.opacity(0.28))
+                    .frame(width: 48, height: 48).blur(radius: isNight ? 1 : 15)
+                    .offset(x: proxy.size.width * 0.31, y: -proxy.size.height * 0.24)
+                Canvas { context, size in
+                    var far = Path()
+                    far.move(to: CGPoint(x: 0, y: size.height * 0.62))
+                    far.addLines([
+                        CGPoint(x: size.width * 0.18, y: size.height * 0.37),
+                        CGPoint(x: size.width * 0.31, y: size.height * 0.53),
+                        CGPoint(x: size.width * 0.53, y: size.height * 0.25),
+                        CGPoint(x: size.width * 0.72, y: size.height * 0.52),
+                        CGPoint(x: size.width * 0.86, y: size.height * 0.35),
+                        CGPoint(x: size.width, y: size.height * 0.57),
+                        CGPoint(x: size.width, y: size.height),
+                        CGPoint(x: 0, y: size.height)
+                    ])
+                    far.closeSubpath()
+                    context.fill(far, with: .linearGradient(Gradient(colors: isNight ? [Color(red: 0.08, green: 0.22, blue: 0.34), .black] : [Color(red: 0.42, green: 0.57, blue: 0.65), Color(red: 0.15, green: 0.34, blue: 0.28)]), startPoint: .zero, endPoint: CGPoint(x: size.width, y: size.height)))
+                    var near = Path()
+                    near.move(to: CGPoint(x: 0, y: size.height * 0.78))
+                    near.addLines([CGPoint(x: size.width * 0.22, y: size.height * 0.56), CGPoint(x: size.width * 0.40, y: size.height * 0.72), CGPoint(x: size.width * 0.64, y: size.height * 0.48), CGPoint(x: size.width * 0.82, y: size.height * 0.70), CGPoint(x: size.width, y: size.height * 0.55), CGPoint(x: size.width, y: size.height), CGPoint(x: 0, y: size.height)])
+                    near.closeSubpath()
+                    context.fill(near, with: .color(isNight ? Color(red: 0.01, green: 0.09, blue: 0.13).opacity(0.94) : Color(red: 0.15, green: 0.35, blue: 0.24).opacity(0.68)))
+                }
+                LinearGradient(colors: [.clear, isNight ? .black.opacity(0.42) : .white.opacity(0.18)], startPoint: .center, endPoint: .bottom)
+            }
+        }
+    }
+}
+
 struct ContentView: View {
     @Environment(\.scenePhase) private var scenePhase
     @StateObject private var health = HealthKitManager()
@@ -324,89 +363,138 @@ struct ContentView: View {
     }
 
     private var homeDashboard: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 18) {
-                HStack(alignment: .center) {
+        ScrollView(showsIndicators: false) {
+            VStack(spacing: 14) {
+                // GATIVX visual system: mountain hero, neon progress ring and
+                // functional cards. Live values continue to come from HealthKit.
+                ZStack(alignment: .top) {
+                    GATIVXMountainBackdrop(isNight: appearanceMode == "night" || (appearanceMode == "system" && UITraitCollection.current.userInterfaceStyle == .dark))
+                        .frame(height: 315)
+                        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+                    VStack(alignment: .leading, spacing: 14) {
+                        HStack(spacing: 9) {
+                            Image(systemName: "figure.hiking")
+                                .font(.system(size: 27, weight: .black))
+                                .foregroundStyle(neon)
+                            VStack(alignment: .leading, spacing: 0) {
+                                Text("GATIVX®").font(.system(size: 27, weight: .black, design: .rounded)).tracking(-0.7)
+                                Text("YOUR GOAL. YOUR PURPOSE. YOUR GATI.")
+                                    .font(.system(size: 7.5, weight: .heavy)).tracking(0.45)
+                            }
+                            Spacer()
+                            Image(systemName: "bell.badge").font(.title2)
+                            Image(systemName: "person.crop.circle.fill").font(.system(size: 34))
+                                .padding(2).overlay(Circle().stroke(neon, lineWidth: 2))
+                        }
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(greeting + "!").font(.system(size: 25, weight: .bold, design: .rounded))
+                            Text(greeting == "Good morning" ? "Make today count." : "Stay on track.")
+                                .font(.headline.weight(.medium))
+                        }
+                        HStack(alignment: .center, spacing: 12) {
+                            stepRing
+                                .frame(maxWidth: .infinity)
+                            VStack(alignment: .leading, spacing: 9) {
+                                Image(systemName: "gift.fill").font(.title2).foregroundStyle(neon)
+                                Text("Today's Mission").font(.subheadline.weight(.semibold))
+                                Text("8,000 steps").font(.title3.weight(.bold))
+                                Image(systemName: "chevron.right.circle.fill").font(.title2).foregroundStyle(neon)
+                            }
+                            .frame(maxWidth: .infinity, minHeight: 118, alignment: .leading)
+                            .padding(12)
+                            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20))
+                            .overlay(RoundedRectangle(cornerRadius: 20).stroke(.white.opacity(0.22), lineWidth: 1))
+                        }
+                    }
+                    .padding(16)
+                }
+                HStack(spacing: 7) {
+                    compactMetric("Distance", value: health.todayWalkingRunningDistanceKm.map { String(format: "%.1f", $0) } ?? "—", unit: "km", icon: "mappin.and.ellipse", tint: .green)
+                    compactMetric("Active Time", value: health.todayExerciseMinutes.map(String.init) ?? "—", unit: "min", icon: "stopwatch", tint: .green)
+                    compactMetric("Calories", value: health.todayActiveEnergyKcal.map(String.init) ?? "—", unit: "", icon: "flame.fill", tint: .orange)
+                    compactMetric("Avg. Heart Rate", value: health.todayAverageHeartRateBPM.map(String.init) ?? "—", unit: "bpm", icon: "heart", tint: .pink)
+                }
+                HStack(spacing: 12) {
+                    Image(systemName: "figure.walk").font(.system(size: 29, weight: .bold)).foregroundStyle(neon)
                     VStack(alignment: .leading, spacing: 3) {
-                        Text("GATIVX").font(.system(size: 27, weight: .black, design: .rounded)).tracking(1.1)
-                        Text("FROM GOALS TO XCELLENCE").font(.system(size: 9, weight: .bold, design: .rounded)).tracking(1.6).foregroundStyle(.secondary)
+                        Text("Activity Tracker").font(.headline)
+                        Text("Track your walk, route, pace and progress.").font(.caption).foregroundStyle(.secondary)
                     }
-                    Spacer()
-                    Image(systemName: "bell.badge").font(.title3).padding(11).background(cardBackground, in: Circle())
-                    Image(systemName: "person.crop.circle.fill").font(.title).foregroundStyle(.secondary)
+                    Spacer(minLength: 2)
+                    Button { selectedTab = 1 } label: {
+                        Label("START WALK", systemImage: "play.fill")
+                            .font(.caption.weight(.black)).foregroundStyle(.black)
+                            .padding(.horizontal, 13).padding(.vertical, 12)
+                            .background(neon, in: Capsule())
+                    }
                 }
-                VStack(alignment: .leading, spacing: 5) {
-                    Text(greeting).font(.title2.weight(.bold))
-                    Text("Every step moves you closer to your purpose.").font(.subheadline).foregroundStyle(.secondary)
-                }
-                VStack(spacing: 14) {
+                .padding(15)
+                .background(LinearGradient(colors: [neon.opacity(0.18), cardBackground], startPoint: .leading, endPoint: .trailing), in: RoundedRectangle(cornerRadius: 22))
+                .overlay(RoundedRectangle(cornerRadius: 22).stroke(neon.opacity(0.45), lineWidth: 1))
+                dashboardFeature(icon: "leaf", title: "Gati Guru", headline: "Remember why you started.", detail: "Small, consistent actions create extraordinary results.", action: { selectedTab = 2 })
+                VStack(alignment: .leading, spacing: 9) {
                     HStack {
-                        Label("TODAY'S JOURNEY", systemImage: "sun.max.fill").font(.caption.weight(.bold)).tracking(0.8).foregroundStyle(.secondary)
+                        Label("My Journey", systemImage: "calendar").font(.headline)
                         Spacer()
-                        Text(Date().formatted(date: .abbreviated, time: .omitted)).font(.caption).foregroundStyle(.secondary)
+                        Text("Your progress").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
                     }
-                    stepRing
-                    Text(displayedStepSource).font(.caption2).foregroundStyle(.secondary).multilineTextAlignment(.center)
-                    Text("Active energy  ·  " + (health.todayActiveEnergyKcal.map { "\($0) kcal" } ?? "—"))
-                        .font(.subheadline.weight(.semibold))
+                    Text("\(activityHistory.count) activities saved").font(.subheadline.weight(.semibold))
+                    ProgressView(value: min(Double(activityHistory.count) / 90.0, 1.0))
+                        .tint(neon)
+                    Text(historyStatus.isEmpty ? "Your completed activities will appear here." : historyStatus)
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+                .padding(16).background(cardBackground, in: RoundedRectangle(cornerRadius: 22))
+                dashboardFeature(icon: "person.3", title: "Community Gati", headline: "Grow together.", detail: "Challenges, inspiration and shared progress.", action: { selectedTab = 3 })
+                VStack(alignment: .leading, spacing: 5) {
+                    Text(displayedStepSource).font(.caption2).foregroundStyle(.secondary)
+                    Text(health.statusMessage).font(.caption2).foregroundStyle(.secondary)
+                    Text(motionStatus).font(.caption2).foregroundStyle(.secondary)
                     if !health.hasRequestedAccess {
                         Button { health.requestReadAccessAndStart() } label: {
                             Label("Connect Apple Health", systemImage: "heart.text.square")
-                                .font(.subheadline.weight(.bold)).frame(maxWidth: .infinity).padding(.vertical, 13)
-                        }.buttonStyle(.borderedProminent).tint(.primary).disabled(!health.isAvailable || health.isRefreshing)
+                                .font(.subheadline.weight(.bold)).frame(maxWidth: .infinity).padding(.vertical, 12)
+                        }.buttonStyle(.borderedProminent).tint(.green)
                     }
                 }
-                .padding(18)
-                .background(cardBackground, in: RoundedRectangle(cornerRadius: 26, style: .continuous))
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack {
-                        Text("TODAY'S MISSION").font(.caption.weight(.bold)).tracking(1).foregroundStyle(.secondary)
-                        Spacer()
-                        Image(systemName: "sparkles").foregroundStyle(neon)
-                    }
-                    Text("Move with purpose").font(.title3.weight(.bold))
-                    Text("Complete a mindful walk today. Start small, stay consistent, and reconnect with why you began.")
-                        .font(.subheadline).foregroundStyle(.secondary)
-                    Button { selectedTab = 1 } label: {
-                        HStack { Text("Start your mission"); Spacer(); Image(systemName: "arrow.up.right") }
-                            .font(.subheadline.weight(.bold)).foregroundStyle(.black).padding(14)
-                            .background(neon, in: RoundedRectangle(cornerRadius: 14))
-                    }
-                }
-                .padding(17).background(cardBackground, in: RoundedRectangle(cornerRadius: 22))
-                HStack(spacing: 10) {
-                    metricCard("Distance", value: health.todayWalkingRunningDistanceKm.map { String(format: "%.1f", $0) } ?? "—", unit: "km", symbol: "location")
-                    metricCard("Active time", value: health.todayExerciseMinutes.map(String.init) ?? "—", unit: "min", symbol: "timer")
-                }
-                HStack(spacing: 10) {
-                    metricCard("Calories", value: health.todayActiveEnergyKcal.map(String.init) ?? "—", unit: "kcal", symbol: "flame")
-                    metricCard("Avg. heart rate", value: health.todayAverageHeartRateBPM.map(String.init) ?? "—", unit: "bpm", symbol: "heart")
-                }
-                Text("Daily distance, exercise time, active energy and heart rate are read from Apple Health. Missing readings remain unavailable; the live iPhone pedometer is shown separately.")
-                    .font(.caption2).foregroundStyle(.secondary)
-                VStack(alignment: .leading, spacing: 8) {
-                    Label("GATI GURU", systemImage: "sparkles").font(.caption.weight(.bold)).foregroundStyle(neon)
-                    Text("When motivation slows, remember your why.").font(.headline)
-                    Text("One small action today is enough to regain your Gati.").font(.subheadline).foregroundStyle(.secondary)
-                }.padding(17).frame(maxWidth: .infinity, alignment: .leading).background(cardBackground, in: RoundedRectangle(cornerRadius: 20))
-                VStack(alignment: .leading, spacing: 8) {
-                    Label("MY JOURNEY", systemImage: "chart.line.uptrend.xyaxis").font(.caption.weight(.bold)).foregroundStyle(.secondary)
-                    Text("\(activityHistory.count) activities saved").font(.headline)
-                    Text(historyStatus.isEmpty ? "Your completed activities will be kept here." : historyStatus).font(.caption).foregroundStyle(.secondary)
-                }.padding(17).frame(maxWidth: .infinity, alignment: .leading).background(cardBackground, in: RoundedRectangle(cornerRadius: 20))
-                VStack(alignment: .leading, spacing: 8) {
-                    Label("COMMUNITY GATI", systemImage: "person.3.fill").font(.caption.weight(.bold)).foregroundStyle(.secondary)
-                    Text("Your consistency can inspire someone else.").font(.headline)
-                    Text("Community experiences will appear here as this space grows.").font(.caption).foregroundStyle(.secondary)
-                }.padding(17).frame(maxWidth: .infinity, alignment: .leading).background(cardBackground, in: RoundedRectangle(cornerRadius: 20))
-                Text(health.statusMessage).font(.caption).foregroundStyle(.secondary)
-                Text(motionStatus).font(.caption2).foregroundStyle(.secondary)
-                Text("Fitness guidance, not medical diagnosis or treatment.").font(.caption2).foregroundStyle(.tertiary)
+                .padding(.horizontal, 4)
             }
-            .padding(.horizontal, 16).padding(.top, 10).padding(.bottom, 24)
+            .padding(.horizontal, 12).padding(.top, 8).padding(.bottom, 22)
         }
         .background(pageBackground.ignoresSafeArea())
         .accessibilityIdentifier("gativx-home-dashboard")
+    }
+
+    private func compactMetric(_ title: String, value: String, unit: String, icon: String, tint: Color) -> some View {
+        VStack(spacing: 5) {
+            Image(systemName: icon).font(.system(size: 19, weight: .semibold)).foregroundStyle(tint)
+            Text(value + (unit.isEmpty ? "" : " " + unit))
+                .font(.system(size: 15, weight: .bold, design: .rounded)).minimumScaleFactor(0.65).lineLimit(1)
+            Text(title).font(.system(size: 9, weight: .medium)).foregroundStyle(.secondary).lineLimit(1).minimumScaleFactor(0.7)
+        }
+        .frame(maxWidth: .infinity, minHeight: 75)
+        .padding(.vertical, 8)
+        .background(cardBackground, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 16).stroke(.white.opacity(0.35), lineWidth: 0.7))
+    }
+
+    private func dashboardFeature(icon: String, title: String, headline: String, detail: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 12) {
+                Image(systemName: icon).font(.system(size: 27, weight: .semibold)).foregroundStyle(neon).frame(width: 42)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(title).font(.headline)
+                    Text(headline).font(.subheadline.weight(.semibold))
+                    Text(detail).font(.caption).foregroundStyle(.secondary)
+                }
+                Spacer(minLength: 2)
+                Image(systemName: "chevron.right.circle.fill").font(.title2).foregroundStyle(neon)
+            }
+            .padding(15).frame(maxWidth: .infinity, alignment: .leading)
+            .background(cardBackground, in: RoundedRectangle(cornerRadius: 21))
+            .overlay(RoundedRectangle(cornerRadius: 21).stroke(neon.opacity(0.20), lineWidth: 1))
+        }
+        .buttonStyle(.plain)
     }
 
     private var activityScreen: some View {
