@@ -45,6 +45,7 @@ struct ContentView: View {
     @StateObject private var health = HealthKitManager()
     @StateObject private var cloud = SupabaseRESTClient()
     @StateObject private var routeRecorder = GPSRouteRecorder()
+    private let activityStore = ActivitySessionStore()
     @State private var email = ""
     @State private var password = ""
     @State private var pedometer = CMPedometer()
@@ -118,10 +119,14 @@ struct ContentView: View {
         }
     }
     private func loadActivityHistory() {
-        let key = "gativx.activitySessions.v1"
-        guard let data = UserDefaults.standard.data(forKey: key) else { historyStatus = "No completed activities saved yet."; return }
-        do { activityHistory = try JSONDecoder().decode([ActivitySessionRecord].self, from: data); historyStatus = "Loaded saved activities from this iPhone." }
-        catch { historyStatus = "Saved activity history could not be read. Existing data has been left untouched." }
+        do {
+            activityHistory = try activityStore.load()
+            historyStatus = activityHistory.isEmpty
+                ? "No completed activities saved yet."
+                : "Loaded saved activities from this iPhone."
+        } catch {
+            historyStatus = "Saved activity history could not be read. Existing data has been left untouched."
+        }
     }
 
     private func syncCurrentMotionSnapshotToCloud() {
@@ -146,19 +151,16 @@ struct ContentView: View {
 
     private func syncSavedActivitySessions() {
         guard cloud.isSignedIn else { return }
-        let storageKey = "gativx.activitySessions.v1"
+
         let history: [ActivitySessionRecord]
-        if let data = UserDefaults.standard.data(forKey: storageKey) {
-            do {
-                history = try JSONDecoder().decode([ActivitySessionRecord].self, from: data)
-            } catch {
-                // Corrupt local history must never masquerade as an empty history.
-                historyStatus = "Cloud sync paused: saved activity history could not be read. Existing data was not changed."
-                return
-            }
-        } else {
-            history = []
+        do {
+            history = try activityStore.load()
+        } catch {
+            // Corrupt local history must never masquerade as an empty history.
+            historyStatus = "Cloud sync paused: saved activity history could not be read. Existing data was not changed."
+            return
         }
+
         // Backfill previously saved sessions into the durable per-session outbox.
         // New sessions are queued by the same path before any network request.
         for record in history {
@@ -218,11 +220,9 @@ struct ContentView: View {
                 }
                 let finalDistance = queriedDistance ?? self.sessionMotionDistanceMeters
                 let record = ActivitySessionRecord(id: recordID, activity: activity, startedAt: start, finishedAt: finishedAt, steps: finalSteps, routePoints: routePoints, motionDistanceMeters: finalDistance)
-                let storageKey = "gativx.activitySessions.v1"
-                let existingData = UserDefaults.standard.data(forKey: storageKey)
                 var history: [ActivitySessionRecord]
                 do {
-                    history = try existingData.map { try JSONDecoder().decode([ActivitySessionRecord].self, from: $0) } ?? []
+                    history = try self.activityStore.load()
                 } catch {
                     // Never replace an unreadable history with an empty array.
                     self.sessionStatus = "Could not read existing activity history. Your current route draft is preserved; no saved history was replaced. You can retry saving."
@@ -233,15 +233,10 @@ struct ContentView: View {
                     history.insert(record, at: 0)
                 }
                 do {
-                    let encodedHistory = try JSONEncoder().encode(history)
-                    UserDefaults.standard.set(encodedHistory, forKey: storageKey)
-                    // Verify the exact activity can be decoded from the persisted
-                    // bytes before deleting the independently recoverable GPS draft.
-                    guard
-                        let persistedData = UserDefaults.standard.data(forKey: storageKey),
-                        let persistedHistory = try? JSONDecoder().decode([ActivitySessionRecord].self, from: persistedData),
-                        persistedHistory.contains(where: { $0.id == recordID })
-                    else {
+                    // Atomic file replacement plus a read-back check protects the route draft.
+                    try self.activityStore.save(history)
+                    let persistedHistory = try self.activityStore.load()
+                    guard persistedHistory.contains(where: { $0.id == recordID }) else {
                         throw NSError(domain: "GATIVXActivityStorage", code: 1, userInfo: [NSLocalizedDescriptionKey: "The saved activity could not be read back and verified. Your GPS draft remains preserved."])
                     }
                     self.activityHistory = persistedHistory

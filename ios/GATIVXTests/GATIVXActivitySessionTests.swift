@@ -53,6 +53,81 @@ final class GATIVXActivitySessionTests: XCTestCase {
         XCTAssertEqual(record.durationText, "2:05")
     }
 
+    func testActivityStoreAtomicallySavesAndReadsBackHistory() throws {
+        let (store, directory, defaults, suiteName) = makeActivityStore()
+        defer { cleanUpActivityStore(directory, defaults: defaults, suiteName: suiteName) }
+
+        let record = activityRecord()
+        try store.save([record])
+
+        let restored = try store.load()
+        XCTAssertEqual(restored.map(\\.id), [record.id])
+        XCTAssertTrue(FileManager.default.fileExists(
+            atPath: directory.appendingPathComponent("activity-history.json").path
+        ))
+    }
+
+    func testActivityStoreMigratesLegacyDefaultsAfterFileVerification() throws {
+        let (store, directory, defaults, suiteName) = makeActivityStore()
+        defer { cleanUpActivityStore(directory, defaults: defaults, suiteName: suiteName) }
+
+        let record = activityRecord()
+        defaults.set(
+            try JSONEncoder().encode([record]),
+            forKey: "gativx.activitySessions.v1"
+        )
+
+        let restored = try store.load()
+
+        XCTAssertEqual(restored.map(\\.id), [record.id])
+        XCTAssertNil(defaults.data(forKey: "gativx.activitySessions.v1"))
+        XCTAssertTrue(FileManager.default.fileExists(
+            atPath: directory.appendingPathComponent("activity-history.json").path
+        ))
+    }
+
+    func testCorruptActivityFileIsPreservedAndDoesNotFallBackToLegacyData() throws {
+        let (store, directory, defaults, suiteName) = makeActivityStore()
+        defer { cleanUpActivityStore(directory, defaults: defaults, suiteName: suiteName) }
+
+        let fileURL = directory.appendingPathComponent("activity-history.json")
+        let corruptData = Data("not-json".utf8)
+        try FileManager.default.createDirectory(
+            at: directory,
+            withIntermediateDirectories: true
+        )
+        try corruptData.write(to: fileURL)
+        defaults.set(
+            try JSONEncoder().encode([activityRecord()]),
+            forKey: "gativx.activitySessions.v1"
+        )
+
+        XCTAssertThrowsError(try store.load())
+        XCTAssertEqual(try Data(contentsOf: fileURL), corruptData)
+        XCTAssertNotNil(defaults.data(forKey: "gativx.activitySessions.v1"))
+    }
+
+    private func makeActivityStore() -> (ActivitySessionStore, URL, UserDefaults, String) {
+        let suiteName = "GATIVXTests.\\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(suiteName, isDirectory: true)
+        let store = ActivitySessionStore(
+            userDefaults: defaults,
+            directoryOverride: directory
+        )
+        return (store, directory, defaults, suiteName)
+    }
+
+    private func cleanUpActivityStore(
+        _ directory: URL,
+        defaults: UserDefaults,
+        suiteName: String
+    ) {
+        try? FileManager.default.removeItem(at: directory)
+        defaults.removePersistentDomain(forName: suiteName)
+    }
+
     private func routePoint(
         latitude: Double,
         longitude: Double,

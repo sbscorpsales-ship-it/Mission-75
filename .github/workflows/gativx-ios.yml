@@ -22,11 +22,11 @@ on:
 permissions:
   contents: read
 
-# Keep push and pull-request validation independent. Sharing a concurrency
-# group caused one event to cancel the other for the same branch.
+# Keep push and pull-request validation independent, while cancelling
+# obsolete runs for the same event and branch to save CI time.
 concurrency:
   group: gativx-ios-${{ github.event_name }}-${{ github.head_ref || github.ref_name }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   build-ios:
@@ -90,6 +90,7 @@ jobs:
           from pathlib import Path
 
           gps = Path("ios/GATIVX/GPSRouteRecorder.swift").read_text()
+          activity_store = Path("ios/GATIVX/Storage/ActivitySessionStore.swift").read_text()
           view = Path("ios/GATIVX/ContentView.swift").read_text()
           health = Path("ios/GATIVX/HealthKit/HealthKitManager.swift").read_text()
           cloud = Path("ios/GATIVX/Cloud/SupabaseRESTClient.swift").read_text()
@@ -127,9 +128,13 @@ jobs:
               "Workout finish button is disabled while saving": ".disabled(isFinishingSession)" in view and "Saving activity…" in view,
               "Failed local save leaves the session retryable": "tap Finish & save activity to retry" in finish_activity and "self.sessionStarted = start" in finish_activity,
               "Sensor-empty activity is retained for retry rather than discarded": "Your session remains available" in finish_activity and "self.sessionStarted = nil" not in finish_activity.split("guard finalSteps != nil || !routePoints.isEmpty else", 1)[1].split("}", 1)[0] and "self.routeRecorder.clearDraft()" not in finish_activity.split("guard finalSteps != nil || !routePoints.isEmpty else", 1)[1].split("}", 1)[0],
-              "Cloud activity sync reports corrupt local history instead of treating it as empty": "Cloud sync paused: saved activity history could not be read" in view and "try JSONDecoder().decode([ActivitySessionRecord].self, from: data)" in view,
-              "Completed activity is encoded before successful-save GPS draft clearing": "let encodedHistory = try JSONEncoder().encode(history)" in finish_activity and finish_activity.index("let encodedHistory = try JSONEncoder().encode(history)") < finish_activity.rindex("self.routeRecorder.clearDraft()"),
-              "Local activity is decoded and verified before GPS draft clearing": "persistedHistory = try? JSONDecoder().decode([ActivitySessionRecord].self, from: persistedData)" in finish_activity and "persistedHistory.contains(where: { $0.id == recordID })" in finish_activity and finish_activity.index("persistedHistory.contains") < finish_activity.index("self.routeRecorder.clearDraft()"),
+              "Cloud activity sync reports corrupt local history instead of treating it as empty": "Cloud sync paused: saved activity history could not be read" in view and "try activityStore.load()" in view,
+              "Completed activity is atomically stored and read back before GPS draft clearing": "try self.activityStore.save(history)" in finish_activity and "let persistedHistory = try self.activityStore.load()" in finish_activity and finish_activity.index("try self.activityStore.save(history)") < finish_activity.index("let persistedHistory = try self.activityStore.load()") < finish_activity.index("self.routeRecorder.clearDraft()"),
+              "Local activity is decoded and verified before GPS draft clearing": "let persistedHistory = try self.activityStore.load()" in finish_activity and "persistedHistory.contains(where: { $0.id == recordID })" in finish_activity and finish_activity.index("persistedHistory.contains") < finish_activity.index("self.routeRecorder.clearDraft()"),
+              "Activity history uses atomic Application Support file writes": "applicationSupportDirectory" in activity_store and "data.write(to: url, options: .atomic)" in activity_store,
+              "Activity history file is read back and decoded before success": "let savedData = try Data(contentsOf: url)" in activity_store and "JSONDecoder().decode([ActivitySessionRecord].self, from: savedData)" in activity_store and "savedRecords.map(\\.id) == records.map(\\.id)" in activity_store,
+              "Legacy history is removed only after verified file migration": "try write(records, to: url)" in activity_store and activity_store.index("try write(records, to: url)") < activity_store.index("userDefaults.removeObject(forKey: legacyKey)"),
+              "Corrupt activity history is never overwritten with an empty list": "Could not read existing activity history" in finish_activity and "try self.activityStore.load()" in finish_activity,
               "Failed local activity save preserves GPS draft": "Your GPS draft remains preserved" in finish_activity and "catch {" in finish_activity,
               "Corrupt activity history is never overwritten with an empty list": "Could not read existing activity history" in finish_activity and "existingData.map" in finish_activity,
               "Always permission enables background GPS during an active walk": "else if isRecording" in auth_handler and "manager.allowsBackgroundLocationUpdates = true" in auth_handler and "manager.showsBackgroundLocationIndicator = true" in auth_handler,
