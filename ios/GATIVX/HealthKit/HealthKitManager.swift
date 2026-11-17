@@ -211,7 +211,7 @@ final class HealthKitManager: ObservableObject {
         store.requestAuthorization(toShare: shareTypes, read: [self.stepType, self.energyType]) { [weak self] _, error in
             guard let self else { return }
             if let error { DispatchQueue.main.async { completion(.failure(error)) }; return }
-            let syncID = "gativx.activity.\\(id.uuidString)"
+            let syncID = "gativx.activity.\(id.uuidString)"
             let syncPredicate = HKQuery.predicateForObjects(withMetadataKey: HKMetadataKeySyncIdentifier, allowedValues: [syncID])
             let existing = HKSampleQuery(sampleType: workoutType, predicate: syncPredicate, limit: 1, sortDescriptors: nil) { [weak self] _, samples, queryError in
                 guard let self else { return }
