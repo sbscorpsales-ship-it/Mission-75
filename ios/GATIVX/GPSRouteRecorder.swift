@@ -119,19 +119,22 @@ final class GPSRouteRecorder: NSObject, ObservableObject, CLLocationManagerDeleg
         }
     }
 
-    private func persistDraft() {
-        guard let startedAt = activeStartedAt else { return }
+    @discardableResult
+    private func persistDraft() -> Bool {
+        guard let startedAt = activeStartedAt else { return false }
         guard let url = draftURL else {
             status = "Could not access the local GPS draft folder. The route remains in memory; do not force-quit GATIVX."
-            return
+            return false
         }
         let draft = GATIVXActiveRouteDraft(startedAt: startedAt, activity: activeActivity, points: points)
         do {
             let data = try JSONEncoder().encode(draft)
             try data.write(to: url, options: .atomic)
             UserDefaults.standard.removeObject(forKey: draftKey)
+            return true
         } catch {
             status = "Could not persist the active route safely: \(error.localizedDescription)"
+            return false
         }
     }
 
@@ -143,8 +146,11 @@ final class GPSRouteRecorder: NSObject, ObservableObject, CLLocationManagerDeleg
         activeActivity = activity
         recoveredStartedAt = nil
         recoveredActivity = nil
-        persistDraft()
+        let draftPersisted = persistDraft()
         requestAndBegin()
+        if !draftPersisted {
+            status = "GPS started, but the route draft is not yet safely stored on this iPhone. Keep GATIVX open and check available storage."
+        }
     }
 
     func resumeRecovered() {
@@ -205,8 +211,10 @@ final class GPSRouteRecorder: NSObject, ObservableObject, CLLocationManagerDeleg
         manager.showsBackgroundLocationIndicator = false
         isRecording = false
         pendingStartAfterAuthorization = false
-        persistDraft()
-        status = points.isEmpty ? "No GPS points recorded. Check location permission and signal." : "Route paused and safely stored on this iPhone."
+        let draftPersisted = persistDraft()
+        if draftPersisted {
+            status = points.isEmpty ? "No GPS points recorded. Check location permission and signal." : "Route paused and safely stored on this iPhone."
+        }
     }
 
     func clearDraft() {
@@ -299,9 +307,10 @@ final class GPSRouteRecorder: NSObject, ObservableObject, CLLocationManagerDeleg
         if changed {
             // Persist each accepted batch, not just when the user presses Finish.
             // This allows recovery after app termination or a device restart.
-            persistDraft()
-            status = "Recording GPS route · \(points.count) points · " +
-                String(format: "%.2f km", routeDistanceMeters / 1000)
+            if persistDraft() {
+                status = "Recording GPS route · \(points.count) points · " +
+                    String(format: "%.2f km", routeDistanceMeters / 1000)
+            }
         }
     }
 
