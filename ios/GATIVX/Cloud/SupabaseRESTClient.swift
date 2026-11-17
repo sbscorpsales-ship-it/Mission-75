@@ -21,21 +21,34 @@ struct PendingHealthSync: Codable, Identifiable {
     var id: String { ownerID + ":" + kind.rawValue + ":" + localDay }
 }
 
+
+struct PendingActivitySession: Codable, Identifiable {
+    let ownerID: String
+    let revisionID: UUID
+    let record: ActivitySessionRecord
+    let queuedAt: Date
+    var id: String { ownerID + ":" + record.id.uuidString }
+}
+
 @MainActor
 final class SupabaseRESTClient: ObservableObject {
     @Published private(set) var isSignedIn = false
     @Published private(set) var status = "Sign in with your existing GATIVX web-app account."
     @Published private(set) var pendingHealthSyncCount = 0
     @Published private(set) var isHealthOutboxReadable = true
+    @Published private(set) var pendingActivitySyncCount = 0
+    @Published private(set) var isActivityOutboxReadable = true
 
     private let baseURL = URL(string: "https://crarbbsvcczwmtvxyrxo.supabase.co")!
     // Supabase publishable key is a client-side key. Never place a service-role key in the app.
     private let publishableKey = "sb_publishable_XAGRFtrWrFqJ-JSfXh2WbRQ_jCcPnr-6"
     private let sessionStore = "com.paramitsolutions.gativx.session"
     private let healthOutboxKey = "com.paramitsolutions.gativx.health-sync-outbox.v1"
+    private let activityOutboxKey = "com.paramitsolutions.gativx.activity-sync-outbox.v1"
     private var accessToken: String?
     private var refreshToken: String?
     private var isRetryingHealthOutbox = false
+    private var isRetryingActivityOutbox = false
 
     init() {
         if let saved = readSession() {
@@ -45,6 +58,9 @@ final class SupabaseRESTClient: ObservableObject {
         }
         if let items = loadHealthOutbox() {
             pendingHealthSyncCount = items.filter { $0.ownerID == currentUserID }.count
+        }
+        if let items = loadActivityOutbox() {
+            pendingActivitySyncCount = items.filter { $0.ownerID == currentUserID }.count
         }
     }
 
@@ -150,6 +166,76 @@ final class SupabaseRESTClient: ObservableObject {
         }
     }
 
+
+    private func loadActivityOutbox() -> [PendingActivitySession]? {
+        guard let data = UserDefaults.standard.data(forKey: activityOutboxKey) else {
+            isActivityOutboxReadable = true
+            return []
+        }
+        do {
+            let items = try JSONDecoder().decode([PendingActivitySession].self, from: data)
+            isActivityOutboxReadable = true
+            return items
+        } catch {
+            isActivityOutboxReadable = false
+            status = "Activity cloud sync paused: the on-device retry queue could not be read. Original data was preserved; pending count is unknown."
+            return nil
+        }
+    }
+
+    private func saveActivityOutbox(_ items: [PendingActivitySession]) -> Bool {
+        do {
+            let data = try JSONEncoder().encode(items)
+            UserDefaults.standard.set(data, forKey: activityOutboxKey)
+            guard let saved = UserDefaults.standard.data(forKey: activityOutboxKey),
+                  let verified = try? JSONDecoder().decode([PendingActivitySession].self, from: saved),
+                  verified.map(\.revisionID) == items.map(\.revisionID) else {
+                status = "Activity sync queue could not be verified after saving. The activity remains saved locally."
+                return false
+            }
+            pendingActivitySyncCount = items.filter { $0.ownerID == currentUserID }.count
+            return true
+        } catch {
+            status = "Activity sync queue could not be encoded: " + error.localizedDescription
+            return false
+        }
+    }
+
+    /// Persist a completed local activity before attempting any cloud request.
+    func enqueueActivitySession(_ record: ActivitySessionRecord) {
+        guard let ownerID = currentUserID else {
+            status = "Activity saved on this iPhone. Sign in to queue its cloud upload."
+            return
+        }
+        guard var items = loadActivityOutbox() else { return }
+        if items.contains(where: { $0.ownerID == ownerID && $0.record.id == record.id }) { return }
+        items.append(PendingActivitySession(ownerID: ownerID, revisionID: UUID(), record: record, queuedAt: Date()))
+        guard saveActivityOutbox(items) else { return }
+        status = "Activity saved locally and safely queued for cloud sync."
+    }
+
+    /// Retry each activity's step and route writes independently. Remove the
+    /// queue item only after every deliverable present in the local record is acknowledged.
+    func retryPendingActivitySessions() async {
+        guard !isRetryingActivityOutbox, isSignedIn, let ownerID = currentUserID else { return }
+        guard let pending = loadActivityOutbox() else { return }
+        isRetryingActivityOutbox = true
+        defer { isRetryingActivityOutbox = false }
+        for item in pending where item.ownerID == ownerID {
+            let record = item.record
+            var allAcknowledged = true
+            if let steps = record.steps {
+                allAcknowledged = await syncActivitySession(id: record.id, activity: record.activity, startedAt: record.startedAt, finishedAt: record.finishedAt, steps: steps) && allAcknowledged
+            }
+            if let points = record.routePoints, !points.isEmpty {
+                allAcknowledged = await syncActivitySessionRoute(id: record.id, startedAt: record.startedAt, finishedAt: record.finishedAt, steps: record.steps, points: points) && allAcknowledged
+            }
+            guard allAcknowledged else { continue }
+            guard let current = loadActivityOutbox() else { return }
+            _ = saveActivityOutbox(current.filter { !($0.id == item.id && $0.revisionID == item.revisionID) })
+        }
+    }
+
     func signIn(email: String, password: String) async {
         do {
             var request = URLRequest(url: baseURL.appendingPathComponent("auth/v1/token").appending(queryItems: [URLQueryItem(name: "grant_type", value: "password")]))
@@ -169,6 +255,7 @@ final class SupabaseRESTClient: ObservableObject {
             pendingHealthSyncCount = (loadHealthOutbox() ?? []).filter { $0.ownerID == currentUserID }.count
             status = "Signed in. Your existing cloud records can be shared with GATIVX."
             await retryPendingHealthSyncs()
+            await retryPendingActivitySessions()
         } catch {
             status = "Sign-in failed: \(error.localizedDescription)"
         }
@@ -198,6 +285,7 @@ final class SupabaseRESTClient: ObservableObject {
                 }
                 status = "Account created and signed in."
                 await retryPendingHealthSyncs()
+                await retryPendingActivitySessions()
             } else {
                 status = "Account request accepted. Check your email to verify the account, then sign in."
             }
@@ -349,8 +437,8 @@ final class SupabaseRESTClient: ObservableObject {
         guard (200..<300).contains(http.statusCode) else { throw Self.serverError(data) }
     }
 
-    func syncActivitySession(id: UUID, activity: String, startedAt: Date, finishedAt: Date, steps: Int, retryAfterRefresh: Bool = true) async {
-        guard steps >= 0, finishedAt >= startedAt else { return }
+    func syncActivitySession(id: UUID, activity: String, startedAt: Date, finishedAt: Date, steps: Int, retryAfterRefresh: Bool = true) async -> Bool {
+        guard steps >= 0, finishedAt >= startedAt else { return false }
         do {
             guard let token = accessToken else { throw ClientError.notSignedIn }
             var request = URLRequest(url: baseURL.appendingPathComponent("rest/v1/rpc/sync_activity_session_steps"))
@@ -371,20 +459,21 @@ final class SupabaseRESTClient: ObservableObject {
             guard let http = response as? HTTPURLResponse else { throw ClientError.invalidResponse }
             if http.statusCode == 401 && retryAfterRefresh {
                 try await refreshSession()
-                await syncActivitySession(id: id, activity: activity, startedAt: startedAt, finishedAt: finishedAt, steps: steps, retryAfterRefresh: false)
-                return
+                return await syncActivitySession(id: id, activity: activity, startedAt: startedAt, finishedAt: finishedAt, steps: steps, retryAfterRefresh: false)
             }
             guard (200..<300).contains(http.statusCode) else { throw Self.serverError(data) }
             status = "Activity session synced to your GATIVX account."
+            return true
         } catch {
             status = "Activity saved on this iPhone; cloud sync pending: " + error.localizedDescription
+            return false
         }
     }
-    func syncActivitySessionRoute(id: UUID, startedAt: Date, finishedAt: Date, steps: Int?, points: [GATIVXRoutePoint], retryAfterRefresh: Bool = true) async {
-        guard !points.isEmpty else { return }
+    func syncActivitySessionRoute(id: UUID, startedAt: Date, finishedAt: Date, steps: Int?, points: [GATIVXRoutePoint], retryAfterRefresh: Bool = true) async -> Bool {
+        guard !points.isEmpty else { return false }
         guard steps == nil || (steps! >= 0 && steps! <= 200_000) else {
             status = "GPS route saved on this iPhone; cloud sync is pending because the session step count is invalid."
-            return
+            return false
         }
         // The database RPC caps payloads at 20,000 points. Preserve the full
         // local recording, but uniformly thin oversized cloud payloads while
@@ -434,13 +523,14 @@ final class SupabaseRESTClient: ObservableObject {
             guard let walkHTTP = walkResponse as? HTTPURLResponse else { throw ClientError.invalidResponse }
             if walkHTTP.statusCode == 401 && retryAfterRefresh {
                 try await refreshSession()
-                await syncActivitySessionRoute(id: id, startedAt: startedAt, finishedAt: finishedAt, steps: steps, points: points, retryAfterRefresh: false)
-                return
+                return await syncActivitySessionRoute(id: id, startedAt: startedAt, finishedAt: finishedAt, steps: steps, points: points, retryAfterRefresh: false)
             }
             guard (200..<300).contains(walkHTTP.statusCode) else { throw Self.serverError(walkData) }
             status = "GPS route synced to GATIVX walking history."
+            return true
         } catch {
             status = "GPS route saved on this iPhone; cloud sync pending: " + error.localizedDescription
+            return false
         }
     }
 
