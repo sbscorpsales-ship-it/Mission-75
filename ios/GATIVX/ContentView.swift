@@ -316,6 +316,7 @@ struct ContentView: View {
     @AppStorage("gativx.heartPointsGoal") private var heartPointsGoal = 30
     @AppStorage("gativx.dailyStepGoal") private var dailyStepGoal = 10_000
     @State private var selectedTab = 0
+    @State private var isGuruPresented = false
     @AppStorage("gativx.guru.goal") private var guruGoal = ""
     @AppStorage("gativx.guru.purpose") private var guruPurpose = ""
     @AppStorage("gativx.guru.emotion") private var guruEmotion = ""
@@ -441,7 +442,7 @@ struct ContentView: View {
                 .padding(15)
                 .background(LinearGradient(colors: [neon.opacity(0.18), cardBackground], startPoint: .leading, endPoint: .trailing), in: RoundedRectangle(cornerRadius: 22))
                 .overlay(RoundedRectangle(cornerRadius: 22).stroke(neon.opacity(0.45), lineWidth: 1))
-                dashboardFeature(icon: "leaf", title: "Gati Guru", headline: "Remember why you started.", detail: "Small, consistent actions create extraordinary results.", action: { selectedTab = 5 })
+                dashboardFeature(icon: "leaf", title: "Gati Guru", headline: "Remember why you started.", detail: "Small, consistent actions create extraordinary results.", action: { isGuruPresented = true })
                 VStack(alignment: .leading, spacing: 9) {
                     HStack {
                         Label("My Journey", systemImage: "calendar").font(.headline)
@@ -599,7 +600,7 @@ struct ContentView: View {
                 Text("Your goal progress").font(.headline)
                 ProgressView(value: stepProgress).tint(neon)
                 Text(displayedDailySteps.map { "\($0.formatted()) of \(max(dailyStepGoal, 1).formatted()) steps" } ?? "Waiting for a step reading").font(.caption).foregroundStyle(.secondary)
-                Button("Open Gati Guru") { selectedTab = 5 }.buttonStyle(.bordered)
+                Button("Open Gati Guru") { isGuruPresented = true }.buttonStyle(.bordered)
             }.padding(16)
         }.background(pageBackground.ignoresSafeArea())
     }
@@ -842,13 +843,22 @@ struct ContentView: View {
                 .tabItem { Label("Activity", systemImage: "figure.walk") }.tag(1)
             NavigationStack { missionsScreen.navigationTitle("Missions") }
                 .tabItem { Label("Missions", systemImage: "target") }.tag(2)
-            NavigationStack { guruScreen.navigationTitle("Gati Guru") }
-                .tabItem { Label("Guru", systemImage: "leaf") }.tag(5)
             NavigationStack { communityScreen.navigationTitle("Community") }
                 .tabItem { Label("Community", systemImage: "person.3") }.tag(3)
             NavigationStack { profileScreen.navigationTitle("Profile") }
                 .tabItem { Label("Profile", systemImage: "person.crop.circle") }.tag(4)
         }
+                .sheet(isPresented: $isGuruPresented) {
+                    NavigationStack {
+                        guruScreen
+                            .navigationTitle("Gati Guru")
+                            .toolbar {
+                                ToolbarItem(placement: .confirmationAction) {
+                                    Button("Done") { isGuruPresented = false }
+                                }
+                            }
+                    }
+                }
                 .tint(neon)
             } else {
                 welcomeScreen
