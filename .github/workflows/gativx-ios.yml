@@ -77,7 +77,7 @@ jobs:
           health = Path("ios/GATIVX/HealthKit/HealthKitManager.swift").read_text()
           cloud = Path("ios/GATIVX/Cloud/SupabaseRESTClient.swift").read_text()
           migration = Path("supabase/migrations/20261109113101_allow_gps_route_sync_without_step_count.sql").read_text()
-          outbox = cloud.split("private enum PendingHealthSyncKind", 1)[1] if "private enum PendingHealthSyncKind" in cloud else ""
+          outbox = cloud.split("enum PendingHealthSyncKind", 1)[1] if "enum PendingHealthSyncKind" in cloud else ""
           step_sync = cloud.split("func syncSteps(date: Date, steps: Int)", 1)[1].split("func syncActiveEnergy", 1)[0]
           energy_sync = cloud.split("func syncActiveEnergy", 1)[1].split("func syncMotionDailySteps", 1)[0]
           motion_sync = cloud.split("func syncMotionDailySteps", 1)[1].split("private func performStepSync", 1)[0]
