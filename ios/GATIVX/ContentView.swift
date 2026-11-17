@@ -406,6 +406,7 @@ struct ContentView: View {
             .padding(.horizontal, 16).padding(.top, 10).padding(.bottom, 24)
         }
         .background(pageBackground.ignoresSafeArea())
+        .accessibilityIdentifier("gativx-home-dashboard")
     }
 
     private var activityScreen: some View {
