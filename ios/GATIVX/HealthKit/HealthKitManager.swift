@@ -8,6 +8,9 @@ import Combine
 final class HealthKitManager: ObservableObject {
     @Published private(set) var todaySteps: Int?
     @Published private(set) var todayActiveEnergyKcal: Int?
+    @Published private(set) var todayWalkingRunningDistanceKm: Double?
+    @Published private(set) var todayExerciseMinutes: Int?
+    @Published private(set) var todayAverageHeartRateBPM: Int?
     @Published private(set) var isAvailable = HKHealthStore.isHealthDataAvailable()
     @Published private(set) var isRefreshing = false
     @Published private(set) var hasRequestedAccess = UserDefaults.standard.bool(forKey: "gativx.healthkit.connectionRequested")
@@ -20,6 +23,9 @@ final class HealthKitManager: ObservableObject {
     private let connectionRequestedKey = "gativx.healthkit.connectionRequested"
     private let stepType = HKObjectType.quantityType(forIdentifier: .stepCount)!
     private let energyType = HKObjectType.quantityType(forIdentifier: .activeEnergyBurned)!
+    private let distanceType = HKObjectType.quantityType(forIdentifier: .distanceWalkingRunning)!
+    private let exerciseType = HKObjectType.quantityType(forIdentifier: .appleExerciseTime)!
+    private let heartRateType = HKObjectType.quantityType(forIdentifier: .heartRate)!
     private var observers: [HKObserverQuery] = []
     private var refreshAgain = false
     private var pendingCompletions: [() -> Void] = []
@@ -30,11 +36,12 @@ final class HealthKitManager: ObservableObject {
         startObserving()
         refreshRecentDays()
         refreshTodayEnergy()
+        refreshTodayMetrics()
     }
 
     func requestReadAccessAndStart() {
         guard isAvailable else { statusMessage = "Apple Health is unavailable on this iPhone."; return }
-        store.requestAuthorization(toShare: [], read: [stepType, energyType]) { [weak self] _, error in
+        store.requestAuthorization(toShare: [], read: [stepType, energyType, distanceType, exerciseType, heartRateType]) { [weak self] _, error in
             Task { @MainActor in
                 guard let self else { return }
                 if let error {
@@ -158,11 +165,61 @@ final class HealthKitManager: ObservableObject {
         store.execute(query)
     }
 
+
+    /// Read measured daily distance, exercise minutes and average heart rate.
+    /// Missing HealthKit samples remain nil; the dashboard must not invent values.
+    func refreshTodayMetrics(onComplete: (() -> Void)? = nil) {
+        guard UserDefaults.standard.bool(forKey: connectionRequestedKey), isAvailable else {
+            onComplete?()
+            return
+        }
+        let start = Calendar.current.startOfDay(for: Date())
+        let predicate = HKQuery.predicateForSamples(withStart: start, end: Date(), options: .strictStartDate)
+        let group = DispatchGroup()
+
+        group.enter()
+        let distanceQuery = HKStatisticsQuery(quantityType: distanceType, quantitySamplePredicate: predicate, options: .cumulativeSum) { [weak self] _, statistics, error in
+            Task { @MainActor in
+                if error == nil {
+                    self?.todayWalkingRunningDistanceKm = statistics?.sumQuantity().map { $0.doubleValue(for: .meter()) / 1000 }
+                }
+                group.leave()
+            }
+        }
+        store.execute(distanceQuery)
+
+        group.enter()
+        let exerciseQuery = HKStatisticsQuery(quantityType: exerciseType, quantitySamplePredicate: predicate, options: .cumulativeSum) { [weak self] _, statistics, error in
+            Task { @MainActor in
+                if error == nil {
+                    self?.todayExerciseMinutes = statistics?.sumQuantity().map { Int($0.doubleValue(for: .minute()).rounded()) }
+                }
+                group.leave()
+            }
+        }
+        store.execute(exerciseQuery)
+
+        group.enter()
+        let heartRateQuery = HKStatisticsQuery(quantityType: heartRateType, quantitySamplePredicate: predicate, options: .discreteAverage) { [weak self] _, statistics, error in
+            Task { @MainActor in
+                if error == nil {
+                    self?.todayAverageHeartRateBPM = statistics?.averageQuantity().map {
+                        Int($0.doubleValue(for: HKUnit.count().unitDivided(by: .minute())).rounded())
+                    }
+                }
+                group.leave()
+            }
+        }
+        store.execute(heartRateQuery)
+
+        group.notify(queue: .main) { onComplete?() }
+    }
+
     func startObserving() {
         guard observers.isEmpty, isAvailable else { return }
         // Observe both quantities so a change in active energy refreshes calories
         // even when no new step sample is written at the same time.
-        for type in [stepType, energyType] {
+        for type in [stepType, energyType, distanceType, exerciseType, heartRateType] {
             let observedType = type
             let query = HKObserverQuery(sampleType: observedType, predicate: nil) { [weak self] _, completion, error in
                 guard let self else { completion(); return }
@@ -258,6 +315,9 @@ final class HealthKitManager: ObservableObject {
         store.disableBackgroundDelivery(for: energyType) { _, _ in }
         todaySteps = nil
         todayActiveEnergyKcal = nil
+        todayWalkingRunningDistanceKm = nil
+        todayExerciseMinutes = nil
+        todayAverageHeartRateBPM = nil
         lastRefresh = nil
         statusMessage = "Apple Health disconnected in GATIVX."
     }
