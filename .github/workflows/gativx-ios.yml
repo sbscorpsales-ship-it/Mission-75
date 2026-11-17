@@ -136,7 +136,6 @@ jobs:
               "Legacy history is removed only after verified file migration": "try write(records, to: url)" in activity_store and activity_store.index("try write(records, to: url)") < activity_store.index("userDefaults.removeObject(forKey: legacyKey)"),
               "Corrupt activity history is never overwritten with an empty list": "Could not read existing activity history" in finish_activity and "try self.activityStore.load()" in finish_activity,
               "Failed local activity save preserves GPS draft": "Your GPS draft remains preserved" in finish_activity and "catch {" in finish_activity,
-              "Corrupt activity history is never overwritten with an empty list": "Could not read existing activity history" in finish_activity and "existingData.map" in finish_activity,
               "Always permission enables background GPS during an active walk": "else if isRecording" in auth_handler and "manager.allowsBackgroundLocationUpdates = true" in auth_handler and "manager.showsBackgroundLocationIndicator = true" in auth_handler,
               "Active GPS updates resume after permission change": "manager.startUpdatingLocation()" in auth_handler,
               "Location downgrade removes background GPS claim": "manager.allowsBackgroundLocationUpdates = false" in auth_handler and "Allow Always location for background recording" in auth_handler,
