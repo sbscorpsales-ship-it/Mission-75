@@ -374,15 +374,15 @@ struct ContentView: View {
                     }
                 }
                 .padding(17).background(cardBackground, in: RoundedRectangle(cornerRadius: 22))
-                HStack(spacing: 12) {
-                    metricCard("Live steps", value: liveMotionSteps?.formatted() ?? "—", unit: "steps", symbol: "figure.walk")
-                    metricCard("Active energy", value: health.todayActiveEnergyKcal.map { String(Int($0)) } ?? "—", unit: "kcal", symbol: "flame")
+                HStack(spacing: 10) {
+                    metricCard("Distance", value: health.todayWalkingRunningDistanceKm.map { String(format: "%.1f", $0) } ?? "—", unit: "km", symbol: "location")
+                    metricCard("Active time", value: health.todayExerciseMinutes.map(String.init) ?? "—", unit: "min", symbol: "timer")
                 }
-                HStack(spacing: 12) {
-                    metricCard("Distance", value: liveMotionDistanceMeters.map { String(format: "%.2f", $0 / 1000) } ?? "—", unit: "km", symbol: "location")
-                    metricCard("Heart rate", value: "—", unit: "bpm", symbol: "heart")
+                HStack(spacing: 10) {
+                    metricCard("Calories", value: health.todayActiveEnergyKcal.map(String.init) ?? "—", unit: "kcal", symbol: "flame")
+                    metricCard("Avg. heart rate", value: health.todayAverageHeartRateBPM.map(String.init) ?? "—", unit: "bpm", symbol: "heart")
                 }
-                Text("Heart rate appears only when a supported real reading is available. GATIVX never invents health measurements.")
+                Text("Daily distance, exercise time, active energy and heart rate are read from Apple Health. Missing readings remain unavailable; the live iPhone pedometer is shown separately.")
                     .font(.caption2).foregroundStyle(.secondary)
                 VStack(alignment: .leading, spacing: 8) {
                     Label("GATI GURU", systemImage: "sparkles").font(.caption.weight(.bold)).foregroundStyle(neon)
