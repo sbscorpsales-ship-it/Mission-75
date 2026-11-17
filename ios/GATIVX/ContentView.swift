@@ -306,13 +306,14 @@ struct ContentView: View {
 
     private var stepProgress: Double {
         guard let steps = displayedDailySteps else { return 0 }
-        return min(Double(steps) / 10_000, 1)
+        return min(Double(steps) / Double(max(dailyStepGoal, 1)), 1)
     }
 
     @AppStorage("gativx.appearance") private var appearanceMode = "system"
     @AppStorage("gativx.localModeEntered") private var localModeEntered = false
     @AppStorage("gativx.activeEnergyGoalKcal") private var activeEnergyGoalKcal = 500
     @AppStorage("gativx.heartPointsGoal") private var heartPointsGoal = 30
+    @AppStorage("gativx.dailyStepGoal") private var dailyStepGoal = 10_000
     @State private var selectedTab = 0
 
     private var dashboardColorScheme: ColorScheme? {
@@ -355,14 +356,14 @@ struct ContentView: View {
             VStack(spacing: 5) {
                 Image(systemName: "figure.walk").font(.title2).foregroundStyle(neon)
                 Text(displayedDailySteps?.formatted() ?? "—").font(.system(size: 34, weight: .bold, design: .rounded)).monospacedDigit().minimumScaleFactor(0.7).lineLimit(1)
-                Text("OF 10,000 STEPS").font(.caption2.weight(.bold)).foregroundStyle(.secondary)
-                Text(displayedDailySteps.map { "\(Int(min(Double($0) / 10000, 1) * 100))% complete" } ?? "Waiting for data").font(.caption).foregroundStyle(.secondary)
+                Text("OF \(max(dailyStepGoal, 1).formatted()) STEPS").font(.caption2.weight(.bold)).foregroundStyle(.secondary)
+                Text(displayedDailySteps.map { "\(Int(min(Double($0) / Double(max(dailyStepGoal, 1)), 1) * 100))% complete" } ?? "Waiting for data").font(.caption).foregroundStyle(.secondary)
             }
         }
         .frame(width: 190, height: 190)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Today's steps")
-        .accessibilityValue(displayedDailySteps.map { "\($0) of 10000" } ?? "No reading")
+        .accessibilityValue(displayedDailySteps.map { "\($0) of \(max(dailyStepGoal, 1))" } ?? "No reading")
     }
 
     private var homeDashboard: some View {
@@ -400,7 +401,7 @@ struct ContentView: View {
                             VStack(alignment: .leading, spacing: 9) {
                                 Image(systemName: "gift.fill").font(.title2).foregroundStyle(neon)
                                 Text("Today's Mission").font(.subheadline.weight(.semibold))
-                                Text("8,000 steps").font(.title3.weight(.bold))
+                                Text("\(max(dailyStepGoal, 1).formatted()) steps").font(.title3.weight(.bold))
                                 Image(systemName: "chevron.right.circle.fill").font(.title2).foregroundStyle(neon)
                             }
                             .frame(maxWidth: .infinity, minHeight: 118, alignment: .leading)
