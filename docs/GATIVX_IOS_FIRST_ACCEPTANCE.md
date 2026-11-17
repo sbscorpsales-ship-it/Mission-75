@@ -4,6 +4,14 @@
 **Integration PR:** #106  
 **Rule:** Android and web implementation are frozen until iOS is accepted. Do not start parallel platform work.
 
+## Dashboard design decision — locked
+
+- Visual identity: **C — White + Neon Green**.
+- Layout priority: **Balanced** — fitness metrics, missions, Gati Guru and community share the home dashboard.
+- Primary navigation: **Home, Activity, Missions, Community, Profile**.
+- Keep the dashboard readable, accessible and consistent; do not switch back to the earlier neon-yellow/black concept.
+- Treat this as the approved design direction. Implementation and visual QA still need to be completed on the iOS app; approval of the concept is not proof that the shipped screen matches it.
+
 ## What CI can prove
 
 | Check | Result |
