@@ -41,7 +41,7 @@ final class SupabaseRESTClient: ObservableObject {
             refreshToken = saved.refreshToken
             isSignedIn = accessToken != nil
         }
-        pendingHealthSyncCount = loadHealthOutbox().filter { $0.ownerID == currentUserID }.count
+        pendingHealthSyncCount = (loadHealthOutbox() ?? []).filter { $0.ownerID == currentUserID }.count
     }
 
 
@@ -71,21 +71,29 @@ final class SupabaseRESTClient: ObservableObject {
         return Calendar.current.date(from: DateComponents(year: parts[0], month: parts[1], day: parts[2]))
     }
 
-    private func loadHealthOutbox() -> [PendingHealthSync] {
-        guard let data = UserDefaults.standard.data(forKey: healthOutboxKey),
-              let items = try? JSONDecoder().decode([PendingHealthSync].self, from: data) else { return [] }
-        return items
+    private func loadHealthOutbox() -> [PendingHealthSync]? {
+        guard let data = UserDefaults.standard.data(forKey: healthOutboxKey) else { return [] }
+        do {
+            return try JSONDecoder().decode([PendingHealthSync].self, from: data)
+        } catch {
+            // Never interpret unreadable queued sensor records as an empty queue.
+            status = "Sensor sync paused: the on-device retry queue could not be read. Original data was left untouched; contact support before clearing app data."
+            return nil
+        }
     }
 
     private func saveHealthOutbox(_ items: [PendingHealthSync]) {
-        if let data = try? JSONEncoder().encode(items) {
+        do {
+            let data = try JSONEncoder().encode(items)
             UserDefaults.standard.set(data, forKey: healthOutboxKey)
             pendingHealthSyncCount = items.filter { $0.ownerID == currentUserID }.count
+        } catch {
+            status = "Sensor sync queue could not be encoded. Existing queued data was not intentionally replaced."
         }
     }
 
     private func enqueueHealthSync(_ item: PendingHealthSync) {
-        var items = loadHealthOutbox()
+        guard var items = loadHealthOutbox() else { return }
         items.removeAll { $0.id == item.id }
         items.append(item)
         items.sort { $0.queuedAt < $1.queuedAt }
@@ -95,7 +103,8 @@ final class SupabaseRESTClient: ObservableObject {
     private func acknowledgeHealthSync(_ item: PendingHealthSync) {
         // An older in-flight request must not remove a newer reading for the
         // same member/day that was queued while the request was awaiting I/O.
-        saveHealthOutbox(loadHealthOutbox().filter {
+        guard let items = loadHealthOutbox() else { return }
+        saveHealthOutbox(items.filter {
             !($0.id == item.id && $0.revisionID == item.revisionID)
         })
     }
@@ -105,10 +114,11 @@ final class SupabaseRESTClient: ObservableObject {
     /// removed independently; failed items remain on this device.
     func retryPendingHealthSyncs() async {
         guard isSignedIn, let ownerID = currentUserID else { return }
-        let pending = loadHealthOutbox().filter { $0.ownerID == ownerID }
+        guard let outbox = loadHealthOutbox() else { return }
+        let pending = outbox.filter { $0.ownerID == ownerID }
         for item in pending {
             guard let day = dateForLocalDay(item.localDay) else {
-                acknowledgeHealthSync(item)
+                status = "Sensor sync paused: a queued record has an invalid date. The original record was retained for recovery."
                 continue
             }
             switch item.kind {
@@ -140,7 +150,7 @@ final class SupabaseRESTClient: ObservableObject {
             refreshToken = session.refreshToken
             saveSession(session)
             isSignedIn = true
-            pendingHealthSyncCount = loadHealthOutbox().filter { $0.ownerID == currentUserID }.count
+            pendingHealthSyncCount = (loadHealthOutbox() ?? []).filter { $0.ownerID == currentUserID }.count
             status = "Signed in. Your existing cloud records can be shared with GATIVX."
             await retryPendingHealthSyncs()
         } catch {
