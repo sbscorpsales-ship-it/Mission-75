@@ -149,7 +149,19 @@ struct ContentView: View {
 
     private func syncSavedActivitySessions() {
         guard cloud.isSignedIn else { return }
-        let history = (try? JSONDecoder().decode([ActivitySessionRecord].self, from: UserDefaults.standard.data(forKey: "gativx.activitySessions.v1") ?? Data())) ?? []
+        let storageKey = "gativx.activitySessions.v1"
+        let history: [ActivitySessionRecord]
+        if let data = UserDefaults.standard.data(forKey: storageKey) {
+            do {
+                history = try JSONDecoder().decode([ActivitySessionRecord].self, from: data)
+            } catch {
+                // Corrupt local history must never masquerade as an empty history.
+                historyStatus = "Cloud sync paused: saved activity history could not be read. Existing data was not changed."
+                return
+            }
+        } else {
+            history = []
+        }
         Task {
             for record in history {
                 // Step data and GPS route are independent deliverables.
@@ -217,11 +229,11 @@ struct ContentView: View {
                 guard self.isFinishingSession, self.sessionStarted == start else { return }
                 let finalSteps = queriedSteps ?? self.sessionSteps
                 guard finalSteps != nil || !routePoints.isEmpty else {
-                    self.routeRecorder.clearDraft()
+                    // Do not discard an activity just because both sensors failed
+                    // to return data. Keep the active session identity and durable
+                    // route draft so the member can retry or recover it.
                     self.sessionSteps = nil
-                    self.sessionStatus = "No step count or GPS route points were recorded."
-                    self.sessionStarted = nil
-                    self.activeSessionID = nil
+                    self.sessionStatus = "No verified step count or GPS points were received. Nothing was saved or counted. Your session remains available; retry after checking Motion and Location permissions."
                     self.isFinishingSession = false
                     return
                 }
