@@ -690,6 +690,14 @@ struct ContentView: View {
             Section("Apple Health") {
                 Label(health.hasRequestedAccess ? "Connection requested" : "Not connected", systemImage: "heart.text.square")
                 Text(health.statusMessage).font(.caption).foregroundStyle(.secondary)
+                if !health.isWorkoutOutboxReadable {
+                    Text("Apple Health workout export queue unreadable. Pending export count is unknown; local activity history remains saved.")
+                        .font(.caption).foregroundStyle(.red)
+                } else if health.pendingWorkoutExportCount > 0 {
+                    Text("\(health.pendingWorkoutExportCount) workout export(s) waiting for Apple Health retry.")
+                        .font(.caption).foregroundStyle(.orange)
+                    Button("Retry Apple Health exports") { health.retryPendingWorkoutExports() }
+                }
                 if !health.hasRequestedAccess {
                     Button("Connect Apple Health") { health.requestReadAccessAndStart() }.disabled(!health.isAvailable || health.isRefreshing)
                 }
@@ -857,6 +865,7 @@ struct ContentView: View {
                 Task { await cloud.syncActiveEnergy(date: day, kilocalories: total) }
             }
             health.resumeIfPreviouslyConnected()
+            health.retryPendingWorkoutExports()
             health.refreshOnForeground()
             startLiveMotionMonitor()
             loadActivityHistory()
@@ -888,6 +897,7 @@ struct ContentView: View {
         }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {
+                health.retryPendingWorkoutExports()
                 health.refreshOnForeground()
                 startLiveMotionMonitor()
                 if cloud.isSignedIn {
