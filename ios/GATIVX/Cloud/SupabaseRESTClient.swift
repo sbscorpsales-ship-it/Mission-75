@@ -148,6 +148,55 @@ final class SupabaseRESTClient: ObservableObject {
         }
     }
 
+    /// Create a new GATIVX account through Supabase Auth. If email confirmation
+    /// is enabled, Supabase returns a user without a session; the member must
+    /// verify the email and then sign in normally.
+    func signUp(email: String, password: String) async {
+        do {
+            var request = URLRequest(url: baseURL.appendingPathComponent("auth/v1/signup"))
+            request.httpMethod = "POST"
+            request.setValue(publishableKey, forHTTPHeaderField: "apikey")
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.httpBody = try JSONSerialization.data(withJSONObject: ["email": email, "password": password])
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+                throw Self.serverError(data)
+            }
+            if let session = try? JSONDecoder().decode(AuthSession.self, from: data) {
+                accessToken = session.accessToken
+                refreshToken = session.refreshToken
+                saveSession(session)
+                isSignedIn = true
+                pendingHealthSyncCount = loadHealthOutbox().filter { $0.ownerID == currentUserID }.count
+                status = "Account created and signed in."
+                await retryPendingHealthSyncs()
+            } else {
+                status = "Account request accepted. Check your email to verify the account, then sign in."
+            }
+        } catch {
+            status = "Account creation failed: \\(error.localizedDescription)"
+        }
+    }
+
+    /// Send Supabase's password-recovery email. The app never handles or stores
+    /// a password-reset token; the secure recovery flow is completed by email.
+    func sendPasswordReset(email: String) async {
+        do {
+            var request = URLRequest(url: baseURL.appendingPathComponent("auth/v1/recover"))
+            request.httpMethod = "POST"
+            request.setValue(publishableKey, forHTTPHeaderField: "apikey")
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.httpBody = try JSONSerialization.data(withJSONObject: ["email": email])
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+                throw Self.serverError(data)
+            }
+            status = "If this email belongs to a GATIVX account, password-recovery instructions have been sent."
+        } catch {
+            status = "Password recovery could not be requested: \\(error.localizedDescription)"
+        }
+    }
+
     func syncSteps(date: Date, steps: Int) async {
         guard steps >= 0 else { return }
         guard let ownerID = currentUserID else { status = "Step sync pending until a valid account session is available."; return }
