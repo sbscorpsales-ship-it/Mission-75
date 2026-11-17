@@ -310,6 +310,9 @@ struct ContentView: View {
     }
 
     @AppStorage("gativx.appearance") private var appearanceMode = "system"
+    @AppStorage("gativx.localModeEntered") private var localModeEntered = false
+    @AppStorage("gativx.activeEnergyGoalKcal") private var activeEnergyGoalKcal = 500
+    @AppStorage("gativx.heartPointsGoal") private var heartPointsGoal = 30
     @State private var selectedTab = 0
 
     private var dashboardColorScheme: ColorScheme? {
@@ -414,6 +417,7 @@ struct ContentView: View {
                     compactMetric("Calories", value: health.todayActiveEnergyKcal.map(String.init) ?? "—", unit: "", icon: "flame.fill", tint: .orange)
                     compactMetric("Avg. Heart Rate", value: health.todayAverageHeartRateBPM.map(String.init) ?? "—", unit: "bpm", icon: "heart", tint: .pink)
                 }
+                wellnessMeters
                 HStack(spacing: 12) {
                     Image(systemName: "figure.walk").font(.system(size: 29, weight: .bold)).foregroundStyle(neon)
                     VStack(alignment: .leading, spacing: 3) {
@@ -637,8 +641,101 @@ struct ContentView: View {
         }
     }
 
+    private func progressMeterCard(title: String, value: Int?, goal: Int, unit: String, symbol: String, tint: Color, explanation: String) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 7) {
+                Image(systemName: symbol).foregroundStyle(tint)
+                Text(title).font(.subheadline.weight(.bold))
+                Spacer()
+            }
+            HStack(spacing: 12) {
+                ZStack {
+                    Circle().stroke(tint.opacity(0.16), lineWidth: 9)
+                    Circle().trim(from: 0, to: min(Double(value ?? 0) / Double(max(goal, 1)), 1))
+                        .stroke(tint, style: StrokeStyle(lineWidth: 9, lineCap: .round)).rotationEffect(.degrees(-90))
+                    Image(systemName: symbol).font(.title3.weight(.bold)).foregroundStyle(tint)
+                }.frame(width: 58, height: 58)
+                VStack(alignment: .leading, spacing: 3) {
+                    HStack(alignment: .firstTextBaseline, spacing: 3) {
+                        Text(value.map(String.init) ?? "—").font(.title2.weight(.bold).monospacedDigit())
+                        Text(unit).font(.caption).foregroundStyle(.secondary)
+                    }
+                    Text("Goal: \(goal) \(unit)").font(.caption2).foregroundStyle(.secondary)
+                    Text(value == nil ? "Waiting for measured data" : "\(Int(min(Double(value ?? 0) / Double(max(goal, 1)), 1) * 100))% of goal")
+                        .font(.caption2.weight(.semibold)).foregroundStyle(tint)
+                }
+            }
+            Text(explanation).font(.caption2).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(14).frame(maxWidth: .infinity, alignment: .leading)
+        .background(cardBackground, in: RoundedRectangle(cornerRadius: 19, style: .continuous))
+    }
+
+    private var wellnessMeters: some View {
+        HStack(alignment: .top, spacing: 10) {
+            progressMeterCard(title: "Active Calories", value: health.todayActiveEnergyKcal,
+                goal: max(activeEnergyGoalKcal, 1), unit: "kcal", symbol: "flame.fill", tint: .orange,
+                explanation: "Measured active energy from Apple Health, not food calories.")
+            progressMeterCard(title: "Heart Points", value: health.todayExerciseMinutes,
+                goal: max(heartPointsGoal, 1), unit: "pts", symbol: "heart.fill", tint: .pink,
+                explanation: "GATIVX exercise points: 1 point per Apple Exercise minute. Not Google's intensity-weighted score.")
+        }
+    }
+
+    private var welcomeScreen: some View {
+        ZStack {
+            GATIVXMountainBackdrop(isNight: appearanceMode == "night").ignoresSafeArea()
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    HStack(spacing: 10) {
+                        Image(systemName: "figure.walk").font(.system(size: 32, weight: .black)).foregroundStyle(neon)
+                        VStack(alignment: .leading, spacing: 0) {
+                            Text("GATIVX").font(.system(size: 30, weight: .black, design: .rounded))
+                            Text("FROM GOALS TO XCELLENCE").font(.caption2.weight(.heavy)).tracking(1.1)
+                        }
+                    }.padding(.top, 42)
+                    Spacer(minLength: 20)
+                    Text("Your health journey starts here.").font(.system(size: 32, weight: .bold, design: .rounded))
+                    Text("Track movement, understand your progress and build healthier habits with a community that keeps you moving.")
+                        .font(.subheadline).foregroundStyle(.secondary)
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("SIGN IN TO GATIVX").font(.caption.weight(.heavy)).tracking(1)
+                        TextField("Email address", text: $email).textContentType(.emailAddress)
+                            .textInputAutocapitalization(.never).keyboardType(.emailAddress).autocorrectionDisabled()
+                            .padding(14).background(cardBackground, in: RoundedRectangle(cornerRadius: 13))
+                        SecureField("Password", text: $password).textContentType(.password)
+                            .padding(14).background(cardBackground, in: RoundedRectangle(cornerRadius: 13))
+                        Button {
+                            Task {
+                                await cloud.signIn(email: email, password: password)
+                                if cloud.isSignedIn { localModeEntered = true }
+                            }
+                        } label: {
+                            HStack { Spacer(); Text("Sign in & sync").fontWeight(.bold); Spacer() }
+                                .padding(15).foregroundStyle(.black).background(neon, in: Capsule())
+                        }.disabled(email.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || password.isEmpty)
+                        Text(cloud.status).font(.caption).foregroundStyle(.secondary)
+                    }.padding(17).background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 22))
+                    Button { localModeEntered = true } label: {
+                        HStack { Spacer(); Text("Continue without account").fontWeight(.semibold); Spacer() }
+                            .padding(14).background(cardBackground.opacity(0.88), in: Capsule())
+                    }
+                    Button { health.requestReadAccessAndStart() } label: {
+                        Label("Connect Apple Health", systemImage: "heart.text.square")
+                            .font(.subheadline.weight(.semibold)).frame(maxWidth: .infinity).padding(12)
+                    }.buttonStyle(.bordered).tint(neon)
+                    Text("You control your health permissions. Connect Apple Health now or later in Profile. Local-only use does not require an account.")
+                        .font(.caption2).foregroundStyle(.secondary)
+                    Spacer(minLength: 24)
+                }.padding(.horizontal, 22)
+            }
+        }.preferredColorScheme(dashboardColorScheme)
+    }
+
     var body: some View {
-        TabView(selection: $selectedTab) {
+        Group {
+            if cloud.isSignedIn || localModeEntered {
+                TabView(selection: $selectedTab) {
             NavigationStack { homeDashboard.navigationTitle("").toolbar(.hidden, for: .navigationBar) }
                 .tabItem { Label("Home", systemImage: "house.fill") }.tag(0)
             NavigationStack { activityScreen.navigationTitle("Activity") }
@@ -650,7 +747,11 @@ struct ContentView: View {
             NavigationStack { profileScreen.navigationTitle("Profile") }
                 .tabItem { Label("Profile", systemImage: "person.crop.circle") }.tag(4)
         }
-        .tint(neon)
+                .tint(neon)
+            } else {
+                welcomeScreen
+            }
+        }
         .preferredColorScheme(dashboardColorScheme)
         .onAppear {
             health.onDailyTotal = { day, total in
