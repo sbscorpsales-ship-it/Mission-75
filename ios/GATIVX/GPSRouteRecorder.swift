@@ -148,8 +148,8 @@ final class GPSRouteRecorder: NSObject, ObservableObject, CLLocationManagerDeleg
         recoveredActivity = nil
         let draftPersisted = persistDraft()
         requestAndBegin()
-        if !draftPersisted {
-            status = "GPS started, but the route draft is not yet safely stored on this iPhone. Keep GATIVX open and check available storage."
+        if !draftPersisted && isRecording {
+            status = "GPS is recording, but the route draft is not safely stored on this iPhone. Keep GATIVX open and check available storage."
         }
     }
 
