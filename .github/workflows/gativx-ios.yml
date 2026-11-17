@@ -120,6 +120,7 @@ jobs:
               "Cloud distance skips segment breaks": "if cloudPoints[index].breakBefore { continue }" in cloud,
               "Active walk keeps motion monitor in background": "sessionStarted == nil && !routeRecorder.isRecording" in view,
               "Prompt HealthKit background update requested": "frequency: .immediate" in health,
+              "Disconnect disables background delivery for every observed HealthKit quantity": "for type in [stepType, energyType, distanceType, exerciseType, heartRateType]" in health and "disableBackgroundDelivery(for: type)" in health,
               "HealthKit step background cadence disclosed as hourly": "at most hourly" in health,
               "Apple Health imports daily step history, not only today's total": "HKStatisticsCollectionQuery" in health and "enumerateStatistics(from: start, to: end)" in health,
               "Apple Health history window is bounded to a safe range": "max(1, min(days, 365))" in health,
