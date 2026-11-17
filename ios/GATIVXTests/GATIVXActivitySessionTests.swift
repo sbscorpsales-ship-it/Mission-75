@@ -61,7 +61,7 @@ final class GATIVXActivitySessionTests: XCTestCase {
         try store.save([record])
 
         let restored = try store.load()
-        XCTAssertEqual(restored.map(\\.id), [record.id])
+        XCTAssertEqual(restored.map(\.id), [record.id])
         XCTAssertTrue(FileManager.default.fileExists(
             atPath: directory.appendingPathComponent("activity-history.json").path
         ))
@@ -79,7 +79,7 @@ final class GATIVXActivitySessionTests: XCTestCase {
 
         let restored = try store.load()
 
-        XCTAssertEqual(restored.map(\\.id), [record.id])
+        XCTAssertEqual(restored.map(\.id), [record.id])
         XCTAssertNil(defaults.data(forKey: "gativx.activitySessions.v1"))
         XCTAssertTrue(FileManager.default.fileExists(
             atPath: directory.appendingPathComponent("activity-history.json").path
@@ -108,7 +108,7 @@ final class GATIVXActivitySessionTests: XCTestCase {
     }
 
     private func makeActivityStore() -> (ActivitySessionStore, URL, UserDefaults, String) {
-        let suiteName = "GATIVXTests.\\(UUID().uuidString)"
+        let suiteName = "GATIVXTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent(suiteName, isDirectory: true)
