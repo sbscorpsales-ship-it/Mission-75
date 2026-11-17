@@ -10,6 +10,7 @@ final class HealthKitManager: ObservableObject {
     @Published private(set) var todayActiveEnergyKcal: Int?
     @Published private(set) var isAvailable = HKHealthStore.isHealthDataAvailable()
     @Published private(set) var isRefreshing = false
+    @Published private(set) var hasRequestedAccess = UserDefaults.standard.bool(forKey: "gativx.healthkit.connectionRequested")
     @Published private(set) var lastRefresh: Date?
     @Published private(set) var statusMessage = "Apple Health is not connected."
     var onDailyTotal: ((Date, Int) -> Void)?
@@ -42,6 +43,7 @@ final class HealthKitManager: ObservableObject {
                 }
                 // HealthKit intentionally does not reveal whether read access was denied.
                 UserDefaults.standard.set(true, forKey: self.connectionRequestedKey)
+                self.hasRequestedAccess = true
                 self.statusMessage = "Apple Health access was requested. Checking today's measured steps…"
                 self.startObserving()
                 self.refreshRecentDays()
@@ -189,8 +191,67 @@ final class HealthKitManager: ObservableObject {
         refreshTodayEnergy()
     }
 
+    /// Export one completed activity to Apple Health. The GATIVX local record is saved first,
+    /// so HealthKit permission or signing failures never discard the member's activity.
+    func saveActivityWorkout(
+        id: UUID,
+        activity: String,
+        startedAt: Date,
+        finishedAt: Date,
+        steps: Int?,
+        distanceMeters: Double?,
+        completion: @escaping (Result<Void, Error>) -> Void
+    ) {
+        guard isAvailable else {
+            completion(.failure(NSError(domain: "GATIVXHealthKit", code: 1, userInfo: [NSLocalizedDescriptionKey: "Apple Health is unavailable on this iPhone."])))
+            return
+        }
+        let workoutType = HKObjectType.workoutType()
+        let shareTypes: Set<HKSampleType> = [workoutType]
+        store.requestAuthorization(toShare: shareTypes, read: [self.stepType, self.energyType]) { [weak self] _, error in
+            guard let self else { return }
+            if let error { DispatchQueue.main.async { completion(.failure(error)) }; return }
+            let syncID = "gativx.activity.\\(id.uuidString)"
+            let syncPredicate = HKQuery.predicateForObjects(withMetadataKey: HKMetadataKeySyncIdentifier, allowedValues: [syncID])
+            let existing = HKSampleQuery(sampleType: workoutType, predicate: syncPredicate, limit: 1, sortDescriptors: nil) { [weak self] _, samples, queryError in
+                guard let self else { return }
+                if let queryError { DispatchQueue.main.async { completion(.failure(queryError)) }; return }
+                if samples?.isEmpty == false { DispatchQueue.main.async { completion(.success(())) }; return }
+
+                let type: HKWorkoutActivityType
+                switch activity.lowercased() {
+                case "running": type = .running
+                case "hiking": type = .hiking
+                case "walking": type = .walking
+                default: type = .other
+                }
+                let safeEnd = max(finishedAt, startedAt.addingTimeInterval(1))
+                var metadata: [String: Any] = [
+                    HKMetadataKeySyncIdentifier: syncID,
+                    HKMetadataKeySyncVersion: 1,
+                    "com.paramitsolutions.gativx.measuredSteps": max(0, steps ?? 0)
+                ]
+                if let distanceMeters, distanceMeters > 0 {
+                    metadata["com.paramitsolutions.gativx.measuredDistanceMeters"] = distanceMeters
+                }
+                let totalDistance = (distanceMeters ?? 0) > 0
+                    ? HKQuantity(unit: .meter(), doubleValue: distanceMeters!) : nil
+                let workout = HKWorkout(activityType: type, start: startedAt, end: safeEnd, workoutEvents: nil, totalEnergyBurned: nil, totalDistance: totalDistance, metadata: metadata)
+                self.store.save(workout) { success, saveError in
+                    DispatchQueue.main.async {
+                        if let saveError { completion(.failure(saveError)) }
+                        else if success { completion(.success(())) }
+                        else { completion(.failure(NSError(domain: "GATIVXHealthKit", code: 2, userInfo: [NSLocalizedDescriptionKey: "Apple Health did not confirm saving this workout."]))) }
+                    }
+                }
+            }
+            self.store.execute(existing)
+        }
+    }
+
     func disconnect() {
         UserDefaults.standard.removeObject(forKey: connectionRequestedKey)
+        hasRequestedAccess = false
         observers.forEach { store.stop($0) }
         observers.removeAll()
         store.disableBackgroundDelivery(for: stepType) { _, _ in }
