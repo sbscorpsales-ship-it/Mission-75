@@ -34,3 +34,20 @@ targets:
         GENERATE_INFOPLIST_FILE: YES
         CODE_SIGN_ENTITLEMENTS: GATIVX/GATIVX.entitlements
         SUPPORTS_MACCATALYST: NO
+    scheme:
+      testTargets:
+        - GATIVXTests
+      gatherCoverageData: false
+  GATIVXTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: GATIVXTests
+    dependencies:
+      - target: GATIVX
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.paramitsolutions.gativx.tests
+        SWIFT_VERSION: "5.0"
+        GENERATE_INFOPLIST_FILE: YES
+        TARGETED_DEVICE_FAMILY: "1"
