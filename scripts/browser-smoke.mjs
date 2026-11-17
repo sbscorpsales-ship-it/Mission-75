@@ -14,6 +14,7 @@ assert(await page.locator("a").filter({hasText:"Sync Apple Health now"}).evaluat
 assert((await page.locator("#missionTitle").textContent()).includes("Build strength"),"Fresh-store mission did not render");
 assert((await page.locator("#missionPct").textContent()).includes("MISSION ACTIVE"),"Mission status missing");
 assert((await page.locator("#missionPct").textContent()).includes("1/90 CHECK-IN DAYS"),"Mission progress must count real saved check-in days, not a decorative percentage");
+assert((await page.locator("#missionRingValue").textContent()).trim()==="1%","Primary mission ring must reflect real saved check-in progress");
 await page.locator('[data-panel="journey"]').click();
 await page.locator("#goalType").selectOption({label:"Weight loss"});
 await page.locator("#goalDuration").selectOption({label:"90 days"});
