@@ -11,8 +11,8 @@ private struct PendingHealthWorkout: Codable, Identifiable {
     let distanceMeters: Double?
 }
 
-/// Native, read-only Apple Health daily aggregate.
-/// HealthKit is the authority for the all-source daily total; CoreMotion is never added to it.
+/// Reads measured Apple Health aggregates and exports completed GATIVX workouts.
+/// HealthKit is the authority for the all-source daily total; Core Motion is never added to it.
 @MainActor
 final class HealthKitManager: ObservableObject {
     @Published private(set) var todaySteps: Int?
