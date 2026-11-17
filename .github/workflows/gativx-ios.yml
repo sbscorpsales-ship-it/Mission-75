@@ -138,6 +138,7 @@ jobs:
               "Queued sensor writes retry after sign-in and on foreground": "await retryPendingHealthSyncs()" in cloud and "await cloud.retryPendingHealthSyncs()" in view,
               "Sensor outbox retry reuses the original idempotency revision": "pendingItem: item" in cloud and "if pendingItem == nil { enqueueHealthSync(item) }" in cloud,
               "Unreadable sensor outbox is not treated as an empty queue": "private func loadHealthOutbox() -> [PendingHealthSync]?" in cloud and "Original data was left untouched" in cloud,
+              "Unreadable sensor outbox exposes unknown count instead of false zero": "isHealthOutboxReadable = false" in cloud and "Pending count is unknown" in cloud and "if let items = loadHealthOutbox()" in cloud,
               "Enqueue and acknowledgement never overwrite unreadable sensor outbox": "guard var items = loadHealthOutbox() else { return }" in cloud and "guard let items = loadHealthOutbox() else { return }" in cloud,
               "Invalid sensor outbox dates are retained for recovery": "invalid date. The original record was retained for recovery" in cloud and "acknowledgeHealthSync(item)" not in cloud.split("guard let day = dateForLocalDay(item.localDay) else", 1)[1].split("}", 1)[0],
               "Sensor outbox retry preserves original revision through token refresh": "retryAfterRefresh: false, pendingItem: item" in cloud,
