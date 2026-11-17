@@ -35,6 +35,7 @@ final class SupabaseRESTClient: ObservableObject {
     private let healthOutboxKey = "com.paramitsolutions.gativx.health-sync-outbox.v1"
     private var accessToken: String?
     private var refreshToken: String?
+    private var isRetryingHealthOutbox = false
 
     init() {
         if let saved = readSession() {
@@ -123,8 +124,13 @@ final class SupabaseRESTClient: ObservableObject {
     /// previous network failure. Each successful server acknowledgement is
     /// removed independently; failed items remain on this device.
     func retryPendingHealthSyncs() async {
+        // This MainActor method suspends during network I/O. Foreground, sign-in
+        // and observer callbacks can all request a retry, so serialize the drain.
+        guard !isRetryingHealthOutbox else { return }
         guard isSignedIn, let ownerID = currentUserID else { return }
         guard let outbox = loadHealthOutbox() else { return }
+        isRetryingHealthOutbox = true
+        defer { isRetryingHealthOutbox = false }
         let pending = outbox.filter { $0.ownerID == ownerID }
         for item in pending {
             guard let day = dateForLocalDay(item.localDay) else {
