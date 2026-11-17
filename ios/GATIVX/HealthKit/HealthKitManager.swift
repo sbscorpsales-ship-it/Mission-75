@@ -270,7 +270,10 @@ final class HealthKitManager: ObservableObject {
         }
         let workoutType = HKObjectType.workoutType()
         let shareTypes: Set<HKSampleType> = [workoutType]
-        store.requestAuthorization(toShare: shareTypes, read: [self.stepType, self.energyType]) { [weak self] _, error in
+        // Request workout read access as well as write access so the stable
+        // sync identifier can be checked before attempting an export retry.
+        let readTypes: Set<HKObjectType> = [self.stepType, self.energyType, workoutType]
+        store.requestAuthorization(toShare: shareTypes, read: readTypes) { [weak self] _, error in
             guard let self else { return }
             if let error { DispatchQueue.main.async { completion(.failure(error)) }; return }
             let syncID = "gativx.activity.\(id.uuidString)"
