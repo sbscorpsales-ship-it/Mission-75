@@ -12,6 +12,13 @@
 - Keep the dashboard readable, accessible and consistent; do not switch back to the earlier neon-yellow/black concept.
 - Treat this as the approved design direction. Implementation and visual QA still need to be completed on the iOS app; approval of the concept is not proof that the shipped screen matches it.
 
+## Appearance preference — approved
+
+- Default appearance: **System / Automatic** — follow the iPhone's Light/Dark appearance setting.
+- Manual override: provide **Day Mode**, **Night Mode**, and **Automatic** in Profile → Settings → Appearance.
+- Keep the approved White + Neon Green identity in Day Mode and adapt surfaces/text for Night Mode while preserving accessible contrast.
+- This is an approved product requirement; native implementation and device verification are still pending.
+
 ## What CI can prove
 
 | Check | Result |
