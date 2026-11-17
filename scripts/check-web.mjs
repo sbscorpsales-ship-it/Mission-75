@@ -20,6 +20,7 @@ if (entry.includes("./app-v2.html") && entry.includes("window.location.search") 
 for (const [label, ok] of [
   ["Mobile web-app metadata and install icon are present", entry.includes('name="apple-mobile-web-app-capable"') && entry.includes('rel="apple-touch-icon"')],
   ["Three daily progress rings are present", ["stepsRing","caloriesRing","heartRing"].every(id => app.includes('id="'+id+'"'))],
+  ["Primary mission ring is tied to saved journey progress", app.includes('id="missionRingValue"') && app.includes("mission.percent*3.6")],
   ["Third ring is honestly labelled as completed walk minutes", app.includes("<small>WALK MIN</small>") && app.includes("completedWalkMinutesForDay")],
   ["Dashboard exposes health, walk and cloud status", ["healthConnectionStatus","walkSaveStatus","cloudBackupStatus"].every(id => app.includes('id="'+id+'"'))],
   ["Unknown measurements remain visibly unavailable", app.includes("shownSteps==null?'—'") && app.includes("x.activeEnergyKcal==null?'—'")],
