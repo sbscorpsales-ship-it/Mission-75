@@ -34,7 +34,7 @@ jobs:
     timeout-minutes: 20
     steps:
       - name: Check out source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7.0.1
 
       - name: Select Xcode 26
         run: |
@@ -243,7 +243,7 @@ jobs:
           PY
 
       - name: Upload simulator build
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: GATIVX-iOS-Simulator
           path: build/GATIVX-Simulator/Build/Products/Debug-iphonesimulator/GATIVX.app
@@ -274,7 +274,7 @@ jobs:
           test -s ../GATIVX-unsigned.ipa
 
       - name: Upload unsigned iPhone IPA
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: GATIVX-iPhone-unsigned-IPA
           path: build/GATIVX-unsigned.ipa
