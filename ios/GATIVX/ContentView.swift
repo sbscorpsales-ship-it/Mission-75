@@ -334,6 +334,10 @@ struct ContentView: View {
     @AppStorage("gativx.heartPointsGoal") private var heartPointsGoal = 30
     @AppStorage("gativx.dailyStepGoal") private var dailyStepGoal = 10_000
     @State private var selectedTab = 0
+    @AppStorage("gativx.guru.goal") private var guruGoal = ""
+    @AppStorage("gativx.guru.purpose") private var guruPurpose = ""
+    @AppStorage("gativx.guru.emotion") private var guruEmotion = ""
+    @AppStorage("gativx.guru.nextAction") private var guruNextAction = ""
 
     private var dashboardColorScheme: ColorScheme? {
         switch appearanceMode {
@@ -455,7 +459,7 @@ struct ContentView: View {
                 .padding(15)
                 .background(LinearGradient(colors: [neon.opacity(0.18), cardBackground], startPoint: .leading, endPoint: .trailing), in: RoundedRectangle(cornerRadius: 22))
                 .overlay(RoundedRectangle(cornerRadius: 22).stroke(neon.opacity(0.45), lineWidth: 1))
-                dashboardFeature(icon: "leaf", title: "Gati Guru", headline: "Remember why you started.", detail: "Small, consistent actions create extraordinary results.", action: { selectedTab = 2 })
+                dashboardFeature(icon: "leaf", title: "Gati Guru", headline: "Remember why you started.", detail: "Small, consistent actions create extraordinary results.", action: { selectedTab = 5 })
                 VStack(alignment: .leading, spacing: 9) {
                     HStack {
                         Label("My Journey", systemImage: "calendar").font(.headline)
@@ -606,9 +610,71 @@ struct ContentView: View {
                 }.padding(18).frame(maxWidth: .infinity, alignment: .leading).background(cardBackground, in: RoundedRectangle(cornerRadius: 22))
                 Text("Your goal progress").font(.headline)
                 ProgressView(value: stepProgress).tint(neon)
-                Text(displayedDailySteps.map { "\($0.formatted()) of 10,000 steps" } ?? "Waiting for a step reading").font(.caption).foregroundStyle(.secondary)
+                Text(displayedDailySteps.map { "\($0.formatted()) of 10,000 steps" } ?? "Waiting for a step reading").font(.caption).foregroundStyle(.secondary)\n                Button("Open Gati Guru") { selectedTab = 5 }.buttonStyle(.bordered)
             }.padding(16)
         }.background(pageBackground.ignoresSafeArea())
+    }
+
+    private var guruScreen: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Label("GATI GURU", systemImage: "leaf.fill")
+                        .font(.caption.weight(.black)).foregroundStyle(neon)
+                    Text("Reconnect with your why.")
+                        .font(.largeTitle.weight(.bold))
+                    Text("When motivation gets low, return to the purpose behind your goal. Guru keeps your reason visible and helps you choose one manageable next step.")
+                        .font(.subheadline).foregroundStyle(.secondary)
+                }
+                .padding(18).frame(maxWidth: .infinity, alignment: .leading)
+                .background(cardBackground, in: RoundedRectangle(cornerRadius: 22))
+
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("YOUR GOAL").font(.caption.weight(.bold)).foregroundStyle(.secondary)
+                    TextField("What do you want to achieve?", text: $guruGoal, axis: .vertical)
+                        .lineLimit(2...4).textFieldStyle(.roundedBorder)
+                    Text("YOUR PURPOSE").font(.caption.weight(.bold)).foregroundStyle(.secondary)
+                    TextField("Why does this matter to you?", text: $guruPurpose, axis: .vertical)
+                        .lineLimit(2...4).textFieldStyle(.roundedBorder)
+                    Text("THE EMOTION BEHIND IT").font(.caption.weight(.bold)).foregroundStyle(.secondary)
+                    TextField("How will achieving it make you feel?", text: $guruEmotion, axis: .vertical)
+                        .lineLimit(2...3).textFieldStyle(.roundedBorder)
+                    Text("ONE SMALL NEXT ACTION").font(.caption.weight(.bold)).foregroundStyle(.secondary)
+                    TextField("What is one action you can do today?", text: $guruNextAction, axis: .vertical)
+                        .lineLimit(2...3).textFieldStyle(.roundedBorder)
+                    Text("Your answers are saved on this iPhone.")
+                        .font(.caption2).foregroundStyle(.secondary)
+                }
+                .padding(18).background(cardBackground, in: RoundedRectangle(cornerRadius: 22))
+
+                VStack(alignment: .leading, spacing: 10) {
+                    Label("WHEN YOUR GATI SLOWS", systemImage: "heart.text.square.fill")
+                        .font(.headline).foregroundStyle(neon)
+                    Text(guruPurpose.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                         ? "Your purpose will appear here when you add it above."
+                         : guruPurpose)
+                        .font(.body.weight(.medium))
+                    if !guruEmotion.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        Text("Remember the feeling you are moving towards: " + guruEmotion)
+                            .font(.subheadline).foregroundStyle(.secondary)
+                    }
+                    Text(guruNextAction.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                         ? "Choose one small action. Keep it realistic enough to begin today."
+                         : "Your next step: " + guruNextAction)
+                        .font(.subheadline.weight(.semibold))
+                    Button {
+                        selectedTab = 1
+                    } label: {
+                        Label("Go to Activity", systemImage: "figure.walk")
+                            .font(.headline).frame(maxWidth: .infinity).padding(.vertical, 12)
+                    }
+                    .buttonStyle(.borderedProminent).tint(neon).foregroundStyle(.black)
+                }
+                .padding(18).background(cardBackground, in: RoundedRectangle(cornerRadius: 22))
+            }
+            .padding(16)
+        }
+        .background(pageBackground.ignoresSafeArea())
     }
 
     private var communityScreen: some View {
@@ -779,7 +845,7 @@ struct ContentView: View {
                 .tabItem { Label("Activity", systemImage: "figure.walk") }.tag(1)
             NavigationStack { missionsScreen.navigationTitle("Missions") }
                 .tabItem { Label("Missions", systemImage: "target") }.tag(2)
-            NavigationStack { communityScreen.navigationTitle("Community") }
+            NavigationStack { guruScreen.navigationTitle("Gati Guru") }\n                .tabItem { Label("Guru", systemImage: "leaf") }.tag(5)\n            NavigationStack { communityScreen.navigationTitle("Community") }
                 .tabItem { Label("Community", systemImage: "person.3") }.tag(3)
             NavigationStack { profileScreen.navigationTitle("Profile") }
                 .tabItem { Label("Profile", systemImage: "person.crop.circle") }.tag(4)
