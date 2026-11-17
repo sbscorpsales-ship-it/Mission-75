@@ -290,14 +290,20 @@ final class HealthKitManager: ObservableObject {
                 let safeEnd = max(finishedAt, startedAt.addingTimeInterval(1))
                 var metadata: [String: Any] = [
                     HKMetadataKeySyncIdentifier: syncID,
-                    HKMetadataKeySyncVersion: 1,
-                    "com.paramitsolutions.gativx.measuredSteps": max(0, steps ?? 0)
+                    HKMetadataKeySyncVersion: 1
                 ]
+                // Preserve unavailable measurements as unavailable. Never export a
+                // synthetic zero step count when the pedometer did not provide one.
+                if let steps {
+                    metadata["com.paramitsolutions.gativx.measuredSteps"] = steps
+                }
+                let totalDistance: HKQuantity?
                 if let distanceMeters, distanceMeters > 0 {
                     metadata["com.paramitsolutions.gativx.measuredDistanceMeters"] = distanceMeters
+                    totalDistance = HKQuantity(unit: .meter(), doubleValue: distanceMeters)
+                } else {
+                    totalDistance = nil
                 }
-                let totalDistance = (distanceMeters ?? 0) > 0
-                    ? HKQuantity(unit: .meter(), doubleValue: distanceMeters!) : nil
                 let workout = HKWorkout(activityType: type, start: startedAt, end: safeEnd, workoutEvents: nil, totalEnergyBurned: nil, totalDistance: totalDistance, metadata: metadata)
                 self.store.save(workout) { success, saveError in
                     DispatchQueue.main.async {
