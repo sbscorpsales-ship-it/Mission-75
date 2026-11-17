@@ -401,12 +401,95 @@ final class HealthKitManager: ObservableObject {
                 } else {
                     totalDistance = nil
                 }
-                let workout = HKWorkout(activityType: type, start: startedAt, end: safeEnd, workoutEvents: nil, totalEnergyBurned: nil, totalDistance: totalDistance, metadata: metadata)
-                self.store.save(workout) { success, saveError in
-                    DispatchQueue.main.async {
-                        if let saveError { completion(.failure(saveError)) }
-                        else if success { self.acknowledgeWorkout(id); completion(.success(())) }
-                        else { completion(.failure(NSError(domain: "GATIVXHealthKit", code: 2, userInfo: [NSLocalizedDescriptionKey: "Apple Health did not confirm saving this workout."]))) }
+                let configuration = HKWorkoutConfiguration()
+                configuration.activityType = type
+                configuration.locationType = .unknown
+                let builder = HKWorkoutBuilder(
+                    healthStore: self.store,
+                    configuration: configuration,
+                    device: .local()
+                )
+
+                builder.beginCollection(withStart: startedAt) { began, beginError in
+                    guard began else {
+                        DispatchQueue.main.async {
+                            completion(.failure(beginError ?? NSError(
+                                domain: "GATIVXHealthKit",
+                                code: 4,
+                                userInfo: [NSLocalizedDescriptionKey: "Apple Health could not begin the workout export."]
+                            )))
+                        }
+                        return
+                    }
+
+                    builder.addMetadata(metadata) { metadataSaved, metadataError in
+                        guard metadataSaved else {
+                            DispatchQueue.main.async {
+                                completion(.failure(metadataError ?? NSError(
+                                    domain: "GATIVXHealthKit",
+                                    code: 5,
+                                    userInfo: [NSLocalizedDescriptionKey: "Apple Health could not save workout metadata."]
+                                )))
+                            }
+                            return
+                        }
+
+                        let finishCollection = {
+                            builder.endCollection(withEnd: safeEnd) { ended, endError in
+                                guard ended else {
+                                    DispatchQueue.main.async {
+                                        completion(.failure(endError ?? NSError(
+                                            domain: "GATIVXHealthKit",
+                                            code: 6,
+                                            userInfo: [NSLocalizedDescriptionKey: "Apple Health could not finish collecting the workout."]
+                                        )))
+                                    }
+                                    return
+                                }
+
+                                builder.finishWorkout { workout, finishError in
+                                    DispatchQueue.main.async {
+                                        if let finishError {
+                                            completion(.failure(finishError))
+                                        } else if workout != nil {
+                                            self.acknowledgeWorkout(id)
+                                            completion(.success(()))
+                                        } else {
+                                            completion(.failure(NSError(
+                                                domain: "GATIVXHealthKit",
+                                                code: 2,
+                                                userInfo: [NSLocalizedDescriptionKey: "Apple Health did not confirm saving this workout."]
+                                            )))
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        guard let totalDistance else {
+                            finishCollection()
+                            return
+                        }
+
+                        let distanceSample = HKQuantitySample(
+                            type: self.distanceType,
+                            quantity: totalDistance,
+                            start: startedAt,
+                            end: safeEnd
+                        )
+                        builder.add([distanceSample]) { distanceSaved, distanceError in
+                            guard distanceSaved else {
+                                DispatchQueue.main.async {
+                                    completion(.failure(distanceError ?? NSError(
+                                        domain: "GATIVXHealthKit",
+                                        code: 7,
+                                        userInfo: [NSLocalizedDescriptionKey: "Apple Health could not save the measured workout distance."]
+                                    )))
+                                }
+                                return
+                            }
+                            finishCollection()
+                        }
                     }
                 }
             }
