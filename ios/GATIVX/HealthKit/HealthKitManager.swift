@@ -363,7 +363,8 @@ final class HealthKitManager: ObservableObject {
             return
         }
         let workoutType = HKObjectType.workoutType()
-        let shareTypes: Set<HKSampleType> = [workoutType]
+        // The builder writes the workout plus its measured distance sample.
+        let shareTypes: Set<HKSampleType> = [workoutType, distanceType]
         // Request workout read access as well as write access so the stable
         // sync identifier can be checked before attempting an export retry.
         let readTypes: Set<HKObjectType> = [self.stepType, self.energyType, workoutType]
