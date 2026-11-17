@@ -162,30 +162,12 @@ struct ContentView: View {
         } else {
             history = []
         }
-        Task {
-            for record in history {
-                // Step data and GPS route are independent deliverables.
-                // Missing pedometer data must never prevent route upload.
-                if let steps = record.steps {
-                    await cloud.syncActivitySession(
-                        id: record.id,
-                        activity: record.activity,
-                        startedAt: record.startedAt,
-                        finishedAt: record.finishedAt,
-                        steps: steps
-                    )
-                }
-                if let points = record.routePoints, !points.isEmpty {
-                    await cloud.syncActivitySessionRoute(
-                        id: record.id,
-                        startedAt: record.startedAt,
-                        finishedAt: record.finishedAt,
-                        steps: record.steps,
-                        points: points
-                    )
-                }
-            }
+        // Backfill previously saved sessions into the durable per-session outbox.
+        // New sessions are queued by the same path before any network request.
+        for record in history {
+            cloud.enqueueActivitySession(record)
         }
+        Task { await cloud.retryPendingActivitySessions() }
     }
     private func startActivitySession() {
         guard sessionStarted == nil, !isFinishingSession else { return }
@@ -876,7 +858,10 @@ struct ContentView: View {
             startLiveMotionMonitor()
             loadActivityHistory()
             if cloud.isSignedIn {
-                Task { await cloud.retryPendingHealthSyncs() }
+                Task {
+                    await cloud.retryPendingHealthSyncs()
+                    await cloud.retryPendingActivitySessions()
+                }
                 syncSavedActivitySessions()
             }
             if let recoveredStart = routeRecorder.recoveredStartedAt {
@@ -888,7 +873,10 @@ struct ContentView: View {
             if signedIn {
                 health.onDailyTotal = { day, total in Task { await cloud.syncSteps(date: day, steps: total) } }
                 health.onActiveEnergy = { day, total in Task { await cloud.syncActiveEnergy(date: day, kilocalories: total) } }
-                Task { await cloud.retryPendingHealthSyncs() }
+                Task {
+                    await cloud.retryPendingHealthSyncs()
+                    await cloud.retryPendingActivitySessions()
+                }
                 health.refreshRecentDays()
                 health.refreshTodayEnergy()
                 syncCurrentMotionSnapshotToCloud()
@@ -900,7 +888,10 @@ struct ContentView: View {
                 health.refreshOnForeground()
                 startLiveMotionMonitor()
                 if cloud.isSignedIn {
-                    Task { await cloud.retryPendingHealthSyncs() }
+                    Task {
+                    await cloud.retryPendingHealthSyncs()
+                    await cloud.retryPendingActivitySessions()
+                }
                     syncCurrentMotionSnapshotToCloud()
                     syncSavedActivitySessions()
                 }
