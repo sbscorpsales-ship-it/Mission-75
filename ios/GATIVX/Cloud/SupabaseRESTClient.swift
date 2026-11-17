@@ -26,6 +26,7 @@ final class SupabaseRESTClient: ObservableObject {
     @Published private(set) var isSignedIn = false
     @Published private(set) var status = "Sign in with your existing GATIVX web-app account."
     @Published private(set) var pendingHealthSyncCount = 0
+    @Published private(set) var isHealthOutboxReadable = true
 
     private let baseURL = URL(string: "https://crarbbsvcczwmtvxyrxo.supabase.co")!
     // Supabase publishable key is a client-side key. Never place a service-role key in the app.
@@ -72,12 +73,19 @@ final class SupabaseRESTClient: ObservableObject {
     }
 
     private func loadHealthOutbox() -> [PendingHealthSync]? {
-        guard let data = UserDefaults.standard.data(forKey: healthOutboxKey) else { return [] }
+        guard let data = UserDefaults.standard.data(forKey: healthOutboxKey) else {
+            isHealthOutboxReadable = true
+            return []
+        }
         do {
-            return try JSONDecoder().decode([PendingHealthSync].self, from: data)
+            let items = try JSONDecoder().decode([PendingHealthSync].self, from: data)
+            isHealthOutboxReadable = true
+            return items
         } catch {
-            // Never interpret unreadable queued sensor records as an empty queue.
-            status = "Sensor sync paused: the on-device retry queue could not be read. Original data was left untouched; contact support before clearing app data."
+            // Never interpret unreadable queued sensor records as an empty queue or
+            // present the pending count as zero: the real count is unknown.
+            isHealthOutboxReadable = false
+            status = "Sensor sync paused: the on-device retry queue could not be read. Pending count is unknown; original data was left untouched. Contact support before clearing app data."
             return nil
         }
     }
@@ -177,7 +185,9 @@ final class SupabaseRESTClient: ObservableObject {
                 refreshToken = session.refreshToken
                 saveSession(session)
                 isSignedIn = true
-                pendingHealthSyncCount = loadHealthOutbox().filter { $0.ownerID == currentUserID }.count
+                if let items = loadHealthOutbox() {
+                    pendingHealthSyncCount = items.filter { $0.ownerID == currentUserID }.count
+                }
                 status = "Account created and signed in."
                 await retryPendingHealthSyncs()
             } else {
