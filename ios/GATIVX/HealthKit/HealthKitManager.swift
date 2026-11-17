@@ -325,8 +325,12 @@ final class HealthKitManager: ObservableObject {
         hasRequestedAccess = false
         observers.forEach { store.stop($0) }
         observers.removeAll()
-        store.disableBackgroundDelivery(for: stepType) { _, _ in }
-        store.disableBackgroundDelivery(for: energyType) { _, _ in }
+        // Stop background delivery for every quantity registered by startObserving().
+        // Disabling only steps and energy leaves three HealthKit delivery registrations
+        // active after the member disconnects GATIVX.
+        for type in [stepType, energyType, distanceType, exerciseType, heartRateType] {
+            store.disableBackgroundDelivery(for: type) { _, _ in }
+        }
         todaySteps = nil
         todayActiveEnergyKcal = nil
         todayWalkingRunningDistanceKm = nil
