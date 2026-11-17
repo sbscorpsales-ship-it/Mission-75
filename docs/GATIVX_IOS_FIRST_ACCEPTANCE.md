@@ -42,25 +42,27 @@ This is a **design lock**, not a claim that the native iOS screen has already be
 
 ## What CI can prove
 
-**Latest verified run:** [GATIVX iOS CI pull-request run 44170283091](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/44170283091)  
-**Commit:** `8ef3c5380ea156a83d7b02004c29f3e87916a440`  
+**Latest fully verified iOS build:** [GATIVX iOS CI pull-request run 44180823238](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/44180823238)  
+**Source commit:** `18bd06e507ed8cd315e3cdef4d7743196941882e`  
 **Result:** All 17 steps in the `build-ios` job completed successfully on 17 November 2026.
 
 | Check | Result |
 |---|---|
-| XcodeGen project generation | Passed in run 44170283091 |
-| Generated GATIVX scheme validation | Passed in run 44170283091 |
+| XcodeGen project generation | Passed |
+| Generated GATIVX scheme validation | Passed |
 | GATIVX unit tests | 4 executed, 4 passed, 0 failures |
 | HealthKit entitlement wiring and permission strings | Passed source/project validation |
-| Native tracking safeguard checks | All emitted checks passed |
+| Native tracking safeguard checks | 77 checks passed |
 | iOS Simulator compile | Passed |
 | Unsigned iPhone device-target compile | Passed |
 | Unsigned iPhone IPA packaging and upload | Passed |
 
-**Artifacts from this run** (not expired when checked on 18 November 2026):
+**Artifacts from run 44180823238** (not expired when checked on 18 November 2026):
 
-- `GATIVX-iPhone-unsigned-IPA`: artifact ID `14369295109`, 744,896 bytes. [Download from GitHub](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/44170283091/artifacts/14369295109)
-- `GATIVX-iOS-Simulator`: artifact ID `14367868388`, 1,547,891 bytes. [Download from GitHub](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/44170283091/artifacts/14367868388)
+- `GATIVX-iPhone-unsigned-IPA`: artifact ID `14373211783`, 744,896 bytes; SHA-256 `188724d9526ab15e05a742de6d9d97c695e0db42525f9b50e70ffe382e90ac72`. [Download from GitHub](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/44180823238/artifacts/14373211783)
+- `GATIVX-iOS-Simulator`: artifact ID `14373795063`, 1,547,891 bytes. [Download from GitHub](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/44180823238/artifacts/14373795063)
+
+The CI workflow was subsequently updated to `actions/checkout@v7.0.1` and `actions/upload-artifact@v7.0.2`, both using Node 24. Validation of that workflow-only update is tracked in [run 44191477264](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/44191477264) and must pass before treating the updated workflow as verified.
 
 A simulator build proves compilation, not physical iPhone behaviour. An unsigned IPA is not installable until signed. An unsigned app cannot prove that the installed app carries the HealthKit entitlement. The static safeguards and four unit tests are not substitutes for physical-device acceptance.
 
