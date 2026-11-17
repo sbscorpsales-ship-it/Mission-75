@@ -650,7 +650,9 @@ struct ContentView: View {
                     Button("Sign out", role: .destructive) { cloud.signOut() }
                 }
                 Text(cloud.status).font(.caption).foregroundStyle(.secondary)
-                if cloud.pendingHealthSyncCount > 0 {
+                if !cloud.isHealthOutboxReadable {
+                    Text("Sensor sync queue unreadable. Pending count is unknown; original on-device data has been preserved.").font(.caption).foregroundStyle(.red)
+                } else if cloud.pendingHealthSyncCount > 0 {
                     Text("\(cloud.pendingHealthSyncCount) sensor update(s) queued for retry.").font(.caption).foregroundStyle(.orange)
                 }
             }
