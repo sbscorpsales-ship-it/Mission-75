@@ -256,13 +256,19 @@ struct ContentView: View {
                 do {
                     let encodedHistory = try JSONEncoder().encode(history)
                     UserDefaults.standard.set(encodedHistory, forKey: storageKey)
-                    self.activityHistory = history
-                    self.historyStatus = "Saved on this iPhone · \(history.count) activities"
-                    guard UserDefaults.standard.data(forKey: storageKey) != nil else {
-                        throw NSError(domain: "GATIVXActivityStorage", code: 1, userInfo: [NSLocalizedDescriptionKey: "Local activity history could not be verified after saving."])
+                    // Verify the exact activity can be decoded from the persisted
+                    // bytes before deleting the independently recoverable GPS draft.
+                    guard
+                        let persistedData = UserDefaults.standard.data(forKey: storageKey),
+                        let persistedHistory = try? JSONDecoder().decode([ActivitySessionRecord].self, from: persistedData),
+                        persistedHistory.contains(where: { $0.id == recordID })
+                    else {
+                        throw NSError(domain: "GATIVXActivityStorage", code: 1, userInfo: [NSLocalizedDescriptionKey: "The saved activity could not be read back and verified. Your GPS draft remains preserved."])
                     }
-                    // Clear the durable GPS draft only after the completed session
-                    // has been encoded and stored successfully.
+                    self.activityHistory = persistedHistory
+                    self.historyStatus = "Saved on this iPhone · \(persistedHistory.count) activities"
+                    // Clear the durable GPS draft only after read-back verification
+                    // confirms the completed session is safely stored.
                     self.routeRecorder.clearDraft()
                     self.sessionSteps = finalSteps
                     let stepSummary = finalSteps.map { $0.formatted() + " steps" } ?? "step count unavailable"
