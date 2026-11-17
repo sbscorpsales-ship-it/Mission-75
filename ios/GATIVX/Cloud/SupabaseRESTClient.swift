@@ -42,7 +42,9 @@ final class SupabaseRESTClient: ObservableObject {
             refreshToken = saved.refreshToken
             isSignedIn = accessToken != nil
         }
-        pendingHealthSyncCount = (loadHealthOutbox() ?? []).filter { $0.ownerID == currentUserID }.count
+        if let items = loadHealthOutbox() {
+            pendingHealthSyncCount = items.filter { $0.ownerID == currentUserID }.count
+        }
     }
 
 
