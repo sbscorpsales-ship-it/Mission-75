@@ -3,13 +3,13 @@ import CoreLocation
 import Security
 import Combine
 
-private enum PendingHealthSyncKind: String, Codable {
+enum PendingHealthSyncKind: String, Codable {
     case healthSteps
     case activeEnergy
     case motionSteps
 }
 
-private struct PendingHealthSync: Codable, Identifiable {
+struct PendingHealthSync: Codable, Identifiable {
     let ownerID: String
     let revisionID: UUID
     let kind: PendingHealthSyncKind
@@ -113,12 +113,12 @@ final class SupabaseRESTClient: ObservableObject {
             }
             switch item.kind {
             case .healthSteps:
-                if let steps = item.steps { await syncSteps(date: day, steps: steps) }
+                if let steps = item.steps { await syncSteps(date: day, steps: steps, pendingItem: item) }
             case .activeEnergy:
-                if let kcal = item.activeEnergyKcal { await syncActiveEnergy(date: day, kilocalories: kcal) }
+                if let kcal = item.activeEnergyKcal { await syncActiveEnergy(date: day, kilocalories: kcal, pendingItem: item) }
             case .motionSteps:
                 if let steps = item.steps {
-                    _ = await syncMotionDailySteps(date: day, steps: steps, distanceMeters: item.distanceMeters)
+                    _ = await syncMotionDailySteps(date: day, steps: steps, distanceMeters: item.distanceMeters, pendingItem: item)
                 }
             }
         }
@@ -197,11 +197,11 @@ final class SupabaseRESTClient: ObservableObject {
         }
     }
 
-    func syncSteps(date: Date, steps: Int) async {
+    func syncSteps(date: Date, steps: Int, pendingItem: PendingHealthSync? = nil) async {
         guard steps >= 0 else { return }
         guard let ownerID = currentUserID else { status = "Step sync pending until a valid account session is available."; return }
-        let item = PendingHealthSync(ownerID: ownerID, revisionID: UUID(), kind: .healthSteps, localDay: localDayString(date), steps: steps, activeEnergyKcal: nil, distanceMeters: nil, queuedAt: Date())
-        enqueueHealthSync(item)
+        let item = pendingItem ?? PendingHealthSync(ownerID: ownerID, revisionID: UUID(), kind: .healthSteps, localDay: localDayString(date), steps: steps, activeEnergyKcal: nil, distanceMeters: nil, queuedAt: Date())
+        if pendingItem == nil { enqueueHealthSync(item) }
         do {
             try await performStepSync(date: date, steps: steps, retryAfterRefresh: true)
             acknowledgeHealthSync(item)
@@ -211,11 +211,11 @@ final class SupabaseRESTClient: ObservableObject {
         }
     }
 
-    func syncActiveEnergy(date: Date, kilocalories: Int, retryAfterRefresh: Bool = true) async {
+    func syncActiveEnergy(date: Date, kilocalories: Int, retryAfterRefresh: Bool = true, pendingItem: PendingHealthSync? = nil) async {
         guard kilocalories >= 0 else { return }
         guard let ownerID = currentUserID else { status = "Active-energy sync pending until a valid account session is available."; return }
-        let item = PendingHealthSync(ownerID: ownerID, revisionID: UUID(), kind: .activeEnergy, localDay: localDayString(date), steps: nil, activeEnergyKcal: kilocalories, distanceMeters: nil, queuedAt: Date())
-        enqueueHealthSync(item)
+        let item = pendingItem ?? PendingHealthSync(ownerID: ownerID, revisionID: UUID(), kind: .activeEnergy, localDay: localDayString(date), steps: nil, activeEnergyKcal: kilocalories, distanceMeters: nil, queuedAt: Date())
+        if pendingItem == nil { enqueueHealthSync(item) }
         do {
             guard let token = accessToken else { throw ClientError.notSignedIn }
             var request = URLRequest(url: baseURL.appendingPathComponent("rest/v1/rpc/sync_healthkit_daily_energy"))
@@ -236,7 +236,7 @@ final class SupabaseRESTClient: ObservableObject {
             guard let http = response as? HTTPURLResponse else { throw ClientError.invalidResponse }
             if http.statusCode == 401 && retryAfterRefresh {
                 try await refreshSession()
-                await syncActiveEnergy(date: date, kilocalories: kilocalories, retryAfterRefresh: false)
+                await syncActiveEnergy(date: date, kilocalories: kilocalories, retryAfterRefresh: false, pendingItem: item)
                 return
             }
             guard (200..<300).contains(http.statusCode) else { throw Self.serverError(data) }
@@ -251,11 +251,11 @@ final class SupabaseRESTClient: ObservableObject {
     /// aggregated HealthKit total. These two sources must never overwrite or
     /// be added together in daily_logs.
     @discardableResult
-    func syncMotionDailySteps(date: Date, steps: Int, distanceMeters: Double?, retryAfterRefresh: Bool = true) async -> Bool {
+    func syncMotionDailySteps(date: Date, steps: Int, distanceMeters: Double?, retryAfterRefresh: Bool = true, pendingItem: PendingHealthSync? = nil) async -> Bool {
         guard steps >= 0 else { return false }
         guard let ownerID = currentUserID else { status = "Motion sync pending until a valid account session is available."; return false }
-        let item = PendingHealthSync(ownerID: ownerID, revisionID: UUID(), kind: .motionSteps, localDay: localDayString(date), steps: steps, activeEnergyKcal: nil, distanceMeters: distanceMeters, queuedAt: Date())
-        enqueueHealthSync(item)
+        let item = pendingItem ?? PendingHealthSync(ownerID: ownerID, revisionID: UUID(), kind: .motionSteps, localDay: localDayString(date), steps: steps, activeEnergyKcal: nil, distanceMeters: distanceMeters, queuedAt: Date())
+        if pendingItem == nil { enqueueHealthSync(item) }
         do {
             guard let token = accessToken else { throw ClientError.notSignedIn }
             var request = URLRequest(url: baseURL.appendingPathComponent("rest/v1/rpc/sync_motion_daily_steps"))
@@ -281,7 +281,7 @@ final class SupabaseRESTClient: ObservableObject {
             guard let http = response as? HTTPURLResponse else { throw ClientError.invalidResponse }
             if http.statusCode == 401 && retryAfterRefresh {
                 try await refreshSession()
-                return await syncMotionDailySteps(date: date, steps: steps, distanceMeters: distanceMeters, retryAfterRefresh: false)
+                return await syncMotionDailySteps(date: date, steps: steps, distanceMeters: distanceMeters, retryAfterRefresh: false, pendingItem: item)
             }
             guard (200..<300).contains(http.statusCode) else { throw Self.serverError(data) }
             acknowledgeHealthSync(item)
