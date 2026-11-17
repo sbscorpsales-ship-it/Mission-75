@@ -270,60 +270,168 @@ struct ContentView: View {
         return min(Double(steps) / 10_000, 1)
     }
 
-    var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(spacing: 20) {
-                Text("GATIVX").font(.system(size: 34, weight: .black, design: .rounded))
-                Text("From Goals to Xcellence").font(.subheadline).foregroundStyle(.secondary)
+    @AppStorage("gativx.appearance") private var appearanceMode = "system"
+    @State private var selectedTab = 0
 
-                VStack(spacing: 8) {
-                    Text("TODAY'S STEPS").font(.caption.weight(.bold)).foregroundStyle(.secondary)
-                    Text(displayedDailySteps?.formatted() ?? "—")
-                        .font(.system(size: 48, weight: .bold, design: .rounded))
-                    Text(displayedStepSource + (displayedDailySteps == nil ? "" : " · Goal: 10,000"))
-                        .font(.subheadline).foregroundStyle(.secondary)
-                    ProgressView(value: stepProgress).tint(.yellow)
-                    Text("Active energy: " + (health.todayActiveEnergyKcal.map { "\($0) kcal" } ?? "—") + " · Apple Health measured active calories, not total calories.")
-                        .font(.caption).foregroundStyle(.secondary)
-                    Text("The daily total comes only from Apple Health. The iPhone motion reading below is a separate live preview and is not substituted for the all-source daily total.")
-                        .font(.caption2).foregroundStyle(.secondary).multilineTextAlignment(.center)
-                    HStack {
-                        Label("Live iPhone motion", systemImage: "figure.walk")
-                        Spacer()
-                        Text(liveMotionSteps?.formatted() ?? "Waiting…")
-                            .monospacedDigit().fontWeight(.semibold)
+    private var dashboardColorScheme: ColorScheme? {
+        switch appearanceMode {
+        case "day": return .light
+        case "night": return .dark
+        default: return nil
+        }
+    }
+
+    private let neon = Color(red: 0.68, green: 0.98, blue: 0.12)
+    private var pageBackground: Color { Color(uiColor: .systemGroupedBackground) }
+    private var cardBackground: Color { Color(uiColor: .secondarySystemGroupedBackground) }
+
+    private var greeting: String {
+        let hour = Calendar.current.component(.hour, from: Date())
+        return hour < 12 ? "Good morning" : (hour < 17 ? "Good afternoon" : "Good evening")
+    }
+
+    private func metricCard(_ title: String, value: String, unit: String, symbol: String) -> some View {
+        VStack(alignment: .leading, spacing: 9) {
+            Image(systemName: symbol).font(.title3.weight(.semibold)).foregroundStyle(neon)
+            Text(title.uppercased()).font(.caption2.weight(.bold)).foregroundStyle(.secondary)
+            HStack(alignment: .firstTextBaseline, spacing: 4) {
+                Text(value).font(.title2.weight(.bold).monospacedDigit())
+                Text(unit).font(.caption).foregroundStyle(.secondary)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(15)
+        .background(cardBackground, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+    }
+
+    private var stepRing: some View {
+        ZStack {
+            Circle().stroke(neon.opacity(0.15), lineWidth: 15)
+            Circle().trim(from: 0, to: stepProgress).stroke(neon, style: StrokeStyle(lineWidth: 15, lineCap: .round))
+                .rotationEffect(.degrees(-90))
+                .shadow(color: neon.opacity(0.35), radius: 9)
+            VStack(spacing: 5) {
+                Image(systemName: "figure.walk").font(.title2).foregroundStyle(neon)
+                Text(displayedDailySteps?.formatted() ?? "—").font(.system(size: 34, weight: .bold, design: .rounded)).monospacedDigit().minimumScaleFactor(0.7).lineLimit(1)
+                Text("OF 10,000 STEPS").font(.caption2.weight(.bold)).foregroundStyle(.secondary)
+                Text(displayedDailySteps.map { "\(Int(min(Double($0) / 10000, 1) * 100))% complete" } ?? "Waiting for data").font(.caption).foregroundStyle(.secondary)
+            }
+        }
+        .frame(width: 190, height: 190)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Today's steps")
+        .accessibilityValue(displayedDailySteps.map { "\($0) of 10000" } ?? "No reading")
+    }
+
+    private var homeDashboard: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 18) {
+                HStack(alignment: .center) {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("GATIVX").font(.system(size: 27, weight: .black, design: .rounded)).tracking(1.1)
+                        Text("FROM GOALS TO XCELLENCE").font(.system(size: 9, weight: .bold, design: .rounded)).tracking(1.6).foregroundStyle(.secondary)
                     }
-                    .font(.caption)
-                    Text(motionStatus).font(.caption2).foregroundStyle(.secondary)
-                    if let meters = liveMotionDistanceMeters {
-                        Text("Today's iPhone motion distance · \(String(format: "%.2f", meters / 1000)) km")
-                            .font(.caption2).foregroundStyle(.secondary)
+                    Spacer()
+                    Image(systemName: "bell.badge").font(.title3).padding(11).background(cardBackground, in: Circle())
+                    Image(systemName: "person.crop.circle.fill").font(.title).foregroundStyle(.secondary)
+                }
+                VStack(alignment: .leading, spacing: 5) {
+                    Text(greeting).font(.title2.weight(.bold))
+                    Text("Every step moves you closer to your purpose.").font(.subheadline).foregroundStyle(.secondary)
+                }
+                VStack(spacing: 14) {
+                    HStack {
+                        Label("TODAY'S JOURNEY", systemImage: "sun.max.fill").font(.caption.weight(.bold)).tracking(0.8).foregroundStyle(.secondary)
+                        Spacer()
+                        Text(Date().formatted(date: .abbreviated, time: .omitted)).font(.caption).foregroundStyle(.secondary)
+                    }
+                    stepRing
+                    Text(displayedStepSource).font(.caption2).foregroundStyle(.secondary).multilineTextAlignment(.center)
+                    Text("Active energy  ·  " + (health.todayActiveEnergyKcal.map { "\($0) kcal" } ?? "—"))
+                        .font(.subheadline.weight(.semibold))
+                    if !health.hasRequestedAccess {
+                        Button { health.requestReadAccessAndStart() } label: {
+                            Label("Connect Apple Health", systemImage: "heart.text.square")
+                                .font(.subheadline.weight(.bold)).frame(maxWidth: .infinity).padding(.vertical, 13)
+                        }.buttonStyle(.borderedProminent).tint(.primary).disabled(!health.isAvailable || health.isRefreshing)
                     }
                 }
-                .padding().frame(maxWidth: .infinity)
-                .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 20))
-
+                .padding(18)
+                .background(cardBackground, in: RoundedRectangle(cornerRadius: 26, style: .continuous))
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("LIVE ACTIVITY SESSION").font(.caption.weight(.bold)).foregroundStyle(.secondary)
+                    HStack {
+                        Text("TODAY'S MISSION").font(.caption.weight(.bold)).tracking(1).foregroundStyle(.secondary)
+                        Spacer()
+                        Image(systemName: "sparkles").foregroundStyle(neon)
+                    }
+                    Text("Move with purpose").font(.title3.weight(.bold))
+                    Text("Complete a mindful walk today. Start small, stay consistent, and reconnect with why you began.")
+                        .font(.subheadline).foregroundStyle(.secondary)
+                    Button { selectedTab = 1 } label: {
+                        HStack { Text("Start your mission"); Spacer(); Image(systemName: "arrow.up.right") }
+                            .font(.subheadline.weight(.bold)).foregroundStyle(.black).padding(14)
+                            .background(neon, in: RoundedRectangle(cornerRadius: 14))
+                    }
+                }
+                .padding(17).background(cardBackground, in: RoundedRectangle(cornerRadius: 22))
+                HStack(spacing: 12) {
+                    metricCard("Live steps", value: liveMotionSteps?.formatted() ?? "—", unit: "steps", symbol: "figure.walk")
+                    metricCard("Active energy", value: health.todayActiveEnergyKcal.map { String(Int($0)) } ?? "—", unit: "kcal", symbol: "flame")
+                }
+                HStack(spacing: 12) {
+                    metricCard("Distance", value: liveMotionDistanceMeters.map { String(format: "%.2f", $0 / 1000) } ?? "—", unit: "km", symbol: "location")
+                    metricCard("Heart rate", value: "—", unit: "bpm", symbol: "heart")
+                }
+                Text("Heart rate appears only when a supported real reading is available. GATIVX never invents health measurements.")
+                    .font(.caption2).foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: 8) {
+                    Label("GATI GURU", systemImage: "sparkles").font(.caption.weight(.bold)).foregroundStyle(neon)
+                    Text("When motivation slows, remember your why.").font(.headline)
+                    Text("One small action today is enough to regain your Gati.").font(.subheadline).foregroundStyle(.secondary)
+                }.padding(17).frame(maxWidth: .infinity, alignment: .leading).background(cardBackground, in: RoundedRectangle(cornerRadius: 20))
+                VStack(alignment: .leading, spacing: 8) {
+                    Label("MY JOURNEY", systemImage: "chart.line.uptrend.xyaxis").font(.caption.weight(.bold)).foregroundStyle(.secondary)
+                    Text("\(activityHistory.count) activities saved").font(.headline)
+                    Text(historyStatus.isEmpty ? "Your completed activities will be kept here." : historyStatus).font(.caption).foregroundStyle(.secondary)
+                }.padding(17).frame(maxWidth: .infinity, alignment: .leading).background(cardBackground, in: RoundedRectangle(cornerRadius: 20))
+                VStack(alignment: .leading, spacing: 8) {
+                    Label("COMMUNITY GATI", systemImage: "person.3.fill").font(.caption.weight(.bold)).foregroundStyle(.secondary)
+                    Text("Your consistency can inspire someone else.").font(.headline)
+                    Text("Community experiences will appear here as this space grows.").font(.caption).foregroundStyle(.secondary)
+                }.padding(17).frame(maxWidth: .infinity, alignment: .leading).background(cardBackground, in: RoundedRectangle(cornerRadius: 20))
+                Text(health.statusMessage).font(.caption).foregroundStyle(.secondary)
+                Text(motionStatus).font(.caption2).foregroundStyle(.secondary)
+                Text("Fitness guidance, not medical diagnosis or treatment.").font(.caption2).foregroundStyle(.tertiary)
+            }
+            .padding(.horizontal, 16).padding(.top, 10).padding(.bottom, 24)
+        }
+        .background(pageBackground.ignoresSafeArea())
+    }
+
+    private var activityScreen: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                Text("Activity").font(.largeTitle.weight(.bold))
+                Text("Record your movement. Your route and activity are saved locally before any cloud or Apple Health export.")
+                    .font(.subheadline).foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: 13) {
+                    Text("ACTIVITY TRACKER").font(.caption.weight(.bold)).foregroundStyle(.secondary)
                     Picker("Activity", selection: $selectedActivity) {
                         ForEach(["Walking", "Running", "Hiking", "Other"], id: \.self) { Text($0) }
                     }.pickerStyle(.segmented)
                     HStack(alignment: .firstTextBaseline) {
-                        Text(sessionSteps?.formatted() ?? "—").font(.system(size: 34, weight: .bold, design: .rounded))
-                        Text("steps this session").font(.subheadline).foregroundStyle(.secondary)
+                        Text(sessionSteps?.formatted() ?? "—").font(.system(size: 36, weight: .bold, design: .rounded))
+                        Text("session steps").font(.subheadline).foregroundStyle(.secondary)
                     }
-                    Text(sessionStatus).font(.caption).foregroundStyle(.secondary)
-                    Text("This session · GPS distance · " + String(format: "%.2f", routeRecorder.routeDistanceMeters / 1000) + " km · " + routeRecorder.points.count.formatted() + " GPS points").font(.caption2).foregroundStyle(.secondary)
+                    Text("GPS distance · " + String(format: "%.2f", routeRecorder.routeDistanceMeters / 1000) + " km")
+                        .font(.subheadline.weight(.semibold))
+                    Text("\(routeRecorder.points.count) GPS points · " + sessionStatus).font(.caption).foregroundStyle(.secondary)
                     if routeRecorder.authorization == .authorizedWhenInUse {
-                        Button("Enable background GPS (Always location)") {
-                            routeRecorder.requestBackgroundLocationAccess()
-                        }
-                        .font(.caption)
+                        Button("Enable background GPS (Always location)") { routeRecorder.requestBackgroundLocationAccess() }.font(.caption)
                     }
                     if sessionStarted == nil {
                         if let recoveredStart = routeRecorder.recoveredStartedAt {
-                            Text("An unfinished activity from \\(recoveredStart.formatted(date: .abbreviated, time: .shortened)) was recovered. Its GPS points are stored on this iPhone.")
+                            Text("Recovered activity from \(recoveredStart.formatted(date: .abbreviated, time: .shortened)).")
                                 .font(.caption).foregroundStyle(.orange)
                             Button("Resume recovered activity") {
                                 selectedActivity = routeRecorder.recoveredActivity ?? "Walking"
@@ -331,173 +439,176 @@ struct ContentView: View {
                                 sessionSteps = nil
                                 routeRecorder.resumeRecovered()
                                 pedometer.startUpdates(from: recoveredStart) { data, error in
-                                    DispatchQueue.main.async {
-                                        if error == nil { self.sessionSteps = data?.numberOfSteps.intValue }
-                                    }
+                                    DispatchQueue.main.async { if error == nil { self.sessionSteps = data?.numberOfSteps.intValue } }
                                 }
                                 sessionStatus = "Recovered activity resumed. Finish to save the route."
-                            }.buttonStyle(.borderedProminent).tint(.orange)
-                            Button(isFinishingSession ? "Saving recovered route…" : "Save recovered route now") {
+                            }.buttonStyle(.bordered)
+                            Button("Save recovered route now") {
                                 selectedActivity = routeRecorder.recoveredActivity ?? "Walking"
                                 sessionStarted = recoveredStart
                                 sessionSteps = nil
                                 finishActivitySession()
-                            }.buttonStyle(.bordered).disabled(isFinishingSession)
+                            }.buttonStyle(.bordered)
                         }
-                        Button(selectedActivity == "Walking" ? "Start WalkOn" : "Start activity") { startActivitySession() }.buttonStyle(.borderedProminent).tint(.green)
+                        Button { startActivitySession() } label: {
+                            Label("Start \(selectedActivity == "Walking" ? "Walk" : selectedActivity)", systemImage: "figure.walk")
+                                .font(.headline).frame(maxWidth: .infinity).padding(.vertical, 14)
+                        }.buttonStyle(.borderedProminent).tint(neon).foregroundStyle(.black)
                     } else {
-                        Button(isFinishingSession ? "Saving activity…" : "Finish & save activity", role: .destructive) { finishActivitySession() }.buttonStyle(.bordered).disabled(isFinishingSession)
+                        Button(isFinishingSession ? "Saving activity…" : "Finish & save activity", role: .destructive) { finishActivitySession() }
+                            .buttonStyle(.borderedProminent).disabled(isFinishingSession)
                     }
-                    Text("Session steps use iPhone motion data. GPS route is recorded separately while an activity is active. Allow location access for route tracking.")
+                    Text("GPS route recording is separate from step counting. Keep location permission enabled for route tracking.")
                         .font(.caption2).foregroundStyle(.secondary)
-                }.padding().frame(maxWidth: .infinity, alignment: .leading)
-                 .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 20))
-
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("RECENT ACTIVITIES").font(.caption.weight(.bold)).foregroundStyle(.secondary)
-                    if activityHistory.isEmpty {
-                        Text(historyStatus.isEmpty ? "Completed walks will appear here with steps, GPS distance and duration." : historyStatus).font(.caption).foregroundStyle(.secondary)
-                    } else {
-                        ForEach(activityHistory.prefix(10)) { item in
-                            VStack(alignment: .leading, spacing: 4) {
-                                HStack { Text(item.activity).fontWeight(.semibold); Spacer(); Text(item.startedAt.formatted(date: .abbreviated, time: .shortened)).font(.caption2).foregroundStyle(.secondary) }
-                                HStack(spacing: 12) {
-                                    Label(item.steps.map { $0.formatted() } ?? "—", systemImage: "figure.walk")
-                                    Label(String(format: "%.2f km", item.gpsDistanceMeters / 1000), systemImage: "location")
-                                    Label(item.durationText, systemImage: "clock")
-                                }.font(.caption).foregroundStyle(.secondary)
-                                Text("GPS points: \((item.routePoints ?? []).count)" + (item.motionDistanceMeters.map { " · Motion: " + String(format: "%.2f km", $0 / 1000) } ?? "")).font(.caption2).foregroundStyle(.secondary)
-                            }.padding(.vertical, 6)
-                            Divider()
-                        }
-                    }
-                }.padding().frame(maxWidth: .infinity, alignment: .leading).background(.thinMaterial, in: RoundedRectangle(cornerRadius: 20))
-
-                if !health.hasRequestedAccess {
-                    Button("Enable automatic Apple Health sync") {
-                        health.requestReadAccessAndStart()
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .tint(.black)
-                    .foregroundStyle(.yellow)
-                    .disabled(!health.isAvailable || health.isRefreshing)
+                }.padding(18).background(cardBackground, in: RoundedRectangle(cornerRadius: 22))
+                Text("RECENT ACTIVITIES").font(.caption.weight(.bold)).foregroundStyle(.secondary)
+                if activityHistory.isEmpty {
+                    Text(historyStatus.isEmpty ? "No completed activities saved yet." : historyStatus).foregroundStyle(.secondary)
                 } else {
-                    Label("Apple Health automatic sync enabled", systemImage: "checkmark.circle.fill")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.green)
-                    Text("GATIVX refreshes measured steps and active calories when Apple Health reports updates and whenever the app returns to the foreground. iOS may batch background updates.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                }
-
-                Text(health.statusMessage)
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .accessibilityIdentifier("apple-health-status")
-
-                if !cloud.isSignedIn {
-                    VStack(spacing: 10) {
-                        Text("Sign in with your existing GATIVX account")
-                            .font(.headline)
-                        TextField("Email", text: $email)
-                            .textInputAutocapitalization(.never)
-                            .keyboardType(.emailAddress)
-                            .textFieldStyle(.roundedBorder)
-                        SecureField("Password", text: $password)
-                            .textFieldStyle(.roundedBorder)
-                        Button("Sign in and sync") {
-                            Task { await cloud.signIn(email: email, password: password) }
-                        }
-                        .buttonStyle(.borderedProminent)
-                        .disabled(email.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || password.isEmpty)
-                        Text(cloud.status)
-                            .font(.caption)
-                            .foregroundStyle(cloud.status.lowercased().contains("failed") || cloud.status.lowercased().contains("pending") ? .orange : .secondary)
-                            .multilineTextAlignment(.center)
+                    ForEach(activityHistory.prefix(20)) { item in
+                        VStack(alignment: .leading, spacing: 6) {
+                            HStack { Text(item.activity).font(.headline); Spacer(); Text(item.startedAt.formatted(date: .abbreviated, time: .shortened)).font(.caption).foregroundStyle(.secondary) }
+                            HStack(spacing: 12) {
+                                Label(item.steps.map { $0.formatted() } ?? "—", systemImage: "figure.walk")
+                                Label(String(format: "%.2f km", item.gpsDistanceMeters / 1000), systemImage: "location")
+                                Label(item.durationText, systemImage: "clock")
+                            }.font(.caption).foregroundStyle(.secondary)
+                        }.padding(14).frame(maxWidth: .infinity, alignment: .leading).background(cardBackground, in: RoundedRectangle(cornerRadius: 16))
                     }
+                }
+            }.padding(16)
+        }.background(pageBackground.ignoresSafeArea())
+    }
+
+    private var missionsScreen: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                Text("Missions").font(.largeTitle.weight(.bold))
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("TODAY · CONSISTENCY").font(.caption.weight(.bold)).foregroundStyle(.secondary)
+                    Text("A little progress, every day.").font(.title2.weight(.bold))
+                    Text("Walk at a comfortable pace, notice how you feel, and celebrate showing up.")
+                        .font(.subheadline).foregroundStyle(.secondary)
+                    Button("Begin walking mission") { selectedTab = 1 }.buttonStyle(.borderedProminent).tint(neon).foregroundStyle(.black)
+                }.padding(18).frame(maxWidth: .infinity, alignment: .leading).background(cardBackground, in: RoundedRectangle(cornerRadius: 22))
+                Text("Your goal progress").font(.headline)
+                ProgressView(value: stepProgress).tint(neon)
+                Text(displayedDailySteps.map { "\($0.formatted()) of 10,000 steps" } ?? "Waiting for a step reading").font(.caption).foregroundStyle(.secondary)
+            }.padding(16)
+        }.background(pageBackground.ignoresSafeArea())
+    }
+
+    private var communityScreen: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("Community Gati").font(.largeTitle.weight(.bold))
+            Text("Your journey can encourage someone else's first step.")
+                .font(.title3.weight(.semibold))
+            Text("Community feed and shared missions will be introduced here. No member activity or social data is fabricated.")
+                .font(.subheadline).foregroundStyle(.secondary)
+            Spacer()
+        }.padding(20).frame(maxWidth: .infinity, alignment: .leading).background(pageBackground.ignoresSafeArea())
+    }
+
+    private var profileScreen: some View {
+        Form {
+            Section("Appearance") {
+                Picker("Theme", selection: $appearanceMode) {
+                    Text("Automatic").tag("system")
+                    Text("Day").tag("day")
+                    Text("Night").tag("night")
+                }.pickerStyle(.segmented)
+                Text("Automatic follows your iPhone appearance setting.").font(.caption).foregroundStyle(.secondary)
+            }
+            Section("Apple Health") {
+                Label(health.hasRequestedAccess ? "Connection requested" : "Not connected", systemImage: "heart.text.square")
+                Text(health.statusMessage).font(.caption).foregroundStyle(.secondary)
+                if !health.hasRequestedAccess {
+                    Button("Connect Apple Health") { health.requestReadAccessAndStart() }.disabled(!health.isAvailable || health.isRefreshing)
+                }
+            }
+            Section("Account") {
+                if !cloud.isSignedIn {
+                    TextField("Email", text: $email).textInputAutocapitalization(.never).keyboardType(.emailAddress)
+                    SecureField("Password", text: $password)
+                    Button("Sign in and sync") { Task { await cloud.signIn(email: email, password: password) } }
+                        .disabled(email.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || password.isEmpty)
                 } else {
                     Label("Cloud account connected", systemImage: "checkmark.icloud")
-                        .foregroundStyle(.green)
                     Button("Sign out", role: .destructive) { cloud.signOut() }
                 }
-
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(health.statusMessage)
-                    Text(cloud.status)
-                    if cloud.pendingHealthSyncCount > 0 {
-                        Text("\(cloud.pendingHealthSyncCount) measured sensor update(s) safely queued for cloud retry.")
-                            .foregroundStyle(.orange)
-                    }
-                    if let last = health.lastRefresh {
-                        Text("Last Health refresh: \(last.formatted(date: .omitted, time: .shortened))")
-                    }
-                }
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity, alignment: .leading)
-
-                Spacer()
-                Text("Fitness guidance, not medical diagnosis or treatment.")
-                    .font(.caption2).foregroundStyle(.secondary)
+                Text(cloud.status).font(.caption).foregroundStyle(.secondary)
+                if cloud.pendingHealthSyncCount > 0 {
+                    Text("\(cloud.pendingHealthSyncCount) sensor update(s) queued for retry.").font(.caption).foregroundStyle(.orange)
                 }
             }
-            .padding()
-            .navigationBarTitleDisplayMode(.inline)
-            .onAppear {
-                health.onDailyTotal = { day, total in
-                    guard cloud.isSignedIn else { return }
-                    Task { await cloud.syncSteps(date: day, steps: total) }
-                }
-                health.onActiveEnergy = { day, total in
-                    guard cloud.isSignedIn else { return }
-                    Task { await cloud.syncActiveEnergy(date: day, kilocalories: total) }
-                }
-                health.resumeIfPreviouslyConnected()
-                health.refreshOnForeground()
-                startLiveMotionMonitor()
-                loadActivityHistory()
-                // A Keychain-restored session is already signed in before onChange fires.
-                if cloud.isSignedIn {
-                    Task { await cloud.retryPendingHealthSyncs() }
-                    syncSavedActivitySessions()
-                }
-                if let recoveredStart = routeRecorder.recoveredStartedAt {
-                    selectedActivity = routeRecorder.recoveredActivity ?? "Walking"
-                    sessionStatus = "Unfinished activity recovered from \\(recoveredStart.formatted(date: .abbreviated, time: .shortened))."
-                }
-            }
-            .onChange(of: cloud.isSignedIn) { _, signedIn in
-                if signedIn {
-                    health.onDailyTotal = { day, total in
-                        Task { await cloud.syncSteps(date: day, steps: total) }
-                    }
-                    health.onActiveEnergy = { day, total in
-                        Task { await cloud.syncActiveEnergy(date: day, kilocalories: total) }
-                    }
-                    Task { await cloud.retryPendingHealthSyncs() }
-                    health.refreshRecentDays()
-                    health.refreshTodayEnergy()
-                    syncCurrentMotionSnapshotToCloud()
-                    syncSavedActivitySessions()
-                }
-            }
-            .onChange(of: scenePhase) { _, phase in
-                if phase == .active {
-                    health.refreshOnForeground()
-                    startLiveMotionMonitor()
-                    if cloud.isSignedIn {
-                        Task { await cloud.retryPendingHealthSyncs() }
-                        syncCurrentMotionSnapshotToCloud()
-                        syncSavedActivitySessions()
-                    }
-                } else if sessionStarted == nil && !routeRecorder.isRecording {
-                    // Keep the session pedometer alive while an explicitly started
-                    // activity is running in the background/with the screen locked.
-                    livePedometer.stopUpdates()
-                }
+            Section("About GATIVX") {
+                Text("From Goals to Xcellence")
+                Text("Fitness guidance, not medical diagnosis or treatment.").font(.caption).foregroundStyle(.secondary)
             }
         }
     }
+
+    var body: some View {
+        TabView(selection: $selectedTab) {
+            NavigationStack { homeDashboard.navigationTitle("").toolbar(.hidden, for: .navigationBar) }
+                .tabItem { Label("Home", systemImage: "house.fill") }.tag(0)
+            NavigationStack { activityScreen.navigationTitle("Activity") }
+                .tabItem { Label("Activity", systemImage: "figure.walk") }.tag(1)
+            NavigationStack { missionsScreen.navigationTitle("Missions") }
+                .tabItem { Label("Missions", systemImage: "target") }.tag(2)
+            NavigationStack { communityScreen.navigationTitle("Community") }
+                .tabItem { Label("Community", systemImage: "person.3") }.tag(3)
+            NavigationStack { profileScreen.navigationTitle("Profile") }
+                .tabItem { Label("Profile", systemImage: "person.crop.circle") }.tag(4)
+        }
+        .tint(neon)
+        .preferredColorScheme(dashboardColorScheme)
+        .onAppear {
+            health.onDailyTotal = { day, total in
+                guard cloud.isSignedIn else { return }
+                Task { await cloud.syncSteps(date: day, steps: total) }
+            }
+            health.onActiveEnergy = { day, total in
+                guard cloud.isSignedIn else { return }
+                Task { await cloud.syncActiveEnergy(date: day, kilocalories: total) }
+            }
+            health.resumeIfPreviouslyConnected()
+            health.refreshOnForeground()
+            startLiveMotionMonitor()
+            loadActivityHistory()
+            if cloud.isSignedIn {
+                Task { await cloud.retryPendingHealthSyncs() }
+                syncSavedActivitySessions()
+            }
+            if let recoveredStart = routeRecorder.recoveredStartedAt {
+                selectedActivity = routeRecorder.recoveredActivity ?? "Walking"
+                sessionStatus = "Unfinished activity recovered from \(recoveredStart.formatted(date: .abbreviated, time: .shortened))."
+            }
+        }
+        .onChange(of: cloud.isSignedIn) { _, signedIn in
+            if signedIn {
+                health.onDailyTotal = { day, total in Task { await cloud.syncSteps(date: day, steps: total) } }
+                health.onActiveEnergy = { day, total in Task { await cloud.syncActiveEnergy(date: day, kilocalories: total) } }
+                Task { await cloud.retryPendingHealthSyncs() }
+                health.refreshRecentDays()
+                health.refreshTodayEnergy()
+                syncCurrentMotionSnapshotToCloud()
+                syncSavedActivitySessions()
+            }
+        }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active {
+                health.refreshOnForeground()
+                startLiveMotionMonitor()
+                if cloud.isSignedIn {
+                    Task { await cloud.retryPendingHealthSyncs() }
+                    syncCurrentMotionSnapshotToCloud()
+                    syncSavedActivitySessions()
+                }
+            } else if sessionStarted == nil && !routeRecorder.isRecording {
+                livePedometer.stopUpdates()
+            }
+        }
+    }
+}
 }
