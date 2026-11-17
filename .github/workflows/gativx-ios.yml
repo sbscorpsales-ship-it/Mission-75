@@ -89,6 +89,7 @@ jobs:
 
           checks = {
               "Native daily total falls back to the live iPhone pedometer": "health.todaySteps ?? liveMotionSteps" in daily_display,
+              "Starting a walk never fabricates a zero-step reading": "sessionSteps = 0" not in start_activity and "self.sessionSteps = data?.numberOfSteps.intValue" in start_activity,
               "Core Motion authorization state is surfaced": "CMPedometer.authorizationStatus()" in motion_monitor and "Motion & Fitness access is denied" in motion_monitor,
               "Core Motion sensor errors are not silently discarded": "iPhone pedometer error:" in motion_monitor,
               "Core Motion live daily steps remain a separate sensor source": "self.liveMotionSteps = steps" in motion_monitor and "syncMotionDailySteps" in motion_monitor,
