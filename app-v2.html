@@ -283,6 +283,8 @@ function activateCloudUser(user){
   if(activeAccountId){
    persist();
    activeAccountId=null;
+   // After an account has owned the shared v2 store, never reopen that store while signed out.
+   try{localStorage.setItem(ACCOUNT_MIGRATED_KEY,'1')}catch(migrationError){console.error('GATIVX account isolation marker could not be saved',migrationError)}
    stateStorageKey=KEY+'.device';
    let deviceSaved=null;
    try{deviceSaved=localStorage.getItem(stateStorageKey)}catch{}
