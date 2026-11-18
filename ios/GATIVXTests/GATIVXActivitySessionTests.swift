@@ -72,8 +72,9 @@ final class GATIVXActivitySessionTests: XCTestCase {
         XCTAssertTrue(withGPSRoute.hasCloudSyncPayload)
     }
 
+    @MainActor
     func testStartingNewActivityCannotReplaceRecoveredGPSDraft() throws {
-        let suiteName = "GATIVXGPSDraftTests.\\(UUID().uuidString)"
+        let suiteName = "GATIVXGPSDraftTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent(suiteName, isDirectory: true)
