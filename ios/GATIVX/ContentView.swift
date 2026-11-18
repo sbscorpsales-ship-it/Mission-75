@@ -505,6 +505,32 @@ struct ContentView: View {
     @AppStorage("gativx.guru.purpose") private var guruPurpose = ""
     @AppStorage("gativx.guru.emotion") private var guruEmotion = ""
     @AppStorage("gativx.guru.nextAction") private var guruNextAction = ""
+    @AppStorage("gativx.journey.durationDays") private var guruJourneyDurationDays = 90
+    @AppStorage("gativx.journey.startedAt") private var guruJourneyStartedAt = 0.0
+    @AppStorage("gativx.journey.goal") private var guruJourneyGoal = ""
+
+    private var activeGuruJourney: GATIVXGoalJourney? {
+        guard guruJourneyStartedAt > 0 else { return nil }
+        return GATIVXGoalJourney(
+            durationDays: guruJourneyDurationDays,
+            startedAt: Date(timeIntervalSince1970: guruJourneyStartedAt),
+            now: Date()
+        )
+    }
+
+    private var guruSuggestedNextAction: String {
+        GATIVXGuruCoach.suggestedNextAction(
+            goal: guruGoal,
+            purpose: guruPurpose,
+            emotion: guruEmotion,
+            dailySteps: displayedDailySteps,
+            dailyStepGoal: dailyStepGoal
+        )
+    }
+
+    private var guruPurposeAnchor: String {
+        GATIVXGuruCoach.purposeAnchor(goal: guruGoal, purpose: guruPurpose, emotion: guruEmotion)
+    }
 
     private var dashboardColorScheme: ColorScheme? {
         switch appearanceMode {
@@ -762,7 +788,7 @@ struct ContentView: View {
                         VStack(alignment: .leading, spacing: 4) {
                             Text("COMMUNITY GATI").font(.caption.weight(.heavy)).tracking(0.9).foregroundStyle(.secondary)
                             Text("Move forward, together.").font(.headline)
-                            Text("Encourage others and grow through shared progress.")
+                            Text("Community feed is not active yet. Your personal activity remains private.")
                                 .font(.subheadline).foregroundStyle(.secondary)
                         }
                         Spacer()
@@ -1076,25 +1102,72 @@ struct ContentView: View {
                 }
                 .padding(18).background(cardBackground, in: RoundedRectangle(cornerRadius: 22))
 
+                VStack(alignment: .leading, spacing: 12) {
+                    Label("YOUR GOAL JOURNEY", systemImage: "calendar.badge.clock")
+                        .font(.headline).foregroundStyle(neon)
+                    Text("Choose a pace you can sustain. Your journey progress is stored on this iPhone.")
+                        .font(.subheadline).foregroundStyle(.secondary)
+                    Picker("Journey duration", selection: $guruJourneyDurationDays) {
+                        Text("30 days").tag(30)
+                        Text("90 days").tag(90)
+                        Text("180 days").tag(180)
+                        Text("365 days").tag(365)
+                    }
+                    .pickerStyle(.segmented)
+                    .accessibilityIdentifier("gativx-journey-duration")
+                    if let journey = activeGuruJourney {
+                        Text(guruJourneyGoal.isEmpty ? guruGoal : guruJourneyGoal)
+                            .font(.headline)
+                        HStack {
+                            Text("DAY \(min(journey.elapsedDays + 1, journey.durationDays)) OF \(journey.durationDays)")
+                                .font(.caption.weight(.heavy)).tracking(0.5)
+                            Spacer()
+                            Text(journey.isComplete ? "COMPLETE" : "\(journey.daysRemaining) DAYS LEFT")
+                                .font(.caption.weight(.bold)).foregroundStyle(.secondary)
+                        }
+                        ProgressView(value: journey.progress).tint(neon)
+                            .accessibilityIdentifier("gativx-journey-progress")
+                        Text(journey.checkpointMessage)
+                            .font(.subheadline).foregroundStyle(.secondary)
+                        if journey.isComplete {
+                            Button("Start another cycle") {
+                                guruJourneyGoal = guruGoal.trimmingCharacters(in: .whitespacesAndNewlines)
+                                guruJourneyStartedAt = Date().timeIntervalSince1970
+                            }
+                            .buttonStyle(.borderedProminent).tint(neon).foregroundStyle(.black)
+                        }
+                    } else {
+                        Text("Start with your current goal: \(guruGoal.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "add a goal above" : guruGoal)")
+                            .font(.subheadline).foregroundStyle(.secondary)
+                        Button("Start my \(guruJourneyDurationDays)-day journey") {
+                            guruJourneyGoal = guruGoal.trimmingCharacters(in: .whitespacesAndNewlines)
+                            guruJourneyStartedAt = Date().timeIntervalSince1970
+                        }
+                        .buttonStyle(.borderedProminent).tint(neon).foregroundStyle(.black)
+                        .disabled(guruGoal.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                        .accessibilityIdentifier("gativx-start-journey")
+                    }
+                }
+                .padding(18).background(cardBackground, in: RoundedRectangle(cornerRadius: 22))
+
                 VStack(alignment: .leading, spacing: 10) {
                     Label("WHEN YOUR GATI SLOWS", systemImage: "heart.text.square.fill")
                         .font(.headline).foregroundStyle(neon)
-                    Text(guruPurpose.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                         ? "Your purpose will appear here when you add it above."
-                         : guruPurpose)
-                        .font(.body.weight(.medium))
-                    if !guruEmotion.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                        Text("Remember the feeling you are moving towards: " + guruEmotion)
-                            .font(.subheadline).foregroundStyle(.secondary)
+                    Text(guruPurposeAnchor).font(.body.weight(.medium))
+                    Text("ONE PRACTICAL NEXT ACTION").font(.caption.weight(.heavy)).foregroundStyle(.secondary)
+                    Text(guruSuggestedNextAction).font(.subheadline.weight(.semibold))
+                    Button("Save this as my next action") {
+                        guruNextAction = guruSuggestedNextAction
                     }
-                    Text(guruNextAction.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                         ? "Choose one small action. Keep it realistic enough to begin today."
-                         : "Your next step: " + guruNextAction)
-                        .font(.subheadline.weight(.semibold))
+                    .buttonStyle(.bordered)
+                    if !guruNextAction.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        Text("Your chosen action: " + guruNextAction)
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
                     Button {
                         selectedTab = 1
                     } label: {
-                        Label("Go to Activity", systemImage: "figure.walk")
+                        Label("Start a walk", systemImage: "figure.walk")
                             .font(.headline).frame(maxWidth: .infinity).padding(.vertical, 12)
                     }
                     .buttonStyle(.borderedProminent).tint(neon).foregroundStyle(.black)
@@ -1111,8 +1184,11 @@ struct ContentView: View {
             Text("Community Gati").font(.largeTitle.weight(.bold))
             Text("Your journey can encourage someone else's first step.")
                 .font(.title3.weight(.semibold))
-            Text("Community feed and shared missions will be introduced here. No member activity or social data is fabricated.")
+            Label("NOT ACTIVE IN THIS BUILD", systemImage: "lock.fill")
+                .font(.caption.weight(.heavy)).foregroundStyle(.secondary)
+            Text("Community feed and shared missions are not available yet. Your personal activity remains private and is not shared with other members.")
                 .font(.subheadline).foregroundStyle(.secondary)
+                .accessibilityIdentifier("gativx-community-gated")
             Spacer()
         }.padding(20).frame(maxWidth: .infinity, alignment: .leading).background(pageBackground.ignoresSafeArea())
     }
