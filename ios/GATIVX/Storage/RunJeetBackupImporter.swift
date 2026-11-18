@@ -42,7 +42,7 @@ struct RunJeetBackupImporter {
               root["app"] as? String == "RunJeet" else {
             throw RunJeetBackupImportError.invalidBackup
         }
-        guard (root["schema"] as? NSNumber)?.intValue == 1,
+        guard integer(root["schema"]) == 1,
               let state = root["state"] as? [String: Any],
               let rawDailySteps = state["stepsByDay"] as? [String: Any],
               let rawSessions = state["sessions"] as? [[String: Any]] else {
