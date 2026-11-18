@@ -197,6 +197,8 @@ jobs:
               "Unreadable iPhone GPS draft is preserved rather than silently discarded": "original data was preserved for recovery" in gps,
               "Route distance skips segment breaks": "!pair.1.breakBefore" in gps,
               "Cloud distance skips segment breaks": "if cloudPoints[index].breakBefore { continue }" in cloud,
+              "Live GPS map uses a writable camera binding": "Map(position: $routeMapCameraPosition)" in view and ".constant(.region(routeMapRegion))" not in view,
+              "Live GPS map frames recovered and incoming route points": ".onAppear {" in view and ".onChange(of: routeRecorder.points.count)" in view and "routeMapCameraPosition = .region(routeMapRegion)" in view,
               "Active walk keeps motion monitor in background": "sessionStarted == nil && !routeRecorder.isRecording" in view,
               "Prompt HealthKit background update requested": "frequency: .immediate" in health,
               "Disconnect disables background delivery for every observed HealthKit quantity": "for type in [stepType, energyType, distanceType, exerciseType, heartRateType]" in health and "disableBackgroundDelivery(for: type)" in health,
