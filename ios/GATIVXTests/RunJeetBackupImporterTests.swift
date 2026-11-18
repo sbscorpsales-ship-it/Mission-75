@@ -195,3 +195,63 @@ final class RunJeetBackupImporterTests: XCTestCase {
         XCTAssertThrowsError(try importer.decode(invalidDay))
     }
 }
+
+
+final class RunJeetDailyStepsArchiveStoreTests: XCTestCase {
+    func testMergeIsIdempotentAndExistingDatesWin() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("GATIVXRunJeetArchiveTests.\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = RunJeetDailyStepsArchiveStore(directoryOverride: directory)
+
+        let first = try store.merge(["2026-11-18": 1234])
+        XCTAssertEqual(first.addedDays, 1)
+        XCTAssertEqual(first.preservedExistingDays, 0)
+        XCTAssertEqual(try store.load(), ["2026-11-18": 1234])
+
+        let second = try store.merge([
+            "2026-11-18": 9999,
+            "2026-11-19": 2000
+        ])
+        XCTAssertEqual(second.addedDays, 1)
+        XCTAssertEqual(second.preservedExistingDays, 1)
+        XCTAssertEqual(second.totalDays, 2)
+        XCTAssertEqual(try store.load(), [
+            "2026-11-18": 1234,
+            "2026-11-19": 2000
+        ])
+
+        let repeated = try store.merge(["2026-11-18": 1234, "2026-11-19": 2000])
+        XCTAssertEqual(repeated.addedDays, 0)
+        XCTAssertEqual(repeated.preservedExistingDays, 2)
+        XCTAssertEqual(try store.load().count, 2)
+    }
+
+    func testCorruptArchiveIsPreservedAndNeverTreatedAsEmpty() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("GATIVXRunJeetArchiveCorrupt.\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let file = directory.appendingPathComponent("runjeet-daily-steps-archive.json")
+        let corrupt = Data("keep-original-archive".utf8)
+        try corrupt.write(to: file)
+        let store = RunJeetDailyStepsArchiveStore(directoryOverride: directory)
+
+        XCTAssertThrowsError(try store.load())
+        XCTAssertThrowsError(try store.merge(["2026-11-18": 100]))
+        XCTAssertEqual(try Data(contentsOf: file), corrupt)
+    }
+
+    func testInvalidDailyTotalsAreRejectedBeforeArchiveCreation() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("GATIVXRunJeetArchiveInvalid.\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = RunJeetDailyStepsArchiveStore(directoryOverride: directory)
+
+        XCTAssertThrowsError(try store.merge(["2026-02-30": 100]))
+        XCTAssertFalse(FileManager.default.fileExists(
+            atPath: directory.appendingPathComponent("runjeet-daily-steps-archive.json").path
+        ))
+    }
+}
