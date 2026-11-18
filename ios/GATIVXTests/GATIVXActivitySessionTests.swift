@@ -119,6 +119,35 @@ final class GATIVXActivitySessionTests: XCTestCase {
         XCTAssertEqual(recorder.activityOwnerID, "account-original")
     }
 
+    @MainActor
+    func testStartingNewActivityCannotOverwriteUnreadableGPSDraft() throws {
+        let suiteName = "GATIVXUnreadableGPSDraftTests.\\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(suiteName, isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let draftURL = directory.appendingPathComponent("active-route-draft.json")
+        let corruptData = Data("preserve-this-route".utf8)
+        try corruptData.write(to: draftURL)
+        defer {
+            try? FileManager.default.removeItem(at: directory)
+            defaults.removePersistentDomain(forName: suiteName)
+        }
+
+        let recorder = GPSRouteRecorder(
+            userDefaults: defaults,
+            directoryOverride: directory
+        )
+        XCTAssertTrue(recorder.hasUnreadableDraft)
+        XCTAssertNil(recorder.recoveredStartedAt)
+
+        recorder.start(activity: "Running", ownerID: "new-account")
+
+        XCTAssertTrue(recorder.hasUnreadableDraft)
+        XCTAssertEqual(try Data(contentsOf: draftURL), corruptData)
+        XCTAssertTrue(recorder.status.contains("remains preserved"))
+    }
+
     func testDurationUsesMinutesAndSeconds() {
         let start = Date(timeIntervalSince1970: 1_800_000_000)
         let record = activityRecord(
