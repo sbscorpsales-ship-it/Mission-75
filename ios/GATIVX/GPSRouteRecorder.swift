@@ -1,5 +1,5 @@
 import Foundation
-import CoreLocation
+@preconcurrency import CoreLocation
 import Combine
 
 struct GATIVXRoutePoint: Codable {
@@ -42,16 +42,36 @@ struct GATIVXRoutePoint: Codable {
 private struct GATIVXActiveRouteDraft: Codable {
     let startedAt: Date
     let activity: String
+    let sessionID: UUID?
+    let ownerID: String?
     var points: [GATIVXRoutePoint]
+
+    init(
+        startedAt: Date,
+        activity: String,
+        points: [GATIVXRoutePoint],
+        sessionID: UUID,
+        ownerID: String? = nil
+    ) {
+        self.startedAt = startedAt
+        self.activity = activity
+        self.sessionID = sessionID
+        self.ownerID = ownerID
+        self.points = points
+    }
 }
 
+/// Core Location delivers delegate callbacks on the manager's creation run loop.
+/// This recorder is created on the main actor and keeps its location manager and UI state there.
 @MainActor
-final class GPSRouteRecorder: NSObject, ObservableObject, CLLocationManagerDelegate {
+final class GPSRouteRecorder: NSObject, ObservableObject {
     @Published private(set) var points: [GATIVXRoutePoint] = []
     @Published private(set) var status = "GPS ready."
     @Published private(set) var authorization: CLAuthorizationStatus = .notDetermined
     @Published private(set) var recoveredStartedAt: Date?
     @Published private(set) var recoveredActivity: String?
+    private(set) var activitySessionID: UUID?
+    private(set) var activityOwnerID: String?
 
     private let manager = CLLocationManager()
     private let draftKey = "gativx.activeRouteDraft.v1"
@@ -103,6 +123,8 @@ final class GPSRouteRecorder: NSObject, ObservableObject, CLLocationManagerDeleg
         points = draft.points
         recoveredStartedAt = draft.startedAt
         recoveredActivity = draft.activity
+        activitySessionID = draft.sessionID ?? UUID()
+        activityOwnerID = draft.ownerID
         activeStartedAt = draft.startedAt
         activeActivity = draft.activity
         status = "Recovered unfinished activity · \(points.count) GPS points. Resume or finish to save it."
@@ -117,34 +139,53 @@ final class GPSRouteRecorder: NSObject, ObservableObject, CLLocationManagerDeleg
                 status = "Recovered legacy GPS draft. File migration is pending; the original draft remains preserved."
             }
         }
+        // Upgrade old drafts with a stable idempotency key exactly once.
+        if draft.sessionID == nil {
+            _ = persistDraft()
+        }
     }
 
-    private func persistDraft() {
-        guard let startedAt = activeStartedAt else { return }
+    @discardableResult
+    private func persistDraft() -> Bool {
+        guard let startedAt = activeStartedAt,
+              let sessionID = activitySessionID else { return false }
         guard let url = draftURL else {
             status = "Could not access the local GPS draft folder. The route remains in memory; do not force-quit GATIVX."
-            return
+            return false
         }
-        let draft = GATIVXActiveRouteDraft(startedAt: startedAt, activity: activeActivity, points: points)
+        let draft = GATIVXActiveRouteDraft(
+            startedAt: startedAt,
+            activity: activeActivity,
+            points: points,
+            sessionID: sessionID,
+            ownerID: activityOwnerID
+        )
         do {
             let data = try JSONEncoder().encode(draft)
             try data.write(to: url, options: .atomic)
             UserDefaults.standard.removeObject(forKey: draftKey)
+            return true
         } catch {
             status = "Could not persist the active route safely: \(error.localizedDescription)"
+            return false
         }
     }
 
-    func start(activity: String) {
+    func start(activity: String, ownerID: String? = nil) {
         guard !isRecording else { return }
         points.removeAll()
         needsSegmentBreak = true
         activeStartedAt = Date()
         activeActivity = activity
+        activitySessionID = UUID()
+        activityOwnerID = ownerID
         recoveredStartedAt = nil
         recoveredActivity = nil
-        persistDraft()
+        let draftPersisted = persistDraft()
         requestAndBegin()
+        if !draftPersisted && isRecording {
+            status = "GPS is recording, but the route draft is not safely stored on this iPhone. Keep GATIVX open and check available storage."
+        }
     }
 
     func resumeRecovered() {
@@ -205,8 +246,10 @@ final class GPSRouteRecorder: NSObject, ObservableObject, CLLocationManagerDeleg
         manager.showsBackgroundLocationIndicator = false
         isRecording = false
         pendingStartAfterAuthorization = false
-        persistDraft()
-        status = points.isEmpty ? "No GPS points recorded. Check location permission and signal." : "Route paused and safely stored on this iPhone."
+        let draftPersisted = persistDraft()
+        if draftPersisted {
+            status = points.isEmpty ? "No GPS points recorded. Check location permission and signal." : "Route paused and safely stored on this iPhone."
+        }
     }
 
     func clearDraft() {
@@ -215,6 +258,8 @@ final class GPSRouteRecorder: NSObject, ObservableObject, CLLocationManagerDeleg
         points.removeAll()
         activeStartedAt = nil
         activeActivity = "Walking"
+        activitySessionID = nil
+        activityOwnerID = nil
         recoveredStartedAt = nil
         recoveredActivity = nil
     }
@@ -299,9 +344,10 @@ final class GPSRouteRecorder: NSObject, ObservableObject, CLLocationManagerDeleg
         if changed {
             // Persist each accepted batch, not just when the user presses Finish.
             // This allows recovery after app termination or a device restart.
-            persistDraft()
-            status = "Recording GPS route · \(points.count) points · " +
-                String(format: "%.2f km", routeDistanceMeters / 1000)
+            if persistDraft() {
+                status = "Recording GPS route · \(points.count) points · " +
+                    String(format: "%.2f km", routeDistanceMeters / 1000)
+            }
         }
     }
 
@@ -309,3 +355,7 @@ final class GPSRouteRecorder: NSObject, ObservableObject, CLLocationManagerDeleg
         status = "GPS issue: \(error.localizedDescription)"
     }
 }
+
+// Core Location invokes delegates on the run loop where CLLocationManager is created.
+// The manager is created by this main-actor recorder, so delegate state stays on MainActor.
+extension GPSRouteRecorder: @preconcurrency CLLocationManagerDelegate {}
