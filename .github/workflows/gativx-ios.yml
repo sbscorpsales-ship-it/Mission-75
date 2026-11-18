@@ -18,6 +18,7 @@ on:
     paths:
       - "ios/GATIVX/**"
       - "ios/GATIVXTests/**"
+      - "ios/GATIVXUITests/**"
       - "ios/gativx-project.yml"
       - ".github/workflows/gativx-ios.yml"
 
