@@ -142,6 +142,26 @@ final class RunJeetBackupImporterTests: XCTestCase {
         XCTAssertThrowsError(try importer.decode(overlongSession))
     }
 
+    func testRejectsUnreasonableAndOverflowingStepCounts() {
+        let excessiveDailySteps = Data("""
+        {"app":"RunJeet","schema":1,"state":{"stepsByDay":{"2026-11-18":1000001},"sessions":[]}}
+        """.utf8)
+        let overflowingDailySteps = Data("""
+        {"app":"RunJeet","schema":1,"state":{"stepsByDay":{"2026-11-18":9223372036854775808},"sessions":[]}}
+        """.utf8)
+        let excessiveSessionSteps = Data("""
+        {"app":"RunJeet","schema":1,"state":{"stepsByDay":{},"sessions":[{
+          "id":"c79090d9-9753-4fab-8183-426f2ceec150",
+          "startedAt":1794985731513,"endedAt":1794985743724,
+          "durationSec":12,"distanceM":0,"points":[],"sessionSteps":200001
+        }]}}
+        """.utf8)
+
+        XCTAssertThrowsError(try importer.decode(excessiveDailySteps))
+        XCTAssertThrowsError(try importer.decode(overflowingDailySteps))
+        XCTAssertThrowsError(try importer.decode(excessiveSessionSteps))
+    }
+
     func testDuplicateImportDoesNotDuplicateExistingActivity() throws {
         let data = Data("""
         {
