@@ -47,7 +47,7 @@ final class HealthKitWorkoutOutboxStoreTests: XCTestCase {
 
         XCTAssertEqual(restored.id, workout.id)
         XCTAssertNil(restored.steps)
-        XCTAssertEqual(restored.distanceMeters, 842.5)
+        XCTAssertEqual(try XCTUnwrap(restored.distanceMeters), 842.5, accuracy: 0.001)
         XCTAssertEqual(restored.activity, "Walking")
     }
 
