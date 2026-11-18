@@ -465,6 +465,9 @@ struct ContentView: View {
     @AppStorage("gativx.heartPointsGoal") private var heartPointsGoal = 30
     @AppStorage("gativx.dailyStepGoal") private var dailyStepGoal = 10_000
     @State private var selectedTab = 0
+    @State private var selectedProfilePhoto: PhotosPickerItem?
+    @State private var profilePhotoData: Data?
+    @State private var profilePhotoStatus = "No member photo selected."
     @State private var isGuruPresented = false
     @AppStorage("gativx.guru.goal") private var guruGoal = ""
     @AppStorage("gativx.guru.purpose") private var guruPurpose = ""
