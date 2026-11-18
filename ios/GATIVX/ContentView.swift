@@ -390,7 +390,10 @@ struct ContentView: View {
                     // to return data. Keep the active session identity and durable
                     // route draft so the member can retry or recover it.
                     self.sessionSteps = nil
-                    self.sessionStatus = "No verified step count or GPS points were received. Nothing was saved or counted. Your session remains available; retry after checking Motion and Location permissions."
+                    // Keep the original session ID and draft, and resume GPS so
+                    // the member can continue recording after a sensor/permission failure.
+                    self.routeRecorder.resumeRecovered()
+                    self.sessionStatus = "No verified step count or GPS points were received. Nothing was saved or counted. Your session remains available. " + self.routeRecorder.status + " Check Motion & Location permissions, then retry Finish & Save."
                     self.isFinishingSession = false
                     return
                 }
