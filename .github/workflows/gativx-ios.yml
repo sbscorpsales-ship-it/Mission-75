@@ -69,11 +69,17 @@ jobs:
           assert "sb_secret_" not in cloud and "service_role" not in cloud, "A privileged Supabase key must never ship in the app"
           assert "https://crarbbsvcczwmtvxyrxo.supabase.co" in cloud, "Supabase project URL changed unexpectedly"
           assert "auth/v1/signup" in cloud and "auth/v1/token" in cloud, "Sign-up and password sign-in endpoints must both exist"
-          assert "@State private var isCreatingAccount = true" in view, "First launch must default to registration"
-          assert "await cloud.signUp(email: cleanEmail, password: password)" in view, "Registration action is not connected"
-          assert "await cloud.signIn(email: cleanEmail, password: password)" in view, "Sign-in action is not connected"
-          assert 'accessibilityIdentifier("gativx-auth-submit")' in view, "Auth submit control needs a stable test identifier"
-          assert '.accessibilityIdentifier("gativx-home-dashboard")' in view, "Dashboard needs a stable test identifier"
+          assert "await cloud.signUp(email: cleanEmail, password: password)" in view, "Optional account registration action is not connected"
+          assert "await cloud.signIn(email: cleanEmail, password: password)" in view, "Optional account sign-in action is not connected"
+          assert 'Section("Account")' in view and 'Button("Sign out", role: .destructive)' in view, "Account management must remain available in Profile"
+          assert "An account is optional." in view, "Dashboard must remain usable without an account"
+          root_start = view.index("    var body: some View {", view.index("private var welcomeScreen"))
+          root_end = view.index(".frame(maxWidth: .infinity, maxHeight: .infinity)", root_start)
+          launch_root = view[root_start:root_end]
+          assert "TabView(selection: $selectedTab)" in launch_root, "Tapping the app icon must open the dashboard tab shell directly"
+          assert "homeDashboard" in launch_root, "The approved home dashboard must be the initial app screen"
+          assert "welcomeScreen" not in launch_root and "if cloud.isSignedIn" not in launch_root, "First launch must not be blocked by welcome or account registration"
+          assert 'accessibilityIdentifier("gativx-home-dashboard")' in view, "Dashboard needs a stable test identifier"
           assert "GATIVX GURU" in view and "GATIVX Guru" in view, "GATIVX Guru branding must remain available in dashboard and navigation"
           dashboard = view.split("private var homeDashboard: some View", 1)[1].split("private func wellnessSnapshotCard", 1)[0]
           assert 'Text("GATI GURU")' in dashboard, "Approved home dashboard must show the Gati Guru section"
@@ -104,7 +110,7 @@ jobs:
           assert "NSContactsUsageDescription" not in info and "CNContactStore" not in view, "Do not request Contacts for core fitness features"
 
           print("PASS: publishable Supabase configuration and both auth endpoints")
-          print("PASS: registration-first onboarding and sign-in controls")
+          print("PASS: direct dashboard launch with optional account setup in Profile")
           print("PASS: opt-in Motion permission and portrait-only native layout")
           print("PASS: HealthKit, Motion and GPS usage descriptions")
           print("PASS: no unnecessary Contacts permission")
