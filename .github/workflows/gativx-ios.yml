@@ -14,7 +14,6 @@ on:
       - main
       - "fix/gativx/**"
       - "fix/gativx-*"
-      - "feat/consolidated-gativx-runjeet"
     paths:
       - "ios/GATIVX/**"
       - "ios/GATIVXTests/**"
@@ -134,10 +133,19 @@ jobs:
             -scheme GATIVX \
             -destination "platform=iOS Simulator,id=$SIMULATOR_ID" \
             -derivedDataPath build/GATIVX-Tests \
+            -resultBundlePath build/GATIVX.xcresult \
             CODE_SIGNING_ALLOWED=NO \
             test
 
-      - name: Verify generated HealthKit target signing configuration
+      - name: Upload XCTest result bundle and dashboard screenshot evidence
+        if: always()
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: GATIVX-xcresult
+          path: build/GATIVX.xcresult
+          if-no-files-found: warn
+
+      - name: Verify generated target references HealthKit source entitlements
         run: |
           SETTINGS="$(xcodebuild -showBuildSettings -project ios/GATIVX.xcodeproj -scheme GATIVX)"
           echo "$SETTINGS" | grep -F 'CODE_SIGN_ENTITLEMENTS = GATIVX/GATIVX.entitlements'
@@ -303,7 +311,7 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             build
 
-      - name: Verify packaged permissions and HealthKit entitlements
+      - name: Verify simulator privacy strings and source entitlement declarations
         run: |
           APP="build/GATIVX-Simulator/Build/Products/Debug-iphonesimulator/GATIVX.app"
           test -f "$APP/Info.plist"
@@ -333,7 +341,7 @@ jobs:
               raise SystemExit("HealthKit entitlement is missing")
           if entitlements.get("com.apple.developer.healthkit.background-delivery") != True:
               raise SystemExit("HealthKit background-delivery entitlement is missing")
-          print("GATIVX permission strings and source entitlements validated")
+          print("Simulator privacy strings and source entitlement declarations validated; signed device entitlements are not asserted.")
           PY
 
       - name: Upload simulator build

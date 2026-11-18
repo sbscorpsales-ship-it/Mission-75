@@ -148,6 +148,85 @@ final class GATIVXActivitySessionTests: XCTestCase {
         XCTAssertTrue(recorder.status.contains("remains preserved"))
     }
 
+    func testRecoveryUpsertMergesLongerRouteAndPreservesKnownStepsAndOwner() {
+        let sessionID = UUID()
+        let startedAt = Date(timeIntervalSince1970: 1_800_000_000)
+        let pointA = routePoint(latitude: 15.8500, longitude: 74.5000, breakBefore: true)
+        let pointB = routePoint(latitude: 15.8501, longitude: 74.5000)
+        let pointC = routePoint(latitude: 15.8510, longitude: 74.5000)
+        let existing = ActivitySessionRecord(
+            id: sessionID,
+            activity: "Walking",
+            startedAt: startedAt,
+            finishedAt: startedAt.addingTimeInterval(60),
+            steps: 120,
+            routePoints: [pointA, pointB],
+            motionDistanceMeters: 12,
+            ownerID: "account-original"
+        )
+        let recovered = ActivitySessionRecord(
+            id: sessionID,
+            activity: "Running",
+            startedAt: startedAt.addingTimeInterval(5),
+            finishedAt: startedAt.addingTimeInterval(120),
+            steps: 118,
+            routePoints: [pointA, pointC],
+            motionDistanceMeters: 10,
+            ownerID: "account-different"
+        )
+        let store = ActivitySessionStore()
+
+        let merged = store.upserting(recovered, into: [existing])
+
+        XCTAssertEqual(merged.count, 1, "Recovery must not create a duplicate session")
+        XCTAssertEqual(merged[0].id, sessionID)
+        XCTAssertEqual(merged[0].activity, "Walking")
+        XCTAssertEqual(merged[0].startedAt, startedAt)
+        XCTAssertEqual(merged[0].finishedAt, recovered.finishedAt)
+        XCTAssertEqual(merged[0].steps, 120, "A recovered lower count must not replace a known count")
+        XCTAssertEqual(merged[0].routePoints?.count, 2)
+        XCTAssertGreaterThan(merged[0].gpsDistanceMeters, existing.gpsDistanceMeters)
+        XCTAssertEqual(merged[0].ownerID, "account-original", "Recovery must not transfer an owned session")
+        XCTAssertEqual(merged[0].motionDistanceMeters, 12)
+    }
+
+    func testRecoveryUpsertFillsMissingStepsAndKeepsLongerExistingRoute() {
+        let sessionID = UUID()
+        let startedAt = Date(timeIntervalSince1970: 1_800_000_000)
+        let pointA = routePoint(latitude: 15.8500, longitude: 74.5000, breakBefore: true)
+        let pointB = routePoint(latitude: 15.8510, longitude: 74.5000)
+        let pointC = routePoint(latitude: 15.8520, longitude: 74.5000)
+        let existing = ActivitySessionRecord(
+            id: sessionID,
+            activity: "Walking",
+            startedAt: startedAt,
+            finishedAt: startedAt.addingTimeInterval(60),
+            steps: nil,
+            routePoints: [pointA, pointB, pointC],
+            motionDistanceMeters: nil,
+            ownerID: nil
+        )
+        let recovered = ActivitySessionRecord(
+            id: sessionID,
+            activity: "Walking",
+            startedAt: startedAt,
+            finishedAt: startedAt.addingTimeInterval(90),
+            steps: 95,
+            routePoints: [pointA, pointB],
+            motionDistanceMeters: 20,
+            ownerID: "account-original"
+        )
+        let store = ActivitySessionStore()
+
+        let merged = store.upserting(recovered, into: [existing])
+
+        XCTAssertEqual(merged.count, 1)
+        XCTAssertEqual(merged[0].steps, 95, "A verified recovered step count should fill a missing value")
+        XCTAssertEqual(merged[0].routePoints?.count, 3, "The longer previously saved route must win")
+        XCTAssertEqual(merged[0].ownerID, "account-original")
+        XCTAssertEqual(merged[0].motionDistanceMeters, 20)
+    }
+
     func testDurationUsesMinutesAndSeconds() {
         let start = Date(timeIntervalSince1970: 1_800_000_000)
         let record = activityRecord(

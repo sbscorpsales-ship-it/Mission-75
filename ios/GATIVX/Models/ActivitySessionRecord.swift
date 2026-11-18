@@ -51,6 +51,28 @@ struct ActivitySessionRecord: Codable, Identifiable {
         steps != nil || !(routePoints?.isEmpty ?? true)
     }
 
+    /// Merge a recovered copy of the same session without losing better local data.
+    /// The existing record remains authoritative for identity, original start and owner.
+    func mergingRecovery(_ incoming: ActivitySessionRecord) -> ActivitySessionRecord {
+        let existingPoints = routePoints ?? []
+        let incomingPoints = incoming.routePoints ?? []
+        let useIncomingRoute = incoming.gpsDistanceMeters > gpsDistanceMeters ||
+            (incoming.gpsDistanceMeters == gpsDistanceMeters && incomingPoints.count > existingPoints.count)
+        let mergedSteps = [steps, incoming.steps].compactMap { $0 }.max()
+        let mergedMotionDistance = [motionDistanceMeters, incoming.motionDistanceMeters].compactMap { $0 }.max()
+
+        return ActivitySessionRecord(
+            id: id,
+            activity: activity,
+            startedAt: startedAt,
+            finishedAt: max(finishedAt, incoming.finishedAt),
+            steps: mergedSteps,
+            routePoints: useIncomingRoute ? incoming.routePoints : routePoints,
+            motionDistanceMeters: mergedMotionDistance,
+            ownerID: ownerID ?? incoming.ownerID
+        )
+    }
+
     var durationText: String {
         let seconds = max(0, Int(finishedAt.timeIntervalSince(startedAt)))
         return String(format: "%d:%02d", seconds / 60, seconds % 60)

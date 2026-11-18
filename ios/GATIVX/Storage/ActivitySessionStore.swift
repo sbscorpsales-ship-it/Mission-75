@@ -42,6 +42,18 @@ struct ActivitySessionStore {
         try write(records, to: fileURL())
     }
 
+    /// Idempotently inserts or reconciles a session by its stable UUID.
+    /// Existing position and identity are preserved; richer recovered sensor data is merged.
+    func upserting(_ record: ActivitySessionRecord, into records: [ActivitySessionRecord]) -> [ActivitySessionRecord] {
+        var updated = records
+        if let index = updated.firstIndex(where: { $0.id == record.id }) {
+            updated[index] = updated[index].mergingRecovery(record)
+        } else {
+            updated.insert(record, at: 0)
+        }
+        return updated
+    }
+
     private func fileURL() throws -> URL {
         if let directoryOverride {
             return directoryOverride.appendingPathComponent(fileName, isDirectory: false)

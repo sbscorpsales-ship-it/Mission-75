@@ -417,9 +417,9 @@ struct ContentView: View {
                     self.isFinishingSession = false
                     return
                 }
-                if !history.contains(where: { $0.id == recordID }) {
-                    history.insert(record, at: 0)
-                }
+                // Reconcile a crash-recovered copy with the already-written session.
+                // Do not clear the GPS draft until this merged record is verified on disk.
+                history = self.activityStore.upserting(record, into: history)
                 do {
                     // Atomic file replacement plus a read-back check protects the route draft.
                     try self.activityStore.save(history)
