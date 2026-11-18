@@ -12,6 +12,7 @@ struct ContentView: View {
     @StateObject private var routeRecorder = GPSRouteRecorder()
     @State private var routeMapCameraPosition: MapCameraPosition = .automatic
     private let activityStore = ActivitySessionStore()
+    private let runJeetDailyStepsArchiveStore = RunJeetDailyStepsArchiveStore()
     private let memberProfilePhotoStore = MemberProfilePhotoStore()
     @State private var email = ""
     @State private var password = ""
@@ -29,6 +30,8 @@ struct ContentView: View {
     @State private var pendingRunJeetImportName = ""
     @State private var showingRunJeetImportPreview = false
     @State private var runJeetImportAlert: String?
+    @State private var runJeetDailyStepsArchive: [String: Int] = [:]
+    @State private var runJeetArchiveStatus = "No RunJeet daily totals imported."
     @State private var sessionStarted: Date?
     @State private var isFinishingSession = false
     @State private var activeSessionID: UUID?
@@ -203,10 +206,6 @@ struct ContentView: View {
             do {
                 let data = try Data(contentsOf: url)
                 let backup = try RunJeetBackupImporter().decode(data)
-                guard backup.dailyStepsByDay.isEmpty else {
-                    runJeetImportAlert = "This backup contains \(backup.dailyStepsByDay.count) historical daily step totals. This build imports activity sessions only and does not yet archive those totals separately. No data was changed; keep the original JSON backup safe."
-                    return
-                }
                 pendingRunJeetImport = backup
                 pendingRunJeetImportName = url.lastPathComponent
                 showingRunJeetImportPreview = true
@@ -233,6 +232,15 @@ struct ContentView: View {
         let importer = RunJeetBackupImporter()
         let importedRecords = importer.assigningOwnerID(ownerID, to: pendingRunJeetImport.activities)
         do {
+            let archiveResult: RunJeetDailyStepsArchiveStore.MergeResult?
+            if pendingRunJeetImport.dailyStepsByDay.isEmpty {
+                archiveResult = nil
+            } else {
+                archiveResult = try runJeetDailyStepsArchiveStore.merge(pendingRunJeetImport.dailyStepsByDay)
+                runJeetDailyStepsArchive = try runJeetDailyStepsArchiveStore.load()
+                runJeetArchiveStatus = "\(runJeetDailyStepsArchive.count) historical day(s) archived locally; separate from Apple Health."
+            }
+
             let existing = try activityStore.load()
             let existingIDs = Set(existing.map(\.id))
             let merged = importer.merging(importedRecords, into: existing)
@@ -262,11 +270,28 @@ struct ContentView: View {
             let visibilityNote = (!assignToCurrentAccount && cloud.isSignedIn)
                 ? " Local-only imports remain separate from the signed-in account and are hidden until you switch to guest mode."
                 : ""
-            runJeetImportAlert = "Import verified: \(newIDs.count) new activity session(s) saved to \(destination); \(duplicateCount) duplicate session(s) were left unchanged. Daily step totals were not present and Apple Health totals were not changed." + visibilityNote
+            let dailySummary: String
+            if let archiveResult {
+                dailySummary = " \(archiveResult.addedDays) historical daily total(s) archived on this iPhone; \(archiveResult.preservedExistingDays) existing date(s) kept unchanged. These totals are not merged into Apple Health or cloud step totals."
+            } else {
+                dailySummary = " No historical daily totals were present in this backup."
+            }
+            runJeetImportAlert = "Import verified: \(newIDs.count) new activity session(s) saved to \(destination); \(duplicateCount) duplicate session(s) were left unchanged." + dailySummary + visibilityNote
         } catch {
-            runJeetImportAlert = "Import could not be verified: " + error.localizedDescription + ". Existing history was not intentionally replaced; keep the original backup."
+            runJeetImportAlert = "Import could not be fully verified: " + error.localizedDescription + ". Any daily totals already archived remain safe; re-import the same backup to retry without duplicating sessions. Keep the original backup."
         }
         self.pendingRunJeetImport = nil
+    }
+
+    private func loadRunJeetDailyStepsArchive() {
+        do {
+            runJeetDailyStepsArchive = try runJeetDailyStepsArchiveStore.load()
+            runJeetArchiveStatus = runJeetDailyStepsArchive.isEmpty
+                ? "No RunJeet daily totals imported."
+                : "\(runJeetDailyStepsArchive.count) historical day(s) archived locally; separate from Apple Health."
+        } catch {
+            runJeetArchiveStatus = "Imported daily-step archive could not be read. Original data was preserved."
+        }
     }
 
     private func syncCurrentMotionSnapshotToCloud() {
@@ -985,7 +1010,7 @@ struct ContentView: View {
                 pendingRunJeetImport = nil
             }
         } message: {
-            Text("Found \(pendingRunJeetImport?.activities.count ?? 0) saved activity session(s). No daily step totals are present in this backup. Existing session IDs will not be overwritten. Choose account sync only if this backup belongs to the account currently signed in.")
+            Text("Found \(pendingRunJeetImport?.activities.count ?? 0) activity session(s) and \(pendingRunJeetImport?.dailyStepsByDay.count ?? 0) historical daily total(s). Daily totals are archived separately on this iPhone and are not merged into Apple Health. Existing session IDs and archived dates are preserved. Choose account sync only if this backup belongs to the account currently signed in.")
         }
         .alert("RunJeet backup", isPresented: Binding(
             get: { runJeetImportAlert != nil },
@@ -1157,6 +1182,17 @@ struct ContentView: View {
                 Text("Contacts access is not required for step counting, GPS, Apple Health or account sync. GATIVX does not request it.")
                     .font(.caption).foregroundStyle(.secondary)
             }
+            Section("Imported RunJeet daily totals") {
+                Text(runJeetArchiveStatus).font(.caption).foregroundStyle(.secondary)
+                ForEach(runJeetDailyStepsArchive.keys.sorted(by: >).prefix(10), id: \.self) { day in
+                    HStack {
+                        Text(day)
+                        Spacer()
+                        Text("\(runJeetDailyStepsArchive[day, default: 0].formatted()) steps")
+                            .monospacedDigit().foregroundStyle(.secondary)
+                    }
+                }
+            }
             Section("Apple Health") {
                 Label(health.hasRequestedAccess ? "Connection requested" : "Not connected", systemImage: "heart.text.square")
                 Text(health.statusMessage).font(.caption).foregroundStyle(.secondary)
@@ -1213,6 +1249,7 @@ struct ContentView: View {
                 Text("Fitness guidance, not medical diagnosis or treatment.").font(.caption).foregroundStyle(.secondary)
             }
         }
+        .onAppear { loadRunJeetDailyStepsArchive() }
     }
 
     private func progressMeterCard(title: String, value: Int?, goal: Int, unit: String, symbol: String, tint: Color, explanation: String) -> some View {
