@@ -8,6 +8,7 @@ struct ContentView: View {
     @StateObject private var health = HealthKitManager()
     @StateObject private var cloud = SupabaseRESTClient()
     @StateObject private var routeRecorder = GPSRouteRecorder()
+    @State private var routeMapCameraPosition: MapCameraPosition = .automatic
     private let activityStore = ActivitySessionStore()
     @State private var email = ""
     @State private var password = ""
@@ -732,7 +733,7 @@ struct ContentView: View {
 
     private var liveRouteMap: some View {
         ZStack(alignment: .topLeading) {
-            Map(position: .constant(.region(routeMapRegion))) {
+            Map(position: $routeMapCameraPosition) {
                 ForEach(Array(routeCoordinateSegments.enumerated()), id: \.offset) { _, segment in
                     if segment.count > 1 { MapPolyline(coordinates: segment).stroke(neon, lineWidth: 5) }
                 }
@@ -749,6 +750,15 @@ struct ContentView: View {
             }
             .mapControls { MapCompass() }
             .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .onAppear {
+                if !routeRecorder.points.isEmpty {
+                    routeMapCameraPosition = .region(routeMapRegion)
+                }
+            }
+            .onChange(of: routeRecorder.points.count) { _, newCount in
+                guard newCount > 0 else { return }
+                routeMapCameraPosition = .region(routeMapRegion)
+            }
             if routeRecorder.points.isEmpty {
                 VStack(spacing: 6) {
                     Image(systemName: "location.slash").font(.title2)
