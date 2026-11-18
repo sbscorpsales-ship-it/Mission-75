@@ -13,6 +13,7 @@ on:
       - main
       - "fix/gativx/**"
       - "fix/gativx-*"
+      - "feat/consolidated-gativx-runjeet"
     paths:
       - "ios/GATIVX/**"
       - "ios/GATIVXTests/**"
