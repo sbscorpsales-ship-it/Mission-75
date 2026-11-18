@@ -35,6 +35,7 @@ final class HealthKitWorkoutOutboxStoreTests: XCTestCase {
 
         XCTAssertThrowsError(try store.load())
         XCTAssertThrowsError(try store.enqueue(makeWorkout()))
+        XCTAssertThrowsError(try store.acknowledge(UUID()))
         XCTAssertEqual(defaults.data(forKey: key), corrupt)
     }
 
