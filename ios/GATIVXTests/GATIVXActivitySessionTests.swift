@@ -137,7 +137,7 @@ final class GATIVXActivitySessionTests: XCTestCase {
     }
 
     func testActivityStorePreservesLegacyDataWhenMigrationWriteFails() throws {
-        let suiteName = "GATIVXTests.\\(UUID().uuidString)"
+        let suiteName = "GATIVXTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!
         let blockingFile = FileManager.default.temporaryDirectory
             .appendingPathComponent(suiteName, isDirectory: false)
@@ -166,7 +166,7 @@ final class GATIVXActivitySessionTests: XCTestCase {
 
     func testMemberProfilePhotoStoreSavesAndReadsBackData() throws {
         let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("GATIVXPhotoTests.\\(UUID().uuidString)", isDirectory: true)
+            .appendingPathComponent("GATIVXPhotoTests.\(UUID().uuidString)", isDirectory: true)
         defer { try? FileManager.default.removeItem(at: directory) }
         let store = MemberProfilePhotoStore(directoryOverride: directory)
         let photoData = Data([0xFF, 0xD8, 0xFF, 0xD9])
@@ -181,7 +181,7 @@ final class GATIVXActivitySessionTests: XCTestCase {
 
     func testMemberProfilePhotoStoreRejectsEmptyDataWithoutReplacingExistingPhoto() throws {
         let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("GATIVXPhotoTests.\\(UUID().uuidString)", isDirectory: true)
+            .appendingPathComponent("GATIVXPhotoTests.\(UUID().uuidString)", isDirectory: true)
         defer { try? FileManager.default.removeItem(at: directory) }
         let store = MemberProfilePhotoStore(directoryOverride: directory)
         let existingPhoto = Data([0xFF, 0xD8, 0xFF, 0xD9])
@@ -193,7 +193,7 @@ final class GATIVXActivitySessionTests: XCTestCase {
 
     func testMemberProfilePhotoStoreDeletesPhoto() throws {
         let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("GATIVXPhotoTests.\\(UUID().uuidString)", isDirectory: true)
+            .appendingPathComponent("GATIVXPhotoTests.\(UUID().uuidString)", isDirectory: true)
         defer { try? FileManager.default.removeItem(at: directory) }
         let store = MemberProfilePhotoStore(directoryOverride: directory)
         try store.save(Data([0xFF, 0xD8, 0xFF, 0xD9]))
