@@ -68,6 +68,44 @@ final class RunJeetBackupImporterTests: XCTestCase {
         XCTAssertEqual(result.activities[0].motionDistanceMeters, 15.5)
     }
 
+    func testImportedRecordsReceiveAccountOwnershipOnlyWhenExplicitlySelected() throws {
+        let data = Data("""
+        {"app":"RunJeet","schema":1,"state":{"stepsByDay":{},"sessions":[{
+          "id":"c79090d9-9753-4fab-8183-426f2ceec150",
+          "startedAt":1794985731513,"endedAt":1794985743724,
+          "durationSec":12,"distanceM":0,"points":[],"sessionSteps":0
+        }]}}
+        """.utf8)
+        let imported = try importer.decode(data).activities
+
+        let localOnly = importer.assigningOwnerID(nil, to: imported)
+        let accountOwned = importer.assigningOwnerID("account-42", to: imported)
+
+        XCTAssertNil(localOnly[0].ownerID)
+        XCTAssertEqual(accountOwned[0].ownerID, "account-42")
+        XCTAssertEqual(accountOwned[0].id, imported[0].id)
+    }
+
+    func testRejectsBooleanDistanceAndNegativeSessionSteps() {
+        let booleanDistance = Data("""
+        {"app":"RunJeet","schema":1,"state":{"stepsByDay":{},"sessions":[{
+          "id":"c79090d9-9753-4fab-8183-426f2ceec150",
+          "startedAt":1794985731513,"endedAt":1794985743724,
+          "durationSec":12,"distanceM":true,"points":[],"sessionSteps":0
+        }]}}
+        """.utf8)
+        let negativeSteps = Data("""
+        {"app":"RunJeet","schema":1,"state":{"stepsByDay":{},"sessions":[{
+          "id":"c79090d9-9753-4fab-8183-426f2ceec150",
+          "startedAt":1794985731513,"endedAt":1794985743724,
+          "durationSec":12,"distanceM":0,"points":[],"sessionSteps":-1
+        }]}}
+        """.utf8)
+
+        XCTAssertThrowsError(try importer.decode(booleanDistance))
+        XCTAssertThrowsError(try importer.decode(negativeSteps))
+    }
+
     func testDuplicateImportDoesNotDuplicateExistingActivity() throws {
         let data = Data("""
         {
