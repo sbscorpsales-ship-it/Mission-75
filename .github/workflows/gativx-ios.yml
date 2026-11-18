@@ -93,7 +93,9 @@ jobs:
           assert dashboard.count(".tabItem { Label(") == 0, "Navigation tabs belong to the persistent app shell, not the scrollable dashboard"
           step_ring = view.split("private var stepRing: some View", 1)[1].split("private var homeDashboard", 1)[0]
           assert ".frame(width: 190, height: 190)" not in step_ring, "Step ring must respect its responsive dashboard container"
-          assert "stepRing.frame(width: 164, height: 164)" in view, "Dashboard must provide an explicit compact step-ring size"
+          assert "let ringDiameter = min(max(dashboardWidth * 0.40, 136), 164)" in view, "Dashboard must size the step ring responsively for iPhone width"
+          assert "stepRing.frame(width: ringDiameter, height: ringDiameter)" in view, "Step ring must use the responsive dashboard size"
+          assert "GeometryReader { dashboardGeometry in" in view and ".frame(height: heroHeight)" in view, "Dashboard hero and spacing must adapt to available screen dimensions"
           assert "motionMonitoringEnabled" in view and "if motionMonitoringEnabled { startLiveMotionMonitor() }" in view, "Daily motion tracking must be opt-in, not prompted at launch"
 
           required_usage = [
