@@ -133,7 +133,7 @@ jobs:
           print("PASS: no unnecessary Contacts permission")
           PY
 
-      - name: Run GATIVX unit tests
+      - name: Run GATIVX unit tests (serial simulator, 40-minute cap)
         timeout-minutes: 40
         run: |
           SIMULATOR_ID="$(xcrun simctl list devices available -j | python3 -c 'import json, sys; data = json.load(sys.stdin); print(next((device["udid"] for devices in data["devices"].values() for device in devices if device["isAvailable"] and device["name"].startswith("iPhone")), ""))')"
