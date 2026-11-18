@@ -72,6 +72,52 @@ final class GATIVXActivitySessionTests: XCTestCase {
         XCTAssertTrue(withGPSRoute.hasCloudSyncPayload)
     }
 
+    func testStartingNewActivityCannotReplaceRecoveredGPSDraft() throws {
+        let suiteName = "GATIVXGPSDraftTests.\\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(suiteName, isDirectory: true)
+        defer {
+            try? FileManager.default.removeItem(at: directory)
+            defaults.removePersistentDomain(forName: suiteName)
+        }
+
+        let startedAt = Date(timeIntervalSince1970: 1_800_000_000)
+        let sessionID = UUID()
+        let draft: [String: Any] = [
+            "startedAt": startedAt.timeIntervalSince1970,
+            "activity": "Walking",
+            "sessionID": sessionID.uuidString,
+            "ownerID": "account-original",
+            "points": [[
+                "latitude": 15.85,
+                "longitude": 74.50,
+                "timestamp": startedAt.timeIntervalSince1970,
+                "horizontalAccuracy": 5.0,
+                "breakBefore": true
+            ]]
+        ]
+        defaults.set(try JSONSerialization.data(withJSONObject: draft), forKey: "gativx.activeRouteDraft.v1")
+
+        let recorder = GPSRouteRecorder(
+            userDefaults: defaults,
+            directoryOverride: directory
+        )
+        XCTAssertEqual(recorder.recoveredStartedAt, startedAt)
+        XCTAssertEqual(recorder.recoveredActivity, "Walking")
+        XCTAssertEqual(recorder.points.count, 1)
+        XCTAssertEqual(recorder.activitySessionID, sessionID)
+        XCTAssertEqual(recorder.activityOwnerID, "account-original")
+
+        recorder.start(activity: "Running", ownerID: "account-new")
+
+        XCTAssertEqual(recorder.recoveredStartedAt, startedAt)
+        XCTAssertEqual(recorder.recoveredActivity, "Walking")
+        XCTAssertEqual(recorder.points.count, 1)
+        XCTAssertEqual(recorder.activitySessionID, sessionID)
+        XCTAssertEqual(recorder.activityOwnerID, "account-original")
+    }
+
     func testDurationUsesMinutesAndSeconds() {
         let start = Date(timeIntervalSince1970: 1_800_000_000)
         let record = activityRecord(
