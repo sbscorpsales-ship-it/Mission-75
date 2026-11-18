@@ -297,6 +297,35 @@ final class GATIVXActivitySessionTests: XCTestCase {
         XCTAssertEqual(record.durationText, "2:05")
     }
 
+    func testActivityStoreCanRetryAfterTransientSaveFailure() throws {
+        let suiteName = "GATIVXRetrySaveTests.\\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        let blockingPath = FileManager.default.temporaryDirectory
+            .appendingPathComponent(suiteName, isDirectory: false)
+        let blockingData = Data("temporary-storage-blocker".utf8)
+        try blockingData.write(to: blockingPath)
+        defer {
+            try? FileManager.default.removeItem(at: blockingPath)
+            defaults.removePersistentDomain(forName: suiteName)
+        }
+        let store = ActivitySessionStore(
+            userDefaults: defaults,
+            directoryOverride: blockingPath
+        )
+        let record = activityRecord(ownerID: "account-retry")
+
+        XCTAssertThrowsError(try store.save([record]))
+        XCTAssertEqual(try Data(contentsOf: blockingPath), blockingData)
+
+        // Once storage becomes available, the same activity can be retried and verified.
+        try FileManager.default.removeItem(at: blockingPath)
+        try store.save([record])
+        let restored = try store.load()
+
+        XCTAssertEqual(restored.map(\\.id), [record.id])
+        XCTAssertEqual(restored.first?.ownerID, "account-retry")
+    }
+
     func testActivityStoreAtomicallySavesAndReadsBackHistory() throws {
         let (store, directory, defaults, suiteName) = makeActivityStore()
         defer { cleanUpActivityStore(directory, defaults: defaults, suiteName: suiteName) }
