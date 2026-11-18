@@ -188,6 +188,13 @@ final class GATIVXActivitySessionTests: XCTestCase {
         XCTAssertGreaterThan(merged[0].gpsDistanceMeters, existing.gpsDistanceMeters)
         XCTAssertEqual(merged[0].ownerID, "account-original", "Recovery must not transfer an owned session")
         XCTAssertEqual(merged[0].motionDistanceMeters, 12)
+
+        let repeatedRecovery = store.upserting(merged[0], into: merged)
+        XCTAssertEqual(repeatedRecovery.count, 1, "Repeating recovery must remain idempotent")
+        XCTAssertEqual(repeatedRecovery[0].id, sessionID)
+        XCTAssertEqual(repeatedRecovery[0].steps, 120)
+        XCTAssertEqual(repeatedRecovery[0].routePoints?.count, 2)
+        XCTAssertEqual(repeatedRecovery[0].ownerID, "account-original")
     }
 
     func testRecoveryUpsertFillsMissingStepsAndKeepsLongerExistingRoute() {
