@@ -74,11 +74,19 @@ final class GPSRouteRecorder: NSObject, ObservableObject {
     private(set) var activityOwnerID: String?
 
     private let manager = CLLocationManager()
+    private let fileManager: FileManager
+    private let userDefaults: UserDefaults
+    private let directoryOverride: URL?
     private let draftKey = "gativx.activeRouteDraft.v1"
     private var draftURL: URL? {
-        guard let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else { return nil }
-        let directory = support.appendingPathComponent("GATIVX", isDirectory: true)
-        do { try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true) }
+        let directory: URL
+        if let directoryOverride {
+            directory = directoryOverride
+        } else {
+            guard let support = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else { return nil }
+            directory = support.appendingPathComponent("GATIVX", isDirectory: true)
+        }
+        do { try fileManager.createDirectory(at: directory, withIntermediateDirectories: true) }
         catch { return nil }
         return directory.appendingPathComponent("active-route-draft.json", isDirectory: false)
     }
@@ -98,7 +106,14 @@ final class GPSRouteRecorder: NSObject, ObservableObject {
     private var activeActivity = "Walking"
     private var needsSegmentBreak = true
 
-    override init() {
+    init(
+        fileManager: FileManager = .default,
+        userDefaults: UserDefaults = .standard,
+        directoryOverride: URL? = nil
+    ) {
+        self.fileManager = fileManager
+        self.userDefaults = userDefaults
+        self.directoryOverride = directoryOverride
         super.init()
         manager.delegate = self
         manager.desiredAccuracy = kCLLocationAccuracyBest
@@ -112,7 +127,7 @@ final class GPSRouteRecorder: NSObject, ObservableObject {
     private func restoreDraft() {
         let url = draftURL
         let fileData = url.flatMap { try? Data(contentsOf: $0) }
-        let legacyData = UserDefaults.standard.data(forKey: draftKey)
+        let legacyData = userDefaults.data(forKey: draftKey)
         guard let data = fileData ?? legacyData,
               let draft = try? JSONDecoder().decode(GATIVXActiveRouteDraft.self, from: data) else {
             if fileData != nil || legacyData != nil {
@@ -134,7 +149,7 @@ final class GPSRouteRecorder: NSObject, ObservableObject {
         if fileData == nil, let legacyData, let url {
             do {
                 try legacyData.write(to: url, options: .atomic)
-                UserDefaults.standard.removeObject(forKey: draftKey)
+                userDefaults.removeObject(forKey: draftKey)
             } catch {
                 status = "Recovered legacy GPS draft. File migration is pending; the original draft remains preserved."
             }
@@ -163,7 +178,7 @@ final class GPSRouteRecorder: NSObject, ObservableObject {
         do {
             let data = try JSONEncoder().encode(draft)
             try data.write(to: url, options: .atomic)
-            UserDefaults.standard.removeObject(forKey: draftKey)
+            userDefaults.removeObject(forKey: draftKey)
             return true
         } catch {
             status = "Could not persist the active route safely: \(error.localizedDescription)"
@@ -172,7 +187,14 @@ final class GPSRouteRecorder: NSObject, ObservableObject {
     }
 
     func start(activity: String, ownerID: String? = nil) {
-        guard !isRecording else { return }
+        // A restored or paused route owns its original ID, start time and points.
+        // Never replace that recoverable draft with a fresh activity.
+        guard !isRecording, activeStartedAt == nil else {
+            if activeStartedAt != nil {
+                status = "An unfinished activity is already stored. Resume or save it before starting another walk."
+            }
+            return
+        }
         points.removeAll()
         needsSegmentBreak = true
         activeStartedAt = Date()
@@ -253,8 +275,8 @@ final class GPSRouteRecorder: NSObject, ObservableObject {
     }
 
     func clearDraft() {
-        UserDefaults.standard.removeObject(forKey: draftKey)
-        if let url = draftURL { try? FileManager.default.removeItem(at: url) }
+        userDefaults.removeObject(forKey: draftKey)
+        if let url = draftURL { try? fileManager.removeItem(at: url) }
         points.removeAll()
         activeStartedAt = nil
         activeActivity = "Walking"
