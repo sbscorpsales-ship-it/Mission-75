@@ -34,7 +34,8 @@ concurrency:
 jobs:
   build-ios:
     runs-on: macos-26-intel
-    timeout-minutes: 20
+    # UI tests and both simulator/device builds can exceed 20 minutes on hosted macOS.
+    timeout-minutes: 40
     steps:
       - name: Check out source
         uses: actions/checkout@v7.0.1
