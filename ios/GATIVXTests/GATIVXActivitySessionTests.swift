@@ -86,14 +86,14 @@ final class GATIVXActivitySessionTests: XCTestCase {
         let startedAt = Date(timeIntervalSince1970: 1_800_000_000)
         let sessionID = UUID()
         let draft: [String: Any] = [
-            "startedAt": startedAt.timeIntervalSince1970,
+            "startedAt": startedAt.timeIntervalSinceReferenceDate,
             "activity": "Walking",
             "sessionID": sessionID.uuidString,
             "ownerID": "account-original",
             "points": [[
                 "latitude": 15.85,
                 "longitude": 74.50,
-                "timestamp": startedAt.timeIntervalSince1970,
+                "timestamp": startedAt.timeIntervalSinceReferenceDate,
                 "horizontalAccuracy": 5.0,
                 "breakBefore": true
             ]]
