@@ -57,12 +57,31 @@ final class GATIVXDashboardUITests: XCTestCase {
         XCTAssertTrue(notifications.isHittable, "The dashboard header should remain reachable after scrolling.")
         notifications.tap()
         XCTAssertTrue(app.staticTexts["You're all caught up"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["GATIVX notifications are not active in this build yet. Your walking records and health data are unaffected."].exists)
+        app.buttons["Done"].tap()
+
+        let guruEntry = app.buttons["gativx-guru-entry"]
+        XCTAssertTrue(guruEntry.waitForExistence(timeout: 5))
+        for _ in 0..<6 where !guruEntry.isHittable {
+            scrollView.swipeUp()
+        }
+        XCTAssertTrue(guruEntry.isHittable, "The GATIVX Guru entry should remain reachable from Home.")
+        guruEntry.tap()
+        XCTAssertTrue(app.staticTexts["YOUR GOAL JOURNEY"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.descendants(matching: .any)["gativx-journey-duration"].exists)
+        XCTAssertTrue(app.staticTexts["ONE PRACTICAL NEXT ACTION"].exists)
         app.buttons["Done"].tap()
 
         let activityTab = app.tabBars.buttons["Activity"]
         XCTAssertTrue(activityTab.waitForExistence(timeout: 5))
         activityTab.tap()
         XCTAssertTrue(app.navigationBars["Activity"].waitForExistence(timeout: 5))
+
+        let communityTab = app.tabBars.buttons["Community"]
+        XCTAssertTrue(communityTab.exists)
+        communityTab.tap()
+        XCTAssertTrue(app.staticTexts["NOT ACTIVE IN THIS BUILD"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Community feed and shared missions are not available yet. Your personal activity remains private and is not shared with other members."].exists)
 
         let profileTab = app.tabBars.buttons["Profile"]
         XCTAssertTrue(profileTab.exists)
