@@ -316,7 +316,9 @@ struct ContentView: View {
         Task { await cloud.retryPendingActivitySessions() }
     }
     private func startActivitySession() {
-        guard sessionStarted == nil, !isFinishingSession else { return }
+        guard sessionStarted == nil,
+              !isFinishingSession,
+              routeRecorder.recoveredStartedAt == nil else { return }
         let start = Date()
         sessionStarted = start
         activeSessionID = UUID()
@@ -912,11 +914,12 @@ struct ContentView: View {
                                 sessionSteps = nil
                                 finishActivitySession()
                             }.buttonStyle(.bordered)
+                        } else {
+                            Button { startActivitySession() } label: {
+                                Label("Start \(selectedActivity == "Walking" ? "Walk" : selectedActivity)", systemImage: "figure.walk")
+                                    .font(.headline).frame(maxWidth: .infinity).padding(.vertical, 14)
+                            }.buttonStyle(.borderedProminent).tint(neon).foregroundStyle(.black)
                         }
-                        Button { startActivitySession() } label: {
-                            Label("Start \(selectedActivity == "Walking" ? "Walk" : selectedActivity)", systemImage: "figure.walk")
-                                .font(.headline).frame(maxWidth: .infinity).padding(.vertical, 14)
-                        }.buttonStyle(.borderedProminent).tint(neon).foregroundStyle(.black)
                     } else {
                         Button(isFinishingSession ? "Saving activity…" : "Finish & save activity", role: .destructive) { finishActivitySession() }
                             .buttonStyle(.borderedProminent).disabled(isFinishingSession)
