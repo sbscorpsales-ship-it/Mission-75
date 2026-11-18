@@ -523,7 +523,7 @@ struct ContentView: View {
                             Text("Daily step goal").font(.subheadline.weight(.semibold)).foregroundStyle(.secondary)
                             Text(max(dailyStepGoal, 1).formatted())
                                 .font(.system(size: 27, weight: .black, design: .rounded)).monospacedDigit()
-                            Text(displayedDailySteps.map { $0 >= dailyStepGoal ? "Goal achieved. Brilliant work!" : "((max(dailyStepGoal - $0, 0)).formatted()) steps to go" } ?? "Connect Apple Health or enable iPhone step tracking.")
+                            Text(displayedDailySteps.map { $0 >= dailyStepGoal ? "Goal achieved. Brilliant work!" : "\(max(dailyStepGoal - $0, 0).formatted()) steps to go" } ?? "Connect Apple Health or enable iPhone step tracking.")
                                 .font(.caption.weight(.medium)).foregroundStyle(.secondary)
                                 .fixedSize(horizontal: false, vertical: true)
                             Button { selectedTab = 2 } label: {
@@ -598,7 +598,7 @@ struct ContentView: View {
                     HStack(alignment: .top, spacing: 13) {
                         Image(systemName: "sparkles").font(.system(size: 27, weight: .bold)).foregroundStyle(neon).frame(width: 38)
                         VStack(alignment: .leading, spacing: 5) {
-                            Text("GATI GURU").font(.caption.weight(.heavy)).tracking(1).foregroundStyle(.secondary)
+                            Text("GATIVX GURU").font(.caption.weight(.heavy)).tracking(1).foregroundStyle(.secondary)
                             Text("Reconnect with your why.").font(.headline)
                             Text(guruPurpose.isEmpty ? "Add your purpose, the emotion behind it and your next small action." : guruPurpose)
                                 .font(.subheadline).foregroundStyle(.secondary).lineLimit(3)
@@ -919,7 +919,7 @@ struct ContentView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 VStack(alignment: .leading, spacing: 8) {
-                    Label("GATI GURU", systemImage: "leaf.fill")
+                    Label("GATIVX GURU", systemImage: "leaf.fill")
                         .font(.caption.weight(.black)).foregroundStyle(neon)
                     Text("Reconnect with your why.")
                         .font(.largeTitle.weight(.bold))
