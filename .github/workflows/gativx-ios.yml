@@ -74,8 +74,16 @@ jobs:
           assert "await cloud.signIn(email: cleanEmail, password: password)" in view, "Sign-in action is not connected"
           assert 'accessibilityIdentifier("gativx-auth-submit")' in view, "Auth submit control needs a stable test identifier"
           assert '.accessibilityIdentifier("gativx-home-dashboard")' in view, "Dashboard needs a stable test identifier"
-          assert "GATIVX GURU" in view and "GATIVX Guru" in view, "GATIVX Guru branding must be consistent across dashboard and navigation"
-          assert "Gati Guru" not in view and "GATI GURU" not in view, "Legacy Gati Guru label must not reappear"
+          assert "GATIVX GURU" in view and "GATIVX Guru" in view, "GATIVX Guru branding must remain available in dashboard and navigation"
+          dashboard = view.split("private var homeDashboard: some View", 1)[1].split("private func wellnessSnapshotCard", 1)[0]
+          assert 'Text("GATI GURU")' in dashboard, "Approved home dashboard must show the Gati Guru section"
+          assert 'Image(systemName: "bell.badge")' in dashboard, "Approved dashboard header must include the notification bell"
+          assert 'Image(systemName: "person.crop.circle.fill")' in dashboard, "Approved dashboard header must include the member profile image"
+          approved_sections = ["TODAY'S STEPS", "TODAY'S MISSION", 'wellnessSnapshotCard("Distance"', 'wellnessSnapshotCard("Active time"', 'wellnessSnapshotCard("Calories"', 'wellnessSnapshotCard("Avg. heart rate"', "ACTIVITY TRACKER", "START WALK", "GATI GURU", "MY JOURNEY", "COMMUNITY GATI"]
+          section_positions = [dashboard.index(section) for section in approved_sections]
+          assert section_positions == sorted(section_positions), "Dashboard sections must retain the approved order"
+          assert dashboard.count("wellnessSnapshotCard(") == 4, "Dashboard must show exactly four approved health metrics"
+          assert dashboard.count(".tabItem { Label(") == 0, "Navigation tabs belong to the persistent app shell, not the scrollable dashboard"
           step_ring = view.split("private var stepRing: some View", 1)[1].split("private var homeDashboard", 1)[0]
           assert ".frame(width: 190, height: 190)" not in step_ring, "Step ring must respect its responsive dashboard container"
           assert "stepRing.frame(width: 164, height: 164)" in view, "Dashboard must provide an explicit compact step-ring size"
