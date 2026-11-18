@@ -460,121 +460,71 @@ struct ContentView: View {
 
     private var homeDashboard: some View {
         ScrollView(showsIndicators: false) {
-            VStack(alignment: .leading, spacing: 18) {
-                // Brand hero: responsive native portrait layout, not a fixed 9:16 canvas.
+            VStack(alignment: .leading, spacing: 15) {
+                // Approved GATIVX home header: mountain greeting, brand, notifications and member profile.
                 ZStack(alignment: .topLeading) {
                     GATIVXMountainBackdrop(isNight: appearanceMode == "night" || (appearanceMode == "system" && UITraitCollection.current.userInterfaceStyle == .dark))
-                        .frame(height: 224)
-                        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
-                    VStack(alignment: .leading, spacing: 15) {
+                        .frame(height: 204)
+                        .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
+                    VStack(alignment: .leading, spacing: 17) {
                         HStack(alignment: .center, spacing: 10) {
                             ZStack {
-                                RoundedRectangle(cornerRadius: 13).fill(neon).frame(width: 42, height: 42)
-                                Image(systemName: "figure.run").font(.system(size: 23, weight: .black)).foregroundStyle(.black)
+                                RoundedRectangle(cornerRadius: 12).fill(neon).frame(width: 40, height: 40)
+                                Image(systemName: "figure.run").font(.system(size: 22, weight: .black)).foregroundStyle(.black)
                             }
                             VStack(alignment: .leading, spacing: 1) {
-                                Text("GATIVX").font(.system(size: 26, weight: .black, design: .rounded)).tracking(-0.8)
-                                Text("FROM GOALS TO XCELLENCE").font(.system(size: 8, weight: .heavy)).tracking(1.2)
+                                Text("GATIVX").font(.system(size: 25, weight: .black, design: .rounded)).tracking(-0.8)
+                                Text("FROM GOALS TO XCELLENCE").font(.system(size: 8, weight: .heavy)).tracking(1.1)
                             }
                             Spacer()
+                            Image(systemName: "bell.badge")
+                                .font(.system(size: 22, weight: .semibold))
+                                .foregroundStyle(.white)
+                                .accessibilityLabel("Notifications")
                             Button { selectedTab = 4 } label: {
                                 Image(systemName: "person.crop.circle.fill")
-                                    .font(.system(size: 31)).foregroundStyle(.white)
-                                    .padding(2).overlay(Circle().stroke(neon, lineWidth: 1.8))
+                                    .font(.system(size: 32))
+                                    .foregroundStyle(.white)
+                                    .padding(2)
+                                    .overlay(Circle().stroke(neon, lineWidth: 1.8))
                             }
-                            .accessibilityLabel("Open profile and settings")
+                            .accessibilityLabel("Open member profile")
                         }
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(greeting + " 👋").font(.system(size: 27, weight: .bold, design: .rounded))
+                        VStack(alignment: .leading, spacing: 5) {
+                            Text(greeting + " 👋").font(.system(size: 28, weight: .bold, design: .rounded))
                             Text("Every step moves you closer to your purpose.")
-                                .font(.subheadline.weight(.medium)).foregroundStyle(.white.opacity(0.88))
+                                .font(.subheadline.weight(.medium)).foregroundStyle(.white.opacity(0.9))
                         }
-                        HStack(spacing: 8) {
-                            Label("YOUR GOAL", systemImage: "target")
-                            Text("·")
-                            Text(guruGoal.isEmpty ? "Build your daily momentum" : guruGoal)
-                                .lineLimit(1)
-                        }
-                        .font(.caption.weight(.bold))
-                        .padding(.horizontal, 12).padding(.vertical, 8)
-                        .background(.black.opacity(0.28), in: Capsule())
                     }
                     .foregroundStyle(.white)
-                    .padding(18)
+                    .padding(17)
                 }
 
-                // Daily movement score: HealthKit aggregate is preferred; pedometer is a clearly labelled fallback.
-                VStack(alignment: .leading, spacing: 14) {
+                // Primary neon-green daily step counter.
+                HStack(spacing: 18) {
+                    stepRing.frame(width: 158, height: 158)
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("TODAY'S STEPS").font(.caption.weight(.heavy)).tracking(0.9).foregroundStyle(.secondary)
+                        Text("Daily movement").font(.title3.weight(.bold))
+                        Text(max(dailyStepGoal, 1).formatted() + " step goal")
+                            .font(.subheadline.weight(.semibold))
+                        Text(displayedDailySteps.map { $0 >= dailyStepGoal ? "Goal achieved. Brilliant work!" : "\((max(dailyStepGoal - $0, 0)).formatted()) steps to go" } ?? "Connect Apple Health or enable iPhone step tracking.")
+                            .font(.caption).foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .padding(16)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(cardBackground, in: RoundedRectangle(cornerRadius: 23, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 23).stroke(neon.opacity(0.5), lineWidth: 1))
+                .accessibilityIdentifier("gativx-daily-step-counter")
+
+                // Today's Mission follows the step counter in the approved layout.
+                VStack(alignment: .leading, spacing: 10) {
                     HStack {
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text("TODAY'S MOVEMENT").font(.caption.weight(.heavy)).tracking(1).foregroundStyle(.secondary)
-                            Text("Your daily progress").font(.title3.weight(.bold))
-                        }
-                        Spacer()
-                        Label("LIVE", systemImage: "waveform.path")
-                            .font(.caption2.weight(.heavy)).foregroundStyle(.green)
-                            .padding(.horizontal, 9).padding(.vertical, 6)
-                            .background(Color.green.opacity(0.12), in: Capsule())
-                    }
-                    HStack(spacing: 18) {
-                        stepRing.frame(width: 164, height: 164)
-                        VStack(alignment: .leading, spacing: 10) {
-                            Text("Daily step goal").font(.subheadline.weight(.semibold)).foregroundStyle(.secondary)
-                            Text(max(dailyStepGoal, 1).formatted())
-                                .font(.system(size: 27, weight: .black, design: .rounded)).monospacedDigit()
-                            Text(displayedDailySteps.map { $0 >= dailyStepGoal ? "Goal achieved. Brilliant work!" : "\(max(dailyStepGoal - $0, 0).formatted()) steps to go" } ?? "Connect Apple Health or enable iPhone step tracking.")
-                                .font(.caption.weight(.medium)).foregroundStyle(.secondary)
-                                .fixedSize(horizontal: false, vertical: true)
-                            Button { selectedTab = 2 } label: {
-                                Text("View missions  →").font(.caption.weight(.bold)).foregroundStyle(.primary)
-                            }
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-                    Text(displayedStepSource).font(.caption2).foregroundStyle(.secondary)
-                }
-                .padding(17)
-                .background(cardBackground, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
-                .overlay(RoundedRectangle(cornerRadius: 24).stroke(neon.opacity(0.45), lineWidth: 1))
-
-                VStack(alignment: .leading, spacing: 11) {
-                    HStack {
-                        Text("YOUR WELLNESS SNAPSHOT").font(.caption.weight(.heavy)).tracking(0.9).foregroundStyle(.secondary)
-                        Spacer()
-                        Text("Today").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
-                    }
-                    LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
-                        wellnessSnapshotCard("Distance", value: health.todayWalkingRunningDistanceKm.map { String(format: "%.2f", $0) } ?? "—", unit: "km", symbol: "figure.walk", tint: .green)
-                        wellnessSnapshotCard("Exercise", value: health.todayExerciseMinutes.map(String.init) ?? "—", unit: "min", symbol: "stopwatch.fill", tint: .orange)
-                        wellnessSnapshotCard("Active energy", value: health.todayActiveEnergyKcal.map(String.init) ?? "—", unit: "kcal", symbol: "flame.fill", tint: .pink)
-                        wellnessSnapshotCard("Heart rate", value: health.todayAverageHeartRateBPM.map(String.init) ?? "—", unit: "bpm", symbol: "heart.fill", tint: .red)
-                    }
-                    Text("Values are shown only when available from Apple Health; missing readings are not estimated.")
-                        .font(.caption2).foregroundStyle(.secondary)
-                }
-
-                // One clear primary action.
-                Button { selectedTab = 1 } label: {
-                    HStack(spacing: 13) {
-                        Image(systemName: "play.fill").font(.title2.weight(.black))
-                            .foregroundStyle(.black).frame(width: 48, height: 48)
-                            .background(neon, in: Circle())
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text("START A WALK").font(.headline.weight(.black)).tracking(0.5)
-                            Text("Track steps, distance, time and GPS route").font(.caption).foregroundStyle(.secondary)
-                        }
-                        Spacer()
-                        Image(systemName: "arrow.up.right").font(.headline.weight(.bold))
-                    }
-                    .padding(15)
-                    .background(cardBackground, in: RoundedRectangle(cornerRadius: 22))
-                    .overlay(RoundedRectangle(cornerRadius: 22).stroke(neon, lineWidth: 1.5))
-                }
-                .buttonStyle(.plain)
-
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack {
-                        Label("TODAY'S MISSION", systemImage: "flag.checkered").font(.caption.weight(.heavy)).tracking(0.8)
+                        Label("TODAY'S MISSION", systemImage: "flag.checkered")
+                            .font(.caption.weight(.heavy)).tracking(0.8)
                         Spacer()
                         Text("01 / DAILY").font(.caption2.weight(.bold)).foregroundStyle(.secondary)
                     }
@@ -587,28 +537,74 @@ struct ContentView: View {
                         Spacer()
                         Text("\(Int(stepProgress * 100))%").fontWeight(.bold)
                     }.font(.caption.weight(.semibold))
-                    Button { selectedTab = 2 } label: {
-                        Text("Explore my missions  →").font(.subheadline.weight(.bold))
-                    }.foregroundStyle(.primary)
                 }
-                .padding(17).background(cardBackground, in: RoundedRectangle(cornerRadius: 22))
+                .padding(16)
+                .background(cardBackground, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
 
+                // The four approved health metrics: distance, active time, calories and average heart rate.
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack {
+                        Text("TODAY'S ACTIVITY").font(.caption.weight(.heavy)).tracking(0.9).foregroundStyle(.secondary)
+                        Spacer()
+                        Text("Today").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+                    }
+                    LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
+                        wellnessSnapshotCard("Distance", value: health.todayWalkingRunningDistanceKm.map { String(format: "%.2f", $0) } ?? "—", unit: "km", symbol: "figure.walk", tint: .green)
+                        wellnessSnapshotCard("Active time", value: health.todayExerciseMinutes.map(String.init) ?? "—", unit: "min", symbol: "stopwatch.fill", tint: .orange)
+                        wellnessSnapshotCard("Calories", value: health.todayActiveEnergyKcal.map(String.init) ?? "—", unit: "kcal", symbol: "flame.fill", tint: .pink)
+                        wellnessSnapshotCard("Avg. heart rate", value: health.todayAverageHeartRateBPM.map(String.init) ?? "—", unit: "bpm", symbol: "heart.fill", tint: .red)
+                    }
+                    Text("Measured values from Apple Health. Unavailable readings are not estimated.")
+                        .font(.caption2).foregroundStyle(.secondary)
+                }
+
+                // Activity Tracker: one clear green START WALK action.
+                VStack(alignment: .leading, spacing: 12) {
+                    Label("ACTIVITY TRACKER", systemImage: "figure.walk")
+                        .font(.caption.weight(.heavy)).tracking(0.9).foregroundStyle(.secondary)
+                    Text("Ready for your next walk?").font(.headline)
+                    Button {
+                        if sessionStarted == nil { startActivitySession() }
+                        selectedTab = 1
+                    } label: {
+                        HStack(spacing: 10) {
+                            Image(systemName: "figure.walk").font(.headline.weight(.black))
+                            Text(sessionStarted == nil ? "START WALK" : "CONTINUE WALK")
+                                .font(.headline.weight(.black)).tracking(0.6)
+                            Spacer()
+                            Image(systemName: "arrow.right").font(.headline.weight(.bold))
+                        }
+                        .foregroundStyle(.black)
+                        .padding(.horizontal, 18)
+                        .frame(maxWidth: .infinity, minHeight: 54)
+                        .background(neon, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    }
+                    .buttonStyle(.plain)
+                    Text("Track steps, active time and your GPS route.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+                .padding(16)
+                .background(cardBackground, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+
+                // Gati Guru remains directly accessible from the home dashboard.
                 Button { isGuruPresented = true } label: {
                     HStack(alignment: .top, spacing: 13) {
                         Image(systemName: "sparkles").font(.system(size: 27, weight: .bold)).foregroundStyle(neon).frame(width: 38)
                         VStack(alignment: .leading, spacing: 5) {
-                            Text("GATIVX GURU").font(.caption.weight(.heavy)).tracking(1).foregroundStyle(.secondary)
+                            Text("GATI GURU").font(.caption.weight(.heavy)).tracking(1).foregroundStyle(.secondary)
                             Text("Reconnect with your why.").font(.headline)
-                            Text(guruPurpose.isEmpty ? "Add your purpose, the emotion behind it and your next small action." : guruPurpose)
+                            Text(guruPurpose.isEmpty ? "Your purpose, your emotion and one small next action." : guruPurpose)
                                 .font(.subheadline).foregroundStyle(.secondary).lineLimit(3)
                         }
                         Spacer()
                         Image(systemName: "chevron.right").foregroundStyle(.secondary)
                     }
                     .padding(16).frame(maxWidth: .infinity, alignment: .leading)
-                    .background(cardBackground, in: RoundedRectangle(cornerRadius: 22))
-                }.buttonStyle(.plain)
+                    .background(cardBackground, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+                }
+                .buttonStyle(.plain)
 
+                // My Journey: actual saved activity history only.
                 VStack(alignment: .leading, spacing: 10) {
                     HStack {
                         Label("MY JOURNEY", systemImage: "chart.xyaxis.line").font(.caption.weight(.heavy)).tracking(0.8)
@@ -632,28 +628,35 @@ struct ContentView: View {
                         }
                         .padding(11).background(pageBackground, in: RoundedRectangle(cornerRadius: 14))
                     } else {
-                        Text("Your completed walks and activities will appear here after you save your first session.")
+                        Text("Your completed walks will appear here after you save your first activity.")
                             .font(.subheadline).foregroundStyle(.secondary)
                     }
                     Text(historyStatus).font(.caption2).foregroundStyle(.secondary)
                 }
-                .padding(16).background(cardBackground, in: RoundedRectangle(cornerRadius: 22))
+                .padding(16)
+                .background(cardBackground, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
 
-                HStack(spacing: 10) {
-                    Image(systemName: "heart.text.square.fill").foregroundStyle(.pink)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Apple Health").font(.subheadline.weight(.semibold))
-                        Text(health.statusMessage).font(.caption).foregroundStyle(.secondary).lineLimit(2)
+                // Community Gati is a real navigation entry; community data is not fabricated.
+                Button { selectedTab = 3 } label: {
+                    HStack(spacing: 13) {
+                        Image(systemName: "person.3.fill").font(.system(size: 25, weight: .semibold)).foregroundStyle(neon).frame(width: 38)
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("COMMUNITY GATI").font(.caption.weight(.heavy)).tracking(0.9).foregroundStyle(.secondary)
+                            Text("Move forward, together.").font(.headline)
+                            Text("Encourage others and grow through shared progress.")
+                                .font(.subheadline).foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Image(systemName: "chevron.right").foregroundStyle(.secondary)
                     }
-                    Spacer()
-                    if !health.hasRequestedAccess {
-                        Button("Connect") { health.requestReadAccessAndStart() }
-                            .font(.caption.weight(.bold)).buttonStyle(.bordered).tint(neon)
-                    }
+                    .padding(16).frame(maxWidth: .infinity, alignment: .leading)
+                    .background(cardBackground, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
                 }
-                .padding(14).background(cardBackground, in: RoundedRectangle(cornerRadius: 18))
+                .buttonStyle(.plain)
             }
-            .padding(.horizontal, 14).padding(.top, 10).padding(.bottom, 28)
+            .padding(.horizontal, 14)
+            .padding(.top, 10)
+            .padding(.bottom, 28)
         }
         .background(pageBackground.ignoresSafeArea())
         .accessibilityIdentifier("gativx-home-dashboard")
