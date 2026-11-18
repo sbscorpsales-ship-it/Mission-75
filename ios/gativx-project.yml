@@ -20,6 +20,8 @@ targets:
         NSLocationAlwaysAndWhenInUseUsageDescription: "GATIVX uses location during an active walk so route recording can continue when your iPhone screen is locked."
         UIBackgroundModes:
           - location
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
     entitlements:
       path: GATIVX/GATIVX.entitlements
       properties:
