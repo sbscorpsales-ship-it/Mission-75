@@ -3,12 +3,35 @@ import CoreLocation
 
 struct ActivitySessionRecord: Codable, Identifiable {
     let id: UUID
+    /// Authenticated Supabase user who owned this activity when it was recorded.
+    /// Nil means the legacy or local-only record has no verified account owner.
+    let ownerID: String?
     let activity: String
     let startedAt: Date
     let finishedAt: Date
     let steps: Int?
     let routePoints: [GATIVXRoutePoint]?
     let motionDistanceMeters: Double?
+
+    init(
+        id: UUID,
+        activity: String,
+        startedAt: Date,
+        finishedAt: Date,
+        steps: Int?,
+        routePoints: [GATIVXRoutePoint]?,
+        motionDistanceMeters: Double?,
+        ownerID: String? = nil
+    ) {
+        self.id = id
+        self.ownerID = ownerID
+        self.activity = activity
+        self.startedAt = startedAt
+        self.finishedAt = finishedAt
+        self.steps = steps
+        self.routePoints = routePoints
+        self.motionDistanceMeters = motionDistanceMeters
+    }
 
     var gpsDistanceMeters: Double {
         guard let routePoints, routePoints.count > 1 else { return 0 }
