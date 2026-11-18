@@ -25,10 +25,10 @@ on:
 permissions:
   contents: read
 
-# Keep push and pull-request validation independent, while cancelling
-# obsolete runs for the same event and branch to save CI time.
+# Run one validation per source branch across push and pull-request events.
+# A newer commit supersedes the older run; the extended job timeout protects the full pipeline.
 concurrency:
-  group: gativx-ios-${{ github.event_name }}-${{ github.head_ref || github.ref_name }}
+  group: gativx-ios-${{ github.head_ref || github.ref_name }}
   cancel-in-progress: true
 
 jobs:
@@ -163,6 +163,8 @@ jobs:
 
           gps = Path("ios/GATIVX/GPSRouteRecorder.swift").read_text()
           activity_store = Path("ios/GATIVX/Storage/ActivitySessionStore.swift").read_text()
+          archive_store = Path("ios/GATIVX/Storage/RunJeetDailyStepsArchiveStore.swift").read_text()
+          archive_tests = Path("ios/GATIVXTests/RunJeetBackupImporterTests.swift").read_text()
           activity_model = Path("ios/GATIVX/Models/ActivitySessionRecord.swift").read_text()
           view = Path("ios/GATIVX/ContentView.swift").read_text()
           health = Path("ios/GATIVX/HealthKit/HealthKitManager.swift").read_text()
@@ -276,6 +278,10 @@ jobs:
               "Recovered GPS drafts retain a stable session ID and account owner": "activitySessionID = draft.sessionID ?? UUID()" in gps and "sessionID: sessionID" in gps and "ownerID: activityOwnerID" in gps and "ownerID: self.routeRecorder.activityOwnerID" in finish_activity,
               "Activity outbox retries on sign-in and foreground": "await cloud.retryPendingActivitySessions()" in view,
               "Unreadable activity outbox is preserved and not treated as empty": "Original data was preserved; pending count is unknown" in cloud and "return nil" in cloud.split("private func loadActivityOutbox()", 1)[1].split("private func saveActivityOutbox", 1)[0],
+              "RunJeet daily totals are archived separately from Apple Health": "runJeetDailyStepsArchiveStore.merge" in view and "not merged into Apple Health" in view,
+              "RunJeet daily archive writes are atomic and read-back verified": "data.write(to: url, options: .atomic)" in archive_store and "let verified = try load()" in archive_store and "guard verified == merged" in archive_store,
+              "RunJeet archive imports are idempotent and preserve existing dates": "for (day, steps) in incoming where merged[day] == nil" in archive_store and "testMergeIsIdempotentAndExistingDatesWin" in archive_tests,
+              "Corrupt RunJeet archives are preserved for recovery": "original file was preserved" in archive_store and "testCorruptArchiveIsPreservedAndNeverTreatedAsEmpty" in archive_tests,
               "Database allows unknown route steps without writing zero": "alter column steps drop not null" in migration and "steps = coalesce(excluded.steps, public.walk_sessions.steps)" in migration,
           }
           for name, ok in checks.items():
