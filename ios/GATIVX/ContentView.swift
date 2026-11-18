@@ -1038,12 +1038,31 @@ struct ContentView: View {
                 if !cloud.isSignedIn {
                     TextField("Email", text: $email).textInputAutocapitalization(.never).keyboardType(.emailAddress)
                     SecureField("Password", text: $password)
-                    Button("Sign in and sync") { Task { await cloud.signIn(email: email, password: password) } }
-                        .disabled(email.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || password.isEmpty)
+                    Button(isCreatingAccount ? "Create account & sync" : "Sign in and sync") {
+                        Task {
+                            let cleanEmail = email.trimmingCharacters(in: .whitespacesAndNewlines)
+                            if isCreatingAccount {
+                                await cloud.signUp(email: cleanEmail, password: password)
+                            } else {
+                                await cloud.signIn(email: cleanEmail, password: password)
+                            }
+                            if isCreatingAccount && cloud.status.localizedCaseInsensitiveContains("check your email") {
+                                isCreatingAccount = false
+                            }
+                        }
+                    }
+                    .disabled(email.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || (isCreatingAccount ? password.count < 8 : password.isEmpty))
+                    Button(isCreatingAccount ? "Already registered? Sign in" : "New to GATIVX? Create account") {
+                        isCreatingAccount.toggle()
+                        password = ""
+                    }
+                    .font(.caption.weight(.semibold))
                 } else {
                     Label("Cloud account connected", systemImage: "checkmark.icloud")
                     Button("Sign out", role: .destructive) { cloud.signOut() }
                 }
+                Text("An account is optional. Your dashboard, step tracking and local activity history are available without signing in.")
+                    .font(.caption).foregroundStyle(.secondary)
                 Text(cloud.status).font(.caption).foregroundStyle(.secondary)
                 if !cloud.isHealthOutboxReadable {
                     Text("Sensor sync queue unreadable. Pending count is unknown; original on-device data has been preserved.").font(.caption).foregroundStyle(.red)
