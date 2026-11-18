@@ -1,4 +1,5 @@
 import SwiftUI
+import MapKit
 import CoreMotion
 import UniformTypeIdentifiers
 
@@ -582,9 +583,9 @@ struct ContentView: View {
                         .font(.subheadline).foregroundStyle(.secondary)
                     ProgressView(value: stepProgress).tint(neon)
                     HStack {
-                        Text(displayedDailySteps.map { "($0.formatted()) steps completed" } ?? "Waiting for step data")
+                        Text(displayedDailySteps.map { "\($0.formatted()) steps completed" } ?? "Waiting for step data")
                         Spacer()
-                        Text("(Int(stepProgress * 100))%").fontWeight(.bold)
+                        Text("\(Int(stepProgress * 100))%").fontWeight(.bold)
                     }.font(.caption.weight(.semibold))
                     Button { selectedTab = 2 } label: {
                         Text("Explore my missions  →").font(.subheadline.weight(.bold))
@@ -707,6 +708,59 @@ struct ContentView: View {
         .buttonStyle(.plain)
     }
 
+    private var routeCoordinateSegments: [[CLLocationCoordinate2D]] {
+        var segments: [[CLLocationCoordinate2D]] = []
+        var current: [CLLocationCoordinate2D] = []
+        for point in routeRecorder.points {
+            if point.breakBefore && !current.isEmpty { segments.append(current); current = [] }
+            current.append(CLLocationCoordinate2D(latitude: point.latitude, longitude: point.longitude))
+        }
+        if !current.isEmpty { segments.append(current) }
+        return segments
+    }
+
+    private var routeMapRegion: MKCoordinateRegion {
+        let points = routeRecorder.points
+        guard !points.isEmpty else {
+            return MKCoordinateRegion(center: CLLocationCoordinate2D(latitude: 20.5937, longitude: 78.9629), span: MKCoordinateSpan(latitudeDelta: 18, longitudeDelta: 18))
+        }
+        let lats = points.map(\.latitude); let lons = points.map(\.longitude)
+        let minLat = lats.min() ?? 0; let maxLat = lats.max() ?? 0
+        let minLon = lons.min() ?? 0; let maxLon = lons.max() ?? 0
+        return MKCoordinateRegion(center: CLLocationCoordinate2D(latitude: (minLat + maxLat) / 2, longitude: (minLon + maxLon) / 2), span: MKCoordinateSpan(latitudeDelta: max((maxLat - minLat) * 1.8, 0.002), longitudeDelta: max((maxLon - minLon) * 1.8, 0.002)))
+    }
+
+    private var liveRouteMap: some View {
+        ZStack(alignment: .topLeading) {
+            Map(position: .constant(.region(routeMapRegion))) {
+                ForEach(Array(routeCoordinateSegments.enumerated()), id: \.offset) { _, segment in
+                    if segment.count > 1 { MapPolyline(coordinates: segment).stroke(neon, lineWidth: 5) }
+                }
+                if let first = routeRecorder.points.first {
+                    Annotation("Start", coordinate: CLLocationCoordinate2D(latitude: first.latitude, longitude: first.longitude)) {
+                        Image(systemName: "flag.fill").font(.caption).foregroundStyle(.white).padding(7).background(Color.green, in: Circle())
+                    }
+                }
+                if let last = routeRecorder.points.last {
+                    Annotation("You", coordinate: CLLocationCoordinate2D(latitude: last.latitude, longitude: last.longitude)) {
+                        Circle().fill(neon).frame(width: 16, height: 16).overlay(Circle().stroke(.black, lineWidth: 2))
+                    }
+                }
+            }
+            .mapControls { MapCompass() }
+            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+            if routeRecorder.points.isEmpty {
+                VStack(spacing: 6) {
+                    Image(systemName: "location.slash").font(.title2)
+                    Text(routeRecorder.isRecording ? "Waiting for GPS signal…" : "Your walking route will appear here").font(.caption.weight(.semibold))
+                    Text("Allow Location access and move outdoors for a clear GPS fix.").font(.caption2)
+                }.padding(12).background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12)).frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+            Label("\(routeRecorder.points.count) GPS fixes · " + String(format: "%.2f km", routeRecorder.routeDistanceMeters / 1000), systemImage: "location.fill")
+                .font(.caption.weight(.bold)).padding(9).background(.regularMaterial, in: Capsule()).padding(10)
+        }.frame(height: 250).accessibilityLabel("Live GPS route map")
+    }
+
     private var activityScreen: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
@@ -724,7 +778,9 @@ struct ContentView: View {
                     }
                     Text("GPS distance · " + String(format: "%.2f", routeRecorder.routeDistanceMeters / 1000) + " km")
                         .font(.subheadline.weight(.semibold))
-                    Text("\(routeRecorder.points.count) GPS points · " + sessionStatus).font(.caption).foregroundStyle(.secondary)
+                    liveRouteMap
+                    Text(sessionStatus).font(.caption).foregroundStyle(.secondary)
+                    if routeRecorder.isRecording { Label("Live route recording", systemImage: "record.circle.fill").font(.caption.weight(.semibold)).foregroundStyle(.green) }
                     if routeRecorder.authorization == .authorizedWhenInUse {
                         Button("Enable background GPS (Always location)") { routeRecorder.requestBackgroundLocationAccess() }.font(.caption)
                     }
