@@ -101,9 +101,17 @@ final class RunJeetBackupImporterTests: XCTestCase {
           "durationSec":12,"distanceM":0,"points":[],"sessionSteps":-1
         }]}}
         """.utf8)
+        let malformedSteps = Data("""
+        {"app":"RunJeet","schema":1,"state":{"stepsByDay":{},"sessions":[{
+          "id":"c79090d9-9753-4fab-8183-426f2ceec150",
+          "startedAt":1794985731513,"endedAt":1794985743724,
+          "durationSec":12,"distanceM":0,"points":[],"sessionSteps":true
+        }]}}
+        """.utf8)
 
         XCTAssertThrowsError(try importer.decode(booleanDistance))
         XCTAssertThrowsError(try importer.decode(negativeSteps))
+        XCTAssertThrowsError(try importer.decode(malformedSteps))
     }
 
     func testDuplicateImportDoesNotDuplicateExistingActivity() throws {

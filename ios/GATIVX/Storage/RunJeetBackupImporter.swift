@@ -119,7 +119,12 @@ struct RunJeetBackupImporter {
             )
         }
 
-        let rawSteps = integer(raw["sessionSteps"])
+        let rawStepValue = raw["sessionSteps"]
+        let rawSteps = integer(rawStepValue)
+        if rawStepValue != nil && rawSteps == nil {
+            // A present but malformed step value is not the same as an unavailable reading.
+            throw RunJeetBackupImportError.invalidSession(identifier)
+        }
         if let rawSteps, rawSteps < 0 {
             throw RunJeetBackupImportError.invalidSession(identifier)
         }
