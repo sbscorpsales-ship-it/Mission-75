@@ -558,7 +558,7 @@ struct ContentView: View {
                         .font(.caption2).foregroundStyle(.secondary)
                 }
 
-                // Activity Tracker: one clear green START WALK action.
+                // Activity Tracker: one clear green primary action.
                 VStack(alignment: .leading, spacing: 12) {
                     Label("ACTIVITY TRACKER", systemImage: "figure.walk")
                         .font(.caption.weight(.heavy)).tracking(0.9).foregroundStyle(.secondary)
