@@ -164,6 +164,45 @@ final class GATIVXActivitySessionTests: XCTestCase {
         XCTAssertEqual(try Data(contentsOf: blockingFile), blockingData)
     }
 
+    func testMemberProfilePhotoStoreSavesAndReadsBackData() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("GATIVXPhotoTests.\\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = MemberProfilePhotoStore(directoryOverride: directory)
+        let photoData = Data([0xFF, 0xD8, 0xFF, 0xD9])
+
+        try store.save(photoData)
+
+        XCTAssertEqual(try store.load(), photoData)
+        XCTAssertTrue(FileManager.default.fileExists(
+            atPath: directory.appendingPathComponent("member-profile-photo.jpg").path
+        ))
+    }
+
+    func testMemberProfilePhotoStoreRejectsEmptyDataWithoutReplacingExistingPhoto() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("GATIVXPhotoTests.\\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = MemberProfilePhotoStore(directoryOverride: directory)
+        let existingPhoto = Data([0xFF, 0xD8, 0xFF, 0xD9])
+        try store.save(existingPhoto)
+
+        XCTAssertThrowsError(try store.save(Data()))
+        XCTAssertEqual(try store.load(), existingPhoto)
+    }
+
+    func testMemberProfilePhotoStoreDeletesPhoto() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("GATIVXPhotoTests.\\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = MemberProfilePhotoStore(directoryOverride: directory)
+        try store.save(Data([0xFF, 0xD8, 0xFF, 0xD9]))
+
+        try store.delete()
+
+        XCTAssertNil(try store.load())
+    }
+
     private func makeActivityStore() -> (ActivitySessionStore, URL, UserDefaults, String) {
         let suiteName = "GATIVXTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!
