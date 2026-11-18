@@ -42,10 +42,10 @@ This is a **design lock**, not a claim that the native iOS screen has already be
 
 ## What CI can prove
 
-**Latest fully verified iOS build:** [GATIVX iOS CI pull-request run 44192017010](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/44192017010)  
-**Matching push run:** [44192009052](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/44192009052)  
-**Source commit:** `dfcbb4fd762c67636b13817cad15e3e34bd2a238`  
-**Result:** Both push and pull-request jobs completed successfully; all 17 steps in each `build-ios` job passed on 18 November 2026.
+**Latest fully verified iOS source build:** [GATIVX iOS CI pull-request run 44201127963](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/44201127963)  
+**Matching push run:** [44201121886](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/44201121886)  
+**Source commit:** `1af5ac3e5a7dadb6f192a966aa03f646d3051697`  
+**Result:** Both push and pull-request jobs completed successfully. All 17 steps in each `build-ios` job passed on 18 November 2026.
 
 | Check | Result |
 |---|---|
@@ -56,14 +56,13 @@ This is a **design lock**, not a claim that the native iOS screen has already be
 | iOS Simulator compile | Passed |
 | Unsigned iPhone device-target compile | Passed |
 | Unsigned iPhone IPA ZIP integrity and artifact upload | Passed |
-| GitHub Actions checkout/upload-artifact Node 24 action versions | Passed in the same run |
 
-**Artifacts from pull-request run 44192017010** (verified not expired on 18 November 2026):
+**Artifacts from matching push run 44201121886** (verified not expired on 18 November 2026):
 
-- `GATIVX-iPhone-unsigned-IPA`: artifact ID `14377452339`, 754,278 bytes; SHA-256 `6ca5dbaa1b9ca6d5bf9e05bcee01d67f2f402d0e0e7e407b7361ab1e9779959b`. [Download from GitHub](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/44192017010/artifacts/14377452339)
-- `GATIVX-iOS-Simulator`: artifact ID `14376224921`, 1,564,751 bytes. [Download from GitHub](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/44192017010/artifacts/14376224921)
+- `GATIVX-iPhone-unsigned-IPA`: artifact ID `14381428980`, 754,985 bytes. GitHub artifact archive SHA-256: `46de8bc5402d2a268e56db8135d84748457454124bcdb2363eaf114054f9dee2`. [Download from GitHub](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/44201121886/artifacts/14381428980)
+- `GATIVX-iOS-Simulator`: artifact ID `14381783033`, 1,568,092 bytes. [Download from GitHub](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/44201121886/artifacts/14381783033)
 
-The completed-activity history now uses atomic JSON file replacement in Application Support. CI's seven tests cover route-segment distance, older route-point decoding, unavailable step counts, duration formatting, atomic activity save/read-back, legacy UserDefaults migration, and preservation of corrupt history. The HealthKit export path uses `HKWorkoutBuilder`, includes measured distance when available, and retains the export outbox until an existing or newly saved workout is confirmed.
+The completed-activity history uses atomic JSON file replacement in Application Support. CI's seven tests cover route-segment distance, older route-point decoding, unavailable step counts, duration formatting, atomic activity save/read-back, legacy UserDefaults migration, and preservation of corrupt history. The HealthKit export path uses `HKWorkoutBuilder`, includes measured distance when available, and retains the export outbox until an existing or newly saved workout is confirmed. The latest source also extracts the mountain backdrop into a dedicated SwiftUI view without changing the approved dashboard design.
 
 A simulator build and source-level safeguards prove compilation and selected logic, not physical iPhone behaviour. An unsigned IPA is not installable and cannot prove that the installed app carries the HealthKit entitlement. The seven unit tests are not substitutes for physical-device acceptance.
 
