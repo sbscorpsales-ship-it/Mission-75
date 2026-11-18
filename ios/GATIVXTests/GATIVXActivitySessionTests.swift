@@ -121,7 +121,7 @@ final class GATIVXActivitySessionTests: XCTestCase {
 
     @MainActor
     func testStartingNewActivityCannotOverwriteUnreadableGPSDraft() throws {
-        let suiteName = "GATIVXUnreadableGPSDraftTests.\\(UUID().uuidString)"
+        let suiteName = "GATIVXUnreadableGPSDraftTests." + UUID().uuidString
         let defaults = UserDefaults(suiteName: suiteName)!
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent(suiteName, isDirectory: true)
