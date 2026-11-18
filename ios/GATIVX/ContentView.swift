@@ -910,7 +910,7 @@ struct ContentView: View {
                 Text("Your goal progress").font(.headline)
                 ProgressView(value: stepProgress).tint(neon)
                 Text(displayedDailySteps.map { "\($0.formatted()) of \(max(dailyStepGoal, 1).formatted()) steps" } ?? "Waiting for a step reading").font(.caption).foregroundStyle(.secondary)
-                Button("Open Gati Guru") { isGuruPresented = true }.buttonStyle(.bordered)
+                Button("Open GATIVX Guru") { isGuruPresented = true }.buttonStyle(.bordered)
             }.padding(16)
         }.background(pageBackground.ignoresSafeArea())
     }
@@ -1209,7 +1209,7 @@ struct ContentView: View {
                 .sheet(isPresented: $isGuruPresented) {
                     NavigationStack {
                         guruScreen
-                            .navigationTitle("Gati Guru")
+                            .navigationTitle("GATIVX Guru")
                             .toolbar {
                                 ToolbarItem(placement: .confirmationAction) {
                                     Button("Done") { isGuruPresented = false }
