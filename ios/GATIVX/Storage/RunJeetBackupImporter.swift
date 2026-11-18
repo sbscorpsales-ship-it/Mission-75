@@ -34,6 +34,8 @@ struct RunJeetBackupImporter {
     private static let earliestTimestampMilliseconds = 946_684_800_000.0 // 2000-01-01
     private static let latestTimestampMilliseconds = 4_102_444_800_000.0 // 2100-01-01
     private static let maximumSessionDurationSeconds = 86_400
+    private static let maximumDailySteps = 1_000_000
+    private static let maximumSessionSteps = 200_000
 
     func decode(_ data: Data) throws -> RunJeetBackupImport {
         guard let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
@@ -50,15 +52,11 @@ struct RunJeetBackupImporter {
         var dailySteps: [String: Int] = [:]
         for (day, rawValue) in rawDailySteps {
             guard Self.isValidDay(day),
-                  let number = rawValue as? NSNumber,
-                  CFGetTypeID(number) != CFBooleanGetTypeID(),
-                  number.doubleValue.isFinite,
-                  number.doubleValue >= 0,
-                  number.doubleValue.rounded(.towardZero) == number.doubleValue,
-                  number.doubleValue <= Double(Int.max) else {
+                  let steps = integer(rawValue),
+                  (0...Self.maximumDailySteps).contains(steps) else {
                 throw RunJeetBackupImportError.invalidDailySteps(day)
             }
-            dailySteps[day] = number.intValue
+            dailySteps[day] = steps
         }
 
         let activities = try rawSessions.map { try decodeSession($0) }
@@ -133,7 +131,7 @@ struct RunJeetBackupImporter {
             // A present but malformed step value is not the same as an unavailable reading.
             throw RunJeetBackupImportError.invalidSession(identifier)
         }
-        if let rawSteps, rawSteps < 0 {
+        if let rawSteps, !(0...Self.maximumSessionSteps).contains(rawSteps) {
             throw RunJeetBackupImportError.invalidSession(identifier)
         }
         // RunJeet's MVP initializes sessionSteps to zero even when no step source
@@ -172,11 +170,8 @@ struct RunJeetBackupImporter {
     private func integer(_ value: Any?) -> Int? {
         guard let number = value as? NSNumber,
               CFGetTypeID(number) != CFBooleanGetTypeID(),
-              number.doubleValue.isFinite,
-              number.doubleValue.rounded(.towardZero) == number.doubleValue,
-              number.doubleValue >= Double(Int.min),
-              number.doubleValue <= Double(Int.max) else { return nil }
-        return number.intValue
+              let exactInteger = Int(exactly: number.doubleValue) else { return nil }
+        return exactInteger
     }
 
     private static func isValidDay(_ value: String) -> Bool {
