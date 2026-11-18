@@ -29,6 +29,12 @@ enum RunJeetBackupImportError: LocalizedError {
 }
 
 struct RunJeetBackupImporter {
+    // RunJeet was introduced in 2026. Keep imported timestamps within a
+    // representable, plausible archive range and require integer epoch milliseconds.
+    private static let earliestTimestampMilliseconds = 946_684_800_000.0 // 2000-01-01
+    private static let latestTimestampMilliseconds = 4_102_444_800_000.0 // 2100-01-01
+    private static let maximumSessionDurationSeconds = 86_400
+
     func decode(_ data: Data) throws -> RunJeetBackupImport {
         guard let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               root["app"] as? String == "RunJeet" else {
@@ -92,7 +98,9 @@ struct RunJeetBackupImporter {
               let startedAt = millisecondsDate(raw["startedAt"]),
               let finishedAt = millisecondsDate(raw["endedAt"]),
               finishedAt >= startedAt,
-              let duration = integer(raw["durationSec"]), duration >= 0,
+              let duration = integer(raw["durationSec"]),
+              (0...Self.maximumSessionDurationSeconds).contains(duration),
+              finishedAt.timeIntervalSince(startedAt) <= Double(Self.maximumSessionDurationSeconds),
               let rawPoints = raw["points"] as? [[String: Any]],
               let rawDistance = raw["distanceM"] as? NSNumber,
               CFGetTypeID(rawDistance) != CFBooleanGetTypeID(),
@@ -146,7 +154,11 @@ struct RunJeetBackupImporter {
     }
 
     private func millisecondsDate(_ value: Any?) -> Date? {
-        guard let milliseconds = finiteDouble(value) else { return nil }
+        guard let milliseconds = finiteDouble(value),
+              milliseconds.rounded(.towardZero) == milliseconds,
+              (Self.earliestTimestampMilliseconds...Self.latestTimestampMilliseconds).contains(milliseconds) else {
+            return nil
+        }
         return Date(timeIntervalSince1970: milliseconds / 1000)
     }
 
