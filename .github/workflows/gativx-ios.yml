@@ -299,7 +299,7 @@ jobs:
               "Sensor outbox retry preserves original revision through token refresh": "retryAfterRefresh: false, pendingItem: item" in cloud,
               "Member can see pending sensor-sync count": "pendingHealthSyncCount" in cloud and "pendingHealthSyncCount" in view,
               "Pending sync count never exposes another account's queue": "items.filter { $0.ownerID == currentUserID }.count" in cloud,
-              "Older sensor upload cannot acknowledge a newer queued value": "($0.id == item.id && $0.revisionID == item.revisionID)" in cloud,
+              "Older sensor upload cannot acknowledge a newer queued value": "($0.id == item.id && $0.revisionID == item.revisionID)" in sensor_outbox,
               "GPS cloud distance skips discontinuous segments": "if cloudPoints[index].breakBefore { continue }" in cloud,
               "Completed walks have a dedicated durable cloud outbox": "activity-sync-outbox.v1" in cloud and "struct PendingActivitySession: Codable" in cloud,
               "Activity outbox write is read back and verified": "UserDefaults.standard.set(data, forKey: activityOutboxKey)" in cloud and "JSONDecoder().decode([PendingActivitySession].self, from: saved)" in cloud,
