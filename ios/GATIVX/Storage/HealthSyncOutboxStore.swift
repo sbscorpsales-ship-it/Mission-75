@@ -34,8 +34,8 @@ struct HealthSyncOutboxStore {
               saved == data,
               let verified = try? JSONDecoder().decode([PendingHealthSync].self, from: saved),
               verified.count == items.count,
-              verified.map(\\.id) == items.map(\\.id),
-              verified.map(\\.revisionID) == items.map(\\.revisionID) else {
+              verified.map(\.id) == items.map(\.id),
+              verified.map(\.revisionID) == items.map(\.revisionID) else {
             throw NSError(
                 domain: "GATIVXHealthSyncOutbox",
                 code: 2,
