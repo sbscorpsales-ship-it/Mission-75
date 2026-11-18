@@ -42,12 +42,20 @@ struct GATIVXRoutePoint: Codable {
 private struct GATIVXActiveRouteDraft: Codable {
     let startedAt: Date
     let activity: String
+    let sessionID: UUID?
     let ownerID: String?
     var points: [GATIVXRoutePoint]
 
-    init(startedAt: Date, activity: String, points: [GATIVXRoutePoint], ownerID: String? = nil) {
+    init(
+        startedAt: Date,
+        activity: String,
+        points: [GATIVXRoutePoint],
+        sessionID: UUID,
+        ownerID: String? = nil
+    ) {
         self.startedAt = startedAt
         self.activity = activity
+        self.sessionID = sessionID
         self.ownerID = ownerID
         self.points = points
     }
@@ -62,6 +70,7 @@ final class GPSRouteRecorder: NSObject, ObservableObject {
     @Published private(set) var authorization: CLAuthorizationStatus = .notDetermined
     @Published private(set) var recoveredStartedAt: Date?
     @Published private(set) var recoveredActivity: String?
+    private(set) var activitySessionID: UUID?
     private(set) var activityOwnerID: String?
 
     private let manager = CLLocationManager()
@@ -114,6 +123,7 @@ final class GPSRouteRecorder: NSObject, ObservableObject {
         points = draft.points
         recoveredStartedAt = draft.startedAt
         recoveredActivity = draft.activity
+        activitySessionID = draft.sessionID ?? UUID()
         activityOwnerID = draft.ownerID
         activeStartedAt = draft.startedAt
         activeActivity = draft.activity
@@ -129,11 +139,16 @@ final class GPSRouteRecorder: NSObject, ObservableObject {
                 status = "Recovered legacy GPS draft. File migration is pending; the original draft remains preserved."
             }
         }
+        // Upgrade old drafts with a stable idempotency key exactly once.
+        if draft.sessionID == nil {
+            _ = persistDraft()
+        }
     }
 
     @discardableResult
     private func persistDraft() -> Bool {
-        guard let startedAt = activeStartedAt else { return false }
+        guard let startedAt = activeStartedAt,
+              let sessionID = activitySessionID else { return false }
         guard let url = draftURL else {
             status = "Could not access the local GPS draft folder. The route remains in memory; do not force-quit GATIVX."
             return false
@@ -142,6 +157,7 @@ final class GPSRouteRecorder: NSObject, ObservableObject {
             startedAt: startedAt,
             activity: activeActivity,
             points: points,
+            sessionID: sessionID,
             ownerID: activityOwnerID
         )
         do {
@@ -161,6 +177,7 @@ final class GPSRouteRecorder: NSObject, ObservableObject {
         needsSegmentBreak = true
         activeStartedAt = Date()
         activeActivity = activity
+        activitySessionID = UUID()
         activityOwnerID = ownerID
         recoveredStartedAt = nil
         recoveredActivity = nil
@@ -241,6 +258,7 @@ final class GPSRouteRecorder: NSObject, ObservableObject {
         points.removeAll()
         activeStartedAt = nil
         activeActivity = "Walking"
+        activitySessionID = nil
         activityOwnerID = nil
         recoveredStartedAt = nil
         recoveredActivity = nil
