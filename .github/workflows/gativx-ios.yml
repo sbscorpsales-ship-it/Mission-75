@@ -74,6 +74,8 @@ jobs:
           assert "await cloud.signIn(email: cleanEmail, password: password)" in view, "Sign-in action is not connected"
           assert 'accessibilityIdentifier("gativx-auth-submit")' in view, "Auth submit control needs a stable test identifier"
           assert '.accessibilityIdentifier("gativx-home-dashboard")' in view, "Dashboard needs a stable test identifier"
+          assert "GATIVX GURU" in view and "GATIVX Guru" in view, "GATIVX Guru branding must be consistent across dashboard and navigation"
+          assert "Gati Guru" not in view and "GATI GURU" not in view, "Legacy Gati Guru label must not reappear"
           assert "motionMonitoringEnabled" in view and "if motionMonitoringEnabled { startLiveMotionMonitor() }" in view, "Daily motion tracking must be opt-in, not prompted at launch"
 
           required_usage = [
