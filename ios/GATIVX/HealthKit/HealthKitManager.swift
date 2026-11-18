@@ -61,14 +61,17 @@ final class HealthKitManager: ObservableObject {
         }
     }
 
-    private func acknowledgeWorkout(_ id: UUID) {
+    @discardableResult
+    private func acknowledgeWorkout(_ id: UUID) -> Bool {
         do {
             let remaining = try workoutOutbox.acknowledge(id)
             isWorkoutOutboxReadable = true
             pendingWorkoutExportCount = remaining.count
+            return true
         } catch {
             isWorkoutOutboxReadable = false
             statusMessage = "Apple Health export acknowledgement could not be verified. Original queue data was preserved."
+            return false
         }
     }
 
@@ -360,7 +363,20 @@ final class HealthKitManager: ObservableObject {
             let existing = HKSampleQuery(sampleType: workoutType, predicate: syncPredicate, limit: 1, sortDescriptors: nil) { [weak self] _, samples, queryError in
                 guard let self else { return }
                 if let queryError { DispatchQueue.main.async { completion(.failure(queryError)) }; return }
-                if samples?.isEmpty == false { DispatchQueue.main.async { self.acknowledgeWorkout(id); completion(.success(())) }; return }
+                if samples?.isEmpty == false {
+                    DispatchQueue.main.async {
+                        if self.acknowledgeWorkout(id) {
+                            completion(.success(()))
+                        } else {
+                            completion(.failure(NSError(
+                                domain: "GATIVXHealthKit",
+                                code: 7,
+                                userInfo: [NSLocalizedDescriptionKey: "The workout already exists in Apple Health, but its export queue could not be safely acknowledged. It will be reconciled again on retry."]
+                            )))
+                        }
+                    }
+                    return
+                }
 
                 let type: HKWorkoutActivityType
                 switch activity.lowercased() {
@@ -437,8 +453,15 @@ final class HealthKitManager: ObservableObject {
                                         if let finishError {
                                             completion(.failure(finishError))
                                         } else if workout != nil {
-                                            self.acknowledgeWorkout(id)
-                                            completion(.success(()))
+                                            if self.acknowledgeWorkout(id) {
+                                                completion(.success(()))
+                                            } else {
+                                                completion(.failure(NSError(
+                                                    domain: "GATIVXHealthKit",
+                                                    code: 8,
+                                                    userInfo: [NSLocalizedDescriptionKey: "Apple Health saved the workout, but the export queue could not be safely acknowledged. The workout will be reconciled again on retry."]
+                                                )))
+                                            }
                                         } else {
                                             completion(.failure(NSError(
                                                 domain: "GATIVXHealthKit",
