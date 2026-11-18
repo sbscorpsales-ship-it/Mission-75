@@ -188,6 +188,8 @@ jobs:
           activity_model = Path("ios/GATIVX/Models/ActivitySessionRecord.swift").read_text()
           view = Path("ios/GATIVX/ContentView.swift").read_text()
           health = Path("ios/GATIVX/HealthKit/HealthKitManager.swift").read_text()
+          health_outbox = Path("ios/GATIVX/Storage/HealthKitWorkoutOutboxStore.swift").read_text()
+          health_outbox_tests = Path("ios/GATIVXTests/HealthKitWorkoutOutboxStoreTests.swift").read_text()
           cloud = Path("ios/GATIVX/Cloud/SupabaseRESTClient.swift").read_text()
           migration = Path("supabase/migrations/20261109113101_allow_gps_route_sync_without_step_count.sql").read_text()
           outbox = cloud.split("enum PendingHealthSyncKind", 1)[1] if "enum PendingHealthSyncKind" in cloud else ""
@@ -256,9 +258,13 @@ jobs:
               "Apple Health history window is bounded to a safe range": "max(1, min(days, 365))" in health,
               "Missing HealthKit days are not fabricated as zero": "guard let quantity = statistics.sumQuantity() else { return }" in health,
               "Apple Health workout export omits unavailable steps instead of inventing zero": '"com.paramitsolutions.gativx.measuredSteps"] = steps' in health and "steps ?? 0" not in health and "max(0, steps" not in health,
-              "Apple Health export requests workout read access for sync-ID duplicate checks": "let readTypes: Set<HKObjectType> = [self.stepType, self.energyType, workoutType]" in health and "read: readTypes" in health and "HKMetadataKeySyncIdentifier" in health,
-              "Apple Health workout export is durably queued before network or HealthKit work": "enqueueWorkout(pending)" in health and "workout-export-outbox.v1" in health,
-              "Apple Health export queue is read-back verified": "verified.map(\\.id) == items.map(\\.id)" in health,
+              "Apple Health requests measured read types and workout/distance write access": "let shareTypes: Set<HKSampleType> = [workoutType, distanceType]" in health and "let readTypes: Set<HKObjectType> = [stepType, energyType, distanceType, exerciseType, heartRateType, workoutType]" in health and "store.requestAuthorization(toShare: shareTypes, read: readTypes)" in health,
+              "Apple Health workout export checks sync identifiers before duplicate writes": "HKMetadataKeySyncIdentifier" in health and "HKQuery.predicateForObjects(withMetadataKey: HKMetadataKeySyncIdentifier" in health,
+              "Apple Health workout export is durably queued before HealthKit work": "enqueueWorkout(pending)" in health and "workoutOutbox.enqueue(item)" in health and "workout-export-outbox.v1" in health_outbox,
+              "Apple Health export queue is read-back verified": "verified.map(\\.id) == items.map(\\.id)" in health_outbox,
+              "Apple Health outbox enqueue is idempotent by stable workout ID": "if !items.contains(where: { $0.id == item.id })" in health_outbox and "testEnqueueIsIdempotentByStableWorkoutID" in health_outbox_tests,
+              "Apple Health outbox acknowledgement removes only confirmed workout": "func acknowledge(_ id: UUID)" in health_outbox and "testAcknowledgeRemovesOnlyTheConfirmedWorkout" in health_outbox_tests,
+              "Corrupt Apple Health outbox is preserved and enqueue is blocked": "Original data was preserved" in health_outbox and "testCorruptOutboxIsPreservedAndCannotBeReplacedByEnqueue" in health_outbox_tests,
               "Apple Health export queue retains unreadable data": "Pending exports are unknown; original data was preserved" in health,
               "Apple Health workout export is acknowledged only after duplicate check or confirmed save": duplicate_check >= 0 and duplicate_check < first_workout_ack < finish_workout < confirmed_save < second_workout_ack < confirmed_save_completion,
               "Apple Health workout export retries are available on foreground": "retryPendingWorkoutExports()" in view,
