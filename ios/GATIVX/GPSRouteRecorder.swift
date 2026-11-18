@@ -70,6 +70,7 @@ final class GPSRouteRecorder: NSObject, ObservableObject {
     @Published private(set) var authorization: CLAuthorizationStatus = .notDetermined
     @Published private(set) var recoveredStartedAt: Date?
     @Published private(set) var recoveredActivity: String?
+    @Published private(set) var hasUnreadableDraft = false
     private(set) var activitySessionID: UUID?
     private(set) var activityOwnerID: String?
 
@@ -131,6 +132,7 @@ final class GPSRouteRecorder: NSObject, ObservableObject {
         guard let data = fileData ?? legacyData,
               let draft = try? JSONDecoder().decode(GATIVXActiveRouteDraft.self, from: data) else {
             if fileData != nil || legacyData != nil {
+                hasUnreadableDraft = true
                 status = "An unfinished GPS draft could not be decoded. Its original data was preserved for recovery."
             }
             return
@@ -162,7 +164,8 @@ final class GPSRouteRecorder: NSObject, ObservableObject {
 
     @discardableResult
     private func persistDraft() -> Bool {
-        guard let startedAt = activeStartedAt,
+        guard !hasUnreadableDraft,
+              let startedAt = activeStartedAt,
               let sessionID = activitySessionID else { return false }
         guard let url = draftURL else {
             status = "Could not access the local GPS draft folder. The route remains in memory; do not force-quit GATIVX."
@@ -189,8 +192,10 @@ final class GPSRouteRecorder: NSObject, ObservableObject {
     func start(activity: String, ownerID: String? = nil) {
         // A restored or paused route owns its original ID, start time and points.
         // Never replace that recoverable draft with a fresh activity.
-        guard !isRecording, activeStartedAt == nil else {
-            if activeStartedAt != nil {
+        guard !isRecording, activeStartedAt == nil, !hasUnreadableDraft else {
+            if hasUnreadableDraft {
+                status = "An unfinished GPS draft could not be read and remains preserved. Do not start a new walk until it is recovered."
+            } else if activeStartedAt != nil {
                 status = "An unfinished activity is already stored. Resume or save it before starting another walk."
             }
             return
@@ -211,7 +216,7 @@ final class GPSRouteRecorder: NSObject, ObservableObject {
     }
 
     func resumeRecovered() {
-        guard activeStartedAt != nil else { return }
+        guard !hasUnreadableDraft, activeStartedAt != nil else { return }
         // A recovered route may have been interrupted while iOS suspended or terminated the app.
         needsSegmentBreak = true
         requestAndBegin()
@@ -284,6 +289,7 @@ final class GPSRouteRecorder: NSObject, ObservableObject {
         activityOwnerID = nil
         recoveredStartedAt = nil
         recoveredActivity = nil
+        hasUnreadableDraft = false
     }
 
     func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
