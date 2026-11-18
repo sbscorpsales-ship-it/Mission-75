@@ -73,6 +73,14 @@ struct ActivitySessionStore {
         try data.write(to: url, options: .atomic)
 
         let savedData = try Data(contentsOf: url)
+        guard savedData == data else {
+            throw NSError(
+                domain: "GATIVXActivityStorage",
+                code: 12,
+                userInfo: [NSLocalizedDescriptionKey: "The activity history file does not match the data written to disk."]
+            )
+        }
+
         let savedRecords = try JSONDecoder().decode([ActivitySessionRecord].self, from: savedData)
         guard savedRecords.count == records.count,
               savedRecords.map(\.id) == records.map(\.id) else {
