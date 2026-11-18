@@ -17,7 +17,8 @@ final class HealthKitWorkoutOutboxStoreTests: XCTestCase {
         defer { defaults.removePersistentDomain(forName: suite) }
         let first = makeWorkout()
         let second = makeWorkout()
-        try store.save([first, second])
+        _ = try store.enqueue(first)
+        _ = try store.enqueue(second)
 
         let remaining = try store.acknowledge(first.id)
 
@@ -42,7 +43,7 @@ final class HealthKitWorkoutOutboxStoreTests: XCTestCase {
         defer { defaults.removePersistentDomain(forName: suite) }
         let workout = makeWorkout(steps: nil, distanceMeters: 842.5)
 
-        try store.save([workout])
+        _ = try store.enqueue(workout)
         let restored = try XCTUnwrap(store.load().first)
 
         XCTAssertEqual(restored.id, workout.id)
