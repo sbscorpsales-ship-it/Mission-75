@@ -124,17 +124,22 @@ final class HealthKitManager: ObservableObject {
 
     func requestReadAccessAndStart() {
         guard isAvailable else { statusMessage = "Apple Health is unavailable on this iPhone."; return }
-        store.requestAuthorization(toShare: [], read: [stepType, energyType, distanceType, exerciseType, heartRateType]) { [weak self] _, error in
+        // Ask for workout and measured-distance write access when the member connects,
+        // rather than surprising them with a second permission sheet only after a walk.
+        // HealthKit does not disclose whether read or write access was individually denied.
+        let workoutType = HKObjectType.workoutType()
+        let shareTypes: Set<HKSampleType> = [workoutType, distanceType]
+        let readTypes: Set<HKObjectType> = [stepType, energyType, distanceType, exerciseType, heartRateType, workoutType]
+        store.requestAuthorization(toShare: shareTypes, read: readTypes) { [weak self] _, error in
             Task { @MainActor in
                 guard let self else { return }
                 if let error {
                     self.statusMessage = "Health permission request failed: \(error.localizedDescription)"
                     return
                 }
-                // HealthKit intentionally does not reveal whether read access was denied.
                 UserDefaults.standard.set(true, forKey: self.connectionRequestedKey)
                 self.hasRequestedAccess = true
-                self.statusMessage = "Apple Health access was requested. Checking today's measured steps…"
+                self.statusMessage = "Apple Health permissions requested for measured health data and GATIVX workout export. Checking today's steps…"
                 self.startObserving()
                 self.refreshRecentDays()
                 self.refreshTodayEnergy()
