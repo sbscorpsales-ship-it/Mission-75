@@ -33,8 +33,8 @@ concurrency:
 jobs:
   build-ios:
     runs-on: macos-26-intel
-    # UI tests and both simulator/device builds can exceed 20 minutes on hosted macOS.
-    timeout-minutes: 40
+    # UI tests, result-bundle upload and both builds need headroom on hosted macOS.
+    timeout-minutes: 60
     steps:
       - name: Check out source
         uses: actions/checkout@v7.0.1
@@ -146,6 +146,7 @@ jobs:
             -destination "platform=iOS Simulator,id=$SIMULATOR_ID" \
             -derivedDataPath build/GATIVX-Tests \
             -resultBundlePath build/GATIVX.xcresult \
+            -parallel-testing-enabled NO \
             CODE_SIGNING_ALLOWED=NO \
             test
 
@@ -156,6 +157,8 @@ jobs:
           name: GATIVX-xcresult
           path: build/GATIVX.xcresult
           if-no-files-found: warn
+          compression-level: 0
+          retention-days: 7
 
       - name: Verify generated target references HealthKit source entitlements
         run: |
