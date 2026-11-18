@@ -762,6 +762,9 @@ struct ContentView: View {
         }
         .padding(12).frame(maxWidth: .infinity, alignment: .leading)
         .background(cardBackground, in: RoundedRectangle(cornerRadius: 16))
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(title), \(value) \(unit)")
+        .accessibilityIdentifier("gativx-metric-\(title == "Distance" ? "distance" : title == "Active time" ? "active-time" : title == "Calories" ? "calories" : "average-heart-rate")")
     }
 
     private func compactMetric(_ title: String, value: String, unit: String, icon: String, tint: Color) -> some View {
