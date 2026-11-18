@@ -50,6 +50,53 @@ jobs:
       - name: Validate project and scheme
         run: xcodebuild -list -project ios/GATIVX.xcodeproj
 
+      - name: Verify GATIVX first-run auth, portrait layout and permissions
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import plistlib
+          import re
+
+          cloud = Path("ios/GATIVX/Cloud/SupabaseRESTClient.swift").read_text()
+          view = Path("ios/GATIVX/ContentView.swift").read_text()
+          spec = Path("ios/gativx-project.yml").read_text()
+          with Path("ios/GATIVX/Info.plist").open("rb") as stream:
+              info = plistlib.load(stream)
+
+          key_match = re.search(r'private let publishableKey = "([^"]+)"', cloud)
+          assert key_match, "Supabase publishable key is missing"
+          assert key_match.group(1).startswith("sb_publishable_"), "Mobile app must use a publishable key"
+          assert "sb_secret_" not in cloud and "service_role" not in cloud, "A privileged Supabase key must never ship in the app"
+          assert "https://crarbbsvcczwmtvxyrxo.supabase.co" in cloud, "Supabase project URL changed unexpectedly"
+          assert "auth/v1/signup" in cloud and "auth/v1/token" in cloud, "Sign-up and password sign-in endpoints must both exist"
+          assert "@State private var isCreatingAccount = true" in view, "First launch must default to registration"
+          assert "await cloud.signUp(email: cleanEmail, password: password)" in view, "Registration action is not connected"
+          assert "await cloud.signIn(email: cleanEmail, password: password)" in view, "Sign-in action is not connected"
+          assert 'accessibilityIdentifier("gativx-auth-submit")' in view, "Auth submit control needs a stable test identifier"
+          assert '.accessibilityIdentifier("gativx-home-dashboard")' in view, "Dashboard needs a stable test identifier"
+          assert "motionMonitoringEnabled" in view and "if motionMonitoringEnabled { startLiveMotionMonitor() }" in view, "Daily motion tracking must be opt-in, not prompted at launch"
+
+          required_usage = [
+              "NSHealthShareUsageDescription",
+              "NSHealthUpdateUsageDescription",
+              "NSMotionUsageDescription",
+              "NSLocationWhenInUseUsageDescription",
+              "NSLocationAlwaysAndWhenInUseUsageDescription",
+          ]
+          for key in required_usage:
+              assert isinstance(info.get(key), str) and info[key].strip(), f"Missing privacy usage description: {key}"
+          assert "location" in info.get("UIBackgroundModes", []), "Background location mode is missing"
+          assert info.get("UISupportedInterfaceOrientations") == ["UIInterfaceOrientationPortrait"], "GATIVX must stay in portrait on iPhone"
+          assert "UIInterfaceOrientationPortrait" in spec, "XcodeGen spec must retain portrait-only orientation"
+          assert "NSContactsUsageDescription" not in info and "CNContactStore" not in view, "Do not request Contacts for core fitness features"
+
+          print("PASS: publishable Supabase configuration and both auth endpoints")
+          print("PASS: registration-first onboarding and sign-in controls")
+          print("PASS: opt-in Motion permission and portrait-only native layout")
+          print("PASS: HealthKit, Motion and GPS usage descriptions")
+          print("PASS: no unnecessary Contacts permission")
+          PY
+
       - name: Run GATIVX unit tests
         run: |
           SIMULATOR_ID="$(xcrun simctl list devices available -j | python3 -c 'import json, sys; data = json.load(sys.stdin); print(next((device["udid"] for devices in data["devices"].values() for device in devices if device["isAvailable"] and device["name"].startswith("iPhone")), ""))')"
