@@ -91,6 +91,7 @@ jobs:
 
           gps = Path("ios/GATIVX/GPSRouteRecorder.swift").read_text()
           activity_store = Path("ios/GATIVX/Storage/ActivitySessionStore.swift").read_text()
+          activity_model = Path("ios/GATIVX/Models/ActivitySessionRecord.swift").read_text()
           view = Path("ios/GATIVX/ContentView.swift").read_text()
           health = Path("ios/GATIVX/HealthKit/HealthKitManager.swift").read_text()
           cloud = Path("ios/GATIVX/Cloud/SupabaseRESTClient.swift").read_text()
@@ -194,7 +195,8 @@ jobs:
               "Activity queue item is removed only after all available writes succeed": "guard allAcknowledged else { continue }" in activity_retry and activity_retry.index("syncActivitySessionRoute") < activity_retry.index("guard allAcknowledged else") < activity_retry.index("saveActivityOutbox(current.filter"),
               "Activity step and route RPCs return explicit acknowledgements": "async -> Bool" in cloud and "return true" in cloud.split("func syncActivitySession(", 1)[1].split("func syncActivitySessionRoute(", 1)[0] and "return true" in cloud.split("func syncActivitySessionRoute(", 1)[1].split("private func refreshSession()", 1)[0],
               "Existing local walks are backfilled into the activity outbox": "cloud.enqueueActivitySession(record)" in view,
-              "Local activity backfill and cloud queue are scoped to the recording account": "for record in history where record.ownerID == ownerID" in view and "guard record.ownerID == ownerID else" in cloud,
+              "Metadata-only activity records are not queued for cloud sync": "var hasCloudSyncPayload" in activity_model and "for record in accountRecords where record.hasCloudSyncPayload" in view,
+              "Local activity backfill and cloud queue are scoped to the recording account": "let accountRecords = history.filter { $0.ownerID == ownerID }" in view and "guard record.ownerID == ownerID else" in cloud,
               "Activity history display is filtered by the authenticated account": "private var visibleActivityHistory" in view and "activityHistory.filter { $0.ownerID == ownerID }" in view and "ForEach(visibleActivityHistory.prefix(20))" in view,
               "Recovered GPS drafts retain a stable session ID and account owner": "activitySessionID = draft.sessionID ?? UUID()" in gps and "sessionID: sessionID" in gps and "ownerID: activityOwnerID" in gps and "ownerID: self.routeRecorder.activityOwnerID" in finish_activity,
               "Activity outbox retries on sign-in and foreground": "await cloud.retryPendingActivitySessions()" in view,
