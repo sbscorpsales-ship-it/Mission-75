@@ -75,7 +75,7 @@ final class HealthSyncOutboxStoreTests: XCTestCase {
     }
 
     private func makeStore() -> (HealthSyncOutboxStore, UserDefaults, String) {
-        let suite = "GATIVXHealthSyncOutboxTests.\\(UUID().uuidString)"
+        let suite = "GATIVXHealthSyncOutboxTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suite)!
         return (
             HealthSyncOutboxStore(
