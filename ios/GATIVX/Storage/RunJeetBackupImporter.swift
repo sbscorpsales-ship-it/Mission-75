@@ -1,4 +1,5 @@
 import Foundation
+import CoreFoundation
 
 /// Imports RunJeet schema-1 JSON backups into GATIVX's canonical activity model.
 /// Daily step totals are returned separately: they are not merged into HealthKit totals.
