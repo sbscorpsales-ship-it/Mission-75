@@ -469,6 +469,7 @@ struct ContentView: View {
     @State private var profilePhotoData: Data?
     @State private var profilePhotoStatus = "No member photo selected."
     @State private var isGuruPresented = false
+    @State private var isNotificationsPresented = false
     @AppStorage("gativx.guru.goal") private var guruGoal = ""
     @AppStorage("gativx.guru.purpose") private var guruPurpose = ""
     @AppStorage("gativx.guru.emotion") private var guruEmotion = ""
@@ -524,12 +525,18 @@ struct ContentView: View {
     }
 
     private var homeDashboard: some View {
-        ScrollView(showsIndicators: false) {
-            VStack(alignment: .leading, spacing: 15) {
+        GeometryReader { dashboardGeometry in
+            let dashboardWidth = dashboardGeometry.size.width
+            let isCompactDashboard = dashboardGeometry.size.height < 780
+            let ringDiameter = min(max(dashboardWidth * 0.40, 136), 164)
+            let heroHeight = min(max(dashboardWidth * 0.49, 178), 204)
+            let contentSpacing: CGFloat = isCompactDashboard ? 12 : 15
+            ScrollView(showsIndicators: false) {
+                VStack(alignment: .leading, spacing: contentSpacing) {
                 // Approved GATIVX home header: mountain greeting, brand, notifications and member profile.
                 ZStack(alignment: .topLeading) {
                     GATIVXMountainBackdrop(isNight: appearanceMode == "night" || (appearanceMode == "system" && UITraitCollection.current.userInterfaceStyle == .dark))
-                        .frame(height: 204)
+                        .frame(height: heroHeight)
                         .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
                     VStack(alignment: .leading, spacing: 17) {
                         HStack(alignment: .center, spacing: 10) {
@@ -542,10 +549,15 @@ struct ContentView: View {
                                 Text("FROM GOALS TO XCELLENCE").font(.system(size: 8, weight: .heavy)).tracking(1.1)
                             }
                             Spacer()
-                            Image(systemName: "bell.badge")
-                                .font(.system(size: 22, weight: .semibold))
-                                .foregroundStyle(.white)
-                                .accessibilityLabel("Notifications")
+                            Button { isNotificationsPresented = true } label: {
+                                Image(systemName: "bell.badge")
+                                    .font(.system(size: 22, weight: .semibold))
+                                    .foregroundStyle(.white)
+                                    .frame(width: 38, height: 38)
+                                    .contentShape(Circle())
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel("Notifications")
                             Button { selectedTab = 4 } label: {
                                 Group {
                                     if let data = profilePhotoData, let image = UIImage(data: data) {
@@ -563,7 +575,7 @@ struct ContentView: View {
                             .accessibilityLabel("Open member profile")
                         }
                         VStack(alignment: .leading, spacing: 5) {
-                            Text(greeting + " 👋").font(.system(size: 28, weight: .bold, design: .rounded))
+                            Text(greeting + " 👋").font(.system(size: min(max(dashboardWidth * 0.068, 24), 28), weight: .bold, design: .rounded))
                             Text("Every step moves you closer to your purpose.")
                                 .font(.subheadline.weight(.medium)).foregroundStyle(.white.opacity(0.9))
                         }
@@ -574,7 +586,7 @@ struct ContentView: View {
 
                 // Primary neon-green daily step counter.
                 HStack(spacing: 18) {
-                    stepRing.frame(width: 164, height: 164)
+                    stepRing.frame(width: ringDiameter, height: ringDiameter)
                     VStack(alignment: .leading, spacing: 8) {
                         Text("TODAY'S STEPS").font(.caption.weight(.heavy)).tracking(0.9).foregroundStyle(.secondary)
                         Text("Daily movement").font(.title3.weight(.bold))
@@ -726,12 +738,13 @@ struct ContentView: View {
                 }
                 .buttonStyle(.plain)
             }
-            .padding(.horizontal, 14)
-            .padding(.top, 10)
-            .padding(.bottom, 28)
+                .padding(.horizontal, min(max(dashboardWidth * 0.035, 12), 18))
+                .padding(.top, 10)
+                .padding(.bottom, 28)
+            }
+            .background(pageBackground.ignoresSafeArea())
+            .accessibilityIdentifier("gativx-home-dashboard")
         }
-        .background(pageBackground.ignoresSafeArea())
-        .accessibilityIdentifier("gativx-home-dashboard")
     }
 
     private func wellnessSnapshotCard(_ title: String, value: String, unit: String, symbol: String, tint: Color) -> some View {
@@ -1337,6 +1350,30 @@ struct ContentView: View {
                 .tabItem { Label("Community", systemImage: "person.3") }.tag(3)
             NavigationStack { profileScreen.navigationTitle("Profile") }
                 .tabItem { Label("Profile", systemImage: "person.crop.circle") }.tag(4)
+        }
+        .sheet(isPresented: $isNotificationsPresented) {
+            NavigationStack {
+                VStack(spacing: 12) {
+                    Image(systemName: "bell.badge")
+                        .font(.system(size: 34, weight: .semibold))
+                        .foregroundStyle(neon)
+                    Text("You're all caught up")
+                        .font(.title2.weight(.bold))
+                    Text("GATIVX notifications are not active in this build yet. Your walking records and health data are unaffected.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                }
+                .padding(28)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(pageBackground.ignoresSafeArea())
+                .navigationTitle("Notifications")
+                .toolbar {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Done") { isNotificationsPresented = false }
+                    }
+                }
+            }
         }
         .sheet(isPresented: $isGuruPresented) {
             NavigationStack {
