@@ -114,6 +114,34 @@ final class RunJeetBackupImporterTests: XCTestCase {
         XCTAssertThrowsError(try importer.decode(malformedSteps))
     }
 
+    func testRejectsFractionalOutOfRangeAndOverlongSessionTimestamps() {
+        let fractionalTimestamp = Data("""
+        {"app":"RunJeet","schema":1,"state":{"stepsByDay":{},"sessions":[{
+          "id":"c79090d9-9753-4fab-8183-426f2ceec150",
+          "startedAt":1794985731513.5,"endedAt":1794985743724,
+          "durationSec":12,"distanceM":0,"points":[],"sessionSteps":0
+        }]}}
+        """.utf8)
+        let outOfRangeTimestamp = Data("""
+        {"app":"RunJeet","schema":1,"state":{"stepsByDay":{},"sessions":[{
+          "id":"c79090d9-9753-4fab-8183-426f2ceec150",
+          "startedAt":99999999999999,"endedAt":99999999999999,
+          "durationSec":0,"distanceM":0,"points":[],"sessionSteps":0
+        }]}}
+        """.utf8)
+        let overlongSession = Data("""
+        {"app":"RunJeet","schema":1,"state":{"stepsByDay":{},"sessions":[{
+          "id":"c79090d9-9753-4fab-8183-426f2ceec150",
+          "startedAt":1794985731513,"endedAt":1795072131513,
+          "durationSec":86401,"distanceM":0,"points":[],"sessionSteps":0
+        }]}}
+        """.utf8)
+
+        XCTAssertThrowsError(try importer.decode(fractionalTimestamp))
+        XCTAssertThrowsError(try importer.decode(outOfRangeTimestamp))
+        XCTAssertThrowsError(try importer.decode(overlongSession))
+    }
+
     func testDuplicateImportDoesNotDuplicateExistingActivity() throws {
         let data = Data("""
         {
