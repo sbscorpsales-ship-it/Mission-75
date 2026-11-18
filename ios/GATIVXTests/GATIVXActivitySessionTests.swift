@@ -59,6 +59,19 @@ final class GATIVXActivitySessionTests: XCTestCase {
         XCTAssertNil(decoded.ownerID)
     }
 
+    func testMetadataOnlyImportedSessionIsNotCloudSyncEligible() {
+        let metadataOnly = activityRecord(steps: nil)
+        let withMeasuredSteps = activityRecord(steps: 12)
+        let withGPSRoute = activityRecord(
+            steps: nil,
+            routePoints: [routePoint(latitude: 15.85, longitude: 74.50)]
+        )
+
+        XCTAssertFalse(metadataOnly.hasCloudSyncPayload)
+        XCTAssertTrue(withMeasuredSteps.hasCloudSyncPayload)
+        XCTAssertTrue(withGPSRoute.hasCloudSyncPayload)
+    }
+
     func testDurationUsesMinutesAndSeconds() {
         let start = Date(timeIntervalSince1970: 1_800_000_000)
         let record = activityRecord(
