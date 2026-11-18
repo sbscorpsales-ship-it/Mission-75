@@ -171,7 +171,9 @@ struct ContentView: View {
                 syncSavedActivitySessions()
             }
 
-            let destination = assignToCurrentAccount ? "your signed-in GATIVX account" : "this iPhone only"
+            let destination = assignToCurrentAccount
+                ? "this iPhone, linked to your signed-in GATIVX account"
+                : "this iPhone only"
             let duplicateCount = importedRecords.count - newIDs.count
             let visibilityNote = (!assignToCurrentAccount && cloud.isSignedIn)
                 ? " Local-only imports remain separate from the signed-in account and are hidden until you switch to guest mode."
@@ -217,8 +219,15 @@ struct ContentView: View {
 
         // Only backfill records explicitly bound to this authenticated account.
         // Legacy and guest records remain local until their ownership can be verified.
-        for record in history where record.ownerID == ownerID {
+        // Metadata-only imported sessions have no deliverable step or route payload:
+        // keep them in account-linked local history instead of creating a stuck cloud retry.
+        let accountRecords = history.filter { $0.ownerID == ownerID }
+        for record in accountRecords where record.hasCloudSyncPayload {
             cloud.enqueueActivitySession(record)
+        }
+        let localOnlyCount = accountRecords.filter { !$0.hasCloudSyncPayload }.count
+        if localOnlyCount > 0 {
+            historyStatus = "Account-linked history saved on this iPhone; \(localOnlyCount) session(s) have no measured steps or GPS route and were not queued for cloud sync."
         }
         Task { await cloud.retryPendingActivitySessions() }
     }
