@@ -1,7 +1,7 @@
 import XCTest
 
 final class GATIVXDashboardUITests: XCTestCase {
-    func testHomeDashboardLaunchesWithApprovedSections() {
+    func testDashboardSectionsMetricsAndPrimaryNavigation() {
         let app = XCUIApplication()
         app.launch()
 
@@ -22,33 +22,41 @@ final class GATIVXDashboardUITests: XCTestCase {
             XCTAssertTrue(app.staticTexts[label].firstMatch.exists, "Missing approved dashboard content: \(label)")
         }
 
-        for metric in ["Distance", "Active time", "Calories", "Avg. heart rate"] {
-            XCTAssertTrue(app.staticTexts[metric].firstMatch.exists, "Missing dashboard metric: \(metric)")
+        let screenshot = XCTAttachment(screenshot: app.screenshot())
+        screenshot.name = "GATIVX-Home-Dashboard"
+        screenshot.lifetime = .keepAlways
+        add(screenshot)
+
+        let metricIdentifiers = [
+            "gativx-metric-distance",
+            "gativx-metric-active-time",
+            "gativx-metric-calories",
+            "gativx-metric-average-heart-rate"
+        ]
+        let scrollView = app.scrollViews.firstMatch
+        for _ in 0..<4 {
+            if metricIdentifiers.allSatisfy({ app.descendants(matching: .any)[$0].exists }) {
+                break
+            }
+            if scrollView.exists {
+                scrollView.swipeUp()
+            }
+        }
+        for identifier in metricIdentifiers {
+            XCTAssertTrue(
+                app.descendants(matching: .any)[identifier].waitForExistence(timeout: 5),
+                "Missing approved dashboard metric: \(identifier)"
+            )
         }
 
-        let attachment = XCTAttachment(screenshot: app.screenshot())
-        attachment.name = "GATIVX-Home-Dashboard"
-        attachment.lifetime = .keepAlways
-        add(attachment)
-    }
-
-    func testNotificationBellOpensNotificationsSheet() {
-        let app = XCUIApplication()
-        app.launch()
-
         let notifications = app.buttons["Notifications"]
-        XCTAssertTrue(notifications.waitForExistence(timeout: 10))
+        XCTAssertTrue(notifications.waitForExistence(timeout: 5))
         notifications.tap()
-
         XCTAssertTrue(app.staticTexts["You're all caught up"].waitForExistence(timeout: 5))
-    }
-
-    func testBottomNavigationCanOpenActivityAndProfile() {
-        let app = XCUIApplication()
-        app.launch()
+        app.buttons["Done"].tap()
 
         let activityTab = app.tabBars.buttons["Activity"]
-        XCTAssertTrue(activityTab.waitForExistence(timeout: 10))
+        XCTAssertTrue(activityTab.waitForExistence(timeout: 5))
         activityTab.tap()
         XCTAssertTrue(app.navigationBars["Activity"].waitForExistence(timeout: 5))
 
