@@ -45,6 +45,12 @@ struct ActivitySessionRecord: Codable, Identifiable {
         }
     }
 
+    /// A session can be uploaded to the activity cloud only when it contains
+    /// a measured step count or a GPS route. Metadata-only legacy imports stay local.
+    var hasCloudSyncPayload: Bool {
+        steps != nil || !(routePoints?.isEmpty ?? true)
+    }
+
     var durationText: String {
         let seconds = max(0, Int(finishedAt.timeIntervalSince(startedAt)))
         return String(format: "%d:%02d", seconds / 60, seconds % 60)
