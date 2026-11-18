@@ -318,7 +318,8 @@ struct ContentView: View {
     private func startActivitySession() {
         guard sessionStarted == nil,
               !isFinishingSession,
-              routeRecorder.recoveredStartedAt == nil else { return }
+              routeRecorder.recoveredStartedAt == nil,
+              !routeRecorder.hasUnreadableDraft else { return }
         let start = Date()
         sessionStarted = start
         activeSessionID = UUID()
@@ -648,14 +649,18 @@ struct ContentView: View {
                 VStack(alignment: .leading, spacing: 12) {
                     Label("ACTIVITY TRACKER", systemImage: "figure.walk")
                         .font(.caption.weight(.heavy)).tracking(0.9).foregroundStyle(.secondary)
-                    Text("Ready for your next walk?").font(.headline)
+                    Text(routeRecorder.hasUnreadableDraft ? "Your previous route needs recovery." : "Ready for your next walk?").font(.headline)
                     Button {
-                        if sessionStarted == nil { startActivitySession() }
+                        if sessionStarted == nil,
+                           routeRecorder.recoveredStartedAt == nil,
+                           !routeRecorder.hasUnreadableDraft {
+                            startActivitySession()
+                        }
                         selectedTab = 1
                     } label: {
                         HStack(spacing: 10) {
                             Image(systemName: "figure.walk").font(.headline.weight(.black))
-                            Text(sessionStarted == nil ? "START WALK" : "CONTINUE WALK")
+                            Text(sessionStarted != nil ? "CONTINUE WALK" : routeRecorder.hasUnreadableDraft ? "RECOVERY NEEDED" : routeRecorder.recoveredStartedAt != nil ? "RECOVER WALK" : "START WALK")
                                 .font(.headline.weight(.black)).tracking(0.6)
                             Spacer()
                             Image(systemName: "arrow.right").font(.headline.weight(.bold))
@@ -881,13 +886,16 @@ struct ContentView: View {
                     Text("GPS distance · " + String(format: "%.2f", routeRecorder.routeDistanceMeters / 1000) + " km")
                         .font(.subheadline.weight(.semibold))
                     liveRouteMap
-                    Text(sessionStatus).font(.caption).foregroundStyle(.secondary)
+                    Text(routeRecorder.hasUnreadableDraft ? routeRecorder.status : sessionStatus).font(.caption).foregroundStyle(.secondary)
                     if routeRecorder.isRecording { Label("Live route recording", systemImage: "record.circle.fill").font(.caption.weight(.semibold)).foregroundStyle(.green) }
                     if routeRecorder.authorization == .authorizedWhenInUse {
                         Button("Enable background GPS (Always location)") { routeRecorder.requestBackgroundLocationAccess() }.font(.caption)
                     }
                     if sessionStarted == nil {
-                        if let recoveredStart = routeRecorder.recoveredStartedAt {
+                        if routeRecorder.hasUnreadableDraft {
+                            Text("The original GPS draft is preserved. New walks are disabled until this draft can be recovered.")
+                                .font(.caption).foregroundStyle(.orange)
+                        } else if let recoveredStart = routeRecorder.recoveredStartedAt {
                             Text("Recovered activity from \(recoveredStart.formatted(date: .abbreviated, time: .shortened)).")
                                 .font(.caption).foregroundStyle(.orange)
                             Button("Resume recovered activity") {
