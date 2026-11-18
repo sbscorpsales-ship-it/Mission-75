@@ -11,6 +11,7 @@ struct ContentView: View {
     @State private var email = ""
     @State private var password = ""
     @State private var isCreatingAccount = true
+    @AppStorage("gativx.motion.dailyTrackingEnabled") private var motionMonitoringEnabled = false
     @State private var pedometer = CMPedometer()
     @State private var livePedometer = CMPedometer()
     @State private var selectedActivity = "Walking"
@@ -36,6 +37,11 @@ struct ContentView: View {
     /// Foreground live sensor feed. This is shown separately from HealthKit's
     /// deduplicated all-source daily total; never add the two together.
     private func startLiveMotionMonitor() {
+        guard motionMonitoringEnabled else {
+            livePedometer.stopUpdates()
+            motionStatus = "Daily iPhone step tracking is off. Enable Motion & Fitness in Profile to show live steps."
+            return
+        }
         guard CMPedometer.isStepCountingAvailable() else {
             motionStatus = "This iPhone does not report step counting through Core Motion."
             return
@@ -86,6 +92,19 @@ struct ContentView: View {
             }
         }
     }
+    private func updateMotionMonitoringPreference(_ enabled: Bool) {
+        if enabled {
+            motionMonitoringEnabled = true
+            startLiveMotionMonitor()
+        } else {
+            motionMonitoringEnabled = false
+            livePedometer.stopUpdates()
+            liveMotionSteps = nil
+            liveMotionDistanceMeters = nil
+            motionStatus = "Daily iPhone step tracking is off. Your saved activities are unchanged."
+        }
+    }
+
     private var visibleActivityHistory: [ActivitySessionRecord] {
         if cloud.isSignedIn {
             guard let ownerID = cloud.authenticatedUserID else { return [] }
@@ -527,6 +546,12 @@ struct ContentView: View {
                     Text(displayedStepSource).font(.caption2).foregroundStyle(.secondary)
                     Text(health.statusMessage).font(.caption2).foregroundStyle(.secondary)
                     Text(motionStatus).font(.caption2).foregroundStyle(.secondary)
+                    if !motionMonitoringEnabled && CMPedometer.isStepCountingAvailable() {
+                        Button { updateMotionMonitoringPreference(true) } label: {
+                            Label("Enable iPhone step counting", systemImage: "figure.walk")
+                                .font(.subheadline.weight(.bold)).frame(maxWidth: .infinity).padding(.vertical, 12)
+                        }.buttonStyle(.borderedProminent).tint(neon)
+                    }
                     if !health.hasRequestedAccess {
                         Button { health.requestReadAccessAndStart() } label: {
                             Label("Connect Apple Health", systemImage: "heart.text.square")
@@ -799,6 +824,25 @@ struct ContentView: View {
                 }.pickerStyle(.segmented)
                 Text("Automatic follows your iPhone appearance setting.").font(.caption).foregroundStyle(.secondary)
             }
+            Section("Motion & Fitness") {
+                Toggle("Daily iPhone step tracking", isOn: $motionMonitoringEnabled)
+                    .onChange(of: motionMonitoringEnabled) { _, enabled in
+                        if enabled { startLiveMotionMonitor() }
+                        else { updateMotionMonitoringPreference(false) }
+                    }
+                Text(motionStatus).font(.caption).foregroundStyle(.secondary)
+                Text("GATIVX requests Motion & Fitness access only when you enable daily step tracking or start a walk.")
+                    .font(.caption2).foregroundStyle(.secondary)
+            }
+            Section("Location") {
+                Text("GATIVX requests location when you start a walk. While Using is enough for an open-app route; Always is optional for supported background GPS while your screen is locked.")
+                    .font(.caption).foregroundStyle(.secondary)
+                Text(routeRecorder.status).font(.caption2).foregroundStyle(.secondary)
+            }
+            Section("Contacts") {
+                Text("Contacts access is not required for step counting, GPS, Apple Health or account sync. GATIVX does not request it.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
             Section("Apple Health") {
                 Label(health.hasRequestedAccess ? "Connection requested" : "Not connected", systemImage: "heart.text.square")
                 Text(health.statusMessage).font(.caption).foregroundStyle(.secondary)
@@ -899,11 +943,13 @@ struct ContentView: View {
                         Text(isCreatingAccount ? "CREATE YOUR GATIVX ACCOUNT" : "WELCOME BACK TO GATIVX")
                             .font(.caption.weight(.heavy)).tracking(1)
                         TextField("Email address", text: $email).textContentType(.emailAddress)
+                            .accessibilityIdentifier("gativx-email-field")
                             .textInputAutocapitalization(.never).keyboardType(.emailAddress).autocorrectionDisabled()
                             .padding(14).background(cardBackground, in: RoundedRectangle(cornerRadius: 13))
                         SecureField(isCreatingAccount ? "Create password (8+ characters)" : "Password", text: $password)
                             .textContentType(isCreatingAccount ? .newPassword : .password)
                             .textInputAutocapitalization(.never)
+                            .accessibilityIdentifier("gativx-password-field")
                             .padding(14).background(cardBackground, in: RoundedRectangle(cornerRadius: 13))
                         Button {
                             Task {
@@ -927,6 +973,7 @@ struct ContentView: View {
                             }
                             .padding(15).foregroundStyle(.black).background(neon, in: Capsule())
                         }
+                        .accessibilityIdentifier("gativx-auth-submit")
                         .disabled(
                             email.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
                             (isCreatingAccount ? password.count < 8 : password.isEmpty)
@@ -940,6 +987,7 @@ struct ContentView: View {
                                 password = ""
                             }
                             .font(.subheadline.weight(.semibold))
+                            .accessibilityIdentifier("gativx-auth-mode-toggle")
                         }
                         if !isCreatingAccount {
                             Button("Forgot password?") {
@@ -956,7 +1004,7 @@ struct ContentView: View {
                     Button { localModeEntered = true } label: {
                         HStack { Spacer(); Text("Continue without account").fontWeight(.semibold); Spacer() }
                             .padding(14).background(cardBackground.opacity(0.88), in: Capsule())
-                    }
+                    }.accessibilityIdentifier("gativx-continue-guest")
                     Button { health.requestReadAccessAndStart() } label: {
                         Label("Connect Apple Health", systemImage: "heart.text.square")
                             .font(.subheadline.weight(.semibold)).frame(maxWidth: .infinity).padding(12)
@@ -998,8 +1046,10 @@ struct ContentView: View {
                 .tint(neon)
             } else {
                 welcomeScreen
+                    .accessibilityIdentifier("gativx-welcome-screen")
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .preferredColorScheme(dashboardColorScheme)
         .onAppear {
             health.onDailyTotal = { day, total in
@@ -1013,7 +1063,7 @@ struct ContentView: View {
             health.resumeIfPreviouslyConnected()
             health.retryPendingWorkoutExports()
             health.refreshOnForeground()
-            startLiveMotionMonitor()
+            if motionMonitoringEnabled { startLiveMotionMonitor() }
             loadActivityHistory()
             if cloud.isSignedIn {
                 Task {
@@ -1045,7 +1095,7 @@ struct ContentView: View {
             if phase == .active {
                 health.retryPendingWorkoutExports()
                 health.refreshOnForeground()
-                startLiveMotionMonitor()
+                if motionMonitoringEnabled { startLiveMotionMonitor() }
                 if cloud.isSignedIn {
                     Task {
                     await cloud.retryPendingHealthSyncs()
