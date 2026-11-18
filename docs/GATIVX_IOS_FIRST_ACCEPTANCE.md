@@ -42,29 +42,30 @@ This is a **design lock**, not a claim that the native iOS screen has already be
 
 ## What CI can prove
 
-**Latest fully verified iOS source build:** [GATIVX iOS CI pull-request run 44201127963](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/44201127963)  
-**Matching push run:** [44201121886](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/44201121886)  
-**Source commit:** `1af5ac3e5a7dadb6f192a966aa03f646d3051697`  
-**Result:** Both push and pull-request jobs completed successfully. All 17 steps in each `build-ios` job passed on 18 November 2026.
+**Latest fully verified iOS source build:** [GATIVX iOS CI push run 44208517106](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/44208517106)  
+**Source commit:** `5d8503d09d94fbba30d59a109729bcd094101256`  
+**Result:** The push job completed successfully on 18 November 2026. The matching pull-request run was initially cancelled during unit tests; its second attempt is being rerun and is not yet counted as passed.
 
 | Check | Result |
 |---|---|
 | XcodeGen project generation and scheme validation | Passed |
-| GATIVX unit tests | 7 executed, 7 passed, 0 failures |
+| GATIVX unit tests | 8 executed, 8 passed, 0 failures |
 | HealthKit entitlement wiring and packaged permission strings | Passed CI validation |
 | Native tracking, persistence and cloud-outbox safeguards | 79 source checks passed, 0 failed |
 | iOS Simulator compile | Passed |
 | Unsigned iPhone device-target compile | Passed |
 | Unsigned iPhone IPA ZIP integrity and artifact upload | Passed |
 
-**Artifacts from matching push run 44201121886** (verified not expired on 18 November 2026):
+**Artifacts from push run 44208517106** (verified not expired on 18 November 2026):
 
-- `GATIVX-iPhone-unsigned-IPA`: artifact ID `14381428980`, 754,985 bytes. GitHub artifact archive SHA-256: `46de8bc5402d2a268e56db8135d84748457454124bcdb2363eaf114054f9dee2`. [Download from GitHub](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/44201121886/artifacts/14381428980)
-- `GATIVX-iOS-Simulator`: artifact ID `14381783033`, 1,568,092 bytes. [Download from GitHub](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/44201121886/artifacts/14381783033)
+- `GATIVX-iPhone-unsigned-IPA`: artifact ID `14385324258`, 755,245 bytes. GitHub artifact archive SHA-256: `21ed19c8c381f741902ca9360ffd7e6fa6bc305dbd3a2e3e768272ab394a7b12`. [Download from GitHub](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/44208517106/artifacts/14385324258)
+- `GATIVX-iOS-Simulator`: artifact ID `14384724239`, 1,568,445 bytes. [Download from GitHub](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/44208517106/artifacts/14384724239)
 
-The completed-activity history uses atomic JSON file replacement in Application Support. CI's seven tests cover route-segment distance, older route-point decoding, unavailable step counts, duration formatting, atomic activity save/read-back, legacy UserDefaults migration, and preservation of corrupt history. The HealthKit export path uses `HKWorkoutBuilder`, includes measured distance when available, and retains the export outbox until an existing or newly saved workout is confirmed. The latest source also extracts the mountain backdrop into a dedicated SwiftUI view without changing the approved dashboard design.
+The completed-activity history uses atomic JSON file replacement in Application Support. The eight unit tests cover route-segment distance, older route-point decoding, unavailable step counts, duration formatting, atomic activity save/read-back, legacy UserDefaults migration, preservation of corrupt history, and preservation of legacy data when migration cannot write. The HealthKit export path uses `HKWorkoutBuilder`, includes measured distance when available, and retains the export outbox until an existing or newly saved workout is confirmed.
 
-A simulator build and source-level safeguards prove compilation and selected logic, not physical iPhone behaviour. An unsigned IPA is not installable and cannot prove that the installed app carries the HealthKit entitlement. The seven unit tests are not substitutes for physical-device acceptance.
+The 79 source-level safeguards include Finish & Save retry/recovery, GPS background permission transitions and route persistence, HealthKit export idempotency and outbox handling, member-scoped cloud queues, and protection against fabricated zero readings. They are static source checks, not runtime device tests.
+
+A simulator build and source-level safeguards prove compilation and selected logic, not physical iPhone behaviour. An unsigned IPA is not installable and cannot prove that the installed app carries the HealthKit entitlement. The eight unit tests are not substitutes for physical-device acceptance.
 
 ## Physical iPhone acceptance — all must pass
 
