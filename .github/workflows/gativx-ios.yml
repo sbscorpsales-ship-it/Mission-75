@@ -194,6 +194,8 @@ jobs:
           health = Path("ios/GATIVX/HealthKit/HealthKitManager.swift").read_text()
           health_outbox = Path("ios/GATIVX/Storage/HealthKitWorkoutOutboxStore.swift").read_text()
           health_outbox_tests = Path("ios/GATIVXTests/HealthKitWorkoutOutboxStoreTests.swift").read_text()
+          sensor_outbox = Path("ios/GATIVX/Storage/HealthSyncOutboxStore.swift").read_text()
+          sensor_outbox_tests = Path("ios/GATIVXTests/HealthSyncOutboxStoreTests.swift").read_text()
           cloud = Path("ios/GATIVX/Cloud/SupabaseRESTClient.swift").read_text()
           migration = Path("supabase/migrations/20261109113101_allow_gps_route_sync_without_step_count.sql").read_text()
           outbox = cloud.split("enum PendingHealthSyncKind", 1)[1] if "enum PendingHealthSyncKind" in cloud else ""
@@ -276,8 +278,11 @@ jobs:
               "Daily distance, exercise and heart-rate refresh clears stale values before querying": "todayWalkingRunningDistanceKm = nil" in health and "todayExerciseMinutes = nil" in health and "todayAverageHeartRateBPM = nil" in health,
               "Active-energy query requires explicit HealthKit connection": "guard UserDefaults.standard.bool(forKey: connectionRequestedKey), isAvailable else" in health,
               "GPS route upload allows unknown steps without inventing zero": '"p_steps": steps.map { $0 as Any } ?? NSNull()' in cloud,
-              "Sensor retry outbox is persisted on device": "healthOutboxKey" in cloud and "UserDefaults.standard.set(data, forKey: healthOutboxKey)" in cloud,
-              "Sensor outbox writes are read-back verified": "saved == data" in cloud and "verified.count == items.count" in cloud and "verified.map(\\.revisionID) == items.map(\\.revisionID)" in cloud,
+              "Sensor retry outbox is persisted on device": "HealthSyncOutboxStore()" in cloud and "userDefaults.set(data, forKey: key)" in sensor_outbox,
+              "Sensor outbox writes are read-back verified": "saved == data" in sensor_outbox and "verified.count == items.count" in sensor_outbox and "verified.map(\\.revisionID)" in sensor_outbox,
+              "Sensor outbox replaces only the same member/kind/day": "items.removeAll { $0.id == item.id }" in sensor_outbox and "testEnqueueReplacesOnlyTheSameMemberKindAndLocalDay" in sensor_outbox_tests,
+              "Sensor outbox stale acknowledgement preserves newer revision": "item.revisionID" in sensor_outbox and "testAcknowledgingAnOlderRevisionCannotDeleteANewerReading" in sensor_outbox_tests,
+              "Sensor outbox corrupt data blocks enqueue and acknowledgement": "Original data was preserved" in sensor_outbox and "testCorruptOutboxIsPreservedAndBlocksEnqueueAndAcknowledgement" in sensor_outbox_tests,
               "Sensor uploads require verified queue persistence": all("if pendingItem == nil && !enqueueHealthSync(item)" in section for section in [step_sync, energy_sync, motion_sync]),
               "Sensor sync reports success only after queue acknowledgement is verified": "guard acknowledgeHealthSync(item) else" in step_sync and "guard acknowledgeHealthSync(item) else" in energy_sync and "guard acknowledgeHealthSync(item) else" in motion_sync,
               "Sensor retry records are scoped to authenticated member ID": "currentUserID" in cloud and "ownerID" in outbox and "filter { $0.ownerID == ownerID }" in cloud,
@@ -289,7 +294,7 @@ jobs:
               "Sensor outbox retry reuses the original idempotency revision": "pendingItem: item" in cloud and "if pendingItem == nil && !enqueueHealthSync(item)" in cloud,
               "Unreadable sensor outbox is not treated as an empty queue": "private func loadHealthOutbox() -> [PendingHealthSync]?" in cloud and "original data was left untouched" in cloud,
               "Unreadable sensor outbox exposes unknown count instead of false zero": "isHealthOutboxReadable = false" in cloud and "Pending count is unknown" in cloud and "if let items = loadHealthOutbox()" in cloud,
-              "Enqueue and acknowledgement never overwrite unreadable sensor outbox": "guard var items = loadHealthOutbox() else { return false }" in cloud and "guard let items = loadHealthOutbox() else { return false }" in cloud,
+              "Enqueue and acknowledgement never overwrite unreadable sensor outbox": "var items = try load()" in sensor_outbox and "let items = try load()" in sensor_outbox,
               "Invalid sensor outbox dates are retained for recovery": "invalid date. The original record was retained for recovery" in cloud and "acknowledgeHealthSync(item)" not in cloud.split("guard let day = dateForLocalDay(item.localDay) else", 1)[1].split("}", 1)[0],
               "Sensor outbox retry preserves original revision through token refresh": "retryAfterRefresh: false, pendingItem: item" in cloud,
               "Member can see pending sensor-sync count": "pendingHealthSyncCount" in cloud and "pendingHealthSyncCount" in view,
