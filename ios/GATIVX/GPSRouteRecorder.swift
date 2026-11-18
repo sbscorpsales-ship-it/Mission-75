@@ -42,7 +42,15 @@ struct GATIVXRoutePoint: Codable {
 private struct GATIVXActiveRouteDraft: Codable {
     let startedAt: Date
     let activity: String
+    let ownerID: String?
     var points: [GATIVXRoutePoint]
+
+    init(startedAt: Date, activity: String, points: [GATIVXRoutePoint], ownerID: String? = nil) {
+        self.startedAt = startedAt
+        self.activity = activity
+        self.ownerID = ownerID
+        self.points = points
+    }
 }
 
 /// Core Location delivers delegate callbacks on the manager's creation run loop.
@@ -54,6 +62,7 @@ final class GPSRouteRecorder: NSObject, ObservableObject {
     @Published private(set) var authorization: CLAuthorizationStatus = .notDetermined
     @Published private(set) var recoveredStartedAt: Date?
     @Published private(set) var recoveredActivity: String?
+    private(set) var activityOwnerID: String?
 
     private let manager = CLLocationManager()
     private let draftKey = "gativx.activeRouteDraft.v1"
@@ -105,6 +114,7 @@ final class GPSRouteRecorder: NSObject, ObservableObject {
         points = draft.points
         recoveredStartedAt = draft.startedAt
         recoveredActivity = draft.activity
+        activityOwnerID = draft.ownerID
         activeStartedAt = draft.startedAt
         activeActivity = draft.activity
         status = "Recovered unfinished activity · \(points.count) GPS points. Resume or finish to save it."
@@ -128,7 +138,12 @@ final class GPSRouteRecorder: NSObject, ObservableObject {
             status = "Could not access the local GPS draft folder. The route remains in memory; do not force-quit GATIVX."
             return false
         }
-        let draft = GATIVXActiveRouteDraft(startedAt: startedAt, activity: activeActivity, points: points)
+        let draft = GATIVXActiveRouteDraft(
+            startedAt: startedAt,
+            activity: activeActivity,
+            points: points,
+            ownerID: activityOwnerID
+        )
         do {
             let data = try JSONEncoder().encode(draft)
             try data.write(to: url, options: .atomic)
@@ -140,12 +155,13 @@ final class GPSRouteRecorder: NSObject, ObservableObject {
         }
     }
 
-    func start(activity: String) {
+    func start(activity: String, ownerID: String? = nil) {
         guard !isRecording else { return }
         points.removeAll()
         needsSegmentBreak = true
         activeStartedAt = Date()
         activeActivity = activity
+        activityOwnerID = ownerID
         recoveredStartedAt = nil
         recoveredActivity = nil
         let draftPersisted = persistDraft()
@@ -225,6 +241,7 @@ final class GPSRouteRecorder: NSObject, ObservableObject {
         points.removeAll()
         activeStartedAt = nil
         activeActivity = "Walking"
+        activityOwnerID = nil
         recoveredStartedAt = nil
         recoveredActivity = nil
     }
