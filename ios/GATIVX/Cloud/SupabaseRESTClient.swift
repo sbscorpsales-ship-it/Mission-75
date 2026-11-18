@@ -65,6 +65,8 @@ final class SupabaseRESTClient: ObservableObject {
     }
 
 
+    var authenticatedUserID: String? { currentUserID }
+
     private var currentUserID: String? {
         guard let accessToken else { return nil }
         let parts = accessToken.split(separator: ".")
@@ -218,6 +220,10 @@ final class SupabaseRESTClient: ObservableObject {
     func enqueueActivitySession(_ record: ActivitySessionRecord) {
         guard let ownerID = currentUserID else {
             status = "Activity saved on this iPhone. Sign in to queue its cloud upload."
+            return
+        }
+        guard record.ownerID == ownerID else {
+            status = "Activity remains local because its recording account cannot be verified for this signed-in member."
             return
         }
         guard var items = loadActivityOutbox() else { return }
