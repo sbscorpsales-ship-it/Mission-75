@@ -1194,9 +1194,9 @@ struct ContentView: View {
     }
 
     var body: some View {
-        Group {
-            if cloud.isSignedIn || localModeEntered {
-                TabView(selection: $selectedTab) {
+        // The approved Home dashboard is the app's launch screen.
+        // Account sign-in and cloud sync are optional and available from Profile.
+        TabView(selection: $selectedTab) {
             NavigationStack { homeDashboard.navigationTitle("").toolbar(.hidden, for: .navigationBar) }
                 .tabItem { Label("Home", systemImage: "house.fill") }.tag(0)
             NavigationStack { activityScreen.navigationTitle("Activity") }
@@ -1208,23 +1208,18 @@ struct ContentView: View {
             NavigationStack { profileScreen.navigationTitle("Profile") }
                 .tabItem { Label("Profile", systemImage: "person.crop.circle") }.tag(4)
         }
-                .sheet(isPresented: $isGuruPresented) {
-                    NavigationStack {
-                        guruScreen
-                            .navigationTitle("GATIVX Guru")
-                            .toolbar {
-                                ToolbarItem(placement: .confirmationAction) {
-                                    Button("Done") { isGuruPresented = false }
-                                }
-                            }
+        .sheet(isPresented: $isGuruPresented) {
+            NavigationStack {
+                guruScreen
+                    .navigationTitle("GATIVX Guru")
+                    .toolbar {
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button("Done") { isGuruPresented = false }
+                        }
                     }
-                }
-                .tint(neon)
-            } else {
-                welcomeScreen
-                    .accessibilityIdentifier("gativx-welcome-screen")
             }
         }
+        .tint(neon)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .preferredColorScheme(dashboardColorScheme)
         .onAppear {
