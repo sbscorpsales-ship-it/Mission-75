@@ -59,6 +59,23 @@ struct RunJeetBackupImporter {
         return RunJeetBackupImport(activities: activities, dailyStepsByDay: dailySteps)
     }
 
+    /// Assign ownership only after the member explicitly chooses an account import.
+    /// A local-only import keeps ownerID nil and is never silently uploaded.
+    func assigningOwnerID(_ ownerID: String?, to records: [ActivitySessionRecord]) -> [ActivitySessionRecord] {
+        records.map { record in
+            ActivitySessionRecord(
+                id: record.id,
+                activity: record.activity,
+                startedAt: record.startedAt,
+                finishedAt: record.finishedAt,
+                steps: record.steps,
+                routePoints: record.routePoints,
+                motionDistanceMeters: record.motionDistanceMeters,
+                ownerID: ownerID
+            )
+        }
+    }
+
     /// Merge imported sessions without overwriting existing records. Existing IDs win.
     func merging(_ imported: [ActivitySessionRecord], into existing: [ActivitySessionRecord]) -> [ActivitySessionRecord] {
         var merged = existing
@@ -78,6 +95,7 @@ struct RunJeetBackupImporter {
               let duration = integer(raw["durationSec"]), duration >= 0,
               let rawPoints = raw["points"] as? [[String: Any]],
               let rawDistance = raw["distanceM"] as? NSNumber,
+              CFGetTypeID(rawDistance) != CFBooleanGetTypeID(),
               rawDistance.doubleValue.isFinite, rawDistance.doubleValue >= 0 else {
             throw RunJeetBackupImportError.invalidSession(identifier)
         }
@@ -102,6 +120,9 @@ struct RunJeetBackupImporter {
         }
 
         let rawSteps = integer(raw["sessionSteps"])
+        if let rawSteps, rawSteps < 0 {
+            throw RunJeetBackupImportError.invalidSession(identifier)
+        }
         // RunJeet's MVP initializes sessionSteps to zero even when no step source
         // was connected. Preserve only positive readings as measured session steps.
         let measuredSteps = (rawSteps ?? 0) > 0 ? rawSteps : nil
