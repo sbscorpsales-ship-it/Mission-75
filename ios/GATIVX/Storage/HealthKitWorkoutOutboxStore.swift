@@ -35,7 +35,7 @@ struct HealthKitWorkoutOutboxStore {
         }
     }
 
-    func save(_ items: [PendingHealthWorkout]) throws {
+    private func save(_ items: [PendingHealthWorkout]) throws {
         let data = try JSONEncoder().encode(items)
         userDefaults.set(data, forKey: key)
         guard let saved = userDefaults.data(forKey: key),
