@@ -79,12 +79,22 @@ struct ContentView: View {
             }
         }
     }
+    private var visibleActivityHistory: [ActivitySessionRecord] {
+        if cloud.isSignedIn {
+            guard let ownerID = cloud.authenticatedUserID else { return [] }
+            return activityHistory.filter { $0.ownerID == ownerID }
+        }
+        // Guest/local-only activities are visible only while no cloud account is active.
+        return activityHistory.filter { $0.ownerID == nil }
+    }
+
     private func loadActivityHistory() {
         do {
             activityHistory = try activityStore.load()
-            historyStatus = activityHistory.isEmpty
-                ? "No completed activities saved yet."
-                : "Loaded saved activities from this iPhone."
+            let visibleCount = visibleActivityHistory.count
+            historyStatus = visibleCount == 0
+                ? "No completed activities saved for this account yet."
+                : "Loaded \\(visibleCount) account-matched activities from this iPhone."
         } catch {
             historyStatus = "Saved activity history could not be read. Existing data has been left untouched."
         }
@@ -111,7 +121,7 @@ struct ContentView: View {
     }
 
     private func syncSavedActivitySessions() {
-        guard cloud.isSignedIn else { return }
+        guard cloud.isSignedIn, let ownerID = cloud.authenticatedUserID else { return }
 
         let history: [ActivitySessionRecord]
         do {
@@ -122,9 +132,9 @@ struct ContentView: View {
             return
         }
 
-        // Backfill previously saved sessions into the durable per-session outbox.
-        // New sessions are queued by the same path before any network request.
-        for record in history {
+        // Only backfill records explicitly bound to this authenticated account.
+        // Legacy and guest records remain local until their ownership can be verified.
+        for record in history where record.ownerID == ownerID {
             cloud.enqueueActivitySession(record)
         }
         Task { await cloud.retryPendingActivitySessions() }
@@ -138,7 +148,7 @@ struct ContentView: View {
         sessionMotionDistanceMeters = nil
         // GPS recording is independent of the motion sensor. A device without
         // CMPedometer must still be able to record and save a complete route.
-        routeRecorder.start(activity: selectedActivity)
+        routeRecorder.start(activity: selectedActivity, ownerID: cloud.authenticatedUserID)
         guard CMPedometer.isStepCountingAvailable() else {
             sessionStatus = "Recording GPS route for " + selectedActivity.lowercased() + " · step counter unavailable."
             return
@@ -180,7 +190,16 @@ struct ContentView: View {
                     return
                 }
                 let finalDistance = queriedDistance ?? self.sessionMotionDistanceMeters
-                let record = ActivitySessionRecord(id: recordID, activity: activity, startedAt: start, finishedAt: finishedAt, steps: finalSteps, routePoints: routePoints, motionDistanceMeters: finalDistance)
+                let record = ActivitySessionRecord(
+                    id: recordID,
+                    activity: activity,
+                    startedAt: start,
+                    finishedAt: finishedAt,
+                    steps: finalSteps,
+                    routePoints: routePoints,
+                    motionDistanceMeters: finalDistance,
+                    ownerID: self.routeRecorder.activityOwnerID
+                )
                 var history: [ActivitySessionRecord]
                 do {
                     history = try self.activityStore.load()
@@ -403,7 +422,7 @@ struct ContentView: View {
                         Text("Your progress").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
                     }
                     Text("\(activityHistory.count) activities saved").font(.subheadline.weight(.semibold))
-                    ProgressView(value: min(Double(activityHistory.count) / 90.0, 1.0))
+                    ProgressView(value: min(Double(visibleActivityHistory.count) / 90.0, 1.0))
                         .tint(neon)
                     Text(historyStatus.isEmpty ? "Your completed activities will appear here." : historyStatus)
                         .font(.caption).foregroundStyle(.secondary)
@@ -521,10 +540,10 @@ struct ContentView: View {
                         .font(.caption2).foregroundStyle(.secondary)
                 }.padding(18).background(cardBackground, in: RoundedRectangle(cornerRadius: 22))
                 Text("RECENT ACTIVITIES").font(.caption.weight(.bold)).foregroundStyle(.secondary)
-                if activityHistory.isEmpty {
+                if visibleActivityHistory.isEmpty {
                     Text(historyStatus.isEmpty ? "No completed activities saved yet." : historyStatus).foregroundStyle(.secondary)
                 } else {
-                    ForEach(activityHistory.prefix(20)) { item in
+                    ForEach(visibleActivityHistory.prefix(20)) { item in
                         VStack(alignment: .leading, spacing: 6) {
                             HStack { Text(item.activity).font(.headline); Spacer(); Text(item.startedAt.formatted(date: .abbreviated, time: .shortened)).font(.caption).foregroundStyle(.secondary) }
                             HStack(spacing: 12) {
