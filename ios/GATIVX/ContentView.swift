@@ -748,6 +748,7 @@ struct ContentView: View {
                     .background(cardBackground, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
                 }
                 .buttonStyle(.plain)
+                .accessibilityIdentifier("gativx-guru-entry")
 
                 // My Journey: actual saved activity history only.
                 VStack(alignment: .leading, spacing: 10) {
