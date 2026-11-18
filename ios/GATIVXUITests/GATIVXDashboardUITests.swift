@@ -51,6 +51,10 @@ final class GATIVXDashboardUITests: XCTestCase {
 
         let notifications = app.buttons["Notifications"]
         XCTAssertTrue(notifications.waitForExistence(timeout: 5))
+        for _ in 0..<4 where !notifications.isHittable {
+            scrollView.swipeDown()
+        }
+        XCTAssertTrue(notifications.isHittable, "The dashboard header should remain reachable after scrolling.")
         notifications.tap()
         XCTAssertTrue(app.staticTexts["You're all caught up"].waitForExistence(timeout: 5))
         app.buttons["Done"].tap()
