@@ -2,6 +2,8 @@ import SwiftUI
 import MapKit
 import CoreMotion
 import UniformTypeIdentifiers
+import PhotosUI
+import UIKit
 
 struct ContentView: View {
     @Environment(\.scenePhase) private var scenePhase
@@ -10,6 +12,7 @@ struct ContentView: View {
     @StateObject private var routeRecorder = GPSRouteRecorder()
     @State private var routeMapCameraPosition: MapCameraPosition = .automatic
     private let activityStore = ActivitySessionStore()
+    private let memberProfilePhotoStore = MemberProfilePhotoStore()
     @State private var email = ""
     @State private var password = ""
     @State private var isCreatingAccount = true
@@ -125,6 +128,65 @@ struct ContentView: View {
                 : "Loaded \\(visibleCount) account-matched activities from this iPhone."
         } catch {
             historyStatus = "Saved activity history could not be read. Existing data has been left untouched."
+        }
+    }
+
+    private func loadMemberProfilePhoto() {
+        do {
+            profilePhotoData = try memberProfilePhotoStore.load()
+            if profilePhotoData != nil {
+                profilePhotoStatus = "Member photo saved on this iPhone only."
+            }
+        } catch {
+            // Keep an unreadable original file in place for recovery.
+            profilePhotoStatus = "Saved member photo could not be read. The original file was preserved."
+        }
+    }
+
+    @MainActor
+    private func saveMemberProfilePhoto(_ item: PhotosPickerItem) async {
+        do {
+            guard let sourceData = try await item.loadTransferable(type: Data.self),
+                  let sourceImage = UIImage(data: sourceData) else {
+                profilePhotoStatus = "The selected photo could not be opened. Your current photo was not changed."
+                return
+            }
+
+            let longestSide = max(sourceImage.size.width, sourceImage.size.height)
+            guard longestSide > 0 else {
+                profilePhotoStatus = "The selected photo has invalid dimensions. Your current photo was not changed."
+                return
+            }
+            let scale = min(1, 512 / longestSide)
+            let targetSize = CGSize(
+                width: max(1, (sourceImage.size.width * scale).rounded(.down)),
+                height: max(1, (sourceImage.size.height * scale).rounded(.down))
+            )
+            let renderer = UIGraphicsImageRenderer(size: targetSize)
+            let resizedImage = renderer.image { _ in
+                sourceImage.draw(in: CGRect(origin: .zero, size: targetSize))
+            }
+            guard let jpegData = resizedImage.jpegData(compressionQuality: 0.82) else {
+                profilePhotoStatus = "The selected photo could not be prepared. Your current photo was not changed."
+                return
+            }
+
+            try memberProfilePhotoStore.save(jpegData)
+            profilePhotoData = jpegData
+            profilePhotoStatus = "Member photo saved and verified on this iPhone. It is not uploaded."
+        } catch {
+            profilePhotoStatus = "Member photo was not changed: " + error.localizedDescription
+        }
+    }
+
+    private func removeMemberProfilePhoto() {
+        do {
+            try memberProfilePhotoStore.delete()
+            profilePhotoData = nil
+            selectedProfilePhoto = nil
+            profilePhotoStatus = "Member photo removed from this iPhone."
+        } catch {
+            profilePhotoStatus = "Member photo could not be removed: " + error.localizedDescription
         }
     }
 
@@ -482,11 +544,18 @@ struct ContentView: View {
                                 .foregroundStyle(.white)
                                 .accessibilityLabel("Notifications")
                             Button { selectedTab = 4 } label: {
-                                Image(systemName: "person.crop.circle.fill")
-                                    .font(.system(size: 32))
-                                    .foregroundStyle(.white)
-                                    .padding(2)
-                                    .overlay(Circle().stroke(neon, lineWidth: 1.8))
+                                Group {
+                                    if let data = profilePhotoData, let image = UIImage(data: data) {
+                                        Image(uiImage: image).resizable().scaledToFill()
+                                    } else {
+                                        Image(systemName: "person.crop.circle.fill").resizable().scaledToFit().padding(3)
+                                    }
+                                }
+                                .frame(width: 34, height: 34)
+                                .foregroundStyle(.white)
+                                .clipShape(Circle())
+                                .padding(2)
+                                .overlay(Circle().stroke(neon, lineWidth: 1.8))
                             }
                             .accessibilityLabel("Open member profile")
                         }
@@ -992,6 +1061,45 @@ struct ContentView: View {
 
     private var profileScreen: some View {
         Form {
+            Section("Member profile") {
+                HStack(spacing: 12) {
+                    Group {
+                        if let data = profilePhotoData, let image = UIImage(data: data) {
+                            Image(uiImage: image).resizable().scaledToFill()
+                        } else {
+                            Image(systemName: "person.crop.circle.fill")
+                                .resizable().scaledToFit().padding(7)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .frame(width: 62, height: 62)
+                    .clipShape(Circle())
+                    .overlay(Circle().stroke(neon.opacity(0.7), lineWidth: 1.5))
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(profilePhotoData == nil ? "Add your member photo" : "Member photo saved")
+                            .font(.subheadline.weight(.semibold))
+                        Text("Stored securely on this iPhone only. Not uploaded.")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                }
+                PhotosPicker(
+                    selection: $selectedProfilePhoto,
+                    matching: .images,
+                    photoLibrary: .shared()
+                ) {
+                    Label(profilePhotoData == nil ? "Choose member photo" : "Change member photo", systemImage: "photo")
+                }
+                .onChange(of: selectedProfilePhoto) { _, item in
+                    guard let item else { return }
+                    Task { await saveMemberProfilePhoto(item) }
+                }
+                if profilePhotoData != nil {
+                    Button("Remove member photo", role: .destructive) {
+                        removeMemberProfilePhoto()
+                    }
+                }
+                Text(profilePhotoStatus).font(.caption).foregroundStyle(.secondary)
+            }
             Section("Appearance") {
                 Picker("Theme", selection: $appearanceMode) {
                     Text("Automatic").tag("system")
@@ -1254,6 +1362,7 @@ struct ContentView: View {
             health.retryPendingWorkoutExports()
             health.refreshOnForeground()
             if motionMonitoringEnabled { startLiveMotionMonitor() }
+            loadMemberProfilePhoto()
             loadActivityHistory()
             if cloud.isSignedIn {
                 Task {
