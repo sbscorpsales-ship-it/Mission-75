@@ -109,29 +109,42 @@ final class SupabaseRESTClient: ObservableObject {
         }
     }
 
-    private func saveHealthOutbox(_ items: [PendingHealthSync]) {
+    private func saveHealthOutbox(_ items: [PendingHealthSync]) -> Bool {
         do {
             let data = try JSONEncoder().encode(items)
             UserDefaults.standard.set(data, forKey: healthOutboxKey)
-            pendingHealthSyncCount = items.filter { $0.ownerID == currentUserID }.count
+            guard let saved = UserDefaults.standard.data(forKey: healthOutboxKey),
+                  saved == data,
+                  let verified = try? JSONDecoder().decode([PendingHealthSync].self, from: saved),
+                  verified.count == items.count,
+                  verified.map(\.id) == items.map(\.id),
+                  verified.map(\.revisionID) == items.map(\.revisionID) else {
+                isHealthOutboxReadable = false
+                status = "Sensor sync queue could not be verified after saving. Pending count is unknown; the new upload was stopped."
+                return false
+            }
+            isHealthOutboxReadable = true
+            pendingHealthSyncCount = verified.filter { $0.ownerID == currentUserID }.count
+            return true
         } catch {
-            status = "Sensor sync queue could not be encoded. Existing queued data was not intentionally replaced."
+            status = "Sensor sync queue could not be encoded: " + error.localizedDescription
+            return false
         }
     }
 
-    private func enqueueHealthSync(_ item: PendingHealthSync) {
-        guard var items = loadHealthOutbox() else { return }
+    private func enqueueHealthSync(_ item: PendingHealthSync) -> Bool {
+        guard var items = loadHealthOutbox() else { return false }
         items.removeAll { $0.id == item.id }
         items.append(item)
         items.sort { $0.queuedAt < $1.queuedAt }
-        saveHealthOutbox(items)
+        return saveHealthOutbox(items)
     }
 
-    private func acknowledgeHealthSync(_ item: PendingHealthSync) {
+    private func acknowledgeHealthSync(_ item: PendingHealthSync) -> Bool {
         // An older in-flight request must not remove a newer reading for the
         // same member/day that was queued while the request was awaiting I/O.
-        guard let items = loadHealthOutbox() else { return }
-        saveHealthOutbox(items.filter {
+        guard let items = loadHealthOutbox() else { return false }
+        return saveHealthOutbox(items.filter {
             !($0.id == item.id && $0.revisionID == item.revisionID)
         })
     }
@@ -321,10 +334,16 @@ final class SupabaseRESTClient: ObservableObject {
         guard steps >= 0 else { return }
         guard let ownerID = currentUserID else { status = "Step sync pending until a valid account session is available."; return }
         let item = pendingItem ?? PendingHealthSync(ownerID: ownerID, revisionID: UUID(), kind: .healthSteps, localDay: localDayString(date), steps: steps, activeEnergyKcal: nil, distanceMeters: nil, queuedAt: Date())
-        if pendingItem == nil { enqueueHealthSync(item) }
+        if pendingItem == nil && !enqueueHealthSync(item) {
+            status = "Step sync paused: the on-device retry queue could not be verified, so no network request was sent."
+            return
+        }
         do {
             try await performStepSync(date: date, steps: steps, retryAfterRefresh: true)
-            acknowledgeHealthSync(item)
+            guard acknowledgeHealthSync(item) else {
+                status = "Apple Health steps reached the server, but local queue acknowledgement could not be verified. A safe retry remains possible."
+                return
+            }
             status = "Apple Health steps synced to your GATIVX account."
         } catch {
             status = "Step sync pending: \(error.localizedDescription). Open the app later to retry."
@@ -335,7 +354,10 @@ final class SupabaseRESTClient: ObservableObject {
         guard kilocalories >= 0 else { return }
         guard let ownerID = currentUserID else { status = "Active-energy sync pending until a valid account session is available."; return }
         let item = pendingItem ?? PendingHealthSync(ownerID: ownerID, revisionID: UUID(), kind: .activeEnergy, localDay: localDayString(date), steps: nil, activeEnergyKcal: kilocalories, distanceMeters: nil, queuedAt: Date())
-        if pendingItem == nil { enqueueHealthSync(item) }
+        if pendingItem == nil && !enqueueHealthSync(item) {
+            status = "Active-energy sync paused: the on-device retry queue could not be verified, so no network request was sent."
+            return
+        }
         do {
             guard let token = accessToken else { throw ClientError.notSignedIn }
             var request = URLRequest(url: baseURL.appendingPathComponent("rest/v1/rpc/sync_healthkit_daily_energy"))
@@ -360,7 +382,10 @@ final class SupabaseRESTClient: ObservableObject {
                 return
             }
             guard (200..<300).contains(http.statusCode) else { throw Self.serverError(data) }
-            acknowledgeHealthSync(item)
+            guard acknowledgeHealthSync(item) else {
+                status = "Apple Health active calories reached the server, but local queue acknowledgement could not be verified. A safe retry remains possible."
+                return
+            }
             status = "Apple Health active calories synced to your GATIVX account."
         } catch {
             status = "Active calorie sync pending: " + error.localizedDescription + ". Open the app later to retry."
@@ -375,7 +400,10 @@ final class SupabaseRESTClient: ObservableObject {
         guard steps >= 0 else { return false }
         guard let ownerID = currentUserID else { status = "Motion sync pending until a valid account session is available."; return false }
         let item = pendingItem ?? PendingHealthSync(ownerID: ownerID, revisionID: UUID(), kind: .motionSteps, localDay: localDayString(date), steps: steps, activeEnergyKcal: nil, distanceMeters: distanceMeters, queuedAt: Date())
-        if pendingItem == nil { enqueueHealthSync(item) }
+        if pendingItem == nil && !enqueueHealthSync(item) {
+            status = "Motion sync paused: the on-device retry queue could not be verified, so no network request was sent."
+            return false
+        }
         do {
             guard let token = accessToken else { throw ClientError.notSignedIn }
             var request = URLRequest(url: baseURL.appendingPathComponent("rest/v1/rpc/sync_motion_daily_steps"))
@@ -404,7 +432,10 @@ final class SupabaseRESTClient: ObservableObject {
                 return await syncMotionDailySteps(date: date, steps: steps, distanceMeters: distanceMeters, retryAfterRefresh: false, pendingItem: item)
             }
             guard (200..<300).contains(http.statusCode) else { throw Self.serverError(data) }
-            acknowledgeHealthSync(item)
+            guard acknowledgeHealthSync(item) else {
+                status = "iPhone motion steps reached the server, but local queue acknowledgement could not be verified. A safe retry remains possible."
+                return false
+            }
             status = "iPhone motion steps synced separately from Apple Health."
             return true
         } catch {
