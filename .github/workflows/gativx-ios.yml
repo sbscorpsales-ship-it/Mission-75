@@ -62,6 +62,9 @@ jobs:
 
           cloud = Path("ios/GATIVX/Cloud/SupabaseRESTClient.swift").read_text()
           view = Path("ios/GATIVX/ContentView.swift").read_text()
+          guru_model = Path("ios/GATIVX/Models/GATIVXGoalJourney.swift").read_text()
+          guru_tests = Path("ios/GATIVXTests/GATIVXGoalJourneyTests.swift").read_text()
+          ui_tests = Path("ios/GATIVXUITests/GATIVXDashboardUITests.swift").read_text()
           spec = Path("ios/gativx-project.yml").read_text()
           with Path("ios/GATIVX/Info.plist").open("rb") as stream:
               info = plistlib.load(stream)
@@ -99,6 +102,15 @@ jobs:
           assert "stepRing.frame(width: ringDiameter, height: ringDiameter)" in view, "Step ring must use the responsive dashboard size"
           assert "GeometryReader { dashboardGeometry in" in view and ".frame(height: heroHeight)" in view, "Dashboard hero and spacing must adapt to available screen dimensions"
           assert "motionMonitoringEnabled" in view and "if motionMonitoringEnabled { startLiveMotionMonitor() }" in view, "Daily motion tracking must be opt-in, not prompted at launch"
+          assert "GATIVXGuruCoach.suggestedNextAction" in view and "GATIVXGuruCoach.purposeAnchor" in view, "Guru must generate purpose-aware next actions, not only store form answers"
+          assert "gativx.journey.durationDays" in view and "gativx.journey.startedAt" in view and "gativx.journey.goal" in view, "Goal journey state must persist locally"
+          assert all(f'Text("{days} days").tag({days})' in view for days in (30, 90, 180, 365)), "30/90/180/365-day journey choices are required"
+          assert "testJourneyCalculatesElapsedDaysRemainingAndProgress" in guru_tests and "testGuruAdaptsNextActionToRemainingDailySteps" in guru_tests, "Guru and journey behavior must have unit coverage"
+          assert "gativx-journey-duration" in view and "gativx-start-journey" in view, "Journey controls need stable UI test targets"
+          assert "Community feed and shared missions are not available yet" in view and "gativx-community-gated" in view, "Community must be clearly gated until real shared data exists"
+          assert "GATIVX notifications are not active in this build yet" in view and "gativx-notifications-gated" in view, "Notifications must be clearly gated until delivery is implemented"
+          assert "gativx-guru-entry" in view and "YOUR GOAL JOURNEY" in view and "ONE PRACTICAL NEXT ACTION" in view, "Dashboard must expose the implemented Guru journey"
+          assert "gativx-journey-duration" in ui_tests and "gativx-community-gated" in ui_tests and "gativx-notifications-gated" in ui_tests, "UI tests must cover journey entry and inactive feature gates"
 
           required_usage = [
               "NSHealthShareUsageDescription",
