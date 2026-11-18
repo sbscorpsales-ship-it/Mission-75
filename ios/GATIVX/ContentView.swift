@@ -1494,6 +1494,7 @@ struct ContentView: View {
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
+                        .accessibilityIdentifier("gativx-notifications-gated")
                 }
                 .padding(28)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
