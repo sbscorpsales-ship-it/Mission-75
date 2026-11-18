@@ -234,6 +234,59 @@ final class GATIVXActivitySessionTests: XCTestCase {
         XCTAssertEqual(merged[0].motionDistanceMeters, 20)
     }
 
+    func testCrashAfterHistoryWriteBeforeDraftClearRecoversSameSessionOnDisk() throws {
+        let (store, directory, defaults, suiteName) = makeActivityStore()
+        defer { cleanUpActivityStore(directory, defaults: defaults, suiteName: suiteName) }
+
+        let sessionID = UUID()
+        let startedAt = Date(timeIntervalSince1970: 1_800_000_000)
+        let pointA = routePoint(latitude: 15.8500, longitude: 74.5000, breakBefore: true)
+        let shortPoint = routePoint(latitude: 15.8501, longitude: 74.5000)
+        let longerPoint = routePoint(latitude: 15.8510, longitude: 74.5000)
+        let alreadyWritten = ActivitySessionRecord(
+            id: sessionID,
+            activity: "Walking",
+            startedAt: startedAt,
+            finishedAt: startedAt.addingTimeInterval(60),
+            steps: 250,
+            routePoints: [pointA, shortPoint],
+            motionDistanceMeters: 18,
+            ownerID: "account-original"
+        )
+        try store.save([alreadyWritten])
+
+        // Simulate a crash after the history write succeeded but before the GPS draft was cleared.
+        let recoveredDraft = ActivitySessionRecord(
+            id: sessionID,
+            activity: "Running",
+            startedAt: startedAt,
+            finishedAt: startedAt.addingTimeInterval(120),
+            steps: nil,
+            routePoints: [pointA, longerPoint],
+            motionDistanceMeters: 12,
+            ownerID: "account-other"
+        )
+        let recoveredHistory = store.upserting(recoveredDraft, into: try store.load())
+        try store.save(recoveredHistory)
+
+        // A second relaunch/retry must not append another copy or lose the better measurements.
+        let repeatedHistory = store.upserting(recoveredDraft, into: try store.load())
+        try store.save(repeatedHistory)
+        let persisted = try store.load()
+
+        XCTAssertEqual(persisted.count, 1)
+        let restored = try XCTUnwrap(persisted.first)
+        XCTAssertEqual(restored.id, sessionID)
+        XCTAssertEqual(restored.activity, "Walking")
+        XCTAssertEqual(restored.startedAt, startedAt)
+        XCTAssertEqual(restored.finishedAt, recoveredDraft.finishedAt)
+        XCTAssertEqual(restored.steps, 250)
+        XCTAssertEqual(restored.routePoints?.count, 2)
+        XCTAssertGreaterThan(restored.gpsDistanceMeters, alreadyWritten.gpsDistanceMeters)
+        XCTAssertEqual(restored.motionDistanceMeters, 18)
+        XCTAssertEqual(restored.ownerID, "account-original")
+    }
+
     func testDurationUsesMinutesAndSeconds() {
         let start = Date(timeIntervalSince1970: 1_800_000_000)
         let record = activityRecord(
