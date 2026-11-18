@@ -57,7 +57,7 @@ final class GATIVXDashboardUITests: XCTestCase {
         XCTAssertTrue(notifications.isHittable, "The dashboard header should remain reachable after scrolling.")
         notifications.tap()
         XCTAssertTrue(app.staticTexts["You're all caught up"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["GATIVX notifications are not active in this build yet. Your walking records and health data are unaffected."].exists)
+        XCTAssertTrue(app.descendants(matching: .any)["gativx-notifications-gated"].exists)
         app.buttons["Done"].tap()
 
         let guruEntry = app.buttons["gativx-guru-entry"]
@@ -80,8 +80,7 @@ final class GATIVXDashboardUITests: XCTestCase {
         let communityTab = app.tabBars.buttons["Community"]
         XCTAssertTrue(communityTab.exists)
         communityTab.tap()
-        XCTAssertTrue(app.staticTexts["NOT ACTIVE IN THIS BUILD"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["Community feed and shared missions are not available yet. Your personal activity remains private and is not shared with other members."].exists)
+        XCTAssertTrue(app.descendants(matching: .any)["gativx-community-gated"].waitForExistence(timeout: 5))
 
         let profileTab = app.tabBars.buttons["Profile"]
         XCTAssertTrue(profileTab.exists)
