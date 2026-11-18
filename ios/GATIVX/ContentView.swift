@@ -10,6 +10,7 @@ struct ContentView: View {
     private let activityStore = ActivitySessionStore()
     @State private var email = ""
     @State private var password = ""
+    @State private var isCreatingAccount = true
     @State private var pedometer = CMPedometer()
     @State private var livePedometer = CMPedometer()
     @State private var selectedActivity = "Walking"
@@ -895,36 +896,61 @@ struct ContentView: View {
                     Text("Track movement, understand your progress and build healthier habits with a community that keeps you moving.")
                         .font(.subheadline).foregroundStyle(.secondary)
                     VStack(alignment: .leading, spacing: 12) {
-                        Text("SIGN IN TO GATIVX").font(.caption.weight(.heavy)).tracking(1)
+                        Text(isCreatingAccount ? "CREATE YOUR GATIVX ACCOUNT" : "WELCOME BACK TO GATIVX")
+                            .font(.caption.weight(.heavy)).tracking(1)
                         TextField("Email address", text: $email).textContentType(.emailAddress)
                             .textInputAutocapitalization(.never).keyboardType(.emailAddress).autocorrectionDisabled()
                             .padding(14).background(cardBackground, in: RoundedRectangle(cornerRadius: 13))
-                        SecureField("Password", text: $password).textContentType(.password)
+                        SecureField(isCreatingAccount ? "Create password (8+ characters)" : "Password", text: $password)
+                            .textContentType(isCreatingAccount ? .newPassword : .password)
+                            .textInputAutocapitalization(.never)
                             .padding(14).background(cardBackground, in: RoundedRectangle(cornerRadius: 13))
                         Button {
                             Task {
-                                await cloud.signIn(email: email, password: password)
-                                if cloud.isSignedIn { localModeEntered = true }
+                                let cleanEmail = email.trimmingCharacters(in: .whitespacesAndNewlines)
+                                if isCreatingAccount {
+                                    await cloud.signUp(email: cleanEmail, password: password)
+                                } else {
+                                    await cloud.signIn(email: cleanEmail, password: password)
+                                }
+                                if cloud.isSignedIn {
+                                    localModeEntered = true
+                                } else if isCreatingAccount && cloud.status.localizedCaseInsensitiveContains("check your email") {
+                                    isCreatingAccount = false
+                                }
                             }
                         } label: {
-                            HStack { Spacer(); Text("Sign in & sync").fontWeight(.bold); Spacer() }
-                                .padding(15).foregroundStyle(.black).background(neon, in: Capsule())
-                        }.disabled(email.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || password.isEmpty)
-                        HStack(spacing: 14) {
-                            Button("Create account") {
-                                Task { await cloud.signUp(email: email.trimmingCharacters(in: .whitespacesAndNewlines), password: password) }
+                            HStack {
+                                Spacer()
+                                Text(isCreatingAccount ? "Create account & continue" : "Sign in & sync").fontWeight(.bold)
+                                Spacer()
+                            }
+                            .padding(15).foregroundStyle(.black).background(neon, in: Capsule())
+                        }
+                        .disabled(
+                            email.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
+                            (isCreatingAccount ? password.count < 8 : password.isEmpty)
+                        )
+                        HStack {
+                            Text(isCreatingAccount ? "Already have an account?" : "New to GATIVX?")
+                                .font(.subheadline).foregroundStyle(.secondary)
+                            Spacer(minLength: 4)
+                            Button(isCreatingAccount ? "Sign in" : "Create account") {
+                                isCreatingAccount.toggle()
+                                password = ""
                             }
                             .font(.subheadline.weight(.semibold))
-                            .disabled(email.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || password.count < 8)
-                            Spacer(minLength: 4)
+                        }
+                        if !isCreatingAccount {
                             Button("Forgot password?") {
                                 Task { await cloud.sendPasswordReset(email: email.trimmingCharacters(in: .whitespacesAndNewlines)) }
                             }
                             .font(.subheadline.weight(.semibold))
                             .disabled(email.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                        } else {
+                            Text("Use at least 8 characters. Email verification may be required.")
+                                .font(.caption2).foregroundStyle(.secondary)
                         }
-                        Text("Use at least 8 characters for a new password. Email verification may be required.")
-                            .font(.caption2).foregroundStyle(.secondary)
                         Text(cloud.status).font(.caption).foregroundStyle(.secondary)
                     }.padding(17).background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 22))
                     Button { localModeEntered = true } label: {
