@@ -43,6 +43,22 @@ final class GATIVXActivitySessionTests: XCTestCase {
         XCTAssertNil(decoded.steps)
     }
 
+    func testActivityOwnerIDSurvivesPersistenceRoundTrip() throws {
+        let record = activityRecord(ownerID: "account-123")
+        let encoded = try JSONEncoder().encode(record)
+        let decoded = try JSONDecoder().decode(ActivitySessionRecord.self, from: encoded)
+
+        XCTAssertEqual(decoded.ownerID, "account-123")
+    }
+
+    func testLegacyActivityWithoutOwnerIDDecodesAsUnassigned() throws {
+        let record = activityRecord()
+        let encoded = try JSONEncoder().encode(record)
+        let decoded = try JSONDecoder().decode(ActivitySessionRecord.self, from: encoded)
+
+        XCTAssertNil(decoded.ownerID)
+    }
+
     func testDurationUsesMinutesAndSeconds() {
         let start = Date(timeIntervalSince1970: 1_800_000_000)
         let record = activityRecord(
@@ -178,7 +194,8 @@ final class GATIVXActivitySessionTests: XCTestCase {
         steps: Int? = 120,
         routePoints: [GATIVXRoutePoint]? = nil,
         startedAt: Date = Date(timeIntervalSince1970: 1_800_000_000),
-        finishedAt: Date = Date(timeIntervalSince1970: 1_800_000_060)
+        finishedAt: Date = Date(timeIntervalSince1970: 1_800_000_060),
+        ownerID: String? = nil
     ) -> ActivitySessionRecord {
         ActivitySessionRecord(
             id: UUID(),
@@ -187,7 +204,8 @@ final class GATIVXActivitySessionTests: XCTestCase {
             finishedAt: finishedAt,
             steps: steps,
             routePoints: routePoints,
-            motionDistanceMeters: nil
+            motionDistanceMeters: nil,
+            ownerID: ownerID
         )
     }
 }
