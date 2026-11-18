@@ -502,7 +502,7 @@ struct ContentView: View {
 
                 // Primary neon-green daily step counter.
                 HStack(spacing: 18) {
-                    stepRing.frame(width: 158, height: 158)
+                    stepRing.frame(width: 164, height: 164)
                     VStack(alignment: .leading, spacing: 8) {
                         Text("TODAY'S STEPS").font(.caption.weight(.heavy)).tracking(0.9).foregroundStyle(.secondary)
                         Text("Daily movement").font(.title3.weight(.bold))
