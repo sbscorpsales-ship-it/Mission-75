@@ -1,5 +1,6 @@
 import SwiftUI
 import CoreMotion
+import UniformTypeIdentifiers
 
 struct ContentView: View {
     @Environment(\.scenePhase) private var scenePhase
@@ -16,6 +17,11 @@ struct ContentView: View {
     @State private var sessionMotionDistanceMeters: Double?
     @State private var activityHistory: [ActivitySessionRecord] = []
     @State private var historyStatus = ""
+    @State private var isImportingRunJeetBackup = false
+    @State private var pendingRunJeetImport: RunJeetBackupImport?
+    @State private var pendingRunJeetImportName = ""
+    @State private var showingRunJeetImportPreview = false
+    @State private var runJeetImportAlert: String?
     @State private var sessionStarted: Date?
     @State private var isFinishingSession = false
     @State private var activeSessionID: UUID?
@@ -98,6 +104,83 @@ struct ContentView: View {
         } catch {
             historyStatus = "Saved activity history could not be read. Existing data has been left untouched."
         }
+    }
+
+    private func handleRunJeetBackupSelection(_ result: Result<[URL], Error>) {
+        switch result {
+        case .failure(let error):
+            runJeetImportAlert = "Could not open the selected backup: " + error.localizedDescription
+        case .success(let urls):
+            guard let url = urls.first else { return }
+            let hasSecurityScope = url.startAccessingSecurityScopedResource()
+            defer {
+                if hasSecurityScope { url.stopAccessingSecurityScopedResource() }
+            }
+            do {
+                let data = try Data(contentsOf: url)
+                let backup = try RunJeetBackupImporter().decode(data)
+                guard backup.dailyStepsByDay.isEmpty else {
+                    runJeetImportAlert = "This backup contains \\(backup.dailyStepsByDay.count) historical daily step totals. This build imports activity sessions only and does not yet archive those totals separately. No data was changed; keep the original JSON backup safe."
+                    return
+                }
+                pendingRunJeetImport = backup
+                pendingRunJeetImportName = url.lastPathComponent
+                showingRunJeetImportPreview = true
+            } catch {
+                runJeetImportAlert = "The selected file was not imported: " + error.localizedDescription
+            }
+        }
+    }
+
+    private func commitRunJeetImport(assignToCurrentAccount: Bool) {
+        guard let pendingRunJeetImport else { return }
+
+        let ownerID: String?
+        if assignToCurrentAccount {
+            guard cloud.isSignedIn, let authenticatedUserID = cloud.authenticatedUserID else {
+                runJeetImportAlert = "Sign in to the intended GATIVX account before choosing account sync. No data was changed."
+                return
+            }
+            ownerID = authenticatedUserID
+        } else {
+            ownerID = nil
+        }
+
+        let importer = RunJeetBackupImporter()
+        let importedRecords = importer.assigningOwnerID(ownerID, to: pendingRunJeetImport.activities)
+        do {
+            let existing = try activityStore.load()
+            let existingIDs = Set(existing.map(\\.id))
+            let merged = importer.merging(importedRecords, into: existing)
+            let newIDs = Set(importedRecords.map(\\.id)).subtracting(existingIDs)
+
+            try activityStore.save(merged)
+            let verified = try activityStore.load()
+            let verifiedIDs = Set(verified.map(\\.id))
+            guard newIDs.isSubset(of: verifiedIDs) else {
+                throw NSError(
+                    domain: "GATIVXRunJeetImport",
+                    code: 1,
+                    userInfo: [NSLocalizedDescriptionKey: "The imported activity history did not pass read-back verification."]
+                )
+            }
+
+            activityHistory = verified
+            historyStatus = "Saved activity history verified · \\(visibleActivityHistory.count) activities visible for this account"
+            if assignToCurrentAccount {
+                syncSavedActivitySessions()
+            }
+
+            let destination = assignToCurrentAccount ? "your signed-in GATIVX account" : "this iPhone only"
+            let duplicateCount = importedRecords.count - newIDs.count
+            let visibilityNote = (!assignToCurrentAccount && cloud.isSignedIn)
+                ? " Local-only imports remain separate from the signed-in account and are hidden until you switch to guest mode."
+                : ""
+            runJeetImportAlert = "Import verified: \\(newIDs.count) new activity session(s) saved to \\(destination); \\(duplicateCount) duplicate session(s) were left unchanged. Daily step totals were not present and Apple Health totals were not changed." + visibilityNote
+        } catch {
+            runJeetImportAlert = "Import could not be verified: " + error.localizedDescription + ". Existing history was not intentionally replaced; keep the original backup."
+        }
+        self.pendingRunJeetImport = nil
     }
 
     private func syncCurrentMotionSnapshotToCloud() {
@@ -542,7 +625,16 @@ struct ContentView: View {
                     Text("GPS route recording is separate from step counting. Keep location permission enabled for route tracking.")
                         .font(.caption2).foregroundStyle(.secondary)
                 }.padding(18).background(cardBackground, in: RoundedRectangle(cornerRadius: 22))
-                Text("RECENT ACTIVITIES").font(.caption.weight(.bold)).foregroundStyle(.secondary)
+                HStack {
+                    Text("RECENT ACTIVITIES").font(.caption.weight(.bold)).foregroundStyle(.secondary)
+                    Spacer()
+                    Button {
+                        isImportingRunJeetBackup = true
+                    } label: {
+                        Label("Import backup", systemImage: "square.and.arrow.down")
+                            .font(.caption.weight(.semibold))
+                    }
+                }
                 if visibleActivityHistory.isEmpty {
                     Text(historyStatus.isEmpty ? "No completed activities saved yet." : historyStatus).foregroundStyle(.secondary)
                 } else {
@@ -558,7 +650,41 @@ struct ContentView: View {
                     }
                 }
             }.padding(16)
-        }.background(pageBackground.ignoresSafeArea())
+        }
+        .background(pageBackground.ignoresSafeArea())
+        .fileImporter(
+            isPresented: $isImportingRunJeetBackup,
+            allowedContentTypes: [.json],
+            allowsMultipleSelection: false,
+            onCompletion: handleRunJeetBackupSelection
+        )
+        .confirmationDialog(
+            "Import \\(pendingRunJeetImportName)?",
+            isPresented: $showingRunJeetImportPreview,
+            titleVisibility: .visible
+        ) {
+            Button("Import to this iPhone") {
+                commitRunJeetImport(assignToCurrentAccount: false)
+            }
+            if cloud.isSignedIn {
+                Button("Import & sync to this account") {
+                    commitRunJeetImport(assignToCurrentAccount: true)
+                }
+            }
+            Button("Cancel", role: .cancel) {
+                pendingRunJeetImport = nil
+            }
+        } message: {
+            Text("Found \\(pendingRunJeetImport?.activities.count ?? 0) saved activity session(s). No daily step totals are present in this backup. Existing session IDs will not be overwritten. Choose account sync only if this backup belongs to the account currently signed in.")
+        }
+        .alert("RunJeet backup", isPresented: Binding(
+            get: { runJeetImportAlert != nil },
+            set: { if !$0 { runJeetImportAlert = nil } }
+        )) {
+            Button("OK", role: .cancel) { runJeetImportAlert = nil }
+        } message: {
+            Text(runJeetImportAlert ?? "")
+        }
     }
 
     private var missionsScreen: some View {
