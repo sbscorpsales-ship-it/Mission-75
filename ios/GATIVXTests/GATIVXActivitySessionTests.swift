@@ -107,6 +107,34 @@ final class GATIVXActivitySessionTests: XCTestCase {
         XCTAssertNotNil(defaults.data(forKey: "gativx.activitySessions.v1"))
     }
 
+    func testActivityStorePreservesLegacyDataWhenMigrationWriteFails() throws {
+        let suiteName = "GATIVXTests.\\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        let blockingFile = FileManager.default.temporaryDirectory
+            .appendingPathComponent(suiteName, isDirectory: false)
+        let blockingData = Data("not-a-directory".utf8)
+        try blockingData.write(to: blockingFile)
+        defer {
+            try? FileManager.default.removeItem(at: blockingFile)
+            defaults.removePersistentDomain(forName: suiteName)
+        }
+
+        let record = activityRecord()
+        let legacyData = try JSONEncoder().encode([record])
+        defaults.set(legacyData, forKey: "gativx.activitySessions.v1")
+        let store = ActivitySessionStore(
+            userDefaults: defaults,
+            directoryOverride: blockingFile
+        )
+
+        XCTAssertThrowsError(try store.load())
+        XCTAssertEqual(
+            defaults.data(forKey: "gativx.activitySessions.v1"),
+            legacyData
+        )
+        XCTAssertEqual(try Data(contentsOf: blockingFile), blockingData)
+    }
+
     private func makeActivityStore() -> (ActivitySessionStore, URL, UserDefaults, String) {
         let suiteName = "GATIVXTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!
