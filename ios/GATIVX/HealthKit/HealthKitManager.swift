@@ -48,34 +48,28 @@ final class HealthKitManager: ObservableObject {
         }
     }
 
-    private func savePendingWorkouts(_ items: [PendingHealthWorkout]) -> Bool {
+    private func enqueueWorkout(_ item: PendingHealthWorkout) -> Bool {
         do {
-            try workoutOutbox.save(items)
-            let verified = try workoutOutbox.load()
-            guard verified.map(\.id) == items.map(\.id) else {
-                isWorkoutOutboxReadable = false
-                statusMessage = "Apple Health export queue could not be verified. The export was not marked complete."
-                return false
-            }
+            let items = try workoutOutbox.enqueue(item)
             isWorkoutOutboxReadable = true
-            pendingWorkoutExportCount = verified.count
+            pendingWorkoutExportCount = items.count
             return true
         } catch {
-            statusMessage = "Apple Health export could not be queued: \(error.localizedDescription)"
+            isWorkoutOutboxReadable = false
+            statusMessage = "Apple Health export could not be queued safely: \(error.localizedDescription)"
             return false
         }
     }
 
-    private func enqueueWorkout(_ item: PendingHealthWorkout) -> Bool {
-        guard let items = loadPendingWorkouts() else { return false }
-        var updated = items
-        if !updated.contains(where: { $0.id == item.id }) { updated.append(item) }
-        return savePendingWorkouts(updated)
-    }
-
     private func acknowledgeWorkout(_ id: UUID) {
-        guard let items = loadPendingWorkouts() else { return }
-        _ = savePendingWorkouts(items.filter { $0.id != id })
+        do {
+            let remaining = try workoutOutbox.acknowledge(id)
+            isWorkoutOutboxReadable = true
+            pendingWorkoutExportCount = remaining.count
+        } catch {
+            isWorkoutOutboxReadable = false
+            statusMessage = "Apple Health export acknowledgement could not be verified. Original queue data was preserved."
+        }
     }
 
     func retryPendingWorkoutExports() {
