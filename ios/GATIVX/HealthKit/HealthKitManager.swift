@@ -2,15 +2,6 @@ import Foundation
 import HealthKit
 import Combine
 
-private struct PendingHealthWorkout: Codable, Identifiable {
-    let id: UUID
-    let activity: String
-    let startedAt: Date
-    let finishedAt: Date
-    let steps: Int?
-    let distanceMeters: Double?
-}
-
 /// Reads measured Apple Health aggregates and exports completed GATIVX workouts.
 /// HealthKit is the authority for the all-source daily total; Core Motion is never added to it.
 @MainActor
@@ -39,19 +30,14 @@ final class HealthKitManager: ObservableObject {
     private var refreshAgain = false
     private var pendingCompletions: [() -> Void] = []
 
-    private let workoutOutboxKey = "gativx.healthkit.workout-export-outbox.v1"
+    private let workoutOutbox = HealthKitWorkoutOutboxStore()
     @Published private(set) var pendingWorkoutExportCount = 0
     @Published private(set) var isWorkoutOutboxReadable = true
     private var isRetryingWorkoutOutbox = false
 
     private func loadPendingWorkouts() -> [PendingHealthWorkout]? {
-        guard let data = UserDefaults.standard.data(forKey: workoutOutboxKey) else {
-            isWorkoutOutboxReadable = true
-            pendingWorkoutExportCount = 0
-            return []
-        }
         do {
-            let items = try JSONDecoder().decode([PendingHealthWorkout].self, from: data)
+            let items = try workoutOutbox.load()
             isWorkoutOutboxReadable = true
             pendingWorkoutExportCount = items.count
             return items
@@ -64,11 +50,9 @@ final class HealthKitManager: ObservableObject {
 
     private func savePendingWorkouts(_ items: [PendingHealthWorkout]) -> Bool {
         do {
-            let data = try JSONEncoder().encode(items)
-            UserDefaults.standard.set(data, forKey: workoutOutboxKey)
-            guard let saved = UserDefaults.standard.data(forKey: workoutOutboxKey),
-                  let verified = try? JSONDecoder().decode([PendingHealthWorkout].self, from: saved),
-                  verified.map(\.id) == items.map(\.id) else {
+            try workoutOutbox.save(items)
+            let verified = try workoutOutbox.load()
+            guard verified.map(\.id) == items.map(\.id) else {
                 isWorkoutOutboxReadable = false
                 statusMessage = "Apple Health export queue could not be verified. The export was not marked complete."
                 return false
@@ -83,9 +67,10 @@ final class HealthKitManager: ObservableObject {
     }
 
     private func enqueueWorkout(_ item: PendingHealthWorkout) -> Bool {
-        guard var items = loadPendingWorkouts() else { return false }
-        if !items.contains(where: { $0.id == item.id }) { items.append(item) }
-        return savePendingWorkouts(items)
+        guard let items = loadPendingWorkouts() else { return false }
+        var updated = items
+        if !updated.contains(where: { $0.id == item.id }) { updated.append(item) }
+        return savePendingWorkouts(updated)
     }
 
     private func acknowledgeWorkout(_ id: UUID) {
