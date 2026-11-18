@@ -183,7 +183,11 @@ final class RunJeetBackupImporterTests: XCTestCase {
         let wrongApp = Data("""
         {"app":"Other","schema":1,"state":{"stepsByDay":{},"sessions":[]}}
         """.utf8)
+        let booleanSchema = Data("""
+        {"app":"RunJeet","schema":true,"state":{"stepsByDay":{},"sessions":[]}}
+        """.utf8)
         XCTAssertThrowsError(try importer.decode(wrongApp))
+        XCTAssertThrowsError(try importer.decode(booleanSchema))
 
         let invalidDay = Data("""
         {"app":"RunJeet","schema":1,"state":{"stepsByDay":{"2026-02-30":12},"sessions":[]}}
