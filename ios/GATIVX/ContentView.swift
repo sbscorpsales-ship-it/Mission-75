@@ -453,7 +453,6 @@ struct ContentView: View {
                 Text(displayedDailySteps.map { "\(Int(min(Double($0) / Double(max(dailyStepGoal, 1)), 1) * 100))% complete" } ?? "Waiting for data").font(.caption).foregroundStyle(.secondary)
             }
         }
-        .frame(width: 190, height: 190)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Today's steps")
         .accessibilityValue(displayedDailySteps.map { "\($0) of \(max(dailyStepGoal, 1))" } ?? "No reading")
