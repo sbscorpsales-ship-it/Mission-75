@@ -149,6 +149,7 @@ struct ContentView: View {
         // GPS recording is independent of the motion sensor. A device without
         // CMPedometer must still be able to record and save a complete route.
         routeRecorder.start(activity: selectedActivity, ownerID: cloud.authenticatedUserID)
+        activeSessionID = routeRecorder.activitySessionID
         guard CMPedometer.isStepCountingAvailable() else {
             sessionStatus = "Recording GPS route for " + selectedActivity.lowercased() + " · step counter unavailable."
             return
@@ -167,7 +168,7 @@ struct ContentView: View {
     private func finishActivitySession() {
         guard !isFinishingSession, let start = sessionStarted else { return }
         isFinishingSession = true
-        let recordID = activeSessionID ?? UUID()
+        let recordID = routeRecorder.activitySessionID ?? activeSessionID ?? UUID()
         activeSessionID = recordID
         sessionStatus = "Finishing activity and saving your route…"
         let finishedAt = Date()
@@ -220,7 +221,7 @@ struct ContentView: View {
                         throw NSError(domain: "GATIVXActivityStorage", code: 1, userInfo: [NSLocalizedDescriptionKey: "The saved activity could not be read back and verified. Your GPS draft remains preserved."])
                     }
                     self.activityHistory = persistedHistory
-                    self.historyStatus = "Saved on this iPhone · \(persistedHistory.count) activities"
+                    self.historyStatus = "Saved on this iPhone · \(self.visibleActivityHistory.count) activities for this account"
                     // Clear the durable GPS draft only after read-back verification
                     // confirms the completed session is safely stored.
                     self.routeRecorder.clearDraft()
@@ -421,7 +422,7 @@ struct ContentView: View {
                         Spacer()
                         Text("Your progress").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
                     }
-                    Text("\(activityHistory.count) activities saved").font(.subheadline.weight(.semibold))
+                    Text("\(visibleActivityHistory.count) activities saved").font(.subheadline.weight(.semibold))
                     ProgressView(value: min(Double(visibleActivityHistory.count) / 90.0, 1.0))
                         .tint(neon)
                     Text(historyStatus.isEmpty ? "Your completed activities will appear here." : historyStatus)
@@ -510,6 +511,7 @@ struct ContentView: View {
                                 sessionStarted = recoveredStart
                                 sessionSteps = nil
                                 routeRecorder.resumeRecovered()
+                                activeSessionID = routeRecorder.activitySessionID
                                 pedometer.startUpdates(from: recoveredStart) { data, error in
                                     DispatchQueue.main.async {
                                         if let error {
@@ -524,6 +526,7 @@ struct ContentView: View {
                             Button("Save recovered route now") {
                                 selectedActivity = routeRecorder.recoveredActivity ?? "Walking"
                                 sessionStarted = recoveredStart
+                                activeSessionID = routeRecorder.activitySessionID
                                 sessionSteps = nil
                                 finishActivitySession()
                             }.buttonStyle(.bordered)
