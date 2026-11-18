@@ -120,7 +120,7 @@ struct ContentView: View {
                 let data = try Data(contentsOf: url)
                 let backup = try RunJeetBackupImporter().decode(data)
                 guard backup.dailyStepsByDay.isEmpty else {
-                    runJeetImportAlert = "This backup contains \\(backup.dailyStepsByDay.count) historical daily step totals. This build imports activity sessions only and does not yet archive those totals separately. No data was changed; keep the original JSON backup safe."
+                    runJeetImportAlert = "This backup contains \(backup.dailyStepsByDay.count) historical daily step totals. This build imports activity sessions only and does not yet archive those totals separately. No data was changed; keep the original JSON backup safe."
                     return
                 }
                 pendingRunJeetImport = backup
@@ -150,13 +150,13 @@ struct ContentView: View {
         let importedRecords = importer.assigningOwnerID(ownerID, to: pendingRunJeetImport.activities)
         do {
             let existing = try activityStore.load()
-            let existingIDs = Set(existing.map(\\.id))
+            let existingIDs = Set(existing.map(\.id))
             let merged = importer.merging(importedRecords, into: existing)
-            let newIDs = Set(importedRecords.map(\\.id)).subtracting(existingIDs)
+            let newIDs = Set(importedRecords.map(\.id)).subtracting(existingIDs)
 
             try activityStore.save(merged)
             let verified = try activityStore.load()
-            let verifiedIDs = Set(verified.map(\\.id))
+            let verifiedIDs = Set(verified.map(\.id))
             guard newIDs.isSubset(of: verifiedIDs) else {
                 throw NSError(
                     domain: "GATIVXRunJeetImport",
@@ -166,7 +166,7 @@ struct ContentView: View {
             }
 
             activityHistory = verified
-            historyStatus = "Saved activity history verified · \\(visibleActivityHistory.count) activities visible for this account"
+            historyStatus = "Saved activity history verified · \(visibleActivityHistory.count) activities visible for this account"
             if assignToCurrentAccount {
                 syncSavedActivitySessions()
             }
@@ -176,7 +176,7 @@ struct ContentView: View {
             let visibilityNote = (!assignToCurrentAccount && cloud.isSignedIn)
                 ? " Local-only imports remain separate from the signed-in account and are hidden until you switch to guest mode."
                 : ""
-            runJeetImportAlert = "Import verified: \\(newIDs.count) new activity session(s) saved to \\(destination); \\(duplicateCount) duplicate session(s) were left unchanged. Daily step totals were not present and Apple Health totals were not changed." + visibilityNote
+            runJeetImportAlert = "Import verified: \(newIDs.count) new activity session(s) saved to \(destination); \(duplicateCount) duplicate session(s) were left unchanged. Daily step totals were not present and Apple Health totals were not changed." + visibilityNote
         } catch {
             runJeetImportAlert = "Import could not be verified: " + error.localizedDescription + ". Existing history was not intentionally replaced; keep the original backup."
         }
@@ -659,7 +659,7 @@ struct ContentView: View {
             onCompletion: handleRunJeetBackupSelection
         )
         .confirmationDialog(
-            "Import \\(pendingRunJeetImportName)?",
+            "Import \(pendingRunJeetImportName)?",
             isPresented: $showingRunJeetImportPreview,
             titleVisibility: .visible
         ) {
@@ -675,7 +675,7 @@ struct ContentView: View {
                 pendingRunJeetImport = nil
             }
         } message: {
-            Text("Found \\(pendingRunJeetImport?.activities.count ?? 0) saved activity session(s). No daily step totals are present in this backup. Existing session IDs will not be overwritten. Choose account sync only if this backup belongs to the account currently signed in.")
+            Text("Found \(pendingRunJeetImport?.activities.count ?? 0) saved activity session(s). No daily step totals are present in this backup. Existing session IDs will not be overwritten. Choose account sync only if this backup belongs to the account currently signed in.")
         }
         .alert("RunJeet backup", isPresented: Binding(
             get: { runJeetImportAlert != nil },
