@@ -1352,6 +1352,9 @@ struct ContentView: View {
         .padding(20)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(pageBackground.ignoresSafeArea())
+        // Keep the gated message exposed as its own accessibility descendant.
+        // The parent screen identifier must not hide the child from UI tests/VoiceOver.
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("gativx-community-screen")
     }
 
