@@ -1,7 +1,7 @@
 import Foundation
 import CoreLocation
 
-struct ActivitySessionRecord: Codable, Identifiable {
+struct ActivitySessionRecord: Codable, Identifiable, Equatable {
     let id: UUID
     /// Authenticated Supabase user who owned this activity when it was recorded.
     /// Nil means the legacy or local-only record has no verified account owner.

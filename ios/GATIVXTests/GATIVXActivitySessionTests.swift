@@ -234,6 +234,104 @@ final class GATIVXActivitySessionTests: XCTestCase {
         XCTAssertEqual(merged[0].motionDistanceMeters, 20)
     }
 
+    func testActivityOutboxMergesRecoveredRouteAndPreservesNewerRevision() {
+        let sessionID = UUID()
+        let startedAt = Date(timeIntervalSince1970: 1_800_000_000)
+        let pointA = routePoint(latitude: 15.8500, longitude: 74.5000, breakBefore: true)
+        let pointB = routePoint(latitude: 15.8501, longitude: 74.5000)
+        let pointC = routePoint(latitude: 15.8510, longitude: 74.5000)
+        let existing = ActivitySessionRecord(
+            id: sessionID,
+            activity: "Walking",
+            startedAt: startedAt,
+            finishedAt: startedAt.addingTimeInterval(60),
+            steps: 250,
+            routePoints: [pointA, pointB],
+            motionDistanceMeters: 18,
+            ownerID: "account-original"
+        )
+        let recovered = ActivitySessionRecord(
+            id: sessionID,
+            activity: "Running",
+            startedAt: startedAt.addingTimeInterval(5),
+            finishedAt: startedAt.addingTimeInterval(120),
+            steps: nil,
+            routePoints: [pointA, pointC],
+            motionDistanceMeters: 12,
+            ownerID: "account-original"
+        )
+        let queuedAt = Date(timeIntervalSince1970: 1_800_000_100)
+        let firstRevision = UUID()
+        let newerRevision = UUID()
+        let queued = ActivitySessionOutboxQueue.upserting(
+            existing,
+            ownerID: "account-original",
+            into: [],
+            revisionID: firstRevision,
+            queuedAt: queuedAt
+        )
+
+        let updated = ActivitySessionOutboxQueue.upserting(
+            recovered,
+            ownerID: "account-original",
+            into: queued,
+            revisionID: newerRevision
+        )
+
+        XCTAssertEqual(updated.count, 1, "Recovery must update the pending session instead of creating a duplicate")
+        XCTAssertEqual(updated[0].ownerID, "account-original")
+        XCTAssertEqual(updated[0].record.ownerID, "account-original")
+        XCTAssertEqual(updated[0].record.steps, 250, "A recovered draft must not discard the known step count")
+        XCTAssertEqual(updated[0].record.routePoints, recovered.routePoints, "The improved route must replace the stale queued route")
+        XCTAssertEqual(updated[0].record.finishedAt, recovered.finishedAt)
+        XCTAssertEqual(updated[0].queuedAt, queuedAt)
+        XCTAssertEqual(updated[0].revisionID, newerRevision)
+        XCTAssertNotEqual(updated[0].revisionID, firstRevision)
+
+        let staleAcknowledgement = ActivitySessionOutboxQueue.acknowledging(queued[0], from: updated)
+        XCTAssertEqual(staleAcknowledgement, updated, "An older in-flight upload must not acknowledge the recovered revision")
+
+        let repeatedRecovery = ActivitySessionOutboxQueue.upserting(
+            recovered,
+            ownerID: "account-original",
+            into: updated,
+            revisionID: UUID()
+        )
+        XCTAssertEqual(repeatedRecovery, updated, "Retrying the same recovery must remain idempotent")
+    }
+
+    func testActivityOutboxKeepsSameSessionUUIDIsolatedByOwner() {
+        let sessionID = UUID()
+        let startedAt = Date(timeIntervalSince1970: 1_800_000_000)
+        let memberA = ActivitySessionRecord(
+            id: sessionID,
+            activity: "Walking",
+            startedAt: startedAt,
+            finishedAt: startedAt.addingTimeInterval(60),
+            steps: 100,
+            routePoints: nil,
+            motionDistanceMeters: nil,
+            ownerID: "member-a"
+        )
+        let memberB = ActivitySessionRecord(
+            id: sessionID,
+            activity: "Running",
+            startedAt: startedAt,
+            finishedAt: startedAt.addingTimeInterval(90),
+            steps: 200,
+            routePoints: nil,
+            motionDistanceMeters: nil,
+            ownerID: "member-b"
+        )
+        let first = ActivitySessionOutboxQueue.upserting(memberA, ownerID: "member-a", into: [])
+        let both = ActivitySessionOutboxQueue.upserting(memberB, ownerID: "member-b", into: first)
+
+        XCTAssertEqual(both.count, 2, "Identical session UUIDs owned by different accounts must not collide")
+        XCTAssertEqual(Set(both.map(\.ownerID)), Set(["member-a", "member-b"]))
+        XCTAssertEqual(both.first(where: { $0.ownerID == "member-a" })?.record.steps, 100)
+        XCTAssertEqual(both.first(where: { $0.ownerID == "member-b" })?.record.steps, 200)
+    }
+
     func testCrashAfterHistoryWriteBeforeDraftClearRecoversSameSessionOnDisk() throws {
         let (store, directory, defaults, suiteName) = makeActivityStore()
         defer { cleanUpActivityStore(directory, defaults: defaults, suiteName: suiteName) }

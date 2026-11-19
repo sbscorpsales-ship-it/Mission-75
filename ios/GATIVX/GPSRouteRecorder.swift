@@ -2,7 +2,7 @@ import Foundation
 @preconcurrency import CoreLocation
 import Combine
 
-struct GATIVXRoutePoint: Codable {
+struct GATIVXRoutePoint: Codable, Equatable {
     let latitude: Double
     let longitude: Double
     let timestamp: Date

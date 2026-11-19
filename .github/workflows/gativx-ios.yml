@@ -195,6 +195,7 @@ jobs:
           gps = Path("ios/GATIVX/GPSRouteRecorder.swift").read_text()
           gps_tests = Path("ios/GATIVXTests/GPSRouteDraftPersistenceTests.swift").read_text()
           activity_store = Path("ios/GATIVX/Storage/ActivitySessionStore.swift").read_text()
+          activity_outbox_tests = Path("ios/GATIVXTests/GATIVXActivitySessionTests.swift").read_text()
           archive_store = Path("ios/GATIVX/Storage/RunJeetDailyStepsArchiveStore.swift").read_text()
           archive_tests = Path("ios/GATIVXTests/RunJeetBackupImporterTests.swift").read_text()
           activity_model = Path("ios/GATIVX/Models/ActivitySessionRecord.swift").read_text()
@@ -318,6 +319,10 @@ jobs:
               "GPS cloud distance skips discontinuous segments": "if cloudPoints[index].breakBefore { continue }" in cloud,
               "Completed walks have a dedicated durable cloud outbox": "activity-sync-outbox.v1" in cloud and "struct PendingActivitySession: Codable" in cloud,
               "Activity outbox write is read back and verified": "UserDefaults.standard.set(data, forKey: activityOutboxKey)" in cloud and "JSONDecoder().decode([PendingActivitySession].self, from: saved)" in cloud,
+              "Activity outbox read-back verifies the complete queued payload": "verified == items" in cloud,
+              "Recovered activity refreshes the pending cloud payload with a new revision": "ActivitySessionOutboxQueue.upserting" in cloud and "merged != existing.record" in cloud and "testActivityOutboxMergesRecoveredRouteAndPreservesNewerRevision" in activity_outbox_tests,
+              "Stale activity acknowledgement cannot remove a newer recovered revision": "ActivitySessionOutboxQueue.acknowledging" in activity_retry and "testActivityOutboxMergesRecoveredRouteAndPreservesNewerRevision" in activity_outbox_tests,
+              "Activity outbox isolates matching session UUIDs by member": "items.firstIndex(where: { $0.ownerID == ownerID && $0.record.id == record.id })" in cloud and "testActivityOutboxKeepsSameSessionUUIDIsolatedByOwner" in activity_outbox_tests,
               "Activity outbox is isolated to the signed-in member": "for item in pending where item.ownerID == ownerID" in activity_retry and "items.filter { $0.ownerID == currentUserID }.count" in cloud,
               "Activity retries retain stable session and revision identifiers": "record.id.uuidString" in cloud and "item.revisionID" in activity_retry,
               "Activity queue item is removed only after all available writes succeed": "guard allAcknowledged else { continue }" in activity_retry and activity_retry.index("syncActivitySessionRoute") < activity_retry.index("guard allAcknowledged else") < activity_retry.index("saveActivityOutbox(current.filter"),

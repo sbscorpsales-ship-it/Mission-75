@@ -22,12 +22,53 @@ struct PendingHealthSync: Codable, Identifiable {
 }
 
 
-struct PendingActivitySession: Codable, Identifiable {
+struct PendingActivitySession: Codable, Identifiable, Equatable {
     let ownerID: String
     let revisionID: UUID
     let record: ActivitySessionRecord
     let queuedAt: Date
     var id: String { ownerID + ":" + record.id.uuidString }
+}
+
+/// Pure revision-aware reconciliation for completed activity uploads.
+/// A crash-recovered session can improve an already-pending payload without
+/// allowing an older in-flight acknowledgement to remove the newer revision.
+enum ActivitySessionOutboxQueue {
+    static func upserting(
+        _ record: ActivitySessionRecord,
+        ownerID: String,
+        into items: [PendingActivitySession],
+        revisionID: UUID = UUID(),
+        queuedAt: Date = Date()
+    ) -> [PendingActivitySession] {
+        var updated = items
+        if let index = updated.firstIndex(where: { $0.ownerID == ownerID && $0.record.id == record.id }) {
+            let existing = updated[index]
+            let merged = existing.record.mergingRecovery(record)
+            guard merged != existing.record else { return items }
+            updated[index] = PendingActivitySession(
+                ownerID: existing.ownerID,
+                revisionID: revisionID,
+                record: merged,
+                queuedAt: existing.queuedAt
+            )
+        } else {
+            updated.append(PendingActivitySession(
+                ownerID: ownerID,
+                revisionID: revisionID,
+                record: record,
+                queuedAt: queuedAt
+            ))
+        }
+        return updated
+    }
+
+    static func acknowledging(
+        _ item: PendingActivitySession,
+        from items: [PendingActivitySession]
+    ) -> [PendingActivitySession] {
+        items.filter { !($0.id == item.id && $0.revisionID == item.revisionID) }
+    }
 }
 
 @MainActor
@@ -164,7 +205,7 @@ final class SupabaseRESTClient: ObservableObject {
             UserDefaults.standard.set(data, forKey: activityOutboxKey)
             guard let saved = UserDefaults.standard.data(forKey: activityOutboxKey),
                   let verified = try? JSONDecoder().decode([PendingActivitySession].self, from: saved),
-                  verified.map(\.revisionID) == items.map(\.revisionID) else {
+                  verified == items else {
                 status = "Activity sync queue could not be verified after saving. The activity remains saved locally."
                 return false
             }
@@ -186,10 +227,10 @@ final class SupabaseRESTClient: ObservableObject {
             status = "Activity remains local because its recording account cannot be verified for this signed-in member."
             return
         }
-        guard var items = loadActivityOutbox() else { return }
-        if items.contains(where: { $0.ownerID == ownerID && $0.record.id == record.id }) { return }
-        items.append(PendingActivitySession(ownerID: ownerID, revisionID: UUID(), record: record, queuedAt: Date()))
-        guard saveActivityOutbox(items) else { return }
+        guard let items = loadActivityOutbox() else { return }
+        let updated = ActivitySessionOutboxQueue.upserting(record, ownerID: ownerID, into: items)
+        guard updated != items else { return }
+        guard saveActivityOutbox(updated) else { return }
         status = "Activity saved locally and safely queued for cloud sync."
     }
 
@@ -215,7 +256,7 @@ final class SupabaseRESTClient: ObservableObject {
             }
             guard allAcknowledged else { continue }
             guard let current = loadActivityOutbox() else { return }
-            _ = saveActivityOutbox(current.filter { !($0.id == item.id && $0.revisionID == item.revisionID) })
+            _ = saveActivityOutbox(ActivitySessionOutboxQueue.acknowledging(item, from: current))
         }
     }
 
