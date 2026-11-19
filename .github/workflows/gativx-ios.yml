@@ -105,7 +105,7 @@ jobs:
           assert "moves you toward feeling" in guru_model and "testGuruConnectsGoalPurposeAndEmotionToPracticalNextAction" in guru_tests, "Guru next actions must connect goal, purpose and desired emotion"
           assert "gativx.journey.durationDays" in view and "gativx.journey.startedAt" in view and "gativx.journey.goal" in view, "Goal journey state must persist locally"
           assert all(f'Text("{days} days").tag({days})' in view for days in (30, 90, 180, 365)), "30/90/180/365-day journey choices are required"
-          assert "testJourneyCalculatesElapsedDaysRemainingAndProgress" in guru_tests and "testGuruAdaptsNextActionToRemainingDailySteps" in guru_tests, "Guru and journey behavior must have unit coverage"
+          assert "testJourneyCalculatesElapsedDaysRemainingAndProgress" in guru_tests and "testGuruAdaptsNextActionToRemainingDailySteps" in guru_tests and "testAllSupportedJourneyDurationsCalculateProgressAndCompletion" in guru_tests, "Guru and all four journey durations must have unit coverage"
           assert "gativx-journey-duration" in view and "gativx-start-journey" in view, "Journey controls need stable UI test targets"
           assert "Community feed and shared missions are not available yet" in view and "gativx-community-gated" in view, "Community must be clearly gated until real shared data exists"
           assert "GATIVX notifications are not active in this build yet" in view and "gativx-notifications-gated" in view, "Notifications must be clearly gated until delivery is implemented"
@@ -223,6 +223,9 @@ jobs:
           second_workout_ack = workout_export.find("self.acknowledgeWorkout(id)", first_workout_ack + 1)
           confirmed_save_completion = workout_export.find("completion(.success(()))", confirmed_save)
 
+invalid_date_guard = "guard let date = HealthSyncOutboxStore.dateForLocalDay(item.localDay) else"
+          invalid_date_recovery = cloud.split(invalid_date_guard, 1)[1].split("}", 1)[0] if invalid_date_guard in cloud else ""
+
           checks = {
               "Native daily total falls back to the live iPhone pedometer": "health.todaySteps ?? liveMotionSteps" in daily_display,
               "Starting a walk never fabricates a zero-step reading": "sessionSteps = 0" not in start_activity and "self.sessionSteps = data?.numberOfSteps.intValue" in start_activity,
@@ -304,7 +307,7 @@ jobs:
               "Unreadable sensor outbox is not treated as an empty queue": "private func loadHealthOutbox() -> [PendingHealthSync]?" in cloud and "original data was left untouched" in cloud,
               "Unreadable sensor outbox exposes unknown count instead of false zero": "isHealthOutboxReadable = false" in cloud and "Pending count is unknown" in cloud and "if let items = loadHealthOutbox()" in cloud,
               "Enqueue and acknowledgement never overwrite unreadable sensor outbox": "var items = try load()" in sensor_outbox and "let items = try load()" in sensor_outbox,
-              "Invalid sensor outbox dates are retained for recovery": "HealthSyncOutboxStore.dateForLocalDay(item.localDay)" in cloud and "static func dateForLocalDay" in sensor_outbox and "original queue item was retained for recovery" in cloud and "acknowledgeHealthSync(item)" not in cloud.split("guard let date = dateForLocalDay(item.localDay) else", 1)[1].split("}", 1)[0],
+              "Invalid sensor outbox dates are retained for recovery": invalid_date_guard in cloud and "static func dateForLocalDay" in sensor_outbox and "original queue item was retained for recovery" in cloud and "acknowledgeHealthSync(item)" not in invalid_date_recovery,
               "Sensor outbox retry preserves original revision through token refresh": "retryAfterRefresh: false, pendingItem: item" in cloud,
               "Member can see pending sensor-sync count": "pendingHealthSyncCount" in cloud and "pendingHealthSyncCount" in view,
               "Pending sync count never exposes another account's queue": "items.filter { $0.ownerID == currentUserID }.count" in cloud,

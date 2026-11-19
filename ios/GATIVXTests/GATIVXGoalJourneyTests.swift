@@ -107,4 +107,39 @@ final class GATIVXGoalJourneyTests: XCTestCase {
         XCTAssertTrue(action.contains("10-minute walk"))
     }
 
+    func testAllSupportedJourneyDurationsCalculateProgressAndCompletion() {
+        let calendar = Calendar.current
+        let start = calendar.startOfDay(for: Date(timeIntervalSince1970: 1_800_000_000))
+
+        for duration in [30, 90, 180, 365] {
+            let elapsed = duration / 2
+            let halfwayDate = calendar.date(byAdding: .day, value: elapsed, to: start)!
+            let halfway = GATIVXGoalJourney(
+                durationDays: duration,
+                startedAt: start,
+                now: halfwayDate
+            )
+
+            XCTAssertEqual(halfway.elapsedDays, elapsed, "\(duration)-day journey elapsed days")
+            XCTAssertEqual(halfway.daysRemaining, duration - elapsed, "\(duration)-day journey remaining days")
+            XCTAssertEqual(
+                halfway.progress,
+                Double(elapsed) / Double(duration),
+                accuracy: 0.0001,
+                "\(duration)-day journey progress"
+            )
+            XCTAssertFalse(halfway.isComplete, "\(duration)-day journey should still be active")
+
+            let completionDate = calendar.date(byAdding: .day, value: duration, to: start)!
+            let completed = GATIVXGoalJourney(
+                durationDays: duration,
+                startedAt: start,
+                now: completionDate
+            )
+            XCTAssertEqual(completed.daysRemaining, 0, "\(duration)-day journey remaining at completion")
+            XCTAssertEqual(completed.progress, 1, "\(duration)-day journey progress at completion")
+            XCTAssertTrue(completed.isComplete, "\(duration)-day journey completion")
+        }
+    }
+
 }
