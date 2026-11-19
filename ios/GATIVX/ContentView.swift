@@ -637,6 +637,14 @@ struct ContentView: View {
                             Text(greeting + " 👋").font(.system(size: min(max(dashboardWidth * 0.068, 24), 28), weight: .bold, design: .rounded))
                             Text("Every step moves you closer to your purpose.")
                                 .font(.subheadline.weight(.medium)).foregroundStyle(.white.opacity(0.9))
+                            Text(cloud.isSignedIn
+                                 ? "LOGIN ID · " + (cloud.authenticatedUserEmail ?? "SIGNED-IN MEMBER")
+                                 : "LOCAL-ONLY MEMBER")
+                                .font(.caption2.weight(.semibold))
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.72)
+                                .foregroundStyle(.white.opacity(0.86))
+                                .accessibilityIdentifier("gativx-dashboard-member-identity")
                         }
                     }
                     .foregroundStyle(.white)
@@ -1204,6 +1212,24 @@ struct ContentView: View {
 
     private var profileScreen: some View {
         Form {
+            Section("Member account") {
+                if cloud.isSignedIn {
+                    Label("Signed in to GATIVX", systemImage: "checkmark.icloud")
+                    Text("LOGIN ID")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(.secondary)
+                    Text(cloud.authenticatedUserEmail ?? "Signed-in member")
+                        .font(.body.weight(.semibold))
+                        .textSelection(.enabled)
+                        .accessibilityIdentifier("gativx-member-login-id")
+                } else {
+                    Label("Local-only access", systemImage: "iphone")
+                        .accessibilityIdentifier("gativx-member-login-id")
+                    Text("Sign in from the welcome screen or choose account sync when ready. Your local activity history remains on this iPhone.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
             Section("Member profile") {
                 HStack(spacing: 12) {
                     Group {
