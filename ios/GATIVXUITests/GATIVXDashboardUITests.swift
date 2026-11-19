@@ -94,12 +94,10 @@ final class GATIVXDashboardUITests: XCTestCase {
         goalField.tap()
         goalField.typeText("Walk consistently")
 
-        // The keyboard covers the lower half of the Guru sheet. Dismiss it by
-        // tapping the visible, non-editable heading before interacting with
-        // the duration and start controls; otherwise scroll gestures hit keys.
-        let guruHeading = app.staticTexts["gativx-guru-heading"]
-        XCTAssertTrue(guruHeading.waitForExistence(timeout: 5))
-        guruHeading.tap()
+        // Dismiss the multiline goal editor using Guru's explicit keyboard toolbar action.
+        let keyboardDone = app.buttons["gativx-guru-keyboard-done"]
+        XCTAssertTrue(keyboardDone.waitForExistence(timeout: 5))
+        keyboardDone.tap()
         XCTAssertFalse(app.keyboards.element.exists, "The keyboard should be dismissed before using the Guru journey controls.")
 
         let durationPicker = app.segmentedControls["gativx-journey-duration"]
