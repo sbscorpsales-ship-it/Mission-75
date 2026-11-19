@@ -62,21 +62,26 @@ enum GATIVXGuruCoach {
         guard !cleanEmotion.isEmpty else {
             return "Name how you want to feel when you reach your goal."
         }
+
+        // Carry the member's own goal, reason and desired emotion into the
+        // practical action instead of merely checking that the fields exist.
+        let motivation = "It supports \(cleanGoal), honours \(cleanPurpose), and moves you toward feeling \(cleanEmotion)."
+
         guard let dailySteps else {
-            return "Take a comfortable 5-minute walk, then check your measured step reading."
+            return "Take a comfortable 5-minute walk. \(motivation) Then check your measured step reading."
         }
 
         let remaining = max(0, max(1, dailyStepGoal) - max(0, dailySteps))
         if remaining == 0 {
-            return "You have reached today's step target. Take 2 minutes to notice how you feel and choose tomorrow's first 5-minute action."
+            return "You have reached today's step target. \(motivation) Take 2 minutes to notice how you feel and choose tomorrow's first 5-minute action."
         }
         if remaining <= 500 {
-            return "Take a relaxed 3–5-minute walk to close the remaining \(remaining) steps. Keep a comfortable pace."
+            return "Take a relaxed 3–5-minute walk to close the remaining \(remaining) steps. \(motivation) Keep a comfortable pace."
         }
         if remaining <= 2_000 {
-            return "Take one comfortable 10-minute walk, then check your measured step total again."
+            return "Take one comfortable 10-minute walk, then check your measured step total again. \(motivation)"
         }
-        return "Begin with 10 comfortable minutes. If that feels manageable, add a second short walk later. Consistency matters more than rushing."
+        return "Begin with 10 comfortable minutes. \(motivation) If that feels manageable, add a second short walk later. Consistency matters more than rushing."
     }
 
     static func purposeAnchor(goal: String, purpose: String, emotion: String) -> String {
