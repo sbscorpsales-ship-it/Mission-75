@@ -806,8 +806,8 @@ struct ContentView: View {
                 .padding(.bottom, 28)
             }
             .background(pageBackground.ignoresSafeArea())
-            .accessibilityIdentifier("gativx-home-dashboard")
         }
+        .accessibilityIdentifier("gativx-home-dashboard")
     }
 
     private func wellnessSnapshotCard(_ title: String, value: String, unit: String, symbol: String, tint: Color) -> some View {
