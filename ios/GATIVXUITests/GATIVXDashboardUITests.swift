@@ -161,9 +161,15 @@ final class GATIVXDashboardUITests: XCTestCase {
         XCTAssertTrue(keyboardDone.waitForExistence(timeout: 5))
         keyboardDone.tap()
         let keyboard = app.keyboards.firstMatch
-        let keyboardDismissed = NSPredicate(format: "exists == false")
-        expectation(for: keyboardDismissed, evaluatedWith: keyboard)
-        waitForExpectations(timeout: 5)
+        let keyboardDismissed = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "exists == false"),
+            object: keyboard
+        )
+        XCTAssertEqual(
+            XCTWaiter.wait(for: [keyboardDismissed], timeout: 10),
+            .completed,
+            "The Guru Done action must dismiss the keyboard before journey navigation."
+        )
         XCTAssertFalse(keyboard.exists, "The keyboard should be dismissed before using the Guru journey controls.")
 
         let durationPicker = app.segmentedControls["gativx-journey-duration"]
@@ -185,6 +191,7 @@ final class GATIVXDashboardUITests: XCTestCase {
         let activityTab = app.tabBars.buttons["Activity"]
         XCTAssertTrue(activityTab.waitForExistence(timeout: 5))
         activityTab.tap()
+        XCTAssertTrue(activityTab.isSelected, "Selecting Activity must change the active tab.")
         let activityScreen = app.scrollViews["gativx-activity-screen"]
         XCTAssertTrue(activityScreen.waitForExistence(timeout: 10),
                       "Selecting Activity must render its own screen rather than leave the Home dashboard visible.")
@@ -192,8 +199,13 @@ final class GATIVXDashboardUITests: XCTestCase {
                       "The Activity screen must show the Activity Tracker controls.")
 
         let communityTab = app.tabBars.buttons["Community"]
-        XCTAssertTrue(communityTab.exists)
+        XCTAssertTrue(communityTab.waitForExistence(timeout: 5))
         communityTab.tap()
+        XCTAssertTrue(communityTab.isSelected, "Selecting Community must change the active tab.")
+        XCTAssertTrue(
+            app.descendants(matching: .any)["gativx-community-screen"].firstMatch.waitForExistence(timeout: 10),
+            "The gated Community tab must render without blocking the app after Activity navigation."
+        )
         XCTAssertTrue(app.descendants(matching: .any)["gativx-community-gated"].waitForExistence(timeout: 5))
 
         let profileTab = app.tabBars.buttons["Profile"]
