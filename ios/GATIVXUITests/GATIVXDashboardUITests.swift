@@ -98,7 +98,11 @@ final class GATIVXDashboardUITests: XCTestCase {
         let keyboardDone = app.buttons["gativx-guru-keyboard-done"]
         XCTAssertTrue(keyboardDone.waitForExistence(timeout: 5))
         keyboardDone.tap()
-        XCTAssertFalse(app.keyboards.element.exists, "The keyboard should be dismissed before using the Guru journey controls.")
+        let keyboard = app.keyboards.firstMatch
+        let keyboardDismissed = NSPredicate(format: "exists == false")
+        expectation(for: keyboardDismissed, evaluatedWith: keyboard)
+        waitForExpectations(timeout: 5)
+        XCTAssertFalse(keyboard.exists, "The keyboard should be dismissed before using the Guru journey controls.")
 
         let durationPicker = app.segmentedControls["gativx-journey-duration"]
         XCTAssertTrue(durationPicker.waitForExistence(timeout: 5))
@@ -114,7 +118,7 @@ final class GATIVXDashboardUITests: XCTestCase {
 
         XCTAssertTrue(app.staticTexts["DAY 1 OF 180"].exists, "Changing the next selection must not change the active 180-day journey.")
         XCTAssertFalse(app.staticTexts["DAY 1 OF 30"].exists)
-        app.buttons["Done"].tap()
+        app.buttons["gativx-guru-close"].tap()
 
         let activityTab = app.tabBars.buttons["Activity"]
         XCTAssertTrue(activityTab.waitForExistence(timeout: 5))
