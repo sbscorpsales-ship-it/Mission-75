@@ -416,6 +416,50 @@ final class SupabaseRESTClient: ObservableObject {
         }
     }
 
+    /// Drain the durable sensor outbox for the currently authenticated member.
+    /// Each item retains its original revision through network/token retries; the
+    /// store only acknowledges that exact revision after a successful server write.
+    func retryPendingHealthSyncs() async {
+        guard !isRetryingHealthOutbox, isSignedIn, let ownerID = currentUserID else { return }
+        guard let pending = loadHealthOutbox() else { return }
+
+        isRetryingHealthOutbox = true
+        defer { isRetryingHealthOutbox = false }
+
+        for item in pending where item.ownerID == ownerID {
+            guard let date = dateForLocalDay(item.localDay) else {
+                status = "Sensor sync paused: a queued local date is invalid. The original queue item was retained for recovery."
+                continue
+            }
+
+            switch item.kind {
+            case .healthSteps:
+                guard let steps = item.steps, steps >= 0 else {
+                    status = "Apple Health step sync paused: the queued measured value is unavailable. The original queue item was retained."
+                    continue
+                }
+                await syncSteps(date: date, steps: steps, pendingItem: item)
+
+            case .activeEnergy:
+                guard let kilocalories = item.activeEnergyKcal, kilocalories >= 0 else {
+                    status = "Active-energy sync paused: the queued measured value is unavailable. The original queue item was retained."
+                    continue
+                }
+                await syncActiveEnergy(date: date, kilocalories: kilocalories,
+                                       retryAfterRefresh: true, pendingItem: item)
+
+            case .motionSteps:
+                guard let steps = item.steps, steps >= 0 else {
+                    status = "iPhone motion sync paused: the queued measured value is unavailable. The original queue item was retained."
+                    continue
+                }
+                _ = await syncMotionDailySteps(date: date, steps: steps,
+                                               distanceMeters: item.distanceMeters,
+                                               retryAfterRefresh: true, pendingItem: item)
+            }
+        }
+    }
+
     private func performStepSync(date: Date, steps: Int, retryAfterRefresh: Bool) async throws {
         guard let token = accessToken else { throw ClientError.notSignedIn }
         var request = URLRequest(url: baseURL.appendingPathComponent("rest/v1/rpc/sync_healthkit_daily_steps"))
