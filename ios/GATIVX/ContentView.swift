@@ -1333,6 +1333,7 @@ struct ContentView: View {
             }
         }
         .onAppear { loadRunJeetDailyStepsArchive() }
+        .accessibilityIdentifier("gativx-profile-screen")
     }
 
     private func progressMeterCard(title: String, value: Int?, goal: Int, unit: String, symbol: String, tint: Color, explanation: String) -> some View {
