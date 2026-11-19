@@ -27,27 +27,29 @@ final class GATIVXDashboardUITests: XCTestCase {
         screenshot.lifetime = .keepAlways
         add(screenshot)
 
-        let metricIdentifiers = [
-            "gativx-metric-distance",
-            "gativx-metric-active-time",
-            "gativx-metric-calories",
-            "gativx-metric-average-heart-rate"
-        ]
-        let scrollView = app.scrollViews.firstMatch
-        for _ in 0..<4 {
-            if metricIdentifiers.allSatisfy({ app.descendants(matching: .any)[$0].exists }) {
-                break
-            }
-            if scrollView.exists {
-                scrollView.swipeUp()
-            }
+        let scrollView = app.scrollViews["gativx-home-dashboard"]
+        XCTAssertTrue(scrollView.waitForExistence(timeout: 5))
+
+        // The dashboard uses a LazyVGrid. Validate each visible row before
+        // scrolling past it; requiring all four cells at once can scroll the
+        // first row out of the accessibility hierarchy before it is asserted.
+        let distanceMetric = app.descendants(matching: .any)["gativx-metric-distance"].firstMatch
+        let activeTimeMetric = app.descendants(matching: .any)["gativx-metric-active-time"].firstMatch
+        for _ in 0..<3 {
+            if distanceMetric.exists && activeTimeMetric.exists { break }
+            scrollView.swipeUp()
         }
-        for identifier in metricIdentifiers {
-            XCTAssertTrue(
-                app.descendants(matching: .any)[identifier].waitForExistence(timeout: 5),
-                "Missing approved dashboard metric: \(identifier)"
-            )
+        XCTAssertTrue(distanceMetric.waitForExistence(timeout: 5), "Missing approved dashboard metric: distance")
+        XCTAssertTrue(activeTimeMetric.waitForExistence(timeout: 5), "Missing approved dashboard metric: active time")
+
+        let caloriesMetric = app.descendants(matching: .any)["gativx-metric-calories"].firstMatch
+        let averageHeartRateMetric = app.descendants(matching: .any)["gativx-metric-average-heart-rate"].firstMatch
+        for _ in 0..<2 {
+            if caloriesMetric.exists && averageHeartRateMetric.exists { break }
+            scrollView.swipeUp()
         }
+        XCTAssertTrue(caloriesMetric.waitForExistence(timeout: 5), "Missing approved dashboard metric: calories")
+        XCTAssertTrue(averageHeartRateMetric.waitForExistence(timeout: 5), "Missing approved dashboard metric: average heart rate")
 
         let notifications = app.buttons["Notifications"]
         XCTAssertTrue(notifications.waitForExistence(timeout: 5))
