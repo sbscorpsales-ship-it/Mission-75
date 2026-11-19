@@ -122,4 +122,24 @@ final class HealthSyncOutboxStoreTests: XCTestCase {
             queuedAt: queuedAt
         )
     }
+    func testLocalDayParserRejectsImpossibleCalendarDates() {
+        let utc = TimeZone(secondsFromGMT: 0)!
+        XCTAssertNil(HealthSyncOutboxStore.dateForLocalDay("2026-02-30", timeZone: utc))
+        XCTAssertNil(HealthSyncOutboxStore.dateForLocalDay("2026-13-01", timeZone: utc))
+        XCTAssertNil(HealthSyncOutboxStore.dateForLocalDay("2026-2-03", timeZone: utc))
+        XCTAssertNil(HealthSyncOutboxStore.dateForLocalDay("2026-11-00", timeZone: utc))
+    }
+
+    func testLocalDayParserPreservesValidGregorianDate() {
+        let utc = TimeZone(secondsFromGMT: 0)!
+        let date = HealthSyncOutboxStore.dateForLocalDay("2026-11-19", timeZone: utc)
+        XCTAssertNotNil(date)
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = utc
+        let components = calendar.dateComponents([.year, .month, .day], from: date!)
+        XCTAssertEqual(components.year, 2026)
+        XCTAssertEqual(components.month, 11)
+        XCTAssertEqual(components.day, 19)
+    }
+
 }
