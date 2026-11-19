@@ -106,18 +106,21 @@ final class SupabaseRESTClient: ObservableObject {
     }
 
 
-    var authenticatedUserID: String? { currentUserID }
+    var authenticatedUserID: String? { currentUserClaims?["sub"] as? String }
+    var authenticatedUserEmail: String? { currentUserClaims?["email"] as? String }
 
-    private var currentUserID: String? {
+    /// Supabase's signed access token carries the authenticated member's subject
+    /// and email. Decode only the payload for display/ownership; never trust it
+    /// as a substitute for server-side authorization.
+    private var currentUserClaims: [String: Any]? {
         guard let accessToken else { return nil }
         let parts = accessToken.split(separator: ".")
         guard parts.count == 3 else { return nil }
         var payload = String(parts[1]).replacingOccurrences(of: "-", with: "+").replacingOccurrences(of: "_", with: "/")
         while payload.count % 4 != 0 { payload.append("=") }
         guard let data = Data(base64Encoded: payload),
-              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let subject = json["sub"] as? String, !subject.isEmpty else { return nil }
-        return subject
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return nil }
+        return json
     }
 
     private func localDayString(_ date: Date) -> String {
