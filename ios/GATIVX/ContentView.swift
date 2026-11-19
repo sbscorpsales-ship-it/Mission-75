@@ -1488,7 +1488,7 @@ struct ContentView: View {
                     Image(systemName: "bell.badge")
                         .font(.system(size: 34, weight: .semibold))
                         .foregroundStyle(neon)
-                    Text("You're all caught up")
+                    Text("Notifications aren't active yet")
                         .font(.title2.weight(.bold))
                     Text("GATIVX notifications are not active in this build yet. Your walking records and health data are unaffected.")
                         .font(.subheadline)
