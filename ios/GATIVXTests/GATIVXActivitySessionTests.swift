@@ -322,7 +322,7 @@ final class GATIVXActivitySessionTests: XCTestCase {
         try store.save([record])
         let restored = try store.load()
 
-        XCTAssertEqual(restored.map(\\.id), [record.id])
+        XCTAssertEqual(restored.map(\.id), [record.id])
         XCTAssertEqual(restored.first?.ownerID, "account-retry")
     }
 
