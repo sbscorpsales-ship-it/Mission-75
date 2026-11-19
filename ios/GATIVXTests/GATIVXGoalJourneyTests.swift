@@ -92,4 +92,19 @@ final class GATIVXGoalJourneyTests: XCTestCase {
         XCTAssertTrue(anchor.contains("Keep up with my family"))
         XCTAssertTrue(anchor.contains("Energetic"))
     }
+    func testGuruConnectsGoalPurposeAndEmotionToPracticalNextAction() {
+        let action = GATIVXGuruCoach.suggestedNextAction(
+            goal: "Walk daily",
+            purpose: "Be active with my family",
+            emotion: "Confident and energetic",
+            dailySteps: 8_000,
+            dailyStepGoal: 10_000
+        )
+
+        XCTAssertTrue(action.contains("Walk daily"))
+        XCTAssertTrue(action.contains("Be active with my family"))
+        XCTAssertTrue(action.contains("Confident and energetic"))
+        XCTAssertTrue(action.contains("10-minute walk"))
+    }
+
 }
