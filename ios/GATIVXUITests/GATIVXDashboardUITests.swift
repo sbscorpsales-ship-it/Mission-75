@@ -73,13 +73,20 @@ final class GATIVXDashboardUITests: XCTestCase {
         XCTAssertTrue(app.descendants(matching: .any)["gativx-journey-duration"].exists)
         XCTAssertTrue(app.staticTexts["ONE PRACTICAL NEXT ACTION"].exists)
 
+        let guruScrollView = app.scrollViews.firstMatch
         let durationPicker = app.segmentedControls["gativx-journey-duration"]
         XCTAssertTrue(durationPicker.waitForExistence(timeout: 5))
+        for _ in 0..<5 where !durationPicker.isHittable { guruScrollView.swipeUp() }
+        XCTAssertTrue(durationPicker.isHittable)
         durationPicker.buttons["180 days"].tap()
         let startJourney = app.buttons["gativx-start-journey"]
         XCTAssertTrue(startJourney.waitForExistence(timeout: 5))
+        for _ in 0..<4 where !startJourney.isHittable { guruScrollView.swipeUp() }
+        XCTAssertTrue(startJourney.isHittable)
         startJourney.tap()
         XCTAssertTrue(app.staticTexts["DAY 1 OF 180"].waitForExistence(timeout: 5))
+        for _ in 0..<4 where !durationPicker.isHittable { guruScrollView.swipeDown() }
+        XCTAssertTrue(durationPicker.isHittable)
         durationPicker.buttons["30 days"].tap()
         XCTAssertTrue(app.staticTexts["DAY 1 OF 180"].exists, "Changing the next selection must not change the active 180-day journey.")
         XCTAssertFalse(app.staticTexts["DAY 1 OF 30"].exists)

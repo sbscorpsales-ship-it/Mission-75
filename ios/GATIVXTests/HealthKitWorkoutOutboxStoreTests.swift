@@ -63,7 +63,7 @@ final class HealthKitWorkoutOutboxStoreTests: XCTestCase {
         XCTAssertThrowsError(try store.acknowledge(workout.id)) { error in
             XCTAssertTrue(error.localizedDescription.contains("read back and verified"))
         }
-        XCTAssertEqual(try store.load().map(\\.id), [workout.id])
+        XCTAssertEqual(try store.load().map(\.id), [workout.id])
     }
 
     private func makeStore() -> (HealthKitWorkoutOutboxStore, UserDefaults, String) {
