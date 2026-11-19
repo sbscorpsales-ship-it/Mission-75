@@ -586,6 +586,12 @@ struct ContentView: View {
     private var homeDashboard: some View {
         GeometryReader { dashboardGeometry in
             let dashboardWidth = dashboardGeometry.size.width
+            let dashboardHorizontalInset = min(max(dashboardWidth * 0.035, 12), 18)
+            let dashboardContentWidth = max(dashboardWidth - dashboardHorizontalInset * 2, 0)
+            // Reserve fixed space for the logo and both header controls. The brand
+            // stack gets only the remaining width so the profile button cannot
+            // be pushed beyond the iPhone's right edge.
+            let headerTitleWidth = max(dashboardContentWidth - 34 - 34 - 32 - 36 - 24, 88)
             let isCompactDashboard = dashboardGeometry.size.height < 780
             let ringDiameter = min(max(dashboardWidth * 0.34, 128), 148)
             let heroHeight = min(max(dashboardWidth * 0.49, 178), 204)
@@ -609,14 +615,15 @@ struct ContentView: View {
                                     .font(.system(size: 22, weight: .black, design: .rounded))
                                     .tracking(-0.7)
                                     .lineLimit(1)
-                                    .minimumScaleFactor(0.8)
+                                    .minimumScaleFactor(0.72)
                                 Text("YOUR GOAL. YOUR PURPOSE. YOUR GATI.")
                                     .font(.system(size: 6.5, weight: .heavy))
-                                    .tracking(0.55)
+                                    .tracking(0.45)
                                     .lineLimit(1)
-                                    .minimumScaleFactor(0.55)
+                                    .minimumScaleFactor(0.45)
                             }
-                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .frame(width: headerTitleWidth, alignment: .leading)
+                            .clipped()
                             Button { isNotificationsPresented = true } label: {
                                 Image(systemName: "bell.badge")
                                     .font(.system(size: 19, weight: .semibold))
@@ -626,6 +633,7 @@ struct ContentView: View {
                             }
                             .buttonStyle(.plain)
                             .accessibilityLabel("Notifications")
+                            .accessibilityIdentifier("gativx-header-notifications")
                             Button { selectedTab = 4 } label: {
                                 Group {
                                     if let data = profilePhotoData, let image = UIImage(data: data) {
@@ -641,6 +649,7 @@ struct ContentView: View {
                                 .overlay(Circle().stroke(neon, lineWidth: 1.8))
                             }
                             .accessibilityLabel("Open member profile")
+                            .accessibilityIdentifier("gativx-header-profile")
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
                         VStack(alignment: .leading, spacing: 5) {
@@ -839,7 +848,7 @@ struct ContentView: View {
                 }
                 .buttonStyle(.plain)
             }
-                .padding(.horizontal, min(max(dashboardWidth * 0.035, 12), 18))
+                .padding(.horizontal, dashboardHorizontalInset)
                 .padding(.top, 10)
                 .padding(.bottom, 28)
                 .frame(width: dashboardWidth, alignment: .leading)
