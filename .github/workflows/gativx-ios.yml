@@ -83,8 +83,9 @@ jobs:
           launch_root = view[root_start:root_end]
           assert "if cloud.isSignedIn || localModeEntered" in launch_root, "Member dashboard must require an authenticated account or explicit local-only entry"
           assert "TabView(selection: $selectedTab)" in launch_root and "homeDashboard" in launch_root, "The approved dashboard tab shell must be available after member entry"
-          assert "welcomeScreen" in launch_root and "else" in launch_root, "First launch must present registration/sign-in before the dashboard"
-          assert "gativx-continue-guest" in view and "gativx-auth-submit" in view, "Registration/sign-in and explicit local-only entry controls must be available"
+          assert "        } else {\n            welcomeScreen\n        }\n    }\n}" in view, "First launch must present registration/sign-in before the dashboard"
+          assert "gativx-continue-guest" in view and "gativx-auth-submit" in view and "gativx-auth-mode-toggle" in view, "Registration, sign-in and explicit local-only entry controls must be available"
+          assert "authenticatedUserEmail" in cloud and "gativx-dashboard-member-identity" in view and "gativx-member-login-id" in view, "Authenticated login ID must be visible in the dashboard and Profile"
           assert 'accessibilityIdentifier("gativx-home-dashboard")' in view, "Dashboard needs a stable test identifier"
           assert "GATIVX GURU" in view and "GATIVX Guru" in view, "GATIVX Guru branding must remain available in dashboard and navigation"
           dashboard = view.split("private var homeDashboard: some View", 1)[1].split("private func wellnessSnapshotCard", 1)[0]
