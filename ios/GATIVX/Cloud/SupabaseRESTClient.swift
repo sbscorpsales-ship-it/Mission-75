@@ -98,10 +98,10 @@ final class SupabaseRESTClient: ObservableObject {
             isSignedIn = accessToken != nil
         }
         if let items = loadHealthOutbox() {
-            pendingHealthSyncCount = items.filter { $0.ownerID == currentUserID }.count
+            pendingHealthSyncCount = items.filter { $0.ownerID == authenticatedUserID }.count
         }
         if let items = loadActivityOutbox() {
-            pendingActivitySyncCount = items.filter { $0.ownerID == currentUserID }.count
+            pendingActivitySyncCount = items.filter { $0.ownerID == authenticatedUserID }.count
         }
     }
 
@@ -149,7 +149,7 @@ final class SupabaseRESTClient: ObservableObject {
         do {
             try healthOutbox.save(items)
             isHealthOutboxReadable = true
-            pendingHealthSyncCount = items.filter { $0.ownerID == currentUserID }.count
+            pendingHealthSyncCount = items.filter { $0.ownerID == authenticatedUserID }.count
             return true
         } catch {
             isHealthOutboxReadable = false
@@ -162,7 +162,7 @@ final class SupabaseRESTClient: ObservableObject {
         do {
             let items = try healthOutbox.enqueue(item)
             isHealthOutboxReadable = true
-            pendingHealthSyncCount = items.filter { $0.ownerID == currentUserID }.count
+            pendingHealthSyncCount = items.filter { $0.ownerID == authenticatedUserID }.count
             return true
         } catch {
             isHealthOutboxReadable = false
@@ -177,7 +177,7 @@ final class SupabaseRESTClient: ObservableObject {
         do {
             let remaining = try healthOutbox.acknowledge(item)
             isHealthOutboxReadable = true
-            pendingHealthSyncCount = remaining.filter { $0.ownerID == currentUserID }.count
+            pendingHealthSyncCount = remaining.filter { $0.ownerID == authenticatedUserID }.count
             return true
         } catch {
             isHealthOutboxReadable = false
@@ -212,7 +212,7 @@ final class SupabaseRESTClient: ObservableObject {
                 status = "Activity sync queue could not be verified after saving. The activity remains saved locally."
                 return false
             }
-            pendingActivitySyncCount = items.filter { $0.ownerID == currentUserID }.count
+            pendingActivitySyncCount = items.filter { $0.ownerID == authenticatedUserID }.count
             return true
         } catch {
             status = "Activity sync queue could not be encoded: " + error.localizedDescription
@@ -222,7 +222,7 @@ final class SupabaseRESTClient: ObservableObject {
 
     /// Persist a completed local activity before attempting any cloud request.
     func enqueueActivitySession(_ record: ActivitySessionRecord) {
-        guard let ownerID = currentUserID else {
+        guard let ownerID = authenticatedUserID else {
             status = "Activity saved on this iPhone. Sign in to queue its cloud upload."
             return
         }
@@ -240,7 +240,7 @@ final class SupabaseRESTClient: ObservableObject {
     /// Retry each activity's step and route writes independently. Remove the
     /// queue item only after every deliverable present in the local record is acknowledged.
     func retryPendingActivitySessions() async {
-        guard !isRetryingActivityOutbox, isSignedIn, let ownerID = currentUserID else { return }
+        guard !isRetryingActivityOutbox, isSignedIn, let ownerID = authenticatedUserID else { return }
         guard let pending = loadActivityOutbox() else { return }
         isRetryingActivityOutbox = true
         defer { isRetryingActivityOutbox = false }
@@ -279,7 +279,7 @@ final class SupabaseRESTClient: ObservableObject {
             refreshToken = session.refreshToken
             saveSession(session)
             isSignedIn = true
-            pendingHealthSyncCount = (loadHealthOutbox() ?? []).filter { $0.ownerID == currentUserID }.count
+            pendingHealthSyncCount = (loadHealthOutbox() ?? []).filter { $0.ownerID == authenticatedUserID }.count
             status = "Signed in. Your existing cloud records can be shared with GATIVX."
             await retryPendingHealthSyncs()
             await retryPendingActivitySessions()
@@ -308,7 +308,7 @@ final class SupabaseRESTClient: ObservableObject {
                 saveSession(session)
                 isSignedIn = true
                 if let items = loadHealthOutbox() {
-                    pendingHealthSyncCount = items.filter { $0.ownerID == currentUserID }.count
+                    pendingHealthSyncCount = items.filter { $0.ownerID == authenticatedUserID }.count
                 }
                 status = "Account created and signed in."
                 await retryPendingHealthSyncs()
@@ -342,7 +342,7 @@ final class SupabaseRESTClient: ObservableObject {
 
     func syncSteps(date: Date, steps: Int, pendingItem: PendingHealthSync? = nil) async {
         guard steps >= 0 else { return }
-        guard let ownerID = currentUserID else { status = "Step sync pending until a valid account session is available."; return }
+        guard let ownerID = authenticatedUserID else { status = "Step sync pending until a valid account session is available."; return }
         let item = pendingItem ?? PendingHealthSync(ownerID: ownerID, revisionID: UUID(), kind: .healthSteps, localDay: localDayString(date), steps: steps, activeEnergyKcal: nil, distanceMeters: nil, queuedAt: Date())
         if pendingItem == nil && !enqueueHealthSync(item) {
             status = "Step sync paused: the on-device retry queue could not be verified, so no network request was sent."
@@ -362,7 +362,7 @@ final class SupabaseRESTClient: ObservableObject {
 
     func syncActiveEnergy(date: Date, kilocalories: Int, retryAfterRefresh: Bool = true, pendingItem: PendingHealthSync? = nil) async {
         guard kilocalories >= 0 else { return }
-        guard let ownerID = currentUserID else { status = "Active-energy sync pending until a valid account session is available."; return }
+        guard let ownerID = authenticatedUserID else { status = "Active-energy sync pending until a valid account session is available."; return }
         let item = pendingItem ?? PendingHealthSync(ownerID: ownerID, revisionID: UUID(), kind: .activeEnergy, localDay: localDayString(date), steps: nil, activeEnergyKcal: kilocalories, distanceMeters: nil, queuedAt: Date())
         if pendingItem == nil && !enqueueHealthSync(item) {
             status = "Active-energy sync paused: the on-device retry queue could not be verified, so no network request was sent."
@@ -408,7 +408,7 @@ final class SupabaseRESTClient: ObservableObject {
     @discardableResult
     func syncMotionDailySteps(date: Date, steps: Int, distanceMeters: Double?, retryAfterRefresh: Bool = true, pendingItem: PendingHealthSync? = nil) async -> Bool {
         guard steps >= 0 else { return false }
-        guard let ownerID = currentUserID else { status = "Motion sync pending until a valid account session is available."; return false }
+        guard let ownerID = authenticatedUserID else { status = "Motion sync pending until a valid account session is available."; return false }
         let item = pendingItem ?? PendingHealthSync(ownerID: ownerID, revisionID: UUID(), kind: .motionSteps, localDay: localDayString(date), steps: steps, activeEnergyKcal: nil, distanceMeters: distanceMeters, queuedAt: Date())
         if pendingItem == nil && !enqueueHealthSync(item) {
             status = "Motion sync paused: the on-device retry queue could not be verified, so no network request was sent."
@@ -458,7 +458,7 @@ final class SupabaseRESTClient: ObservableObject {
     /// Each item retains its original revision through network/token retries; the
     /// store only acknowledges that exact revision after a successful server write.
     func retryPendingHealthSyncs() async {
-        guard !isRetryingHealthOutbox, isSignedIn, let ownerID = currentUserID else { return }
+        guard !isRetryingHealthOutbox, isSignedIn, let ownerID = authenticatedUserID else { return }
         guard let pending = loadHealthOutbox() else { return }
 
         isRetryingHealthOutbox = true
