@@ -97,7 +97,7 @@ final class GATIVXDashboardUITests: XCTestCase {
         // The keyboard covers the lower half of the Guru sheet. Dismiss it by
         // tapping the visible, non-editable heading before interacting with
         // the duration and start controls; otherwise scroll gestures hit keys.
-        let guruHeading = app.staticTexts["Reconnect with your why."]
+        let guruHeading = app.staticTexts["gativx-guru-heading"]
         XCTAssertTrue(guruHeading.waitForExistence(timeout: 5))
         guruHeading.tap()
         XCTAssertFalse(app.keyboards.element.exists, "The keyboard should be dismissed before using the Guru journey controls.")
