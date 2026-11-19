@@ -38,6 +38,13 @@ final class GATIVXDashboardUITests: XCTestCase {
 
         let dashboard = app.descendants(matching: .any)["gativx-home-dashboard"].firstMatch
         XCTAssertTrue(dashboard.waitForExistence(timeout: 10), "The Home dashboard should appear after an explicit entry choice.")
+        let dashboardHeader = app.descendants(matching: .any)["gativx-dashboard-header"].firstMatch
+        XCTAssertTrue(dashboardHeader.exists, "The dashboard header must expose a measurable layout container.")
+        XCTAssertGreaterThan(dashboardHeader.frame.width, app.frame.width * 0.9,
+                             "The header must use the device width instead of expanding beyond it.")
+        XCTAssertLessThanOrEqual(dashboardHeader.frame.maxX, app.frame.maxX + 1,
+                                 "The header must not be clipped off the right edge.")
+
         let dashboardIdentity = app.staticTexts["gativx-dashboard-member-identity"]
         XCTAssertTrue(dashboardIdentity.exists)
         XCTAssertEqual(dashboardIdentity.label, "LOCAL-ONLY MEMBER",
@@ -124,9 +131,13 @@ final class GATIVXDashboardUITests: XCTestCase {
         let guruScrollViews = app.scrollViews
         XCTAssertGreaterThan(guruScrollViews.count, 0, "The Guru sheet should expose its scrollable form.")
         let guruScrollView = guruScrollViews.element(boundBy: guruScrollViews.count - 1)
-        let goalField = app.textFields["What do you want to achieve?"]
+        let goalField = app.textFields["gativx-guru-goal"]
         XCTAssertTrue(goalField.waitForExistence(timeout: 5))
-        goalField.tap()
+        XCTAssertTrue(goalField.isHittable, "The Guru goal field must be visible and editable.")
+        goalField.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        let inputKeyboard = app.keyboards.firstMatch
+        XCTAssertTrue(inputKeyboard.waitForExistence(timeout: 5),
+                      "Tapping the Guru goal field must focus it and open text input.")
         goalField.typeText("Walk consistently")
 
         // Dismiss the multiline goal editor using Guru's explicit keyboard toolbar action.
