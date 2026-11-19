@@ -500,6 +500,7 @@ struct ContentView: View {
     @State private var profilePhotoData: Data?
     @State private var profilePhotoStatus = "No member photo selected."
     @State private var isGuruPresented = false
+    @FocusState private var isGuruFieldFocused: Bool
     @State private var isNotificationsPresented = false
     @AppStorage("gativx.guru.goal") private var guruGoal = ""
     @AppStorage("gativx.guru.purpose") private var guruPurpose = ""
@@ -1090,6 +1091,7 @@ struct ContentView: View {
                 VStack(alignment: .leading, spacing: 12) {
                     Text("YOUR GOAL").font(.caption.weight(.bold)).foregroundStyle(.secondary)
                     TextField("What do you want to achieve?", text: $guruGoal, axis: .vertical)
+                        .focused($isGuruFieldFocused)
                         .lineLimit(2...4).textFieldStyle(.roundedBorder)
                     Text("YOUR PURPOSE").font(.caption.weight(.bold)).foregroundStyle(.secondary)
                     TextField("Why does this matter to you?", text: $guruPurpose, axis: .vertical)
@@ -1519,6 +1521,11 @@ struct ContentView: View {
                     .toolbar {
                         ToolbarItem(placement: .confirmationAction) {
                             Button("Done") { isGuruPresented = false }
+                        }
+                        ToolbarItemGroup(placement: .keyboard) {
+                            Spacer()
+                            Button("Done") { isGuruFieldFocused = false }
+                                .accessibilityIdentifier("gativx-guru-keyboard-done")
                         }
                     }
             }
