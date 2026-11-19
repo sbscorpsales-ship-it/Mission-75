@@ -38,11 +38,13 @@ final class GATIVXDashboardUITests: XCTestCase {
 
         let dashboard = app.descendants(matching: .any)["gativx-home-dashboard"].firstMatch
         XCTAssertTrue(dashboard.waitForExistence(timeout: 10), "The Home dashboard should appear after an explicit entry choice.")
+        let appWindow = app.windows.firstMatch
+        XCTAssertTrue(appWindow.waitForExistence(timeout: 5), "The app window must be measurable for device-bound layout checks.")
         let dashboardHeader = app.descendants(matching: .any)["gativx-dashboard-header"].firstMatch
         XCTAssertTrue(dashboardHeader.exists, "The dashboard header must expose a measurable layout container.")
-        XCTAssertGreaterThan(dashboardHeader.frame.width, app.frame.width * 0.9,
-                             "The header must use the device width instead of expanding beyond it.")
-        XCTAssertLessThanOrEqual(dashboardHeader.frame.maxX, app.frame.maxX + 1,
+        XCTAssertGreaterThan(dashboardHeader.frame.width, appWindow.frame.width * 0.9,
+                             "The header must use the available device width instead of expanding beyond it.")
+        XCTAssertLessThanOrEqual(dashboardHeader.frame.maxX, appWindow.frame.maxX + 1,
                                  "The header must not be clipped off the right edge.")
 
         let dashboardIdentity = app.staticTexts["gativx-dashboard-member-identity"]
@@ -53,7 +55,7 @@ final class GATIVXDashboardUITests: XCTestCase {
         // Catch the compressed/overlapping mission-card defect from the member screenshot.
         let missionCard = app.descendants(matching: .any)["gativx-todays-mission"].firstMatch
         XCTAssertTrue(missionCard.waitForExistence(timeout: 5), "Today's mission must render as a real dashboard card.")
-        XCTAssertGreaterThan(missionCard.frame.width, app.frame.width * 0.82,
+        XCTAssertGreaterThan(missionCard.frame.width, appWindow.frame.width * 0.82,
                              "Today's mission card must use the available dashboard width.")
         XCTAssertGreaterThan(missionCard.frame.height, 90,
                              "Today's mission card must retain enough height for readable content.")
@@ -133,8 +135,13 @@ final class GATIVXDashboardUITests: XCTestCase {
         let guruScrollView = guruScrollViews.element(boundBy: guruScrollViews.count - 1)
         let goalField = app.textFields["gativx-guru-goal"]
         XCTAssertTrue(goalField.waitForExistence(timeout: 5))
-        XCTAssertTrue(goalField.isHittable, "The Guru goal field must be visible and editable.")
-        goalField.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        // The intro card sits above the goal form on a phone-sized sheet. Scroll
+        // the Guru form itself until the first input is inside the visible viewport.
+        for _ in 0..<12 where !goalField.isHittable {
+            scrollTowardBottom(guruScrollView)
+        }
+        XCTAssertTrue(goalField.isHittable, "The Guru goal field must be scrolled into view before editing.")
+        goalField.tap()
         let inputKeyboard = app.keyboards.firstMatch
         XCTAssertTrue(inputKeyboard.waitForExistence(timeout: 5),
                       "Tapping the Guru goal field must focus it and open text input.")
