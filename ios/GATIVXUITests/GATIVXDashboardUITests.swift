@@ -46,6 +46,15 @@ final class GATIVXDashboardUITests: XCTestCase {
                              "The header must use the available device width instead of expanding beyond it.")
         XCTAssertLessThanOrEqual(dashboardHeader.frame.maxX, appWindow.frame.maxX + 1,
                                  "The header must not be clipped off the right edge.")
+        let notificationControl = app.buttons["gativx-header-notifications"]
+        let profileControl = app.buttons["gativx-header-profile"]
+        XCTAssertTrue(notificationControl.exists, "The notification control must remain visible in the header.")
+        XCTAssertTrue(profileControl.exists, "The member profile control must remain visible in the header.")
+        XCTAssertGreaterThanOrEqual(notificationControl.frame.minX, appWindow.frame.minX - 1)
+        XCTAssertLessThanOrEqual(notificationControl.frame.maxX, appWindow.frame.maxX + 1)
+        XCTAssertGreaterThanOrEqual(profileControl.frame.minX, appWindow.frame.minX - 1)
+        XCTAssertLessThanOrEqual(profileControl.frame.maxX, appWindow.frame.maxX + 1,
+                                 "The member profile control must not be clipped at the right edge.")
 
         let dashboardIdentity = app.staticTexts["gativx-dashboard-member-identity"]
         XCTAssertTrue(dashboardIdentity.exists)
