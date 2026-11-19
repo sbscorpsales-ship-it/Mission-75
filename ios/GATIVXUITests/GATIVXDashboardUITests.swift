@@ -72,6 +72,17 @@ final class GATIVXDashboardUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["YOUR GOAL JOURNEY"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.descendants(matching: .any)["gativx-journey-duration"].exists)
         XCTAssertTrue(app.staticTexts["ONE PRACTICAL NEXT ACTION"].exists)
+
+        let durationPicker = app.segmentedControls["gativx-journey-duration"]
+        XCTAssertTrue(durationPicker.waitForExistence(timeout: 5))
+        durationPicker.buttons["180 days"].tap()
+        let startJourney = app.buttons["gativx-start-journey"]
+        XCTAssertTrue(startJourney.waitForExistence(timeout: 5))
+        startJourney.tap()
+        XCTAssertTrue(app.staticTexts["DAY 1 OF 180"].waitForExistence(timeout: 5))
+        durationPicker.buttons["30 days"].tap()
+        XCTAssertTrue(app.staticTexts["DAY 1 OF 180"].exists, "Changing the next selection must not change the active 180-day journey.")
+        XCTAssertFalse(app.staticTexts["DAY 1 OF 30"].exists)
         app.buttons["Done"].tap()
 
         let activityTab = app.tabBars.buttons["Activity"]

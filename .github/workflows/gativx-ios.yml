@@ -104,6 +104,7 @@ jobs:
           assert "GATIVXGuruCoach.suggestedNextAction" in view and "GATIVXGuruCoach.purposeAnchor" in view, "Guru must generate purpose-aware next actions, not only store form answers"
           assert "moves you toward feeling" in guru_model and "testGuruConnectsGoalPurposeAndEmotionToPracticalNextAction" in guru_tests, "Guru next actions must connect goal, purpose and desired emotion"
           assert "gativx.journey.durationDays" in view and "gativx.journey.startedAt" in view and "gativx.journey.goal" in view, "Goal journey state must persist locally"
+          assert "gativx.journey.activeDurationDays" in view and "guruActiveJourneyDurationDays > 0 ? guruActiveJourneyDurationDays : guruJourneyDurationDays" in view and "guruActiveJourneyDurationDays = guruJourneyDurationDays" in view, "An active journey must keep its original duration when the next selection changes"
           assert all(f'Text("{days} days").tag({days})' in view for days in (30, 90, 180, 365)), "30/90/180/365-day journey choices are required"
           assert "testJourneyCalculatesElapsedDaysRemainingAndProgress" in guru_tests and "testGuruAdaptsNextActionToRemainingDailySteps" in guru_tests and "testAllSupportedJourneyDurationsCalculateProgressAndCompletion" in guru_tests, "Guru and all four journey durations must have unit coverage"
           assert "gativx-journey-duration" in view and "gativx-start-journey" in view, "Journey controls need stable UI test targets"
@@ -111,6 +112,7 @@ jobs:
           assert "GATIVX notifications are not active in this build yet" in view and "gativx-notifications-gated" in view, "Notifications must be clearly gated until delivery is implemented"
           assert "gativx-guru-entry" in view and "YOUR GOAL JOURNEY" in view and "ONE PRACTICAL NEXT ACTION" in view, "Dashboard must expose the implemented Guru journey"
           assert "gativx-journey-duration" in ui_tests and "gativx-community-gated" in ui_tests and "gativx-notifications-gated" in ui_tests, "UI tests must cover journey entry and inactive feature gates"
+          assert "DAY 1 OF 180" in ui_tests and "DAY 1 OF 30" in ui_tests, "UI tests must prove a started journey keeps its duration after changing the next selection"
 
           required_usage = [
               "NSHealthShareUsageDescription",
@@ -280,6 +282,7 @@ jobs:
               "Apple Health export queue is read-back verified": "verified.map(\\.id) == items.map(\\.id)" in health_outbox,
               "Apple Health outbox enqueue is idempotent by stable workout ID": "if !items.contains(where: { $0.id == item.id })" in health_outbox and "testEnqueueIsIdempotentByStableWorkoutID" in health_outbox_tests,
               "Apple Health outbox acknowledgement removes only confirmed workout": "func acknowledge(_ id: UUID)" in health_outbox and "testAcknowledgeRemovesOnlyTheConfirmedWorkout" in health_outbox_tests,
+              "Apple Health acknowledgement read-back failure preserves pending workout": "testAcknowledgeReportsVerificationFailureAndRetainsPendingWorkoutWhenQueueWriteCannotBeReadBack" in health_outbox_tests,
               "Apple Health export reports failure when queue acknowledgement cannot be verified": "Apple Health export acknowledgement could not be verified" in health and "Apple Health saved the workout, but the export queue could not be safely acknowledged" in workout_export and "completion(.failure(NSError(" in workout_export,
               "Corrupt Apple Health outbox is preserved and enqueue is blocked": "Original data was preserved" in health_outbox and "testCorruptOutboxIsPreservedAndCannotBeReplacedByEnqueue" in health_outbox_tests,
               "Apple Health export queue retains unreadable data": "Pending exports are unknown; original data was preserved" in health,

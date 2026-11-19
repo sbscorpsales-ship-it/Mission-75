@@ -53,10 +53,40 @@ final class HealthKitWorkoutOutboxStoreTests: XCTestCase {
         XCTAssertEqual(restored.activity, "Walking")
     }
 
+    func testAcknowledgeReportsVerificationFailureAndRetainsPendingWorkoutWhenQueueWriteCannotBeReadBack() throws {
+        let persistence = RejectNextWritePersistence()
+        let store = HealthKitWorkoutOutboxStore(persistence: persistence)
+        let workout = makeWorkout()
+        _ = try store.enqueue(workout)
+
+        persistence.rejectNextWrite = true
+        XCTAssertThrowsError(try store.acknowledge(workout.id)) { error in
+            XCTAssertTrue(error.localizedDescription.contains("read back and verified"))
+        }
+        XCTAssertEqual(try store.load().map(\\.id), [workout.id])
+    }
+
     private func makeStore() -> (HealthKitWorkoutOutboxStore, UserDefaults, String) {
         let suite = "GATIVXHealthKitOutboxTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suite)!
         return (HealthKitWorkoutOutboxStore(userDefaults: defaults), defaults, suite)
+    }
+
+    private final class RejectNextWritePersistence: HealthKitWorkoutOutboxPersistence {
+        private var values: [String: Data] = [:]
+        var rejectNextWrite = false
+
+        func data(forKey key: String) -> Data? {
+            values[key]
+        }
+
+        func setData(_ data: Data, forKey key: String) {
+            if rejectNextWrite {
+                rejectNextWrite = false
+                return
+            }
+            values[key] = data
+        }
     }
 
     private func makeWorkout(steps: Int? = 123, distanceMeters: Double? = 900) -> PendingHealthWorkout {

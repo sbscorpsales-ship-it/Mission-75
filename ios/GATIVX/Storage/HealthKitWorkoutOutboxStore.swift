@@ -9,21 +9,43 @@ struct PendingHealthWorkout: Codable, Identifiable {
     let distanceMeters: Double?
 }
 
+protocol HealthKitWorkoutOutboxPersistence {
+    func data(forKey key: String) -> Data?
+    func setData(_ data: Data, forKey key: String)
+}
+
+private struct UserDefaultsHealthKitWorkoutOutboxPersistence: HealthKitWorkoutOutboxPersistence {
+    let defaults: UserDefaults
+
+    func data(forKey key: String) -> Data? {
+        defaults.data(forKey: key)
+    }
+
+    func setData(_ data: Data, forKey key: String) {
+        defaults.set(data, forKey: key)
+    }
+}
+
 /// Durable, idempotent local queue for workouts awaiting Apple Health export.
 struct HealthKitWorkoutOutboxStore {
-    private let userDefaults: UserDefaults
+    private let persistence: HealthKitWorkoutOutboxPersistence
     private let key: String
 
     init(
         userDefaults: UserDefaults = .standard,
         key: String = "gativx.healthkit.workout-export-outbox.v1"
     ) {
-        self.userDefaults = userDefaults
+        self.persistence = UserDefaultsHealthKitWorkoutOutboxPersistence(defaults: userDefaults)
+        self.key = key
+    }
+
+    init(persistence: HealthKitWorkoutOutboxPersistence, key: String = "gativx.healthkit.workout-export-outbox.v1") {
+        self.persistence = persistence
         self.key = key
     }
 
     func load() throws -> [PendingHealthWorkout] {
-        guard let data = userDefaults.data(forKey: key) else { return [] }
+        guard let data = persistence.data(forKey: key) else { return [] }
         do {
             return try JSONDecoder().decode([PendingHealthWorkout].self, from: data)
         } catch {
@@ -37,8 +59,8 @@ struct HealthKitWorkoutOutboxStore {
 
     private func save(_ items: [PendingHealthWorkout]) throws {
         let data = try JSONEncoder().encode(items)
-        userDefaults.set(data, forKey: key)
-        guard let saved = userDefaults.data(forKey: key),
+        persistence.setData(data, forKey: key)
+        guard let saved = persistence.data(forKey: key),
               saved == data,
               let verified = try? JSONDecoder().decode([PendingHealthWorkout].self, from: saved),
               verified.map(\.id) == items.map(\.id) else {

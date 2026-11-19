@@ -506,13 +506,14 @@ struct ContentView: View {
     @AppStorage("gativx.guru.emotion") private var guruEmotion = ""
     @AppStorage("gativx.guru.nextAction") private var guruNextAction = ""
     @AppStorage("gativx.journey.durationDays") private var guruJourneyDurationDays = 90
+    @AppStorage("gativx.journey.activeDurationDays") private var guruActiveJourneyDurationDays = 0
     @AppStorage("gativx.journey.startedAt") private var guruJourneyStartedAt = 0.0
     @AppStorage("gativx.journey.goal") private var guruJourneyGoal = ""
 
     private var activeGuruJourney: GATIVXGoalJourney? {
         guard guruJourneyStartedAt > 0 else { return nil }
         return GATIVXGoalJourney(
-            durationDays: guruJourneyDurationDays,
+            durationDays: guruActiveJourneyDurationDays > 0 ? guruActiveJourneyDurationDays : guruJourneyDurationDays,
             startedAt: Date(timeIntervalSince1970: guruJourneyStartedAt),
             now: Date()
         )
@@ -1133,6 +1134,7 @@ struct ContentView: View {
                         if journey.isComplete {
                             Button("Start another cycle") {
                                 guruJourneyGoal = guruGoal.trimmingCharacters(in: .whitespacesAndNewlines)
+                                guruActiveJourneyDurationDays = guruJourneyDurationDays
                                 guruJourneyStartedAt = Date().timeIntervalSince1970
                             }
                             .buttonStyle(.borderedProminent).tint(neon).foregroundStyle(.black)
@@ -1142,6 +1144,7 @@ struct ContentView: View {
                             .font(.subheadline).foregroundStyle(.secondary)
                         Button("Start my \(guruJourneyDurationDays)-day journey") {
                             guruJourneyGoal = guruGoal.trimmingCharacters(in: .whitespacesAndNewlines)
+                            guruActiveJourneyDurationDays = guruJourneyDurationDays
                             guruJourneyStartedAt = Date().timeIntervalSince1970
                         }
                         .buttonStyle(.borderedProminent).tint(neon).foregroundStyle(.black)
@@ -1522,6 +1525,10 @@ struct ContentView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .preferredColorScheme(dashboardColorScheme)
         .onAppear {
+            // Migrate existing journeys once, preserving the duration they were already using.
+            if guruJourneyStartedAt > 0 && guruActiveJourneyDurationDays <= 0 {
+                guruActiveJourneyDurationDays = guruJourneyDurationDays
+            }
             health.onDailyTotal = { day, total in
                 guard cloud.isSignedIn else { return }
                 Task { await cloud.syncSteps(date: day, steps: total) }
