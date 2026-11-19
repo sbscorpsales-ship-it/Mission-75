@@ -1080,6 +1080,7 @@ struct ContentView: View {
                         .font(.caption.weight(.black)).foregroundStyle(neon)
                     Text("Reconnect with your why.")
                         .font(.largeTitle.weight(.bold))
+                        .accessibilityIdentifier("gativx-guru-heading")
                     Text("When motivation gets low, return to the purpose behind your goal. Guru keeps your reason visible and helps you choose one manageable next step.")
                         .font(.subheadline).foregroundStyle(.secondary)
                 }
