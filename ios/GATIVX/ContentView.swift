@@ -583,279 +583,347 @@ struct ContentView: View {
         .accessibilityValue(displayedDailySteps.map { "\($0) of \(max(dailyStepGoal, 1))" } ?? "No reading")
     }
 
+    private var dashboardIsNight: Bool {
+        appearanceMode == "night" ||
+        (appearanceMode == "system" && UITraitCollection.current.userInterfaceStyle == .dark)
+    }
+
     private var homeDashboard: some View {
-        GeometryReader { dashboardGeometry in
-            let dashboardWidth = dashboardGeometry.size.width
-            let dashboardHorizontalInset = min(max(dashboardWidth * 0.035, 12), 18)
-            let dashboardContentWidth = max(dashboardWidth - dashboardHorizontalInset * 2, 0)
-            // Reserve fixed space for the logo and both header controls. The brand
-            // stack gets only the remaining width so the profile button cannot
-            // be pushed beyond the iPhone's right edge.
-            let headerTitleWidth = max(dashboardContentWidth - 34 - 34 - 32 - 36 - 24, 88)
-            let isCompactDashboard = dashboardGeometry.size.height < 780
-            let ringDiameter = min(max(dashboardWidth * 0.34, 128), 148)
-            let heroHeight = min(max(dashboardWidth * 0.49, 178), 204)
-            let contentSpacing: CGFloat = isCompactDashboard ? 12 : 15
-            ScrollView(showsIndicators: false) {
-                VStack(alignment: .leading, spacing: contentSpacing) {
-                // Approved GATIVX home header: mountain greeting, brand, notifications and member profile.
-                ZStack(alignment: .topLeading) {
-                    GATIVXMountainBackdrop(isNight: appearanceMode == "night" || (appearanceMode == "system" && UITraitCollection.current.userInterfaceStyle == .dark))
-                        .frame(maxWidth: .infinity)
-                        .frame(height: heroHeight)
-                        .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
-                    VStack(alignment: .leading, spacing: 17) {
-                        HStack(alignment: .center, spacing: 8) {
-                            ZStack {
-                                RoundedRectangle(cornerRadius: 10).fill(neon).frame(width: 34, height: 34)
-                                Image(systemName: "figure.run").font(.system(size: 19, weight: .black)).foregroundStyle(.black)
-                            }
-                            VStack(alignment: .leading, spacing: 1) {
-                                Text("GATIVX")
-                                    .font(.system(size: 22, weight: .black, design: .rounded))
-                                    .tracking(-0.7)
-                                    .lineLimit(1)
-                                    .minimumScaleFactor(0.72)
-                                Text("YOUR GOAL. YOUR PURPOSE. YOUR GATI.")
-                                    .font(.system(size: 6.5, weight: .heavy))
-                                    .tracking(0.45)
-                                    .lineLimit(1)
-                                    .minimumScaleFactor(0.45)
-                            }
-                            .frame(width: headerTitleWidth, alignment: .leading)
-                            .clipped()
-                            Button { isNotificationsPresented = true } label: {
-                                Image(systemName: "bell.badge")
-                                    .font(.system(size: 19, weight: .semibold))
-                                    .foregroundStyle(.white)
-                                    .frame(width: 32, height: 32)
-                                    .contentShape(Circle())
-                            }
-                            .buttonStyle(.plain)
-                            .accessibilityLabel("Notifications")
-                            .accessibilityIdentifier("gativx-header-notifications")
-                            Button { selectedTab = 4 } label: {
-                                Group {
-                                    if let data = profilePhotoData, let image = UIImage(data: data) {
-                                        Image(uiImage: image).resizable().scaledToFill()
-                                    } else {
-                                        Image(systemName: "person.crop.circle.fill").resizable().scaledToFit().padding(3)
-                                    }
-                                }
-                                .frame(width: 32, height: 32)
-                                .foregroundStyle(.white)
-                                .clipShape(Circle())
-                                .padding(2)
-                                .overlay(Circle().stroke(neon, lineWidth: 1.8))
-                            }
-                            .accessibilityLabel("Open member profile")
-                            .accessibilityIdentifier("gativx-header-profile")
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        VStack(alignment: .leading, spacing: 5) {
-                            Text(greeting + " 👋").font(.system(size: min(max(dashboardWidth * 0.062, 22), 26), weight: .bold, design: .rounded))
-                            Text("Every step moves you closer to your purpose.")
-                                .font(.subheadline.weight(.medium)).foregroundStyle(.white.opacity(0.9))
-                            Text(cloud.isSignedIn
-                                 ? "LOGIN ID · " + (cloud.authenticatedUserEmail ?? "SIGNED-IN MEMBER")
-                                 : "LOCAL-ONLY MEMBER")
-                                .font(.caption2.weight(.semibold))
-                                .lineLimit(1)
-                                .minimumScaleFactor(0.72)
-                                .foregroundStyle(.white.opacity(0.86))
-                                .accessibilityIdentifier("gativx-dashboard-member-identity")
-                        }
-                    }
-                    .foregroundStyle(.white)
-                    .padding(17)
-                }
-                .accessibilityElement(children: .contain)
-                .accessibilityIdentifier("gativx-dashboard-header")
-                .frame(maxWidth: .infinity, alignment: .leading)
-
-                // Primary neon-green daily step counter. Stack the ring above its
-                // details on standard iPhone widths so the card never compresses.
-                let stepDetails = VStack(alignment: .leading, spacing: 7) {
-                    Text("TODAY'S STEPS").font(.caption.weight(.heavy)).tracking(0.9).foregroundStyle(.secondary)
-                    Text("Daily movement").font(.title3.weight(.bold))
-                    Text(max(dailyStepGoal, 1).formatted() + " step goal")
-                        .font(.subheadline.weight(.semibold))
-                    Text(displayedDailySteps.map { $0 >= dailyStepGoal ? "Goal achieved. Brilliant work!" : "\((max(dailyStepGoal - $0, 0)).formatted()) steps to go" } ?? "Connect Apple Health or enable iPhone step tracking.")
-                        .font(.caption).foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-
-                Group {
-                    if dashboardWidth < 430 {
-                        VStack(spacing: 12) {
-                            stepRing.frame(width: ringDiameter, height: ringDiameter)
-                            stepDetails
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    } else {
-                        HStack(spacing: 14) {
-                            stepRing.frame(width: ringDiameter, height: ringDiameter)
-                            stepDetails
-                        }
-                    }
-                }
-                .padding(16)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(cardBackground, in: RoundedRectangle(cornerRadius: 23, style: .continuous))
-                .overlay(RoundedRectangle(cornerRadius: 23).stroke(neon.opacity(0.5), lineWidth: 1))
-                .accessibilityIdentifier("gativx-daily-step-counter")
-
-                // Today's Mission follows the step counter in the approved layout.
-                VStack(alignment: .leading, spacing: 10) {
-                    HStack {
-                        Label("TODAY'S MISSION", systemImage: "flag.checkered")
-                            .font(.caption.weight(.heavy)).tracking(0.8)
-                        Spacer()
-                        Text("01 / DAILY").font(.caption2.weight(.bold)).foregroundStyle(.secondary)
-                    }
-                    Text("Move with purpose.").font(.title2.weight(.bold))
-                    Text("Reach your daily movement goal one step at a time. Consistency matters more than perfection.")
-                        .font(.subheadline).foregroundStyle(.secondary)
-                    ProgressView(value: stepProgress).tint(neon)
-                    HStack {
-                        Text(displayedDailySteps.map { "\($0.formatted()) steps completed" } ?? "Waiting for step data")
-                        Spacer()
-                        Text("\(Int(stepProgress * 100))%").fontWeight(.bold)
-                    }.font(.caption.weight(.semibold))
-                }
-                .padding(16)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(cardBackground, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-                .accessibilityElement(children: .contain)
-                .accessibilityIdentifier("gativx-todays-mission")
-
-                // The four approved health metrics: distance, active time, calories and average heart rate.
-                VStack(alignment: .leading, spacing: 10) {
-                    HStack {
-                        Text("TODAY'S ACTIVITY").font(.caption.weight(.heavy)).tracking(0.9).foregroundStyle(.secondary)
-                        Spacer()
-                        Text("Today").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
-                    }
-                    LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
-                        wellnessSnapshotCard("Distance", value: health.todayWalkingRunningDistanceKm.map { String(format: "%.2f", $0) } ?? "—", unit: "km", symbol: "figure.walk", tint: .green)
-                        wellnessSnapshotCard("Active time", value: health.todayExerciseMinutes.map(String.init) ?? "—", unit: "min", symbol: "stopwatch.fill", tint: .orange)
-                        wellnessSnapshotCard("Calories", value: health.todayActiveEnergyKcal.map(String.init) ?? "—", unit: "kcal", symbol: "flame.fill", tint: .pink)
-                        wellnessSnapshotCard("Avg. heart rate", value: health.todayAverageHeartRateBPM.map(String.init) ?? "—", unit: "bpm", symbol: "heart.fill", tint: .red)
-                    }
-                    Text("Measured values from Apple Health. Unavailable readings are not estimated.")
-                        .font(.caption2).foregroundStyle(.secondary)
-                }
-
-                // Activity Tracker: one clear green primary action.
-                VStack(alignment: .leading, spacing: 12) {
-                    Label("ACTIVITY TRACKER", systemImage: "figure.walk")
-                        .font(.caption.weight(.heavy)).tracking(0.9).foregroundStyle(.secondary)
-                    Text(routeRecorder.hasUnreadableDraft ? "Your previous route needs recovery." : "Ready for your next walk?").font(.headline)
-                    Button {
-                        if sessionStarted == nil,
-                           routeRecorder.recoveredStartedAt == nil,
-                           !routeRecorder.hasUnreadableDraft {
-                            startActivitySession()
-                        }
-                        selectedTab = 1
-                    } label: {
-                        HStack(spacing: 10) {
-                            Image(systemName: "figure.walk").font(.headline.weight(.black))
-                            Text(sessionStarted != nil ? "CONTINUE WALK" : routeRecorder.hasUnreadableDraft ? "RECOVERY NEEDED" : routeRecorder.recoveredStartedAt != nil ? "RECOVER WALK" : "START WALK")
-                                .font(.headline.weight(.black)).tracking(0.6)
-                            Spacer()
-                            Image(systemName: "arrow.right").font(.headline.weight(.bold))
-                        }
-                        .foregroundStyle(.black)
-                        .padding(.horizontal, 18)
-                        .frame(maxWidth: .infinity, minHeight: 54)
-                        .background(neon, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-                    }
-                    .buttonStyle(.plain)
-                    Text("Track steps, active time and your GPS route.")
-                        .font(.caption).foregroundStyle(.secondary)
-                }
-                .padding(16)
-                .background(cardBackground, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-
-                // Gati Guru remains directly accessible from the home dashboard.
-                Button { isGuruPresented = true } label: {
-                    HStack(alignment: .top, spacing: 13) {
-                        Image(systemName: "sparkles").font(.system(size: 27, weight: .bold)).foregroundStyle(neon).frame(width: 38)
-                        VStack(alignment: .leading, spacing: 5) {
-                            Text("GATI GURU").font(.caption.weight(.heavy)).tracking(1).foregroundStyle(.secondary)
-                            Text("Reconnect with your why.").font(.headline)
-                            Text(guruPurpose.isEmpty ? "Your purpose, your emotion and one small next action." : guruPurpose)
-                                .font(.subheadline).foregroundStyle(.secondary).lineLimit(3)
-                        }
-                        Spacer()
-                        Image(systemName: "chevron.right").foregroundStyle(.secondary)
-                    }
-                    .padding(16).frame(maxWidth: .infinity, alignment: .leading)
-                    .background(cardBackground, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-                }
-                .buttonStyle(.plain)
-                .accessibilityIdentifier("gativx-guru-entry")
-
-                // My Journey: actual saved activity history only.
-                VStack(alignment: .leading, spacing: 10) {
-                    HStack {
-                        Label("MY JOURNEY", systemImage: "chart.xyaxis.line").font(.caption.weight(.heavy)).tracking(0.8)
-                        Spacer()
-                        Button("View all") { selectedTab = 1 }.font(.caption.weight(.bold))
-                    }
-                    HStack(alignment: .firstTextBaseline, spacing: 5) {
-                        Text("\(visibleActivityHistory.count)").font(.system(size: 30, weight: .black, design: .rounded))
-                        Text("activities saved").font(.subheadline.weight(.medium)).foregroundStyle(.secondary)
-                    }
-                    if let latest = visibleActivityHistory.first {
-                        HStack {
-                            Image(systemName: "figure.walk.circle.fill").font(.title2).foregroundStyle(neon)
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(latest.activity).font(.subheadline.weight(.bold))
-                                Text(latest.startedAt.formatted(date: .abbreviated, time: .shortened))
-                                    .font(.caption).foregroundStyle(.secondary)
-                            }
-                            Spacer()
-                            Text(latest.durationText).font(.caption.weight(.semibold))
-                        }
-                        .padding(11).background(pageBackground, in: RoundedRectangle(cornerRadius: 14))
-                    } else {
-                        Text("Your completed walks will appear here after you save your first activity.")
-                            .font(.subheadline).foregroundStyle(.secondary)
-                    }
-                    Text(historyStatus).font(.caption2).foregroundStyle(.secondary)
-                }
-                .padding(16)
-                .background(cardBackground, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-
-                // Community Gati is a real navigation entry; community data is not fabricated.
-                Button { selectedTab = 3 } label: {
-                    HStack(spacing: 13) {
-                        Image(systemName: "person.3.fill").font(.system(size: 25, weight: .semibold)).foregroundStyle(neon).frame(width: 38)
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("COMMUNITY GATI").font(.caption.weight(.heavy)).tracking(0.9).foregroundStyle(.secondary)
-                            Text("Move forward, together.").font(.headline)
-                            Text("Community feed is not active yet. Your personal activity remains private.")
-                                .font(.subheadline).foregroundStyle(.secondary)
-                        }
-                        Spacer()
-                        Image(systemName: "chevron.right").foregroundStyle(.secondary)
-                    }
-                    .padding(16).frame(maxWidth: .infinity, alignment: .leading)
-                    .background(cardBackground, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-                }
-                .buttonStyle(.plain)
-            }
-                .padding(.horizontal, dashboardHorizontalInset)
-                .padding(.top, 10)
-                .padding(.bottom, 28)
-                .frame(width: dashboardWidth, alignment: .leading)
-            }
-            .background(pageBackground.ignoresSafeArea())
+        GeometryReader { geometry in
+            homeDashboardContent(width: geometry.size.width, height: geometry.size.height)
         }
         .accessibilityIdentifier("gativx-home-dashboard")
+    }
+
+    private func homeDashboardContent(width: CGFloat, height: CGFloat) -> some View {
+        let horizontalInset = min(max(width * 0.035, 12), 18)
+        let contentWidth = max(width - horizontalInset * 2, 0)
+        let titleWidth = max(contentWidth - 34 - 34 - 32 - 36 - 24, 88)
+        let heroHeight = min(max(width * 0.49, 178), 204)
+        let spacing: CGFloat = height < 780 ? 12 : 15
+
+        return ScrollView(showsIndicators: false) {
+            VStack(alignment: .leading, spacing: spacing) {
+                dashboardHeader(width: width, titleWidth: titleWidth, heroHeight: heroHeight)
+                dailyStepCounterCard(width: width)
+                todayMissionCard
+                todayActivityCard
+                activityTrackerCard
+                guruEntryCard
+                myJourneyCard
+                communityGatiCard
+            }
+            .padding(.horizontal, horizontalInset)
+            .padding(.top, 10)
+            .padding(.bottom, 28)
+            .frame(width: width, alignment: .leading)
+        }
+        .background(pageBackground.ignoresSafeArea())
+        .accessibilityIdentifier("gativx-home-dashboard")
+    }
+
+    private func dashboardHeader(width: CGFloat, titleWidth: CGFloat, heroHeight: CGFloat) -> some View {
+        ZStack(alignment: .topLeading) {
+            GATIVXMountainBackdrop(isNight: dashboardIsNight)
+                .frame(maxWidth: .infinity)
+                .frame(height: heroHeight)
+                .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
+            VStack(alignment: .leading, spacing: 17) {
+                HStack(alignment: .center, spacing: 8) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 10).fill(neon).frame(width: 34, height: 34)
+                        Image(systemName: "figure.run").font(.system(size: 19, weight: .black)).foregroundStyle(.black)
+                    }
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text("GATIVX")
+                            .font(.system(size: 22, weight: .black, design: .rounded))
+                            .tracking(-0.7)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.72)
+                        Text("YOUR GOAL. YOUR PURPOSE. YOUR GATI.")
+                            .font(.system(size: 6.5, weight: .heavy))
+                            .tracking(0.45)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.45)
+                    }
+                    .frame(width: titleWidth, alignment: .leading)
+                    .clipped()
+                    Button { isNotificationsPresented = true } label: {
+                        Image(systemName: "bell.badge")
+                            .font(.system(size: 19, weight: .semibold))
+                            .foregroundStyle(.white)
+                            .frame(width: 32, height: 32)
+                            .contentShape(Circle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Notifications")
+                    .accessibilityIdentifier("gativx-header-notifications")
+                    Button { selectedTab = 4 } label: {
+                        Group {
+                            if let data = profilePhotoData, let image = UIImage(data: data) {
+                                Image(uiImage: image).resizable().scaledToFill()
+                            } else {
+                                Image(systemName: "person.crop.circle.fill").resizable().scaledToFit().padding(3)
+                            }
+                        }
+                        .frame(width: 32, height: 32)
+                        .foregroundStyle(.white)
+                        .clipShape(Circle())
+                        .padding(2)
+                        .overlay(Circle().stroke(neon, lineWidth: 1.8))
+                    }
+                    .accessibilityLabel("Open member profile")
+                    .accessibilityIdentifier("gativx-header-profile")
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                VStack(alignment: .leading, spacing: 5) {
+                    Text(greeting + " 👋")
+                        .font(.system(size: min(max(width * 0.062, 22), 26), weight: .bold, design: .rounded))
+                    Text("Every step moves you closer to your purpose.")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(.white.opacity(0.9))
+                    Text(cloud.isSignedIn
+                         ? "LOGIN ID · " + (cloud.authenticatedUserEmail ?? "SIGNED-IN MEMBER")
+                         : "LOCAL-ONLY MEMBER")
+                        .font(.caption2.weight(.semibold))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.72)
+                        .foregroundStyle(.white.opacity(0.86))
+                        .accessibilityIdentifier("gativx-dashboard-member-identity")
+                }
+            }
+            .foregroundStyle(.white)
+            .padding(17)
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("gativx-dashboard-header")
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var dailyStepDetails: some View {
+        VStack(alignment: .leading, spacing: 7) {
+            Text("TODAY'S STEPS").font(.caption.weight(.heavy)).tracking(0.9).foregroundStyle(.secondary)
+            Text("Daily movement").font(.title3.weight(.bold))
+            Text(max(dailyStepGoal, 1).formatted() + " step goal")
+                .font(.subheadline.weight(.semibold))
+            Text(displayedDailySteps.map {
+                $0 >= dailyStepGoal
+                    ? "Goal achieved. Brilliant work!"
+                    : "\((max(dailyStepGoal - $0, 0)).formatted()) steps to go"
+            } ?? "Connect Apple Health or enable iPhone step tracking.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    @ViewBuilder
+    private func dailyStepCounterLayout(width: CGFloat, ringDiameter: CGFloat) -> some View {
+        if width < 430 {
+            VStack(spacing: 12) {
+                stepRing.frame(width: ringDiameter, height: ringDiameter)
+                dailyStepDetails
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        } else {
+            HStack(spacing: 14) {
+                stepRing.frame(width: ringDiameter, height: ringDiameter)
+                dailyStepDetails
+            }
+        }
+    }
+
+    private func dailyStepCounterCard(width: CGFloat) -> some View {
+        let ringDiameter = min(max(width * 0.34, 128), 148)
+        return dailyStepCounterLayout(width: width, ringDiameter: ringDiameter)
+            .padding(16)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(cardBackground, in: RoundedRectangle(cornerRadius: 23, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 23).stroke(neon.opacity(0.5), lineWidth: 1))
+            .accessibilityIdentifier("gativx-daily-step-counter")
+    }
+
+    private var todayMissionCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Label("TODAY'S MISSION", systemImage: "flag.checkered")
+                    .font(.caption.weight(.heavy)).tracking(0.8)
+                Spacer()
+                Text("01 / DAILY").font(.caption2.weight(.bold)).foregroundStyle(.secondary)
+            }
+            Text("Move with purpose.").font(.title2.weight(.bold))
+            Text("Reach your daily movement goal one step at a time. Consistency matters more than perfection.")
+                .font(.subheadline).foregroundStyle(.secondary)
+            ProgressView(value: stepProgress).tint(neon)
+            HStack {
+                Text(displayedDailySteps.map { "\($0.formatted()) steps completed" } ?? "Waiting for step data")
+                Spacer()
+                Text("\(Int(stepProgress * 100))%").fontWeight(.bold)
+            }
+            .font(.caption.weight(.semibold))
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(cardBackground, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("gativx-todays-mission")
+    }
+
+    private var todayActivityCard: some View {
+        let columns = [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)]
+        return VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text("TODAY'S ACTIVITY").font(.caption.weight(.heavy)).tracking(0.9).foregroundStyle(.secondary)
+                Spacer()
+                Text("Today").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+            }
+            LazyVGrid(columns: columns, spacing: 10) {
+                wellnessSnapshotCard(
+                    "Distance",
+                    value: health.todayWalkingRunningDistanceKm.map { String(format: "%.2f", $0) } ?? "—",
+                    unit: "km", symbol: "figure.walk", tint: .green
+                )
+                wellnessSnapshotCard(
+                    "Active time",
+                    value: health.todayExerciseMinutes.map(String.init) ?? "—",
+                    unit: "min", symbol: "stopwatch.fill", tint: .orange
+                )
+                wellnessSnapshotCard(
+                    "Calories",
+                    value: health.todayActiveEnergyKcal.map(String.init) ?? "—",
+                    unit: "kcal", symbol: "flame.fill", tint: .pink
+                )
+                wellnessSnapshotCard(
+                    "Avg. heart rate",
+                    value: health.todayAverageHeartRateBPM.map(String.init) ?? "—",
+                    unit: "bpm", symbol: "heart.fill", tint: .red
+                )
+            }
+            Text("Measured values from Apple Health. Unavailable readings are not estimated.")
+                .font(.caption2).foregroundStyle(.secondary)
+        }
+    }
+
+    private var activityTrackerCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Label("ACTIVITY TRACKER", systemImage: "figure.walk")
+                .font(.caption.weight(.heavy)).tracking(0.9).foregroundStyle(.secondary)
+            Text(routeRecorder.hasUnreadableDraft
+                 ? "Your previous route needs recovery."
+                 : "Ready for your next walk?")
+                .font(.headline)
+            Button {
+                if sessionStarted == nil &&
+                    routeRecorder.recoveredStartedAt == nil &&
+                    !routeRecorder.hasUnreadableDraft {
+                    startActivitySession()
+                }
+                selectedTab = 1
+            } label: {
+                HStack(spacing: 10) {
+                    Image(systemName: "figure.walk").font(.headline.weight(.black))
+                    Text(sessionStarted != nil
+                         ? "CONTINUE WALK"
+                         : routeRecorder.hasUnreadableDraft
+                            ? "RECOVERY NEEDED"
+                            : routeRecorder.recoveredStartedAt != nil
+                                ? "RECOVER WALK"
+                                : "START WALK")
+                        .font(.headline.weight(.black)).tracking(0.6)
+                    Spacer()
+                    Image(systemName: "arrow.right").font(.headline.weight(.bold))
+                }
+                .foregroundStyle(.black)
+                .padding(.horizontal, 18)
+                .frame(maxWidth: .infinity, minHeight: 54)
+                .background(neon, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            }
+            .buttonStyle(.plain)
+            Text("Track steps, active time and your GPS route.")
+                .font(.caption).foregroundStyle(.secondary)
+        }
+        .padding(16)
+        .background(cardBackground, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+    }
+
+    private var guruEntryCard: some View {
+        Button { isGuruPresented = true } label: {
+            HStack(alignment: .top, spacing: 13) {
+                Image(systemName: "sparkles").font(.system(size: 27, weight: .bold)).foregroundStyle(neon).frame(width: 38)
+                VStack(alignment: .leading, spacing: 5) {
+                    Text("GATI GURU").font(.caption.weight(.heavy)).tracking(1).foregroundStyle(.secondary)
+                    Text("Reconnect with your why.").font(.headline)
+                    Text(guruPurpose.isEmpty
+                         ? "Your purpose, your emotion and one small next action."
+                         : guruPurpose)
+                        .font(.subheadline).foregroundStyle(.secondary).lineLimit(3)
+                }
+                Spacer()
+                Image(systemName: "chevron.right").foregroundStyle(.secondary)
+            }
+            .padding(16)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(cardBackground, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("gativx-guru-entry")
+    }
+
+    private var myJourneyCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Label("MY JOURNEY", systemImage: "chart.xyaxis.line")
+                    .font(.caption.weight(.heavy)).tracking(0.8)
+                Spacer()
+                Button("View all") { selectedTab = 1 }.font(.caption.weight(.bold))
+            }
+            HStack(alignment: .firstTextBaseline, spacing: 5) {
+                Text("\(visibleActivityHistory.count)")
+                    .font(.system(size: 30, weight: .black, design: .rounded))
+                Text("activities saved")
+                    .font(.subheadline.weight(.medium)).foregroundStyle(.secondary)
+            }
+            if let latest = visibleActivityHistory.first {
+                HStack {
+                    Image(systemName: "figure.walk.circle.fill").font(.title2).foregroundStyle(neon)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(latest.activity).font(.subheadline.weight(.bold))
+                        Text(latest.startedAt.formatted(date: .abbreviated, time: .shortened))
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    Text(latest.durationText).font(.caption.weight(.semibold))
+                }
+                .padding(11).background(pageBackground, in: RoundedRectangle(cornerRadius: 14))
+            } else {
+                Text("Your completed walks will appear here after you save your first activity.")
+                    .font(.subheadline).foregroundStyle(.secondary)
+            }
+            Text(historyStatus).font(.caption2).foregroundStyle(.secondary)
+        }
+        .padding(16)
+        .background(cardBackground, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+    }
+
+    private var communityGatiCard: some View {
+        Button { selectedTab = 3 } label: {
+            HStack(spacing: 13) {
+                Image(systemName: "person.3.fill").font(.system(size: 25, weight: .semibold)).foregroundStyle(neon).frame(width: 38)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("COMMUNITY GATI").font(.caption.weight(.heavy)).tracking(0.9).foregroundStyle(.secondary)
+                    Text("Move forward, together.").font(.headline)
+                    Text("Community feed is not active yet. Your personal activity remains private.")
+                        .font(.subheadline).foregroundStyle(.secondary)
+                }
+                Spacer()
+                Image(systemName: "chevron.right").foregroundStyle(.secondary)
+            }
+            .padding(16)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(cardBackground, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        }
+        .buttonStyle(.plain)
     }
 
     private func wellnessSnapshotCard(_ title: String, value: String, unit: String, symbol: String, tint: Color) -> some View {
