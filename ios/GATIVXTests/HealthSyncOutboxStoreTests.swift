@@ -74,6 +74,23 @@ final class HealthSyncOutboxStoreTests: XCTestCase {
         XCTAssertEqual(defaults.data(forKey: key), corrupt)
     }
 
+    func testAcknowledgingMemberAReadingDoesNotRemoveMemberBReadingForSameDay() throws {
+        let (store, defaults, suite) = makeStore()
+        defer { defaults.removePersistentDomain(forName: suite) }
+
+        let memberA = makeItem(ownerID: "member-a", kind: .healthSteps, steps: 500)
+        let memberB = makeItem(ownerID: "member-b", kind: .healthSteps, steps: 800)
+        _ = try store.enqueue(memberA)
+        _ = try store.enqueue(memberB)
+
+        let remaining = try store.acknowledge(memberA)
+
+        XCTAssertEqual(remaining.count, 1)
+        XCTAssertEqual(remaining.first?.ownerID, "member-b")
+        XCTAssertEqual(remaining.first?.steps, 800)
+        XCTAssertEqual(try store.load().map(\.ownerID), ["member-b"])
+    }
+
     private func makeStore() -> (HealthSyncOutboxStore, UserDefaults, String) {
         let suite = "GATIVXHealthSyncOutboxTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suite)!
