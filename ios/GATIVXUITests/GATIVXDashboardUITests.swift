@@ -23,12 +23,25 @@ final class GATIVXDashboardUITests: XCTestCase {
                       "First launch must show registration/sign-in before the member dashboard.")
         XCTAssertTrue(app.textFields["gativx-email-field"].exists)
         XCTAssertTrue(app.secureTextFields["gativx-password-field"].exists)
+        let authModeToggle = app.buttons["gativx-auth-mode-toggle"]
+        XCTAssertTrue(authModeToggle.exists)
+        authModeToggle.tap()
+        XCTAssertTrue(app.staticTexts["WELCOME BACK TO GATIVX"].waitForExistence(timeout: 5),
+                      "Existing members must have a real sign-in form.")
+        XCTAssertTrue(app.buttons["Forgot password?"].exists,
+                      "Existing members must be able to start password recovery.")
+        authModeToggle.tap()
+        XCTAssertTrue(app.staticTexts["CREATE YOUR GATIVX ACCOUNT"].exists)
         let guestEntry = app.buttons["gativx-continue-guest"]
         XCTAssertTrue(guestEntry.exists, "Local-only access must be an explicit choice.")
         guestEntry.tap()
 
         let dashboard = app.descendants(matching: .any)["gativx-home-dashboard"].firstMatch
         XCTAssertTrue(dashboard.waitForExistence(timeout: 10), "The Home dashboard should appear after an explicit entry choice.")
+        let dashboardIdentity = app.staticTexts["gativx-dashboard-member-identity"]
+        XCTAssertTrue(dashboardIdentity.exists)
+        XCTAssertEqual(dashboardIdentity.label, "LOCAL-ONLY MEMBER",
+                       "A guest dashboard must clearly identify its local-only account state.")
 
         // Catch the compressed/overlapping mission-card defect from the member screenshot.
         let missionCard = app.descendants(matching: .any)["gativx-todays-mission"].firstMatch
@@ -157,5 +170,7 @@ final class GATIVXDashboardUITests: XCTestCase {
         profileTab.tap()
         XCTAssertTrue(profileTab.isSelected, "Selecting Profile should switch the active tab.")
         XCTAssertTrue(app.descendants(matching: .any)["gativx-profile-screen"].waitForExistence(timeout: 5), "The Profile form should be visible after selecting its tab.")
+        XCTAssertTrue(app.descendants(matching: .any)["gativx-member-login-id"].exists,
+                      "Profile must show the current member identity or explicit local-only status.")
     }
 }
