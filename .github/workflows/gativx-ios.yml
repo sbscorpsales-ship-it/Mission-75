@@ -223,7 +223,7 @@ jobs:
           second_workout_ack = workout_export.find("self.acknowledgeWorkout(id)", first_workout_ack + 1)
           confirmed_save_completion = workout_export.find("completion(.success(()))", confirmed_save)
 
-invalid_date_guard = "guard let date = HealthSyncOutboxStore.dateForLocalDay(item.localDay) else"
+          invalid_date_guard = "guard let date = HealthSyncOutboxStore.dateForLocalDay(item.localDay) else"
           invalid_date_recovery = cloud.split(invalid_date_guard, 1)[1].split("}", 1)[0] if invalid_date_guard in cloud else ""
 
           checks = {
