@@ -185,7 +185,11 @@ final class GATIVXDashboardUITests: XCTestCase {
         let activityTab = app.tabBars.buttons["Activity"]
         XCTAssertTrue(activityTab.waitForExistence(timeout: 5))
         activityTab.tap()
-        XCTAssertTrue(app.staticTexts["ACTIVITY TRACKER"].waitForExistence(timeout: 5), "Selecting Activity should show the Activity Tracker screen.")
+        let activityScreen = app.scrollViews["gativx-activity-screen"]
+        XCTAssertTrue(activityScreen.waitForExistence(timeout: 10),
+                      "Selecting Activity must render its own screen rather than leave the Home dashboard visible.")
+        XCTAssertTrue(app.staticTexts["ACTIVITY TRACKER"].waitForExistence(timeout: 5),
+                      "The Activity screen must show the Activity Tracker controls.")
 
         let communityTab = app.tabBars.buttons["Community"]
         XCTAssertTrue(communityTab.exists)
