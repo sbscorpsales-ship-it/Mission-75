@@ -93,20 +93,27 @@ final class GATIVXDashboardUITests: XCTestCase {
         XCTAssertTrue(goalField.waitForExistence(timeout: 5))
         goalField.tap()
         goalField.typeText("Walk consistently")
+
+        // The keyboard covers the lower half of the Guru sheet. Dismiss it by
+        // tapping the visible, non-editable heading before interacting with
+        // the duration and start controls; otherwise scroll gestures hit keys.
+        let guruHeading = app.staticTexts["Reconnect with your why."]
+        XCTAssertTrue(guruHeading.waitForExistence(timeout: 5))
+        guruHeading.tap()
+        XCTAssertFalse(app.keyboards.element.exists, "The keyboard should be dismissed before using the Guru journey controls.")
+
         let durationPicker = app.segmentedControls["gativx-journey-duration"]
         XCTAssertTrue(durationPicker.waitForExistence(timeout: 5))
-        for _ in 0..<20 where !durationPicker.isHittable { scrollTowardBottom(guruScrollView) }
-        XCTAssertTrue(durationPicker.isHittable)
-        durationPicker.buttons["180 days"].tap()
+        let oneEightyDays = durationPicker.buttons["180 days"]
+        XCTAssertTrue(oneEightyDays.waitForExistence(timeout: 5))
+        oneEightyDays.tap() // XCTest scrolls the control into view if required.
+
         let startJourney = app.buttons["gativx-start-journey"]
         XCTAssertTrue(startJourney.waitForExistence(timeout: 5))
-        for _ in 0..<20 where !startJourney.isHittable { scrollTowardBottom(guruScrollView) }
-        XCTAssertTrue(startJourney.isHittable)
-        startJourney.tap()
+        startJourney.tap() // XCTest scrolls the start action into view if required.
         XCTAssertTrue(app.staticTexts["DAY 1 OF 180"].waitForExistence(timeout: 5))
-        for _ in 0..<20 where !durationPicker.isHittable { scrollTowardTop(guruScrollView) }
-        XCTAssertTrue(durationPicker.isHittable)
         durationPicker.buttons["30 days"].tap()
+
         XCTAssertTrue(app.staticTexts["DAY 1 OF 180"].exists, "Changing the next selection must not change the active 180-day journey.")
         XCTAssertFalse(app.staticTexts["DAY 1 OF 30"].exists)
         app.buttons["Done"].tap()
@@ -122,8 +129,9 @@ final class GATIVXDashboardUITests: XCTestCase {
         XCTAssertTrue(app.descendants(matching: .any)["gativx-community-gated"].waitForExistence(timeout: 5))
 
         let profileTab = app.tabBars.buttons["Profile"]
-        XCTAssertTrue(profileTab.exists)
+        XCTAssertTrue(profileTab.waitForExistence(timeout: 5))
         profileTab.tap()
-        XCTAssertTrue(app.navigationBars["Profile"].waitForExistence(timeout: 5))
+        XCTAssertTrue(profileTab.isSelected, "Selecting Profile should switch the active tab.")
+        XCTAssertTrue(app.descendants(matching: .any)["gativx-profile-screen"].waitForExistence(timeout: 5), "The Profile form should be visible after selecting its tab.")
     }
 }
