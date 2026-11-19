@@ -79,7 +79,7 @@ jobs:
           assert 'Section("Account")' in view and 'Button("Sign out", role: .destructive)' in view, "Account management must remain available in Profile"
           assert "An account is optional." in view, "Dashboard must remain usable without an account"
           root_start = view.index("    var body: some View {", view.index("private var welcomeScreen"))
-          root_end = view.index(".frame(maxWidth: .infinity, maxHeight: .infinity)", root_start)
+          root_end = view.index(".sheet(isPresented:", root_start)
           launch_root = view[root_start:root_end]
           assert "if cloud.isSignedIn || localModeEntered" in launch_root, "Member dashboard must require an authenticated account or explicit local-only entry"
           assert "TabView(selection: $selectedTab)" in launch_root and "homeDashboard" in launch_root, "The approved dashboard tab shell must be available after member entry"
@@ -130,7 +130,7 @@ jobs:
           assert "NSContactsUsageDescription" not in info and "CNContactStore" not in view, "Do not request Contacts for core fitness features"
 
           print("PASS: publishable Supabase configuration and both auth endpoints")
-          print("PASS: direct dashboard launch with optional account setup in Profile")
+          print("PASS: member-first registration/sign-in with explicit local-only dashboard entry")
           print("PASS: opt-in Motion permission and portrait-only native layout")
           print("PASS: HealthKit, Motion and GPS usage descriptions")
           print("PASS: no unnecessary Contacts permission")
