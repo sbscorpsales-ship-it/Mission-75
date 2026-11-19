@@ -101,6 +101,7 @@ jobs:
           assert "GeometryReader { dashboardGeometry in" in view and ".frame(height: heroHeight)" in view, "Dashboard hero and spacing must adapt to available screen dimensions"
           assert "motionMonitoringEnabled" in view and "if motionMonitoringEnabled { startLiveMotionMonitor() }" in view, "Daily motion tracking must be opt-in, not prompted at launch"
           assert "GATIVXGuruCoach.suggestedNextAction" in view and "GATIVXGuruCoach.purposeAnchor" in view, "Guru must generate purpose-aware next actions, not only store form answers"
+          assert "moves you toward feeling" in guru_model and "testGuruConnectsGoalPurposeAndEmotionToPracticalNextAction" in guru_tests, "Guru next actions must connect goal, purpose and desired emotion"
           assert "gativx.journey.durationDays" in view and "gativx.journey.startedAt" in view and "gativx.journey.goal" in view, "Goal journey state must persist locally"
           assert all(f'Text("{days} days").tag({days})' in view for days in (30, 90, 180, 365)), "30/90/180/365-day journey choices are required"
           assert "testJourneyCalculatesElapsedDaysRemainingAndProgress" in guru_tests and "testGuruAdaptsNextActionToRemainingDailySteps" in guru_tests, "Guru and journey behavior must have unit coverage"
