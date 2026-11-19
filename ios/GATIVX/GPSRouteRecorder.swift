@@ -39,7 +39,7 @@ struct GATIVXRoutePoint: Codable {
     }
 }
 
-private struct GATIVXActiveRouteDraft: Codable {
+struct GATIVXActiveRouteDraft: Codable {
     let startedAt: Date
     let activity: String
     let sessionID: UUID?
@@ -58,6 +58,37 @@ private struct GATIVXActiveRouteDraft: Codable {
         self.sessionID = sessionID
         self.ownerID = ownerID
         self.points = points
+    }
+}
+
+
+/// Atomic GPS draft writer. A route is only reported as safely persisted after
+/// the exact bytes are read back and decoded successfully.
+enum GPSRouteDraftPersistence {
+    static func write(_ draft: GATIVXActiveRouteDraft, to url: URL) throws {
+        let data = try JSONEncoder().encode(draft)
+        try data.write(to: url, options: .atomic)
+
+        let savedData = try Data(contentsOf: url)
+        guard savedData == data else {
+            throw NSError(
+                domain: "GATIVXGPSDraft",
+                code: 1,
+                userInfo: [NSLocalizedDescriptionKey: "The GPS draft did not match the data written to disk."]
+            )
+        }
+        let restored = try JSONDecoder().decode(GATIVXActiveRouteDraft.self, from: savedData)
+        guard restored.sessionID == draft.sessionID,
+              restored.ownerID == draft.ownerID,
+              restored.startedAt == draft.startedAt,
+              restored.activity == draft.activity,
+              restored.points.count == draft.points.count else {
+            throw NSError(
+                domain: "GATIVXGPSDraft",
+                code: 2,
+                userInfo: [NSLocalizedDescriptionKey: "The GPS draft could not be read back and verified."]
+            )
+        }
     }
 }
 
@@ -179,8 +210,8 @@ final class GPSRouteRecorder: NSObject, ObservableObject {
             ownerID: activityOwnerID
         )
         do {
-            let data = try JSONEncoder().encode(draft)
-            try data.write(to: url, options: .atomic)
+            try GPSRouteDraftPersistence.write(draft, to: url)
+            // Remove the legacy copy only after the new file has been read back and verified.
             userDefaults.removeObject(forKey: draftKey)
             return true
         } catch {
