@@ -56,7 +56,7 @@ final class GATIVXDashboardUITests: XCTestCase {
         }
         XCTAssertTrue(notifications.isHittable, "The dashboard header should remain reachable after scrolling.")
         notifications.tap()
-        XCTAssertTrue(app.staticTexts["You're all caught up"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Notifications aren't active yet"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.descendants(matching: .any)["gativx-notifications-gated"].exists)
         app.buttons["Done"].tap()
 
