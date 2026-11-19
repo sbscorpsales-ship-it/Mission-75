@@ -87,12 +87,6 @@ final class SupabaseRESTClient: ObservableObject {
         return formatter.string(from: date)
     }
 
-    private func dateForLocalDay(_ day: String) -> Date? {
-        let parts = day.split(separator: "-").compactMap { Int($0) }
-        guard parts.count == 3 else { return nil }
-        return Calendar.current.date(from: DateComponents(year: parts[0], month: parts[1], day: parts[2]))
-    }
-
     private func loadHealthOutbox() -> [PendingHealthSync]? {
         do {
             let items = try healthOutbox.load()
@@ -427,7 +421,7 @@ final class SupabaseRESTClient: ObservableObject {
         defer { isRetryingHealthOutbox = false }
 
         for item in pending where item.ownerID == ownerID {
-            guard let date = dateForLocalDay(item.localDay) else {
+            guard let date = HealthSyncOutboxStore.dateForLocalDay(item.localDay) else {
                 status = "Sensor sync paused: a queued local date is invalid. The original queue item was retained for recovery."
                 continue
             }
