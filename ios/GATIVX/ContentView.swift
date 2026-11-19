@@ -682,7 +682,9 @@ struct ContentView: View {
                     }.font(.caption.weight(.semibold))
                 }
                 .padding(16)
+                .frame(maxWidth: .infinity, alignment: .leading)
                 .background(cardBackground, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+                .accessibilityIdentifier("gativx-todays-mission")
 
                 // The four approved health metrics: distance, active time, calories and average heart rate.
                 VStack(alignment: .leading, spacing: 10) {
