@@ -19,8 +19,16 @@ final class GATIVXDashboardUITests: XCTestCase {
         let app = XCUIApplication()
         app.launch()
 
+        XCTAssertTrue(app.staticTexts["CREATE YOUR GATIVX ACCOUNT"].waitForExistence(timeout: 10),
+                      "First launch must show registration/sign-in before the member dashboard.")
+        XCTAssertTrue(app.textFields["gativx-email-field"].exists)
+        XCTAssertTrue(app.secureTextFields["gativx-password-field"].exists)
+        let guestEntry = app.buttons["gativx-continue-guest"]
+        XCTAssertTrue(guestEntry.exists, "Local-only access must be an explicit choice.")
+        guestEntry.tap()
+
         let dashboard = app.descendants(matching: .any)["gativx-home-dashboard"].firstMatch
-        XCTAssertTrue(dashboard.waitForExistence(timeout: 10), "The app should launch directly into the Home dashboard.")
+        XCTAssertTrue(dashboard.waitForExistence(timeout: 10), "The Home dashboard should appear after an explicit entry choice.")
 
         let approvedLabels = [
             "TODAY'S STEPS",
