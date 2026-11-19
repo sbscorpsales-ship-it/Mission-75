@@ -62,6 +62,7 @@ jobs:
           view = Path("ios/GATIVX/ContentView.swift").read_text()
           guru_model = Path("ios/GATIVX/Models/GATIVXGoalJourney.swift").read_text()
           guru_tests = Path("ios/GATIVXTests/GATIVXGoalJourneyTests.swift").read_text()
+          gps_tests = Path("ios/GATIVXTests/GPSRouteDraftPersistenceTests.swift").read_text()
           ui_tests = Path("ios/GATIVXUITests/GATIVXDashboardUITests.swift").read_text()
           spec = Path("ios/gativx-project.yml").read_text()
           with Path("ios/GATIVX/Info.plist").open("rb") as stream:
@@ -252,6 +253,7 @@ jobs:
               "GPS jump/speed rejection": "delta > 150 || speed > 8" in gps,
               "Backward-compatible route draft decoding": "decodeIfPresent(Bool.self, forKey: .breakBefore) ?? false" in gps,
               "iPhone GPS draft uses atomic Application Support file writes": "applicationSupportDirectory" in gps and "data.write(to: url, options: .atomic)" in gps,
+              "GPS draft writes are read-back verified": "GPSRouteDraftPersistence.write(draft, to: url)" in gps and "savedData == data" in gps and "testWriteAtomicallyReadsBackSessionOwnerAndRoute" in gps_tests and "testWriteFailureDoesNotReplaceExistingData" in gps_tests,
               "GPS route persistence failure is not overwritten by recording success": "if persistDraft() {" in gps and gps.index("if persistDraft() {") < gps.index("Recording GPS route ·") and "GPS is recording, but the route draft is not safely stored" in gps,
               "Legacy UserDefaults GPS drafts migrate only after file write succeeds": "if fileData == nil, let legacyData, let url" in gps and "userDefaults.removeObject(forKey: draftKey)" in gps,
               "Unreadable iPhone GPS draft is preserved rather than silently discarded": "original data was preserved for recovery" in gps,
