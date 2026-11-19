@@ -1475,8 +1475,9 @@ struct ContentView: View {
     }
 
     var body: some View {
-        // The approved Home dashboard is the app's launch screen.
-        // Account sign-in and cloud sync are optional and available from Profile.
+        // Registration/sign-in is the first-run entry point. The dashboard is
+        // shown only after account authentication or an explicit local-only choice.
+        if cloud.isSignedIn || localModeEntered {
         TabView(selection: $selectedTab) {
             NavigationStack { homeDashboard.navigationTitle("").toolbar(.hidden, for: .navigationBar) }
                 .tabItem { Label("Home", systemImage: "house.fill") }.tag(0)
@@ -1569,6 +1570,7 @@ struct ContentView: View {
             }
         }
         .onChange(of: cloud.isSignedIn) { _, signedIn in
+            localModeEntered = signedIn
             if signedIn {
                 health.onDailyTotal = { day, total in Task { await cloud.syncSteps(date: day, steps: total) } }
                 health.onActiveEnergy = { day, total in Task { await cloud.syncActiveEnergy(date: day, kilocalories: total) } }
@@ -1598,6 +1600,9 @@ struct ContentView: View {
             } else if sessionStarted == nil && !routeRecorder.isRecording {
                 livePedometer.stopUpdates()
             }
+        }
+        } else {
+            welcomeScreen
         }
     }
 }
