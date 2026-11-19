@@ -6,6 +6,38 @@ struct HealthSyncOutboxStore {
     private let userDefaults: UserDefaults
     private let key: String
 
+    /// Strictly parse a local YYYY-MM-DD date. Calendar.date(from:) can
+    /// normalize impossible dates (for example February 30), so verify the
+    /// resulting components before allowing a queued sensor write to proceed.
+    static func dateForLocalDay(_ value: String, timeZone: TimeZone = .current) -> Date? {
+        let parts = value.split(separator: "-", omittingEmptySubsequences: false)
+        guard parts.count == 3,
+              parts[0].count == 4,
+              parts[1].count == 2,
+              parts[2].count == 2,
+              let year = Int(parts[0]),
+              let month = Int(parts[1]),
+              let day = Int(parts[2]),
+              year > 0, (1...12).contains(month), (1...31).contains(day) else {
+            return nil
+        }
+
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = timeZone
+        var components = DateComponents()
+        components.year = year
+        components.month = month
+        components.day = day
+        components.hour = 12
+
+        guard let date = calendar.date(from: components) else { return nil }
+        let resolved = calendar.dateComponents([.year, .month, .day], from: date)
+        guard resolved.year == year, resolved.month == month, resolved.day == day else {
+            return nil
+        }
+        return calendar.startOfDay(for: date)
+    }
+
     init(
         userDefaults: UserDefaults = .standard,
         key: String = "com.paramitsolutions.gativx.health-sync-outbox.v1"
