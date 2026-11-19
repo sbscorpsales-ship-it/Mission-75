@@ -535,6 +535,21 @@ struct ContentView: View {
         GATIVXGuruCoach.purposeAnchor(goal: guruGoal, purpose: guruPurpose, emotion: guruEmotion)
     }
 
+    /// Clear SwiftUI focus first, then ask UIKit to resign the active editor on
+    /// the next main-loop turn. This covers multiline TextField keyboard sessions
+    /// and prevents a dismissed Guru sheet from leaving a stale first responder.
+    private func dismissGuruKeyboard() {
+        isGuruFieldFocused = false
+        DispatchQueue.main.async {
+            UIApplication.shared.sendAction(
+                #selector(UIResponder.resignFirstResponder),
+                to: nil,
+                from: nil,
+                for: nil
+            )
+        }
+    }
+
     private var dashboardColorScheme: ColorScheme? {
         switch appearanceMode {
         case "day": return .light
@@ -1223,6 +1238,8 @@ struct ContentView: View {
                     Text("YOUR GOAL").font(.caption.weight(.bold)).foregroundStyle(.secondary)
                     TextField("What do you want to achieve?", text: $guruGoal, axis: .vertical)
                         .focused($isGuruFieldFocused)
+                        .submitLabel(.done)
+                        .onSubmit { dismissGuruKeyboard() }
                         .accessibilityIdentifier("gativx-guru-goal")
                         .simultaneousGesture(TapGesture().onEnded { isGuruFieldFocused = true })
                         .lineLimit(2...4).textFieldStyle(.roundedBorder)
@@ -1317,6 +1334,7 @@ struct ContentView: View {
             .padding(16)
         }
         .background(pageBackground.ignoresSafeArea())
+        .scrollDismissesKeyboard(.interactively)
     }
 
     private var communityScreen: some View {
@@ -1330,7 +1348,11 @@ struct ContentView: View {
                 .font(.subheadline).foregroundStyle(.secondary)
                 .accessibilityIdentifier("gativx-community-gated")
             Spacer()
-        }.padding(20).frame(maxWidth: .infinity, alignment: .leading).background(pageBackground.ignoresSafeArea())
+        }
+        .padding(20)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .background(pageBackground.ignoresSafeArea())
+        .accessibilityIdentifier("gativx-community-screen")
     }
 
     private var profileScreen: some View {
@@ -1636,7 +1658,7 @@ struct ContentView: View {
                 .tabItem { Label("Activity", systemImage: "figure.walk") }.tag(1)
             NavigationStack { missionsScreen.navigationTitle("Missions") }
                 .tabItem { Label("Missions", systemImage: "target") }.tag(2)
-            NavigationStack { communityScreen.navigationTitle("Community") }
+            communityScreen
                 .tabItem { Label("Community", systemImage: "person.3") }.tag(3)
             NavigationStack { profileScreen.navigationTitle("Profile") }
                 .tabItem { Label("Profile", systemImage: "person.crop.circle") }.tag(4)
@@ -1672,16 +1694,16 @@ struct ContentView: View {
                     .navigationTitle("GATIVX Guru")
                     .toolbar {
                         ToolbarItem(placement: .confirmationAction) {
-                            Button("Close Guru") { isGuruPresented = false }
-                                .accessibilityIdentifier("gativx-guru-close")
+                            Button("Close Guru") {
+                                dismissGuruKeyboard()
+                                isGuruPresented = false
+                            }
+                            .accessibilityIdentifier("gativx-guru-close")
                         }
                         ToolbarItemGroup(placement: .keyboard) {
                             Spacer()
-                            Button("Hide Keyboard") {
-                                isGuruFieldFocused = false
-                                UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-                            }
-                            .accessibilityIdentifier("gativx-guru-keyboard-done")
+                            Button("Done") { dismissGuruKeyboard() }
+                                .accessibilityIdentifier("gativx-guru-keyboard-done")
                         }
                     }
             }
