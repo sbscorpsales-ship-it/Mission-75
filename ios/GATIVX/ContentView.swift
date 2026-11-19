@@ -587,7 +587,7 @@ struct ContentView: View {
         GeometryReader { dashboardGeometry in
             let dashboardWidth = dashboardGeometry.size.width
             let isCompactDashboard = dashboardGeometry.size.height < 780
-            let ringDiameter = min(max(dashboardWidth * 0.40, 136), 164)
+            let ringDiameter = min(max(dashboardWidth * 0.34, 128), 148)
             let heroHeight = min(max(dashboardWidth * 0.49, 178), 204)
             let contentSpacing: CGFloat = isCompactDashboard ? 12 : 15
             ScrollView(showsIndicators: false) {
@@ -595,24 +595,33 @@ struct ContentView: View {
                 // Approved GATIVX home header: mountain greeting, brand, notifications and member profile.
                 ZStack(alignment: .topLeading) {
                     GATIVXMountainBackdrop(isNight: appearanceMode == "night" || (appearanceMode == "system" && UITraitCollection.current.userInterfaceStyle == .dark))
+                        .frame(maxWidth: .infinity)
                         .frame(height: heroHeight)
                         .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
                     VStack(alignment: .leading, spacing: 17) {
-                        HStack(alignment: .center, spacing: 10) {
+                        HStack(alignment: .center, spacing: 8) {
                             ZStack {
-                                RoundedRectangle(cornerRadius: 12).fill(neon).frame(width: 40, height: 40)
-                                Image(systemName: "figure.run").font(.system(size: 22, weight: .black)).foregroundStyle(.black)
+                                RoundedRectangle(cornerRadius: 10).fill(neon).frame(width: 34, height: 34)
+                                Image(systemName: "figure.run").font(.system(size: 19, weight: .black)).foregroundStyle(.black)
                             }
                             VStack(alignment: .leading, spacing: 1) {
-                                Text("GATIVX").font(.system(size: 25, weight: .black, design: .rounded)).tracking(-0.8)
-                                Text("FROM GOALS TO XCELLENCE").font(.system(size: 8, weight: .heavy)).tracking(1.1)
+                                Text("GATIVX")
+                                    .font(.system(size: 22, weight: .black, design: .rounded))
+                                    .tracking(-0.7)
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.8)
+                                Text("YOUR GOAL. YOUR PURPOSE. YOUR GATI.")
+                                    .font(.system(size: 6.5, weight: .heavy))
+                                    .tracking(0.55)
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.55)
                             }
-                            Spacer()
+                            .frame(maxWidth: .infinity, alignment: .leading)
                             Button { isNotificationsPresented = true } label: {
                                 Image(systemName: "bell.badge")
-                                    .font(.system(size: 22, weight: .semibold))
+                                    .font(.system(size: 19, weight: .semibold))
                                     .foregroundStyle(.white)
-                                    .frame(width: 38, height: 38)
+                                    .frame(width: 32, height: 32)
                                     .contentShape(Circle())
                             }
                             .buttonStyle(.plain)
@@ -625,7 +634,7 @@ struct ContentView: View {
                                         Image(systemName: "person.crop.circle.fill").resizable().scaledToFit().padding(3)
                                     }
                                 }
-                                .frame(width: 34, height: 34)
+                                .frame(width: 32, height: 32)
                                 .foregroundStyle(.white)
                                 .clipShape(Circle())
                                 .padding(2)
@@ -633,8 +642,9 @@ struct ContentView: View {
                             }
                             .accessibilityLabel("Open member profile")
                         }
+                        .frame(maxWidth: .infinity, alignment: .leading)
                         VStack(alignment: .leading, spacing: 5) {
-                            Text(greeting + " 👋").font(.system(size: min(max(dashboardWidth * 0.068, 24), 28), weight: .bold, design: .rounded))
+                            Text(greeting + " 👋").font(.system(size: min(max(dashboardWidth * 0.062, 22), 26), weight: .bold, design: .rounded))
                             Text("Every step moves you closer to your purpose.")
                                 .font(.subheadline.weight(.medium)).foregroundStyle(.white.opacity(0.9))
                             Text(cloud.isSignedIn
@@ -650,20 +660,36 @@ struct ContentView: View {
                     .foregroundStyle(.white)
                     .padding(17)
                 }
+                .accessibilityElement(children: .contain)
+                .accessibilityIdentifier("gativx-dashboard-header")
+                .frame(maxWidth: .infinity, alignment: .leading)
 
-                // Primary neon-green daily step counter.
-                HStack(spacing: 18) {
-                    stepRing.frame(width: ringDiameter, height: ringDiameter)
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("TODAY'S STEPS").font(.caption.weight(.heavy)).tracking(0.9).foregroundStyle(.secondary)
-                        Text("Daily movement").font(.title3.weight(.bold))
-                        Text(max(dailyStepGoal, 1).formatted() + " step goal")
-                            .font(.subheadline.weight(.semibold))
-                        Text(displayedDailySteps.map { $0 >= dailyStepGoal ? "Goal achieved. Brilliant work!" : "\((max(dailyStepGoal - $0, 0)).formatted()) steps to go" } ?? "Connect Apple Health or enable iPhone step tracking.")
-                            .font(.caption).foregroundStyle(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
+                // Primary neon-green daily step counter. Stack the ring above its
+                // details on standard iPhone widths so the card never compresses.
+                let stepDetails = VStack(alignment: .leading, spacing: 7) {
+                    Text("TODAY'S STEPS").font(.caption.weight(.heavy)).tracking(0.9).foregroundStyle(.secondary)
+                    Text("Daily movement").font(.title3.weight(.bold))
+                    Text(max(dailyStepGoal, 1).formatted() + " step goal")
+                        .font(.subheadline.weight(.semibold))
+                    Text(displayedDailySteps.map { $0 >= dailyStepGoal ? "Goal achieved. Brilliant work!" : "\((max(dailyStepGoal - $0, 0)).formatted()) steps to go" } ?? "Connect Apple Health or enable iPhone step tracking.")
+                        .font(.caption).foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+                Group {
+                    if dashboardWidth < 430 {
+                        VStack(spacing: 12) {
+                            stepRing.frame(width: ringDiameter, height: ringDiameter)
+                            stepDetails
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    } else {
+                        HStack(spacing: 14) {
+                            stepRing.frame(width: ringDiameter, height: ringDiameter)
+                            stepDetails
+                        }
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 .padding(16)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -692,6 +718,7 @@ struct ContentView: View {
                 .padding(16)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .background(cardBackground, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+                .accessibilityElement(children: .contain)
                 .accessibilityIdentifier("gativx-todays-mission")
 
                 // The four approved health metrics: distance, active time, calories and average heart rate.
@@ -815,6 +842,7 @@ struct ContentView: View {
                 .padding(.horizontal, min(max(dashboardWidth * 0.035, 12), 18))
                 .padding(.top, 10)
                 .padding(.bottom, 28)
+                .frame(width: dashboardWidth, alignment: .leading)
             }
             .background(pageBackground.ignoresSafeArea())
         }
@@ -1102,6 +1130,8 @@ struct ContentView: View {
                     Text("YOUR GOAL").font(.caption.weight(.bold)).foregroundStyle(.secondary)
                     TextField("What do you want to achieve?", text: $guruGoal, axis: .vertical)
                         .focused($isGuruFieldFocused)
+                        .accessibilityIdentifier("gativx-guru-goal")
+                        .simultaneousGesture(TapGesture().onEnded { isGuruFieldFocused = true })
                         .lineLimit(2...4).textFieldStyle(.roundedBorder)
                     Text("YOUR PURPOSE").font(.caption.weight(.bold)).foregroundStyle(.secondary)
                     TextField("Why does this matter to you?", text: $guruPurpose, axis: .vertical)
