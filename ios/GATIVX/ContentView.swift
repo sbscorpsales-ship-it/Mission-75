@@ -11,6 +11,7 @@ struct ContentView: View {
     @StateObject private var cloud = SupabaseRESTClient()
     @StateObject private var routeRecorder = GPSRouteRecorder()
     @State private var routeMapCameraPosition: MapCameraPosition = .automatic
+    @State private var showLiveRouteMap = false
     private let activityStore = ActivitySessionStore()
     private let runJeetDailyStepsArchiveStore = RunJeetDailyStepsArchiveStore()
     private let memberProfilePhotoStore = MemberProfilePhotoStore()
@@ -1057,7 +1058,21 @@ struct ContentView: View {
                     }
                     Text("GPS distance · " + String(format: "%.2f", routeRecorder.routeDistanceMeters / 1000) + " km")
                         .font(.subheadline.weight(.semibold))
-                    liveRouteMap
+                    if showLiveRouteMap || routeRecorder.isRecording || !routeRecorder.points.isEmpty {
+                        liveRouteMap
+                    } else {
+                        Button {
+                            showLiveRouteMap = true
+                        } label: {
+                            Label("Show live GPS map", systemImage: "map")
+                                .font(.subheadline.weight(.semibold))
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 10)
+                        }
+                        .buttonStyle(.bordered)
+                        .tint(neon)
+                        .accessibilityIdentifier("gativx-show-live-route-map")
+                    }
                     Text(routeRecorder.hasUnreadableDraft ? routeRecorder.status : sessionStatus).font(.caption).foregroundStyle(.secondary)
                     if routeRecorder.isRecording { Label("Live route recording", systemImage: "record.circle.fill").font(.caption.weight(.semibold)).foregroundStyle(.green) }
                     if routeRecorder.authorization == .authorizedWhenInUse {
