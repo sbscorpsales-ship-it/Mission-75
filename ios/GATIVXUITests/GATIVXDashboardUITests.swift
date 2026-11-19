@@ -30,6 +30,20 @@ final class GATIVXDashboardUITests: XCTestCase {
         let dashboard = app.descendants(matching: .any)["gativx-home-dashboard"].firstMatch
         XCTAssertTrue(dashboard.waitForExistence(timeout: 10), "The Home dashboard should appear after an explicit entry choice.")
 
+        // Catch the compressed/overlapping mission-card defect from the member screenshot.
+        let missionCard = app.descendants(matching: .any)["gativx-todays-mission"].firstMatch
+        XCTAssertTrue(missionCard.waitForExistence(timeout: 5), "Today's mission must render as a real dashboard card.")
+        XCTAssertGreaterThan(missionCard.frame.width, app.frame.width * 0.82,
+                             "Today's mission card must use the available dashboard width.")
+        XCTAssertGreaterThan(missionCard.frame.height, 90,
+                             "Today's mission card must retain enough height for readable content.")
+        let tabBar = app.tabBars.firstMatch
+        XCTAssertTrue(tabBar.waitForExistence(timeout: 5))
+        if missionCard.isHittable {
+            XCTAssertLessThanOrEqual(missionCard.frame.maxY, tabBar.frame.minY + 1,
+                                     "The visible mission card must not be covered by bottom navigation.")
+        }
+
         let approvedLabels = [
             "TODAY'S STEPS",
             "TODAY'S MISSION",
