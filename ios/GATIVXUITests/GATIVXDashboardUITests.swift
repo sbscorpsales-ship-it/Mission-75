@@ -74,6 +74,10 @@ final class GATIVXDashboardUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["ONE PRACTICAL NEXT ACTION"].exists)
 
         let guruScrollView = app.scrollViews.firstMatch
+        let goalField = app.textFields["What do you want to achieve?"]
+        XCTAssertTrue(goalField.waitForExistence(timeout: 5))
+        goalField.tap()
+        goalField.typeText("Walk consistently")
         let durationPicker = app.segmentedControls["gativx-journey-duration"]
         XCTAssertTrue(durationPicker.waitForExistence(timeout: 5))
         for _ in 0..<5 where !durationPicker.isHittable { guruScrollView.swipeUp() }
