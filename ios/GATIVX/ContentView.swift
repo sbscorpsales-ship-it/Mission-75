@@ -1520,12 +1520,16 @@ struct ContentView: View {
                     .navigationTitle("GATIVX Guru")
                     .toolbar {
                         ToolbarItem(placement: .confirmationAction) {
-                            Button("Done") { isGuruPresented = false }
+                            Button("Close Guru") { isGuruPresented = false }
+                                .accessibilityIdentifier("gativx-guru-close")
                         }
                         ToolbarItemGroup(placement: .keyboard) {
                             Spacer()
-                            Button("Done") { isGuruFieldFocused = false }
-                                .accessibilityIdentifier("gativx-guru-keyboard-done")
+                            Button("Hide Keyboard") {
+                                isGuruFieldFocused = false
+                                UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                            }
+                            .accessibilityIdentifier("gativx-guru-keyboard-done")
                         }
                     }
             }
