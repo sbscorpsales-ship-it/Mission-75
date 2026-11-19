@@ -92,10 +92,11 @@ jobs:
           assert 'Text("GATI GURU")' in dashboard, "Approved home dashboard must show the Gati Guru section"
           assert 'Image(systemName: "bell.badge")' in dashboard, "Approved dashboard header must include the notification bell"
           assert 'Image(systemName: "person.crop.circle.fill")' in dashboard, "Approved dashboard header must include the member profile image"
-          approved_sections = ["TODAY'S STEPS", "TODAY'S MISSION", 'wellnessSnapshotCard("Distance"', 'wellnessSnapshotCard("Active time"', 'wellnessSnapshotCard("Calories"', 'wellnessSnapshotCard("Avg. heart rate"', "ACTIVITY TRACKER", "START WALK", "GATI GURU", "MY JOURNEY", "COMMUNITY GATI"]
+          approved_sections = ["TODAY'S STEPS", "private var todayMissionCard", "private var todayActivityCard", "private var activityTrackerCard", "private var guruEntryCard", "private var myJourneyCard", "private var communityGatiCard"]
           section_positions = [dashboard.index(section) for section in approved_sections]
           assert section_positions == sorted(section_positions), "Dashboard sections must retain the approved order"
-          assert dashboard.count("wellnessSnapshotCard(") == 4, "Dashboard must show exactly four approved health metrics"
+          activity_card = dashboard.split("private var todayActivityCard", 1)[1].split("private var activityTrackerCard", 1)[0]
+          assert activity_card.count("wellnessSnapshotCard(") == 4 and all(f'"{metric}"' in activity_card for metric in ("Distance", "Active time", "Calories", "Avg. heart rate")), "Dashboard must show exactly four approved health metrics"
           assert dashboard.count(".tabItem { Label(") == 0, "Navigation tabs belong to the persistent app shell, not the scrollable dashboard"
           step_ring = view.split("private var stepRing: some View", 1)[1].split("private var homeDashboard", 1)[0]
           assert ".frame(width: 190, height: 190)" not in step_ring, "Step ring must respect its responsive dashboard container"
