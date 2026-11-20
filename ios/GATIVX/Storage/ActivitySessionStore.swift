@@ -46,7 +46,7 @@ struct ActivitySessionStore {
     /// Existing position and identity are preserved; richer recovered sensor data is merged.
     func upserting(_ record: ActivitySessionRecord, into records: [ActivitySessionRecord]) -> [ActivitySessionRecord] {
         var updated = records
-        if let index = updated.firstIndex(where: { $0.id == record.id }) {
+        if let index = updated.firstIndex(where: { $0.id == record.id && $0.ownerID == record.ownerID }) {
             updated[index] = updated[index].mergingRecovery(record)
         } else {
             updated.insert(record, at: 0)
