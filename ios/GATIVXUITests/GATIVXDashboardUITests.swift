@@ -227,6 +227,34 @@ final class GATIVXDashboardUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["ACTIVITY TRACKER"].waitForExistence(timeout: 5),
                       "The Activity screen must show the Activity Tracker controls.")
 
+        // Verify the direct Guru action dismisses its sheet before opening Activity.
+        homeTab.tap()
+        for _ in 0..<20 where !guruEntry.isHittable {
+            scrollTowardBottom(scrollView)
+        }
+        XCTAssertTrue(guruEntry.isHittable, "Guru must remain reachable after returning Home.")
+        guruEntry.tap()
+        let guruStartWalk = app.buttons["gativx-guru-start-walk"]
+        let guruActionScrollView = app.scrollViews.element(boundBy: app.scrollViews.count - 1)
+        XCTAssertTrue(guruActionScrollView.waitForExistence(timeout: 5))
+        for _ in 0..<20 where !guruStartWalk.isHittable {
+            scrollTowardBottom(guruActionScrollView)
+        }
+        XCTAssertTrue(guruStartWalk.isHittable, "Guru must expose its direct Start a walk action.")
+        guruStartWalk.tap()
+        let guruStartWalkDismissed = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "exists == false"),
+            object: guruStartWalk
+        )
+        XCTAssertEqual(
+            XCTWaiter.wait(for: [guruStartWalkDismissed], timeout: 10),
+            .completed,
+            "Guru's Start a walk action must dismiss the sheet before Activity is presented."
+        )
+        XCTAssertTrue(activityTab.isSelected, "Guru's Start a walk action must select Activity.")
+        XCTAssertTrue(activityScreen.waitForExistence(timeout: 10),
+                      "Guru's Start a walk action must open the Activity screen.")
+
         let missionsTab = app.tabBars.buttons["Missions"]
         XCTAssertTrue(missionsTab.waitForExistence(timeout: 5))
         missionsTab.tap()
