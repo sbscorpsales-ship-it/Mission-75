@@ -1662,7 +1662,7 @@ struct ContentView: View {
                 .tabItem { Label("Activity", systemImage: "figure.walk") }.tag(1)
             NavigationStack { missionsScreen.navigationTitle("Missions") }
                 .tabItem { Label("Missions", systemImage: "target") }.tag(2)
-            NavigationStack { communityScreen.navigationTitle("Community") }
+            communityScreen
                 .tabItem { Label("Community", systemImage: "person.3").accessibilityIdentifier("gativx-tab-community") }.tag(3)
             NavigationStack { profileScreen.navigationTitle("Profile") }
                 .tabItem { Label("Profile", systemImage: "person.crop.circle") }.tag(4)
