@@ -54,8 +54,12 @@ final class GATIVXDashboardUITests: XCTestCase {
         XCTAssertGreaterThanOrEqual(notificationControl.frame.minX, appWindow.frame.minX - 1)
         XCTAssertLessThanOrEqual(notificationControl.frame.maxX, appWindow.frame.maxX + 1)
         XCTAssertGreaterThanOrEqual(profileControl.frame.minX, appWindow.frame.minX - 1)
-        XCTAssertLessThanOrEqual(profileControl.frame.maxX, appWindow.frame.maxX + 1,
-                                 "The member profile control must not be clipped at the right edge.")
+        XCTAssertLessThanOrEqual(profileControl.frame.maxX, appWindow.frame.maxX - 6,
+                                 "The member profile control must retain a visible trailing inset.")
+
+        let homeTab = app.tabBars.buttons["Home"]
+        XCTAssertTrue(homeTab.waitForExistence(timeout: 5))
+        XCTAssertTrue(homeTab.isSelected, "The Home tab must be selected after member entry.")
 
         let dashboardIdentity = app.staticTexts["gativx-dashboard-member-identity"]
         XCTAssertTrue(dashboardIdentity.exists)
@@ -198,6 +202,16 @@ final class GATIVXDashboardUITests: XCTestCase {
                       "Selecting Activity must render its own screen rather than leave the Home dashboard visible.")
         XCTAssertTrue(app.staticTexts["ACTIVITY TRACKER"].waitForExistence(timeout: 5),
                       "The Activity screen must show the Activity Tracker controls.")
+
+        let missionsTab = app.tabBars.buttons["Missions"]
+        XCTAssertTrue(missionsTab.waitForExistence(timeout: 5))
+        missionsTab.tap()
+        XCTAssertTrue(missionsTab.isSelected, "Selecting Missions must change the active tab.")
+        let missionsScreen = app.scrollViews["gativx-missions-screen"]
+        XCTAssertTrue(missionsScreen.waitForExistence(timeout: 10),
+                      "Selecting Missions must render its own screen.")
+        XCTAssertTrue(app.staticTexts["TODAY · CONSISTENCY"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["Begin walking mission"].exists)
 
         let communityTab = app.tabBars.buttons["gativx-tab-community"]
         XCTAssertTrue(communityTab.waitForExistence(timeout: 5))
