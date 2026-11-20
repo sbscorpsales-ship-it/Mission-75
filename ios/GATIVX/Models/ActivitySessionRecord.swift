@@ -69,7 +69,7 @@ struct ActivitySessionRecord: Codable, Identifiable, Equatable {
             steps: mergedSteps,
             routePoints: useIncomingRoute ? incoming.routePoints : routePoints,
             motionDistanceMeters: mergedMotionDistance,
-            ownerID: ownerID ?? incoming.ownerID
+            ownerID: ownerID
         )
     }
 
