@@ -672,6 +672,7 @@ final class SupabaseRESTClient: ObservableObject {
         refreshToken = nil
         isSignedIn = false
         pendingHealthSyncCount = 0
+        pendingActivitySyncCount = 0
     }
 
     private static func serverError(_ data: Data) -> Error {
