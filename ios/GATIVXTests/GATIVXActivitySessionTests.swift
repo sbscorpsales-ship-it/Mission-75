@@ -197,6 +197,41 @@ final class GATIVXActivitySessionTests: XCTestCase {
         XCTAssertEqual(repeatedRecovery[0].ownerID, "account-original")
     }
 
+    func testRecoveryUpsertDoesNotAssignOwnerToLocalOnlySession() {
+        let sessionID = UUID()
+        let startedAt = Date(timeIntervalSince1970: 1_800_000_000)
+        let existing = ActivitySessionRecord(
+            id: sessionID,
+            activity: "Walking",
+            startedAt: startedAt,
+            finishedAt: startedAt.addingTimeInterval(60),
+            steps: 120,
+            routePoints: nil,
+            motionDistanceMeters: nil,
+            ownerID: nil
+        )
+        let recovered = ActivitySessionRecord(
+            id: sessionID,
+            activity: "Walking",
+            startedAt: startedAt,
+            finishedAt: startedAt.addingTimeInterval(90),
+            steps: 125,
+            routePoints: nil,
+            motionDistanceMeters: nil,
+            ownerID: "newly-signed-in-account"
+        )
+
+        let merged = ActivitySessionStore().upserting(recovered, into: [existing])
+
+        XCTAssertEqual(merged.count, 1)
+        XCTAssertEqual(merged[0].id, sessionID)
+        XCTAssertEqual(merged[0].steps, 125)
+        XCTAssertNil(
+            merged[0].ownerID,
+            "Recovering a local-only session must never silently transfer it to a newly signed-in account."
+        )
+    }
+
     func testRecoveryUpsertFillsMissingStepsAndKeepsLongerExistingRoute() {
         let sessionID = UUID()
         let startedAt = Date(timeIntervalSince1970: 1_800_000_000)
