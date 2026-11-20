@@ -285,13 +285,24 @@ struct ContentView: View {
     }
 
     private func loadRunJeetDailyStepsArchive() {
-        do {
-            runJeetDailyStepsArchive = try runJeetDailyStepsArchiveStore.load()
-            runJeetArchiveStatus = runJeetDailyStepsArchive.isEmpty
-                ? "No RunJeet daily totals imported."
-                : "\(runJeetDailyStepsArchive.count) historical day(s) archived locally; separate from Apple Health."
-        } catch {
-            runJeetArchiveStatus = "Imported daily-step archive could not be read. Original data was preserved."
+        // Imported history can contain many dates. Never decode and validate the
+        // archive synchronously while SwiftUI is presenting the Profile tab.
+        let store = runJeetDailyStepsArchiveStore
+        DispatchQueue.global(qos: .utility).async {
+            let result = Result { try store.load() }
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let archive):
+                    runJeetDailyStepsArchive = archive
+                    runJeetArchiveStatus = archive.isEmpty
+                        ? "No RunJeet daily totals imported."
+                        : "\(archive.count) historical day(s) archived locally; separate from Apple Health."
+                case .failure:
+                    // An unreadable archive is never treated as an empty archive;
+                    // the store leaves the original file untouched.
+                    runJeetArchiveStatus = "Imported daily-step archive could not be read. Original data was preserved."
+                }
+            }
         }
     }
 
