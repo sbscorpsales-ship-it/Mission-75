@@ -635,6 +635,7 @@ struct ContentView: View {
             VStack(alignment: .leading, spacing: spacing) {
                 dashboardHeader(width: width, titleWidth: titleWidth, heroHeight: heroHeight)
                 dailyStepCounterCard(width: width)
+                wellnessMeters
                 todayMissionCard
                 todayActivityCard
                 activityTrackerCard
@@ -1557,6 +1558,10 @@ struct ContentView: View {
         }
         .padding(14).frame(maxWidth: .infinity, alignment: .leading)
         .background(cardBackground, in: RoundedRectangle(cornerRadius: 19, style: .continuous))
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(title) progress")
+        .accessibilityValue(value.map { "\($0) of \(goal) \(unit)" } ?? "Waiting for measured data")
+        .accessibilityIdentifier(title == "Active Calories" ? "gativx-ring-active-calories" : "gativx-ring-heart-points")
     }
 
     private var wellnessMeters: some View {
@@ -1568,6 +1573,8 @@ struct ContentView: View {
                 goal: max(heartPointsGoal, 1), unit: "pts", symbol: "heart.fill", tint: .pink,
                 explanation: "GATIVX exercise points: 1 point per Apple Exercise minute. Not Google's intensity-weighted score.")
         }
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("gativx-wellness-rings")
     }
 
     private var welcomeScreen: some View {
