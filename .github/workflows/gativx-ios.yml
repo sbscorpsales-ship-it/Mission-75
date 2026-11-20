@@ -375,6 +375,12 @@ jobs:
           app = Path("build/GATIVX-Simulator/Build/Products/Debug-iphonesimulator/GATIVX.app")
           with (app / "Info.plist").open("rb") as stream:
               info = plistlib.load(stream)
+          if info.get("CFBundleIdentifier") != "com.paramitsolutions.gativx":
+              raise SystemExit("GATIVX bundle identifier is missing or incorrect")
+          if info.get("CFBundleVersion") != "1":
+              raise SystemExit("GATIVX CFBundleVersion must be 1 for this release")
+          if info.get("CFBundleShortVersionString") != "1.0.0":
+              raise SystemExit("GATIVX marketing version must be 1.0.0 for this release")
           for key in (
               "NSHealthShareUsageDescription",
               "NSMotionUsageDescription",
@@ -426,6 +432,22 @@ jobs:
           cd build/GATIVX-IPA
           /usr/bin/zip -qry ../GATIVX-unsigned.ipa Payload
           /usr/bin/unzip -t ../GATIVX-unsigned.ipa
+          python3 - <<'PY'
+          import plistlib
+          import zipfile
+
+          with zipfile.ZipFile("../GATIVX-unsigned.ipa") as archive:
+              info = plistlib.loads(archive.read("Payload/GATIVX.app/Info.plist"))
+          expected = {
+              "CFBundleIdentifier": "com.paramitsolutions.gativx",
+              "CFBundleVersion": "1",
+              "CFBundleShortVersionString": "1.0.0",
+          }
+          for key, value in expected.items():
+              if info.get(key) != value:
+                  raise SystemExit(f"Release IPA has incorrect {key}: {info.get(key)!r}")
+          print("Release IPA bundle identity and version metadata verified.")
+          PY
           test -s ../GATIVX-unsigned.ipa
 
       - name: Upload unsigned iPhone IPA
