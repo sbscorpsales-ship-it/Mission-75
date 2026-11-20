@@ -1667,7 +1667,7 @@ struct ContentView: View {
             NavigationStack { missionsScreen.navigationTitle("Missions") }
                 .tabItem { Label("Missions", systemImage: "target") }.tag(2)
             communityScreen
-                .tabItem { Label("Community", systemImage: "person.3") }.tag(3)
+                .tabItem { Label("Community", systemImage: "person.3").accessibilityIdentifier("gativx-tab-community") }.tag(3)
             NavigationStack { profileScreen.navigationTitle("Profile") }
                 .tabItem { Label("Profile", systemImage: "person.crop.circle") }.tag(4)
         }
