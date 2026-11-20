@@ -158,13 +158,25 @@ final class GPSRouteRecorder: NSObject, ObservableObject {
 
     private func restoreDraft() {
         let url = draftURL
-        let fileData = url.flatMap { try? Data(contentsOf: $0) }
+        let fileExists = url.map { fileManager.fileExists(atPath: $0.path) } ?? false
+        var fileData: Data?
+        var fileReadFailed = false
+        if fileExists, let url {
+            do {
+                fileData = try Data(contentsOf: url)
+            } catch {
+                // A present but unreadable draft is not the same as no draft.
+                // Preserve it and block new sessions rather than replacing it.
+                fileReadFailed = true
+            }
+        }
         let legacyData = userDefaults.data(forKey: draftKey)
-        guard let data = fileData ?? legacyData,
+        guard !fileReadFailed,
+              let data = fileData ?? legacyData,
               let draft = try? JSONDecoder().decode(GATIVXActiveRouteDraft.self, from: data) else {
-            if fileData != nil || legacyData != nil {
+            if fileReadFailed || fileData != nil || legacyData != nil {
                 hasUnreadableDraft = true
-                status = "An unfinished GPS draft could not be decoded. Its original data was preserved for recovery."
+                status = "An unfinished GPS draft could not be read. Its original data was preserved for recovery."
             }
             return
         }

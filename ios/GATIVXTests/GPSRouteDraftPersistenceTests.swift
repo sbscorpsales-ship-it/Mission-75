@@ -56,4 +56,38 @@ final class GPSRouteDraftPersistenceTests: XCTestCase {
         XCTAssertThrowsError(try GPSRouteDraftPersistence.write(draft, to: impossibleURL))
         XCTAssertEqual(try Data(contentsOf: blocker), original)
     }
+
+    func testUnreadableExistingDraftBlocksNewWalkAndPreservesOriginalData() async throws {
+        try await MainActor.run {
+            let suite = "GATIVXGPSUnreadableDraftTests-\\(UUID().uuidString)"
+            let defaults = UserDefaults(suiteName: suite)!
+            defer { defaults.removePersistentDomain(forName: suite) }
+
+            let directory = FileManager.default.temporaryDirectory
+                .appendingPathComponent(suite, isDirectory: true)
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            defer { try? FileManager.default.removeItem(at: directory) }
+
+            // A directory at the draft-file path makes Data(contentsOf:) fail
+            // while fileExists(atPath:) still confirms that an entry is present.
+            let unreadableDraft = directory.appendingPathComponent("active-route-draft.json", isDirectory: true)
+            try FileManager.default.createDirectory(at: unreadableDraft, withIntermediateDirectories: true)
+            let sentinel = unreadableDraft.appendingPathComponent("preserve-me.txt")
+            let original = Data("do-not-overwrite-this-draft".utf8)
+            try original.write(to: sentinel)
+
+            let recorder = GPSRouteRecorder(
+                fileManager: .default,
+                userDefaults: defaults,
+                directoryOverride: directory
+            )
+
+            XCTAssertTrue(recorder.hasUnreadableDraft)
+            XCTAssertTrue(recorder.status.contains("preserved"))
+            recorder.start(activity: "Walking", ownerID: "member-original")
+            XCTAssertNil(recorder.activitySessionID, "A new session must not replace an unreadable existing draft.")
+            XCTAssertTrue(FileManager.default.fileExists(atPath: sentinel.path))
+            XCTAssertEqual(try Data(contentsOf: sentinel), original)
+        }
+    }
 }
