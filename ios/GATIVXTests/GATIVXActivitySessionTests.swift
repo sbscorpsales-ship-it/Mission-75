@@ -172,7 +172,7 @@ final class GATIVXActivitySessionTests: XCTestCase {
             steps: 118,
             routePoints: [pointA, pointC],
             motionDistanceMeters: 10,
-            ownerID: "account-different"
+            ownerID: "account-original"
         )
         let store = ActivitySessionStore()
 
@@ -223,13 +223,46 @@ final class GATIVXActivitySessionTests: XCTestCase {
 
         let merged = ActivitySessionStore().upserting(recovered, into: [existing])
 
-        XCTAssertEqual(merged.count, 1)
-        XCTAssertEqual(merged[0].id, sessionID)
-        XCTAssertEqual(merged[0].steps, 125)
+        XCTAssertEqual(merged.count, 2, "A different owner must receive a separate record rather than merging into local-only history.")
+        XCTAssertEqual(merged.first(where: { $0.ownerID == nil })?.steps, 120)
+        XCTAssertEqual(merged.first(where: { $0.ownerID == "newly-signed-in-account" })?.steps, 125)
         XCTAssertNil(
-            merged[0].ownerID,
-            "Recovering a local-only session must never silently transfer it to a newly signed-in account."
+            existing.mergingRecovery(recovered).ownerID,
+            "The existing local-only record must retain its nil owner even if a different-owner recovery is presented."
         )
+    }
+
+    func testRecoveryUpsertKeepsSameUUIDIsolatedAcrossOwners() {
+        let sessionID = UUID()
+        let startedAt = Date(timeIntervalSince1970: 1_800_000_000)
+        let existing = ActivitySessionRecord(
+            id: sessionID,
+            activity: "Walking",
+            startedAt: startedAt,
+            finishedAt: startedAt.addingTimeInterval(60),
+            steps: 120,
+            routePoints: nil,
+            motionDistanceMeters: nil,
+            ownerID: "account-A"
+        )
+        let recovered = ActivitySessionRecord(
+            id: sessionID,
+            activity: "Running",
+            startedAt: startedAt.addingTimeInterval(5),
+            finishedAt: startedAt.addingTimeInterval(90),
+            steps: 250,
+            routePoints: nil,
+            motionDistanceMeters: nil,
+            ownerID: "account-B"
+        )
+
+        let records = ActivitySessionStore().upserting(recovered, into: [existing])
+
+        XCTAssertEqual(records.count, 2, "The same UUID under different owners must not be merged.")
+        XCTAssertEqual(records.first(where: { $0.ownerID == "account-A" })?.steps, 120)
+        XCTAssertEqual(records.first(where: { $0.ownerID == "account-B" })?.steps, 250)
+        XCTAssertEqual(records.first(where: { $0.ownerID == "account-A" })?.activity, "Walking")
+        XCTAssertEqual(records.first(where: { $0.ownerID == "account-B" })?.activity, "Running")
     }
 
     func testRecoveryUpsertFillsMissingStepsAndKeepsLongerExistingRoute() {
