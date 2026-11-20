@@ -279,7 +279,7 @@ final class GATIVXActivitySessionTests: XCTestCase {
             steps: nil,
             routePoints: [pointA, pointB, pointC],
             motionDistanceMeters: nil,
-            ownerID: nil
+            ownerID: "account-original"
         )
         let recovered = ActivitySessionRecord(
             id: sessionID,
@@ -430,7 +430,7 @@ final class GATIVXActivitySessionTests: XCTestCase {
             steps: nil,
             routePoints: [pointA, longerPoint],
             motionDistanceMeters: 12,
-            ownerID: "account-other"
+            ownerID: "account-original"
         )
         let recoveredHistory = store.upserting(recoveredDraft, into: try store.load())
         try store.save(recoveredHistory)
