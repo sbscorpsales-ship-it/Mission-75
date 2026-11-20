@@ -1659,7 +1659,7 @@ struct ContentView: View {
         TabView(selection: $selectedTab) {
             NavigationStack { homeDashboard.navigationTitle("").toolbar(.hidden, for: .navigationBar) }
                 .tabItem { Label("Home", systemImage: "house.fill") }.tag(0)
-            activityScreen
+            NavigationStack { activityScreen.navigationTitle("").toolbar(.hidden, for: .navigationBar) }
                 .tabItem { Label("Activity", systemImage: "figure.walk") }.tag(1)
             NavigationStack { missionsScreen.navigationTitle("Missions") }
                 .tabItem { Label("Missions", systemImage: "target") }.tag(2)
