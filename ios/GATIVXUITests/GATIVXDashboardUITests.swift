@@ -193,6 +193,21 @@ final class GATIVXDashboardUITests: XCTestCase {
         XCTAssertFalse(app.staticTexts["DAY 1 OF 30"].exists)
         app.buttons["gativx-guru-close"].tap()
 
+        // A tab bar button can remain queryable behind a sheet while its
+        // dismissal animation is still running. Never tap through the modal:
+        // wait until Guru has actually left the accessibility hierarchy first.
+        let guruCloseButton = app.buttons["gativx-guru-close"]
+        let guruSheetDismissed = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "exists == false"),
+            object: guruCloseButton
+        )
+        XCTAssertEqual(
+            XCTWaiter.wait(for: [guruSheetDismissed], timeout: 10),
+            .completed,
+            "Closing Guru must finish dismissing its sheet before switching tabs."
+        )
+        XCTAssertFalse(guruCloseButton.exists, "The Guru sheet must be gone before Activity navigation.")
+
         let activityTab = app.tabBars.buttons["Activity"]
         XCTAssertTrue(activityTab.waitForExistence(timeout: 5))
         activityTab.tap()
