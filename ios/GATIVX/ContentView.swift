@@ -1338,22 +1338,23 @@ struct ContentView: View {
     }
 
     private var communityScreen: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Text("Community Gati").font(.largeTitle.weight(.bold))
-            Text("Your journey can encourage someone else's first step.")
-                .font(.title3.weight(.semibold))
-            Label("NOT ACTIVE IN THIS BUILD", systemImage: "lock.fill")
-                .font(.caption.weight(.heavy)).foregroundStyle(.secondary)
-            Text("Community feed and shared missions are not available yet. Your personal activity remains private and is not shared with other members.")
-                .font(.subheadline).foregroundStyle(.secondary)
-                .accessibilityIdentifier("gativx-community-gated")
-            Spacer()
+        ScrollView {
+            VStack(alignment: .leading, spacing: 14) {
+                Text("Community Gati").font(.largeTitle.weight(.bold))
+                Text("Your journey can encourage someone else's first step.")
+                    .font(.title3.weight(.semibold))
+                Label("NOT ACTIVE IN THIS BUILD", systemImage: "lock.fill")
+                    .font(.caption.weight(.heavy)).foregroundStyle(.secondary)
+                Text("Community feed and shared missions are not available yet. Your personal activity remains private and is not shared with other members.")
+                    .font(.subheadline).foregroundStyle(.secondary)
+                    .accessibilityIdentifier("gativx-community-gated")
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(20)
         }
-        .padding(20)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(pageBackground.ignoresSafeArea())
-        // Keep the gated message exposed as its own accessibility descendant.
-        // The parent screen identifier must not hide the child from UI tests/VoiceOver.
+        // A scroll container gives the gated screen a stable, independently
+        // queryable accessibility root without an infinite-height Spacer.
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("gativx-community-screen")
     }
@@ -1627,6 +1628,7 @@ struct ContentView: View {
                                 Task { await cloud.sendPasswordReset(email: email.trimmingCharacters(in: .whitespacesAndNewlines)) }
                             }
                             .font(.subheadline.weight(.semibold))
+                            .accessibilityIdentifier("gativx-forgot-password")
                             .disabled(email.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                         } else {
                             Text("Use at least 8 characters. Email verification may be required.")
@@ -1661,7 +1663,7 @@ struct ContentView: View {
                 .tabItem { Label("Activity", systemImage: "figure.walk") }.tag(1)
             NavigationStack { missionsScreen.navigationTitle("Missions") }
                 .tabItem { Label("Missions", systemImage: "target") }.tag(2)
-            communityScreen
+            NavigationStack { communityScreen.navigationTitle("Community") }
                 .tabItem { Label("Community", systemImage: "person.3") }.tag(3)
             NavigationStack { profileScreen.navigationTitle("Profile") }
                 .tabItem { Label("Profile", systemImage: "person.crop.circle") }.tag(4)
