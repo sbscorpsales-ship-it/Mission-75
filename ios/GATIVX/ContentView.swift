@@ -430,9 +430,6 @@ struct ContentView: View {
                     }
                     self.activityHistory = persistedHistory
                     self.historyStatus = "Saved on this iPhone · \(self.visibleActivityHistory.count) activities for this account"
-                    // Clear the durable GPS draft only after read-back verification
-                    // confirms the completed session is safely stored.
-                    self.routeRecorder.clearDraft()
                     self.sessionSteps = finalSteps
                     let stepSummary = finalSteps.map { $0.formatted() + " steps" } ?? "step count unavailable"
                     let routeSummary = routePoints.isEmpty ? "GPS route unavailable (0 points)" : "GPS route saved · " + String(format: "%.2f km", record.gpsDistanceMeters / 1000)
@@ -457,6 +454,11 @@ struct ContentView: View {
                             self.sessionStatus = activity + " saved on this iPhone; Apple Health export needs attention: " + error.localizedDescription
                         }
                     }
+                    // The HealthKit method durably enqueues and reads back its outbox
+                    // synchronously before starting asynchronous export. Keep the GPS
+                    // draft until that enqueue attempt has happened: a crash after the
+                    // history write can then recover and retry the same session UUID.
+                    self.routeRecorder.clearDraft()
                 } catch {
                     self.sessionStatus = "Could not save this activity on this iPhone: " + error.localizedDescription + ". Your GPS draft remains preserved; tap Finish & save activity to retry."
                     self.sessionStarted = start
