@@ -90,8 +90,19 @@ final class HealthKitManager: ObservableObject {
         let item = items[index]
         saveActivityWorkout(id: item.id, activity: item.activity, startedAt: item.startedAt,
                             finishedAt: item.finishedAt, steps: item.steps,
-                            distanceMeters: item.distanceMeters) { [weak self] _ in
-            Task { @MainActor in self?.retryNextWorkout(items, index: index + 1) }
+                            distanceMeters: item.distanceMeters) { [weak self] result in
+            Task { @MainActor in
+                guard let self else { return }
+                switch result {
+                case .success:
+                    self.statusMessage = "Apple Health confirmed a queued GATIVX workout export."
+                case .failure(let error):
+                    // Keep the item queued for retry and surface the actual HealthKit
+                    // failure instead of silently discarding it during background retry.
+                    self.statusMessage = "Apple Health export remains pending: " + error.localizedDescription
+                }
+                self.retryNextWorkout(items, index: index + 1)
+            }
         }
     }
 
