@@ -690,6 +690,7 @@ struct ContentView: View {
                         .padding(2)
                         .overlay(Circle().stroke(neon, lineWidth: 1.8))
                     }
+                    .buttonStyle(.plain)
                     .accessibilityLabel("Open member profile")
                     .accessibilityIdentifier("gativx-header-profile")
                 }
@@ -1218,7 +1219,9 @@ struct ContentView: View {
                 Text(displayedDailySteps.map { "\($0.formatted()) of \(max(dailyStepGoal, 1).formatted()) steps" } ?? "Waiting for a step reading").font(.caption).foregroundStyle(.secondary)
                 Button("Open GATIVX Guru") { isGuruPresented = true }.buttonStyle(.bordered)
             }.padding(16)
-        }.background(pageBackground.ignoresSafeArea())
+        }
+        .background(pageBackground.ignoresSafeArea())
+        .accessibilityIdentifier("gativx-missions-screen")
     }
 
     private var guruScreen: some View {
