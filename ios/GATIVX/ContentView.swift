@@ -1340,21 +1340,21 @@ struct ContentView: View {
     }
 
     private var communityScreen: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 14) {
-                Text("Community Gati").font(.largeTitle.weight(.bold))
-                Text("Your journey can encourage someone else's first step.")
-                    .font(.title3.weight(.semibold))
-                Label("NOT ACTIVE IN THIS BUILD", systemImage: "lock.fill")
-                    .font(.caption.weight(.heavy)).foregroundStyle(.secondary)
-                Text("Community feed and shared missions are not available yet. Your personal activity remains private and is not shared with other members.")
-                    .font(.subheadline).foregroundStyle(.secondary)
-                    .accessibilityIdentifier("gativx-community-gated")
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(20)
+        VStack(alignment: .leading, spacing: 14) {
+            Text("Community Gati")
+                .font(.largeTitle.weight(.bold))
+                .accessibilityIdentifier("gativx-community-screen")
+            Text("Your journey can encourage someone else's first step.")
+                .font(.title3.weight(.semibold))
+            Label("NOT ACTIVE IN THIS BUILD", systemImage: "lock.fill")
+                .font(.caption.weight(.heavy)).foregroundStyle(.secondary)
+            Text("Community feed and shared missions are not available yet. Your personal activity remains private and is not shared with other members.")
+                .font(.subheadline).foregroundStyle(.secondary)
+                .accessibilityIdentifier("gativx-community-gated")
+            Spacer(minLength: 0)
         }
-        .accessibilityIdentifier("gativx-community-screen")
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .padding(20)
         .background(pageBackground.ignoresSafeArea())
     }
 
