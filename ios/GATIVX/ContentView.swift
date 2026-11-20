@@ -1353,9 +1353,8 @@ struct ContentView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(20)
-            .accessibilityElement(children: .contain)
-            .accessibilityIdentifier("gativx-community-screen")
         }
+        .accessibilityIdentifier("gativx-community-screen")
         .background(pageBackground.ignoresSafeArea())
     }
 
