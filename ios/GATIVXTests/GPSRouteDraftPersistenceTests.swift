@@ -59,7 +59,7 @@ final class GPSRouteDraftPersistenceTests: XCTestCase {
 
     func testUnreadableExistingDraftBlocksNewWalkAndPreservesOriginalData() async throws {
         try await MainActor.run {
-            let suite = "GATIVXGPSUnreadableDraftTests-\\(UUID().uuidString)"
+            let suite = "GATIVXGPSUnreadableDraftTests-\(UUID().uuidString)"
             let defaults = UserDefaults(suiteName: suite)!
             defer { defaults.removePersistentDomain(forName: suite) }
 
