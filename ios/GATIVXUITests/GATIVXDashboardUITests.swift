@@ -66,6 +66,15 @@ final class GATIVXDashboardUITests: XCTestCase {
         XCTAssertEqual(dashboardIdentity.label, "LOCAL-ONLY MEMBER",
                        "A guest dashboard must clearly identify its local-only account state.")
 
+        let calorieRing = app.descendants(matching: .any)["gativx-ring-active-calories"].firstMatch
+        XCTAssertTrue(calorieRing.waitForExistence(timeout: 5),
+                      "Home must render the Active Calories progress ring.")
+        XCTAssertEqual(calorieRing.label, "Active Calories progress")
+        let heartPointsRing = app.descendants(matching: .any)["gativx-ring-heart-points"].firstMatch
+        XCTAssertTrue(heartPointsRing.waitForExistence(timeout: 5),
+                      "Home must render the Heart Points progress ring.")
+        XCTAssertEqual(heartPointsRing.label, "Heart Points progress")
+
         // Catch the compressed/overlapping mission-card defect from the member screenshot.
         let missionCard = app.descendants(matching: .any)["gativx-todays-mission"].firstMatch
         XCTAssertTrue(missionCard.waitForExistence(timeout: 5), "Today's mission must render as a real dashboard card.")
