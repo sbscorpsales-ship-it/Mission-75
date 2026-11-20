@@ -129,7 +129,7 @@ struct ContentView: View {
             let visibleCount = visibleActivityHistory.count
             historyStatus = visibleCount == 0
                 ? "No completed activities saved for this account yet."
-                : "Loaded \\(visibleCount) account-matched activities from this iPhone."
+                : "Loaded \(visibleCount) account-matched activities from this iPhone."
         } catch {
             historyStatus = "Saved activity history could not be read. Existing data has been left untouched."
         }
@@ -1339,11 +1339,14 @@ struct ContentView: View {
                             .font(.caption).foregroundStyle(.secondary)
                     }
                     Button {
+                        dismissGuruKeyboard()
+                        isGuruPresented = false
                         selectedTab = 1
                     } label: {
                         Label("Start a walk", systemImage: "figure.walk")
                             .font(.headline).frame(maxWidth: .infinity).padding(.vertical, 12)
                     }
+                    .accessibilityIdentifier("gativx-guru-start-walk")
                     .buttonStyle(.borderedProminent).tint(neon).foregroundStyle(.black)
                 }
                 .padding(18).background(cardBackground, in: RoundedRectangle(cornerRadius: 22))
