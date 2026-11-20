@@ -28,7 +28,8 @@ final class GATIVXDashboardUITests: XCTestCase {
         authModeToggle.tap()
         XCTAssertTrue(app.staticTexts["WELCOME BACK TO GATIVX"].waitForExistence(timeout: 5),
                       "Existing members must have a real sign-in form.")
-        XCTAssertTrue(app.buttons["Forgot password?"].exists,
+        let forgotPassword = app.buttons["gativx-forgot-password"]
+        XCTAssertTrue(forgotPassword.waitForExistence(timeout: 5),
                       "Existing members must be able to start password recovery.")
         authModeToggle.tap()
         XCTAssertTrue(app.staticTexts["CREATE YOUR GATIVX ACCOUNT"].exists)
