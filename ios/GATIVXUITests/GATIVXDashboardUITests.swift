@@ -199,7 +199,7 @@ final class GATIVXDashboardUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["ACTIVITY TRACKER"].waitForExistence(timeout: 5),
                       "The Activity screen must show the Activity Tracker controls.")
 
-        let communityTab = app.tabBars.buttons["Community"]
+        let communityTab = app.tabBars.buttons["gativx-tab-community"]
         XCTAssertTrue(communityTab.waitForExistence(timeout: 5))
         communityTab.tap()
         XCTAssertTrue(communityTab.isSelected, "Selecting Community must change the active tab.")
