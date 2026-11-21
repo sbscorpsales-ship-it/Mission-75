@@ -102,7 +102,7 @@ jobs:
           assert ".frame(width: 190, height: 190)" not in step_ring, "Step ring must respect its responsive dashboard container"
           assert "let ringDiameter = min(max(width * 0.34, 128), 148)" in view, "Dashboard must size the step ring responsively for iPhone width"
           assert "stepRing.frame(width: ringDiameter, height: ringDiameter)" in view, "Step ring must use the responsive dashboard size"
-          assert "GeometryReader { geometry in" in view and "homeDashboardContent(width: geometry.size.width, height: geometry.size.height)" in view and ".frame(height: heroHeight)" in view, "Dashboard hero and spacing must adapt to available screen dimensions"
+          assert "GeometryReader { geometry in" in view and "homeDashboardContent(width: geometry.size.width, height: geometry.size.height)" in view and "let heroHeight = min(max(width * 0.49, 178), 204)" in view and "let spacing: CGFloat = height < 780 ? 12 : 15" in view and "dashboardHeader(width: width, titleWidth: titleWidth, heroHeight: heroHeight)" in view, "Dashboard header and spacing must adapt to available screen dimensions"
           assert "motionMonitoringEnabled" in view and "if motionMonitoringEnabled { startLiveMotionMonitor() }" in view, "Daily motion tracking must be opt-in, not prompted at launch"
           assert "GATIVXGuruCoach.suggestedNextAction" in view and "GATIVXGuruCoach.purposeAnchor" in view, "Guru must generate purpose-aware next actions, not only store form answers"
           assert "moves you toward feeling" in guru_model and "testGuruConnectsGoalPurposeAndEmotionToPracticalNextAction" in guru_tests, "Guru next actions must connect goal, purpose and desired emotion"
