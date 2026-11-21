@@ -552,7 +552,9 @@ struct ContentView: View {
     /// the next main-loop turn. This covers multiline TextField keyboard sessions
     /// and prevents a dismissed Guru sheet from leaving a stale first responder.
     private func dismissGuruKeyboard() {
+        let hadFocus = isGuruFieldFocused
         isGuruFieldFocused = false
+        guard hadFocus else { return }
         DispatchQueue.main.async {
             UIApplication.shared.sendAction(
                 #selector(UIResponder.resignFirstResponder),
