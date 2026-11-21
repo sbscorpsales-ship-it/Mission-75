@@ -283,4 +283,49 @@ final class GATIVXDashboardUITests: XCTestCase {
         XCTAssertTrue(app.descendants(matching: .any)["gativx-member-login-id"].exists,
                       "Profile must show the current member identity or explicit local-only status.")
     }
+
+    func testPrimaryTabBarNavigatesCleanlyAcrossAllFiveTabs() {
+        let app = XCUIApplication()
+        app.launch()
+
+        let guestEntry = app.buttons["gativx-continue-guest"]
+        if guestEntry.waitForExistence(timeout: 5) {
+            guestEntry.tap()
+        }
+
+        let tabBar = app.tabBars.firstMatch
+        XCTAssertTrue(tabBar.waitForExistence(timeout: 10))
+
+        let homeTab = tabBar.buttons["Home"]
+        XCTAssertTrue(homeTab.waitForExistence(timeout: 5))
+        homeTab.tap()
+        XCTAssertTrue(homeTab.isSelected)
+        XCTAssertTrue(app.descendants(matching: .any)["gativx-home-dashboard"].firstMatch.waitForExistence(timeout: 5))
+
+        let activityTab = tabBar.buttons["Activity"]
+        XCTAssertTrue(activityTab.waitForExistence(timeout: 5))
+        activityTab.tap()
+        XCTAssertTrue(activityTab.isSelected)
+        XCTAssertTrue(app.scrollViews["gativx-activity-screen"].waitForExistence(timeout: 5))
+
+        let missionsTab = tabBar.buttons["Missions"]
+        XCTAssertTrue(missionsTab.waitForExistence(timeout: 5))
+        missionsTab.tap()
+        XCTAssertTrue(missionsTab.isSelected)
+        XCTAssertTrue(app.scrollViews["gativx-missions-screen"].waitForExistence(timeout: 5))
+
+        let communityTab = tabBar.buttons["Community"]
+        XCTAssertTrue(communityTab.waitForExistence(timeout: 5))
+        communityTab.tap()
+        XCTAssertTrue(communityTab.isSelected)
+        XCTAssertTrue(app.descendants(matching: .any)["gativx-community-screen"].firstMatch.waitForExistence(timeout: 10))
+        XCTAssertTrue(app.descendants(matching: .any)["gativx-community-gated"].waitForExistence(timeout: 5))
+
+        let profileTab = tabBar.buttons["Profile"]
+        XCTAssertTrue(profileTab.waitForExistence(timeout: 5))
+        profileTab.tap()
+        XCTAssertTrue(profileTab.isSelected)
+        XCTAssertTrue(app.descendants(matching: .any)["gativx-profile-screen"].waitForExistence(timeout: 5))
+    }
+
 }

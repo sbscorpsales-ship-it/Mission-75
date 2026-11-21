@@ -641,9 +641,9 @@ struct ContentView: View {
             VStack(alignment: .leading, spacing: spacing) {
                 dashboardHeader(width: width, titleWidth: titleWidth, heroHeight: heroHeight)
                 dailyStepCounterCard(width: width)
-                wellnessMeters
-                todayMissionCard
                 todayActivityCard
+                todayMissionCard
+                wellnessMeters
                 activityTrackerCard
                 guruEntryCard
                 myJourneyCard
@@ -659,82 +659,56 @@ struct ContentView: View {
     }
 
     private func dashboardHeader(width: CGFloat, titleWidth: CGFloat, heroHeight: CGFloat) -> some View {
-        ZStack(alignment: .topLeading) {
-            GATIVXMountainBackdrop(isNight: dashboardIsNight)
-                .frame(maxWidth: .infinity)
-                .frame(height: heroHeight)
-                .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
-            VStack(alignment: .leading, spacing: 17) {
-                HStack(alignment: .center, spacing: 8) {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 10).fill(neon).frame(width: 34, height: 34)
-                        Image(systemName: "figure.run").font(.system(size: 19, weight: .black)).foregroundStyle(.black)
+        HStack(spacing: 12) {
+            Button { selectedTab = 4 } label: {
+                Group {
+                    if let data = profilePhotoData, let image = UIImage(data: data) {
+                        Image(uiImage: image).resizable().scaledToFill()
+                    } else {
+                        Image(systemName: "person.crop.circle.fill")
+                            .resizable().scaledToFit().padding(5)
+                            .foregroundStyle(.secondary)
                     }
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text("GATIVX")
-                            .font(.system(size: 22, weight: .black, design: .rounded))
-                            .tracking(-0.7)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.72)
-                        Text("YOUR GOAL. YOUR PURPOSE. YOUR GATI.")
-                            .font(.system(size: 6.5, weight: .heavy))
-                            .tracking(0.45)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.45)
-                    }
-                    .frame(width: titleWidth, alignment: .leading)
-                    .clipped()
-                    Button { isNotificationsPresented = true } label: {
-                        Image(systemName: "bell.badge")
-                            .font(.system(size: 19, weight: .semibold))
-                            .foregroundStyle(.white)
-                            .frame(width: 32, height: 32)
-                            .contentShape(Circle())
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Notifications")
-                    .accessibilityIdentifier("gativx-header-notifications")
-                    Button { selectedTab = 4 } label: {
-                        Group {
-                            if let data = profilePhotoData, let image = UIImage(data: data) {
-                                Image(uiImage: image).resizable().scaledToFill()
-                            } else {
-                                Image(systemName: "person.crop.circle.fill").resizable().scaledToFit().padding(3)
-                            }
-                        }
-                        .frame(width: 32, height: 32)
-                        .foregroundStyle(.white)
-                        .clipShape(Circle())
-                        .padding(2)
-                        .overlay(Circle().stroke(neon, lineWidth: 1.8))
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Open member profile")
-                    .accessibilityIdentifier("gativx-header-profile")
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                VStack(alignment: .leading, spacing: 5) {
-                    Text(greeting + " 👋")
-                        .font(.system(size: min(max(width * 0.062, 22), 26), weight: .bold, design: .rounded))
-                    Text("Every step moves you closer to your purpose.")
-                        .font(.subheadline.weight(.medium))
-                        .foregroundStyle(.white.opacity(0.9))
-                    Text(cloud.isSignedIn
-                         ? "LOGIN ID · " + (cloud.authenticatedUserEmail ?? "SIGNED-IN MEMBER")
-                         : "LOCAL-ONLY MEMBER")
-                        .font(.caption2.weight(.semibold))
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.72)
-                        .foregroundStyle(.white.opacity(0.86))
-                        .accessibilityIdentifier("gativx-dashboard-member-identity")
-                }
+                .frame(width: 48, height: 48)
+                .background(cardBackground, in: Circle())
+                .clipShape(Circle())
+                .overlay(Circle().stroke(neon, lineWidth: 2))
             }
-            .foregroundStyle(.white)
-            .padding(17)
+            .buttonStyle(.plain)
+            .accessibilityLabel("Open member profile")
+            .accessibilityIdentifier("gativx-header-profile")
+            VStack(alignment: .leading, spacing: 2) {
+                Text("GATIVX")
+                    .font(.system(size: 21, weight: .black, design: .rounded))
+                    .tracking(-0.6)
+                    .foregroundStyle(.primary)
+                Text(greeting + " · Keep your Gati going!")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                Text(cloud.isSignedIn ? (cloud.authenticatedUserEmail ?? "GATIVX MEMBER") : "LOCAL MEMBER")
+                    .font(.caption2.weight(.medium))
+                    .foregroundStyle(.tertiary)
+                    .lineLimit(1)
+                    .accessibilityIdentifier("gativx-dashboard-member-identity")
+            }
+            Spacer(minLength: 2)
+            Button { isNotificationsPresented = true } label: {
+                Image(systemName: "bell.badge")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundStyle(.primary)
+                    .frame(width: 42, height: 42)
+                    .background(cardBackground, in: Circle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Notifications")
+            .accessibilityIdentifier("gativx-header-notifications")
         }
+        .padding(.vertical, 5)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("gativx-dashboard-header")
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var dailyStepDetails: some View {
@@ -757,7 +731,7 @@ struct ContentView: View {
 
     @ViewBuilder
     private func dailyStepCounterLayout(width: CGFloat, ringDiameter: CGFloat) -> some View {
-        if width < 430 {
+        if width < 390 {
             VStack(spacing: 12) {
                 stepRing.frame(width: ringDiameter, height: ringDiameter)
                 dailyStepDetails

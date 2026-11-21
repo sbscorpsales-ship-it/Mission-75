@@ -458,21 +458,26 @@ private fun GativxAndroidScreen() {
     }
 
     MaterialTheme {
-        Surface(Modifier.fillMaxSize(), color = Color(0xFF0B1115)) {
+        Surface(Modifier.fillMaxSize(), color = Color(0xFFF7F8F5)) {
             Column(
                 modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                Text("GATIVX", color = Color(0xFFD8FF3E), fontSize = 34.sp, fontWeight = FontWeight.Black)
-                Text("MOVE. GROW. EXCEL.", color = Color(0xFF9DAEB6), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Column {
+                        Text("GATIVX", color = Color(0xFF101510), fontSize = 34.sp, fontWeight = FontWeight.Black)
+                        Text("MOVE • BUILD • ACHIEVE", color = Color(0xFF687267), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    }
+                    Text("●", color = Color(0xFFB8F500), fontSize = 28.sp, fontWeight = FontWeight.Black)
+                }
 
-                Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF17232A))) {
+                Card(colors = CardDefaults.cardColors(containerColor = Color(0xFFFFFFFF))) {
                     Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text("EXPLORE GATIVX", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                            Text("EARLY ACCESS", color = Color(0xFFFFC66D), fontWeight = FontWeight.Bold, fontSize = 10.sp)
+                            Text("EXPLORE GATIVX", color = Color(0xFF101510), fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            Text("EARLY ACCESS", color = Color(0xFFB66B12), fontWeight = FontWeight.Bold, fontSize = 10.sp)
                         }
-                        Text("Your fitness journey, all in one place. Tap any section to explore its current status.", color = Color(0xFF9DAEB6), fontSize = 11.sp)
+                        Text("Your fitness journey, all in one place. Tap any section to explore its current status.", color = Color(0xFF687267), fontSize = 11.sp)
                         val featureRows = listOf(
                             listOf("Home", "Mission", "Activity"),
                             listOf("Wellness", "Strength", "GURU"),
@@ -518,16 +523,16 @@ private fun GativxAndroidScreen() {
                                 "Mission" -> "SELECTED: MISSION · TESTING IN PROGRESS"
                                 else -> "SELECTED: $selectedFeature · COMING SOON"
                             },
-                            color = Color(0xFFD8FF3E), fontSize = 10.sp, fontWeight = FontWeight.Bold
+                            color = Color(0xFFB8F500), fontSize = 10.sp, fontWeight = FontWeight.Bold
                         )
                     }
                 }
-                Text("Android Health Connect", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                Text("Android Health Connect", color = Color(0xFF101510), fontSize = 22.sp, fontWeight = FontWeight.Bold)
 
-                Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF17232A))) {
+                Card(colors = CardDefaults.cardColors(containerColor = Color(0xFFFFFFFF))) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Text("TODAY'S MEASURED ACTIVITY", color = Color(0xFFD8FF3E), fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                        Text(measuredDate, color = Color(0xFF9DAEB6), fontSize = 12.sp)
+                        Text("TODAY'S MEASURED ACTIVITY", color = Color(0xFFB8F500), fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        Text(measuredDate, color = Color(0xFF687267), fontSize = 12.sp)
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             MetricTile("STEPS", steps?.toString() ?: "—", Modifier.weight(1f))
                             MetricTile("ACTIVE ENERGY", activeEnergy?.let { "${it.toInt()} kcal" } ?: "—", Modifier.weight(1f))
@@ -536,55 +541,55 @@ private fun GativxAndroidScreen() {
                             onClick = { connectHealthConnect() },
                             enabled = !busy,
                             modifier = Modifier.fillMaxWidth(),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD8FF3E), contentColor = Color(0xFF111820))
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFB8F500), contentColor = Color(0xFF101510))
                         ) { Text("Connect / refresh Health Connect", fontWeight = FontWeight.Bold) }
                         Text(
                             if (healthReady) "SOURCE: HEALTH CONNECT · AGGREGATED" else "SOURCE: NOT CONNECTED",
-                            color = if (healthReady) Color(0xFFD8FF3E) else Color(0xFF9DAEB6),
+                            color = if (healthReady) Color(0xFFB8F500) else Color(0xFF687267),
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold
                         )
                     }
                 }
 
-                Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF17232A))) {
+                Card(colors = CardDefaults.cardColors(containerColor = Color(0xFFFFFFFF))) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Text("WalkOn · GPS ROUTE TRACKING", color = Color(0xFFD8FF3E), fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        Text("WalkOn · GPS ROUTE TRACKING", color = Color(0xFFB8F500), fontWeight = FontWeight.Bold, fontSize = 12.sp)
                         val foreignActiveWalk = WalkOnStore.active(context) != null && activeWalk == null
                         if (foreignActiveWalk) {
-                            Text("A WalkOn route from another account or an offline session is active. Its route details are hidden here.", color = Color(0xFFFFC66D), fontSize = 12.sp)
+                            Text("A WalkOn route from another account or an offline session is active. Its route details are hidden here.", color = Color(0xFFB66B12), fontSize = 12.sp)
                             Button(onClick = { stopWalkOn() }, enabled = !busy && !walkSyncBusy, modifier = Modifier.fillMaxWidth()) {
                                 Text("Finish active device route")
                             }
                         } else if (activeWalk != null) {
-                            Text("RECORDING · %.2f km · %d GPS points".format(activeWalk!!.distanceMeters / 1000.0, activeWalk!!.points.size), color = Color.White, fontWeight = FontWeight.Bold)
+                            Text("RECORDING · %.2f km · %d GPS points".format(activeWalk!!.distanceMeters / 1000.0, activeWalk!!.points.size), color = Color(0xFF101510), fontWeight = FontWeight.Bold)
                             Button(onClick = { stopWalkOn() }, enabled = !busy && !walkSyncBusy, modifier = Modifier.fillMaxWidth()) {
                                 Text("Finish & save WalkOn")
                             }
                         } else {
-                            Text("Record a GPS route while your screen is locked. Precise location and the ongoing notification are required.", color = Color(0xFF9DAEB6), fontSize = 12.sp)
+                            Text("Record a GPS route while your screen is locked. Precise location and the ongoing notification are required.", color = Color(0xFF687267), fontSize = 12.sp)
                             Button(
                                 onClick = { startWalkOn() },
                                 enabled = !busy && !walkSyncBusy,
                                 modifier = Modifier.fillMaxWidth(),
-                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD8FF3E), contentColor = Color(0xFF111820))
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFB8F500), contentColor = Color(0xFF101510))
                             ) { Text("Start WalkOn", fontWeight = FontWeight.Bold) }
                         }
                         val routePreviewPoints = activeWalk?.points?.takeIf { it.size > 1 }
                             ?: latestWalk?.points?.takeIf { it.size > 1 }
                         if (routePreviewPoints != null) {
                             WalkOnRoutePreview(routePreviewPoints)
-                            Text("GPS route trace preview · not a street map", color = Color(0xFF9DAEB6), fontSize = 10.sp)
+                            Text("GPS route trace preview · not a street map", color = Color(0xFF687267), fontSize = 10.sp)
                         }
                         latestWalk?.let { walk ->
                             Text(
                                 "Last route · %.2f km · %d seconds · %d measured steps".format(walk.distanceMeters / 1000.0, walk.durationSeconds, walk.sessionSteps),
-                                color = Color.White,
+                                color = Color(0xFF101510),
                                 fontSize = 12.sp
                             )
                             Text(
                                 if (walk.synced) "CLOUD BACKUP · COMPLETE" else "SAVED ON DEVICE · BACKUP PENDING",
-                                color = if (walk.synced) Color(0xFFD8FF3E) else Color(0xFFFFC66D),
+                                color = if (walk.synced) Color(0xFFB8F500) else Color(0xFFB66B12),
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold
                             )
@@ -608,7 +613,7 @@ private fun GativxAndroidScreen() {
                                 Text("Assign offline routes to this account ($unassignedWalkCount)")
                             }
                         } else if (session == null && unassignedWalkCount > 0) {
-                            Text("$unassignedWalkCount device-only route(s) saved while signed out. Sign in to choose an account before uploading.", color = Color(0xFF9DAEB6), fontSize = 11.sp)
+                            Text("$unassignedWalkCount device-only route(s) saved while signed out. Sign in to choose an account before uploading.", color = Color(0xFF687267), fontSize = 11.sp)
                         }
                         if (pendingWalkCount > 0) {
                             Button(
@@ -619,18 +624,18 @@ private fun GativxAndroidScreen() {
                                 Text(if (walkSyncBusy) "Backing up routes…" else "Sync saved routes ($pendingWalkCount)")
                             }
                         }
-                        Text(walkStatus, color = Color(0xFF9DAEB6), fontSize = 11.sp)
+                        Text(walkStatus, color = Color(0xFF687267), fontSize = 11.sp)
                     }
                 }
 
-                Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF17232A))) {
+                Card(colors = CardDefaults.cardColors(containerColor = Color(0xFFFFFFFF))) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Text("PRIVATE CLOUD BACKUP", color = Color.White, fontWeight = FontWeight.Bold)
+                        Text("PRIVATE CLOUD BACKUP", color = Color(0xFF101510), fontWeight = FontWeight.Bold)
                         if (session == null) {
                             Text(
                                 if (isRegistering) "Create your free GATIVX account to keep your walks and measured activity backed up privately."
                                 else "Sign in to access your private GATIVX cloud backup, or create a free account to get started.",
-                                color = Color(0xFF9DAEB6),
+                                color = Color(0xFF687267),
                                 fontSize = 12.sp
                             )
                             OutlinedTextField(value = email, onValueChange = { email = it }, label = { Text("Email") }, singleLine = true, modifier = Modifier.fillMaxWidth())
@@ -654,7 +659,7 @@ private fun GativxAndroidScreen() {
                                 )
                             }
                         } else {
-                            Text("Signed in · ${session?.userId?.take(8)}…", color = Color(0xFFD8FF3E))
+                            Text("Signed in · ${session?.userId?.take(8)}…", color = Color(0xFFB8F500))
                             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                                 Button(onClick = { syncToCloud() }, enabled = !busy && healthReady) { Text("Sync measured data") }
                                 Button(
@@ -681,13 +686,13 @@ private fun GativxAndroidScreen() {
                     }
                 }
 
-                Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF17232A))) {
+                Card(colors = CardDefaults.cardColors(containerColor = Color(0xFFFFFFFF))) {
                     Column(Modifier.padding(16.dp)) {
-                        Text("STATUS", color = Color(0xFFD8FF3E), fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        Text("STATUS", color = Color(0xFFB8F500), fontWeight = FontWeight.Bold, fontSize = 12.sp)
                         Spacer(Modifier.height(8.dp))
-                        Text(status, color = Color.White, fontSize = 14.sp)
-                        Text("GATIVX reads aggregated Health Connect totals to reduce duplicate-source counting. It does not estimate missing steps or calories.", color = Color(0xFF9DAEB6), fontSize = 11.sp)
-                        Text("Your session is encrypted with Android Keystore and can be revoked when you sign out.", color = Color(0xFF9DAEB6), fontSize = 11.sp)
+                        Text(status, color = Color(0xFF101510), fontSize = 14.sp)
+                        Text("GATIVX reads aggregated Health Connect totals to reduce duplicate-source counting. It does not estimate missing steps or calories.", color = Color(0xFF687267), fontSize = 11.sp)
+                        Text("Your session is encrypted with Android Keystore and can be revoked when you sign out.", color = Color(0xFF687267), fontSize = 11.sp)
                     }
                 }
             }
@@ -706,7 +711,7 @@ private fun WalkOnRoutePreview(points: List<WalkOnPoint>) {
         modifier = Modifier
             .fillMaxWidth()
             .height(132.dp)
-            .background(Color(0xFF0D171D), RoundedCornerShape(12.dp))
+            .background(Color(0xFFF0F4EB), RoundedCornerShape(12.dp))
     ) {
         if (points.size < 2) return@Canvas
         val minLatitude = points.minOf { it.latitude }
@@ -725,7 +730,7 @@ private fun WalkOnRoutePreview(points: List<WalkOnPoint>) {
         for (index in 1 until points.size) {
             if (points[index].breakBefore) continue
             drawLine(
-                color = Color(0xFFD8FF3E),
+                color = Color(0xFFB8F500),
                 start = position(points[index - 1]),
                 end = position(points[index]),
                 strokeWidth = 4.dp.toPx(),
@@ -747,7 +752,7 @@ private fun FeatureHubTile(
     Card(
         modifier = modifier.clickable(onClick = onClick),
         colors = CardDefaults.cardColors(
-            containerColor = if (selected) Color(0xFF344329) else Color(0xFF0D171D)
+            containerColor = if (selected) Color(0xFF344329) else Color(0xFFF0F4EB)
         ),
         shape = RoundedCornerShape(12.dp)
     ) {
@@ -755,10 +760,10 @@ private fun FeatureHubTile(
             Modifier.fillMaxWidth().padding(vertical = 12.dp, horizontal = 5.dp),
             verticalArrangement = Arrangement.spacedBy(5.dp)
         ) {
-            Text(name, color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.fillMaxWidth())
+            Text(name, color = Color(0xFF101510), fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.fillMaxWidth())
             Text(
                 status.uppercase(),
-                color = if (active) Color(0xFFD8FF3E) else Color(0xFFFFC66D),
+                color = if (active) Color(0xFFB8F500) else Color(0xFFB66B12),
                 fontSize = 8.sp,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.fillMaxWidth()
@@ -770,16 +775,16 @@ private fun FeatureHubTile(
 @Composable
 private fun TextButtonCompat(text: String, enabled: Boolean, onClick: () -> Unit) {
     TextButton(onClick = onClick, enabled = enabled, modifier = Modifier.fillMaxWidth()) {
-        Text(text, color = Color(0xFFD8FF3E), fontSize = 12.sp)
+        Text(text, color = Color(0xFFB8F500), fontSize = 12.sp)
     }
 }
 
 @Composable
 private fun MetricTile(label: String, value: String, modifier: Modifier = Modifier) {
-    Card(modifier = modifier, colors = CardDefaults.cardColors(containerColor = Color(0xFF0D171D))) {
+    Card(modifier = modifier, colors = CardDefaults.cardColors(containerColor = Color(0xFFF0F4EB))) {
         Column(Modifier.padding(12.dp)) {
-            Text(label, color = Color(0xFF9DAEB6), fontSize = 10.sp, fontWeight = FontWeight.Bold)
-            Text(value, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            Text(label, color = Color(0xFF687267), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+            Text(value, color = Color(0xFF101510), fontSize = 20.sp, fontWeight = FontWeight.Bold)
         }
     }
 }
