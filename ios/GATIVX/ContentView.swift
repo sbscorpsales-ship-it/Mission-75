@@ -548,14 +548,18 @@ struct ContentView: View {
         GATIVXGuruCoach.purposeAnchor(goal: guruGoal, purpose: guruPurpose, emotion: guruEmotion)
     }
 
-    /// Clear SwiftUI focus first, then ask UIKit to resign the active editor on
-    /// the next main-loop turn. This covers multiline TextField keyboard sessions
-    /// and prevents a dismissed Guru sheet from leaving a stale first responder.
+    /// Clear SwiftUI focus and synchronously ask UIKit to resign the active editor.
+    /// Repeat on the next main-loop turn to cover SwiftUI keyboard-toolbar timing.
     private func dismissGuruKeyboard() {
-        let hadFocus = isGuruFieldFocused
         isGuruFieldFocused = false
-        guard hadFocus else { return }
+        UIApplication.shared.sendAction(
+            #selector(UIResponder.resignFirstResponder),
+            to: nil,
+            from: nil,
+            for: nil
+        )
         DispatchQueue.main.async {
+            self.isGuruFieldFocused = false
             UIApplication.shared.sendAction(
                 #selector(UIResponder.resignFirstResponder),
                 to: nil,
