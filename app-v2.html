@@ -123,6 +123,38 @@ body[data-theme="light"] .mission p,
 body[data-theme="light"] .mission .eyebrow{color:#294b30}
 @media(prefers-reduced-motion:no-preference){.themeToggle{transition:background .18s ease,color .18s ease,border-color .18s ease}.summaryTile,.card,.action,.bottom{transition:background-color .18s ease,border-color .18s ease}}
 
+
+/* Approved GATIVX light/lime screen system — responsive, proportion-preserving */
+:root{color-scheme:light;--bg:#f7f8f5;--card:#fff;--line:#e2e7df;--ink:#101510;--muted:#687267;--lime:#b8f500;--cyan:#37bd82;--orange:#ff922e}
+body{background:#f7f8f5!important;color:#101510!important;padding-bottom:calc(104px + env(safe-area-inset-bottom))}
+.app{max-width:760px;width:100%;padding-left:clamp(12px,3.8vw,26px);padding-right:clamp(12px,3.8vw,26px)}
+.top{height:76px;border-bottom:1px solid #e8ece5}
+.brand{color:#101510;letter-spacing:1.5px}.brand em{color:#75bf00}
+.avatar{background:#fff;border:2px solid #b8f500;color:#101510}
+.intro h1{color:#101510}.intro p,.muted,small{color:#687267}
+.mission{background:linear-gradient(120deg,#caff38,#eaffb1 70%,#fff)!important;color:#101510;border:1px solid #d9edac;box-shadow:0 8px 24px #6c9d2414}
+.mission p,.mission .eyebrow{color:#34452a}
+.metric,.card,.summaryHero,.summaryTile,.healthRingCard,.action,.statusPanel{background:#fff!important;color:#101510;border:1px solid #e1e7de!important;box-shadow:0 5px 18px #1726160b}
+.metric strong,.metric.primary strong{color:#101510}
+.metric small,.tileNote,.summaryTile small,.healthRingCard>small,.statusLabel{color:#687267}
+.section h2,.tileHead,.summaryMove .label{color:#101510}
+.action{color:#101510}
+.action:active,.bottom button.active{background:#b8f500!important;color:#101510}
+.bottom{background:#ffffffed!important;border:1px solid #e0e6dc!important;box-shadow:0 8px 28px #1726161c!important;backdrop-filter:blur(18px)}
+.bottom button{color:#626b60}.bottom button.active{background:#b8f500!important;color:#101510}
+.primarybtn,.guruButton{background:#b8f500!important;color:#101510!important}
+.secondary{background:#edf1e9!important;color:#101510!important}
+.formgrid input,.formgrid select,.formgrid textarea{background:#fff;color:#101510;border-color:#dce4d8}
+.healthRing:before{background:#fff}
+.healthRing{background:conic-gradient(var(--ring-color) 0deg var(--progress),#e8eee4 var(--progress) 360deg)}
+.statusPanelHead,.statusRow strong{color:#101510}
+.routeMap{background:#f0f4eb;border-color:#dce5d6}
+.routeMap svg rect{fill:#edf3e8}
+.guruCard{background:linear-gradient(140deg,#f8fbeF,#fff)!important;border-color:#dce9ca;color:#101510}
+.guruCard p{color:#596451}.guruButton{background:#b8f500}
+.entry{border-color:#e5eae2}.entry span{color:#687267}
+@media(min-width:700px){.app{max-width:900px}.bottom{width:min(560px,calc(100% - 28px))}}
+@media(max-width:360px){.bottom button{font-size:8px}.bottom i{font-size:17px}.app{padding-left:11px;padding-right:11px}.summaryHero{grid-template-columns:90px 1fr;gap:12px;padding:14px}.ring{width:88px;height:88px}.healthRing{width:68px;height:68px}}
 </style></head><body>
 <div class="app"><header class="top"><div class="brand"><img src="./gativx-master.png" alt="GATIVX"><span>GATI<em>V</em>X</span></div><div class="topActions"><button class="themeToggle" id="themeToggle" type="button" aria-label="Switch appearance" title="Switch Day/Night mode">☼</button><button class="avatar" id="profile">G</button></div></header>
 <section class="intro"><div class="eyebrow" id="dateLine"></div><h1>Move. Grow. Excel.</h1><p>Your day. Your pace. Your progress.</p></section>
