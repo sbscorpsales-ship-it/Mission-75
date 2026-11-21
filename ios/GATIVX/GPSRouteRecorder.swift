@@ -2,7 +2,7 @@ import Foundation
 @preconcurrency import CoreLocation
 import Combine
 
-struct GATIVXRoutePoint: Codable {
+struct GATIVXRoutePoint: Codable, Equatable {
     let latitude: Double
     let longitude: Double
     let timestamp: Date
@@ -39,7 +39,7 @@ struct GATIVXRoutePoint: Codable {
     }
 }
 
-private struct GATIVXActiveRouteDraft: Codable {
+struct GATIVXActiveRouteDraft: Codable {
     let startedAt: Date
     let activity: String
     let sessionID: UUID?
@@ -61,6 +61,37 @@ private struct GATIVXActiveRouteDraft: Codable {
     }
 }
 
+
+/// Atomic GPS draft writer. A route is only reported as safely persisted after
+/// the exact bytes are read back and decoded successfully.
+enum GPSRouteDraftPersistence {
+    static func write(_ draft: GATIVXActiveRouteDraft, to url: URL) throws {
+        let data = try JSONEncoder().encode(draft)
+        try data.write(to: url, options: .atomic)
+
+        let savedData = try Data(contentsOf: url)
+        guard savedData == data else {
+            throw NSError(
+                domain: "GATIVXGPSDraft",
+                code: 1,
+                userInfo: [NSLocalizedDescriptionKey: "The GPS draft did not match the data written to disk."]
+            )
+        }
+        let restored = try JSONDecoder().decode(GATIVXActiveRouteDraft.self, from: savedData)
+        guard restored.sessionID == draft.sessionID,
+              restored.ownerID == draft.ownerID,
+              restored.startedAt == draft.startedAt,
+              restored.activity == draft.activity,
+              restored.points.count == draft.points.count else {
+            throw NSError(
+                domain: "GATIVXGPSDraft",
+                code: 2,
+                userInfo: [NSLocalizedDescriptionKey: "The GPS draft could not be read back and verified."]
+            )
+        }
+    }
+}
+
 /// Core Location delivers delegate callbacks on the manager's creation run loop.
 /// This recorder is created on the main actor and keeps its location manager and UI state there.
 @MainActor
@@ -70,15 +101,24 @@ final class GPSRouteRecorder: NSObject, ObservableObject {
     @Published private(set) var authorization: CLAuthorizationStatus = .notDetermined
     @Published private(set) var recoveredStartedAt: Date?
     @Published private(set) var recoveredActivity: String?
+    @Published private(set) var hasUnreadableDraft = false
     private(set) var activitySessionID: UUID?
     private(set) var activityOwnerID: String?
 
     private let manager = CLLocationManager()
+    private let fileManager: FileManager
+    private let userDefaults: UserDefaults
+    private let directoryOverride: URL?
     private let draftKey = "gativx.activeRouteDraft.v1"
     private var draftURL: URL? {
-        guard let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else { return nil }
-        let directory = support.appendingPathComponent("GATIVX", isDirectory: true)
-        do { try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true) }
+        let directory: URL
+        if let directoryOverride {
+            directory = directoryOverride
+        } else {
+            guard let support = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else { return nil }
+            directory = support.appendingPathComponent("GATIVX", isDirectory: true)
+        }
+        do { try fileManager.createDirectory(at: directory, withIntermediateDirectories: true) }
         catch { return nil }
         return directory.appendingPathComponent("active-route-draft.json", isDirectory: false)
     }
@@ -98,7 +138,14 @@ final class GPSRouteRecorder: NSObject, ObservableObject {
     private var activeActivity = "Walking"
     private var needsSegmentBreak = true
 
-    override init() {
+    init(
+        fileManager: FileManager = .default,
+        userDefaults: UserDefaults = .standard,
+        directoryOverride: URL? = nil
+    ) {
+        self.fileManager = fileManager
+        self.userDefaults = userDefaults
+        self.directoryOverride = directoryOverride
         super.init()
         manager.delegate = self
         manager.desiredAccuracy = kCLLocationAccuracyBest
@@ -111,12 +158,25 @@ final class GPSRouteRecorder: NSObject, ObservableObject {
 
     private func restoreDraft() {
         let url = draftURL
-        let fileData = url.flatMap { try? Data(contentsOf: $0) }
-        let legacyData = UserDefaults.standard.data(forKey: draftKey)
-        guard let data = fileData ?? legacyData,
+        let fileExists = url.map { fileManager.fileExists(atPath: $0.path) } ?? false
+        var fileData: Data?
+        var fileReadFailed = false
+        if fileExists, let url {
+            do {
+                fileData = try Data(contentsOf: url)
+            } catch {
+                // A present but unreadable draft is not the same as no draft.
+                // Preserve it and block new sessions rather than replacing it.
+                fileReadFailed = true
+            }
+        }
+        let legacyData = userDefaults.data(forKey: draftKey)
+        guard !fileReadFailed,
+              let data = fileData ?? legacyData,
               let draft = try? JSONDecoder().decode(GATIVXActiveRouteDraft.self, from: data) else {
-            if fileData != nil || legacyData != nil {
-                status = "An unfinished GPS draft could not be decoded. Its original data was preserved for recovery."
+            if fileReadFailed || fileData != nil || legacyData != nil {
+                hasUnreadableDraft = true
+                status = "An unfinished GPS draft could not be read. Its original data was preserved for recovery."
             }
             return
         }
@@ -134,7 +194,7 @@ final class GPSRouteRecorder: NSObject, ObservableObject {
         if fileData == nil, let legacyData, let url {
             do {
                 try legacyData.write(to: url, options: .atomic)
-                UserDefaults.standard.removeObject(forKey: draftKey)
+                userDefaults.removeObject(forKey: draftKey)
             } catch {
                 status = "Recovered legacy GPS draft. File migration is pending; the original draft remains preserved."
             }
@@ -147,7 +207,8 @@ final class GPSRouteRecorder: NSObject, ObservableObject {
 
     @discardableResult
     private func persistDraft() -> Bool {
-        guard let startedAt = activeStartedAt,
+        guard !hasUnreadableDraft,
+              let startedAt = activeStartedAt,
               let sessionID = activitySessionID else { return false }
         guard let url = draftURL else {
             status = "Could not access the local GPS draft folder. The route remains in memory; do not force-quit GATIVX."
@@ -161,9 +222,9 @@ final class GPSRouteRecorder: NSObject, ObservableObject {
             ownerID: activityOwnerID
         )
         do {
-            let data = try JSONEncoder().encode(draft)
-            try data.write(to: url, options: .atomic)
-            UserDefaults.standard.removeObject(forKey: draftKey)
+            try GPSRouteDraftPersistence.write(draft, to: url)
+            // Remove the legacy copy only after the new file has been read back and verified.
+            userDefaults.removeObject(forKey: draftKey)
             return true
         } catch {
             status = "Could not persist the active route safely: \(error.localizedDescription)"
@@ -172,7 +233,16 @@ final class GPSRouteRecorder: NSObject, ObservableObject {
     }
 
     func start(activity: String, ownerID: String? = nil) {
-        guard !isRecording else { return }
+        // A restored or paused route owns its original ID, start time and points.
+        // Never replace that recoverable draft with a fresh activity.
+        guard !isRecording, activeStartedAt == nil, !hasUnreadableDraft else {
+            if hasUnreadableDraft {
+                status = "An unfinished GPS draft could not be read and remains preserved. Do not start a new walk until it is recovered."
+            } else if activeStartedAt != nil {
+                status = "An unfinished activity is already stored. Resume or save it before starting another walk."
+            }
+            return
+        }
         points.removeAll()
         needsSegmentBreak = true
         activeStartedAt = Date()
@@ -189,7 +259,7 @@ final class GPSRouteRecorder: NSObject, ObservableObject {
     }
 
     func resumeRecovered() {
-        guard activeStartedAt != nil else { return }
+        guard !hasUnreadableDraft, activeStartedAt != nil else { return }
         // A recovered route may have been interrupted while iOS suspended or terminated the app.
         needsSegmentBreak = true
         requestAndBegin()
@@ -253,8 +323,8 @@ final class GPSRouteRecorder: NSObject, ObservableObject {
     }
 
     func clearDraft() {
-        UserDefaults.standard.removeObject(forKey: draftKey)
-        if let url = draftURL { try? FileManager.default.removeItem(at: url) }
+        userDefaults.removeObject(forKey: draftKey)
+        if let url = draftURL { try? fileManager.removeItem(at: url) }
         points.removeAll()
         activeStartedAt = nil
         activeActivity = "Walking"
@@ -262,6 +332,7 @@ final class GPSRouteRecorder: NSObject, ObservableObject {
         activityOwnerID = nil
         recoveredStartedAt = nil
         recoveredActivity = nil
+        hasUnreadableDraft = false
     }
 
     func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
