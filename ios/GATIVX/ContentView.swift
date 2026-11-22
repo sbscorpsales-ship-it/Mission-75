@@ -654,6 +654,7 @@ struct ContentView: View {
             .padding(.bottom, 28)
             .frame(width: width, alignment: .leading)
         }
+        .safeAreaInset(edge: .bottom, spacing: 0) { Color.clear.frame(height: 28) }
         .background(pageBackground.ignoresSafeArea())
         .accessibilityIdentifier("gativx-home-dashboard")
     }
@@ -1184,6 +1185,7 @@ struct ContentView: View {
                 }
             }.padding(16)
         }
+        .safeAreaInset(edge: .bottom, spacing: 0) { Color.clear.frame(height: 28) }
         .background(pageBackground.ignoresSafeArea())
         .accessibilityIdentifier("gativx-activity-screen")
         .fileImporter(
@@ -1238,6 +1240,7 @@ struct ContentView: View {
                 Button("Open GATIVX Guru") { isGuruPresented = true }.buttonStyle(.bordered)
             }.padding(16)
         }
+        .safeAreaInset(edge: .bottom, spacing: 0) { Color.clear.frame(height: 28) }
         .background(pageBackground.ignoresSafeArea())
         .accessibilityIdentifier("gativx-missions-screen")
     }
@@ -1379,6 +1382,7 @@ struct ContentView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .padding(20)
+        .safeAreaInset(edge: .bottom, spacing: 0) { Color.clear.frame(height: 28) }
         .background(pageBackground.ignoresSafeArea())
     }
 
@@ -1536,6 +1540,7 @@ struct ContentView: View {
             }
         }
         .onAppear { loadRunJeetDailyStepsArchive() }
+        .safeAreaInset(edge: .bottom, spacing: 0) { Color.clear.frame(height: 28) }
         .accessibilityIdentifier("gativx-profile-screen")
     }
 
@@ -1690,7 +1695,11 @@ struct ContentView: View {
                 .tabItem { Label("Home", systemImage: "house.fill") }.tag(0)
             NavigationStack { activityScreen.navigationTitle("").toolbar(.hidden, for: .navigationBar) }
                 .tabItem { Label("Activity", systemImage: "figure.walk") }.tag(1)
-            NavigationStack { missionsScreen.navigationTitle("Missions") }
+            NavigationStack {
+                missionsScreen
+                    .navigationTitle("")
+                    .toolbar(.hidden, for: .navigationBar)
+            }
                 .tabItem { Label("Missions", systemImage: "target") }.tag(2)
             NavigationStack {
                 communityScreen
