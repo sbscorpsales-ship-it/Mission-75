@@ -654,7 +654,7 @@ struct ContentView: View {
             .padding(.bottom, 28)
             .frame(width: width, alignment: .leading)
         }
-        .safeAreaInset(edge: .bottom, spacing: 0) { Color.clear.frame(height: 28) }
+        .safeAreaInset(edge: .bottom, spacing: 0) { Color.clear.frame(height: 76) }
         .background(pageBackground.ignoresSafeArea())
         .accessibilityIdentifier("gativx-home-dashboard")
     }
@@ -1185,7 +1185,7 @@ struct ContentView: View {
                 }
             }.padding(16)
         }
-        .safeAreaInset(edge: .bottom, spacing: 0) { Color.clear.frame(height: 28) }
+        .safeAreaInset(edge: .bottom, spacing: 0) { Color.clear.frame(height: 76) }
         .background(pageBackground.ignoresSafeArea())
         .accessibilityIdentifier("gativx-activity-screen")
         .fileImporter(
@@ -1240,7 +1240,7 @@ struct ContentView: View {
                 Button("Open GATIVX Guru") { isGuruPresented = true }.buttonStyle(.bordered)
             }.padding(16)
         }
-        .safeAreaInset(edge: .bottom, spacing: 0) { Color.clear.frame(height: 28) }
+        .safeAreaInset(edge: .bottom, spacing: 0) { Color.clear.frame(height: 76) }
         .background(pageBackground.ignoresSafeArea())
         .accessibilityIdentifier("gativx-missions-screen")
     }
@@ -1382,7 +1382,7 @@ struct ContentView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .padding(20)
-        .safeAreaInset(edge: .bottom, spacing: 0) { Color.clear.frame(height: 28) }
+        .safeAreaInset(edge: .bottom, spacing: 0) { Color.clear.frame(height: 76) }
         .background(pageBackground.ignoresSafeArea())
     }
 
@@ -1540,7 +1540,7 @@ struct ContentView: View {
             }
         }
         .onAppear { loadRunJeetDailyStepsArchive() }
-        .safeAreaInset(edge: .bottom, spacing: 0) { Color.clear.frame(height: 28) }
+        .safeAreaInset(edge: .bottom, spacing: 0) { Color.clear.frame(height: 76) }
         .accessibilityIdentifier("gativx-profile-screen")
     }
 
