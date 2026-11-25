@@ -434,3 +434,19 @@ Inspect run #640's complete logs. Require the full unit/UI suite to execute, the
 4. Continue the missing-feature ledger: guided first-run onboarding; full Missions engine; Community groups/feed/moderation; notifications; Apps hub; Android parity; web parity; Universal Data Hub; export/deletion; nutrition/hydration/sleep/strength; 3D route replay; subscriptions/referrals/rewards/admin.
 5. Obtain owner-controlled Apple signing identity/profile with HealthKit entitlement for physical iPhone installation and IOS-01..14 acceptance. Obtain Android emulator/device with Health Connect for screen-locked GPS, save/recovery and sync tests. Obtain a non-production Supabase environment with reproducible schema/migrations and two test accounts for RLS/tenant isolation/idempotency tests. Verify a controlled Pages deployment and live web auth before claiming production readiness.
 6. Preserve Design C and the existing product decisions. Keep PR #107 untouched and every PR unmerged.
+
+
+### Direct branch-ref verification (same run)
+The GitHub commit endpoint was also queried using each branch name, not just remembered PR metadata. Current refs returned:
+- `main` → `143889db3e72540fb478b76c486082f45395e9bd`
+- `feat/gativx/android-sync-ack-20261125` → `19c679a7f2ef675176c0009148865563fca2fd00`
+- `feat/gativx/android-build-validation-20261125` → `d0dbfb67377a298f90bc732a1c16d46546bef185`
+- `audit/gativx-completion-gap-ledger-20261125` → `d139cc4669c8997f0ef0eb3bbe51f6ad35a0ddbe`
+- `feat/gativx-visual-completeness-preview-20261125` → `090678d93dc6f373b2313e0239c0158dc54f5a30`
+- `feat/gativx-design-c-review-20261126` → `b75a0639b34e5c7329db801c3ff423f406f9ce7e`
+- `fix/gativx-guru-goal-keyboard-layout-20261126` → `66635d847964b90ab9b8a3d5b74dbb64257c09dd`
+- `fix/gativx-activity-tab-transition-20261125` → `d37733e3b08a585344506f73534b6e93ac2c1aea`
+- `integration/gativx-finish-save-on-activity-tab-20261125` → `7bb41d9de3cc43b4e03b4e54faf94f6ee48c3417`
+- `fix/gativx-ui-test-guest-reset` → `b6c04d41dc67bd191ed0cf8966331eb5661a9887`
+- `fix/gativx-finish-save-validate` → `87318182360d4369ea2f7a773a27dd3fa3e7c558`
+- `docs/gativx-sprint-report-20261125` → `39a9d0e6306e329a8c9427b15ac6111a9a8647` (this documentation commit advances the branch after the fetch; see the final report-branch head in PR #118).
