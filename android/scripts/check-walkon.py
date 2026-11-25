@@ -82,6 +82,14 @@ checks = {
         "/rest/v1/rpc/sync_walk_session_route" in activity
         and '.put("p_steps", walk.sessionSteps.takeIf { it > 0 }?.let { it } ?: JSONObject.NULL)' in activity
     ),
+    "Android route sync acknowledgement is verified before backup is reported complete": (
+        "fun markSynced(context: Context, id: String)" in store
+        and "if (history.none { it.id == id })" in store
+        and "if (!writeEncrypted(context, COMPLETED_KEY, encodeSessions(updated)))" in store
+        and "throw IllegalStateException" in store.split("fun markSynced", 1)[1].split("private fun readSession", 1)[0]
+        and "WalkOnStore.markSynced(context, walk.id)" in activity
+        and activity.index("WalkOnStore.markSynced(context, walk.id)") < activity.index('walkStatus = "WalkOn route backup complete.')
+    ),
     "route sync keeps retryable local history": (
         "WalkOnStore.markSynced(context, walk.id)" in activity
         and "WalkOnStore.pendingFor" in activity
