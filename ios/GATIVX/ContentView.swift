@@ -397,7 +397,9 @@ struct ContentView: View {
         let saveRecord: (Int?, Double?) -> Void = { queriedSteps, queriedDistance in
             DispatchQueue.main.async {
                 guard self.isFinishingSession, self.sessionStarted == start else { return }
-                let finalSteps = queriedSteps ?? self.sessionSteps
+                // A HealthKit/pedometer re-query can legitimately return zero or lag the live stream.
+                // Never let that lower a verified in-session count; retain the highest non-negative reading.
+                let finalSteps = [queriedSteps, self.sessionSteps].compactMap { $0 }.filter { $0 >= 0 }.max()
                 guard finalSteps != nil || !routePoints.isEmpty else {
                     // Do not discard an activity just because both sensors failed
                     // to return data. Keep the active session identity and durable
