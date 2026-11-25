@@ -1,16 +1,18 @@
 # GATIVX 3-Day Engineering Sprint Report
 
-**Last updated:** 2026-11-26 02:45 IST (21:15 UTC)  
+**Last updated:** 2026-11-26 04:50 IST (23:20 UTC)  
 **Repository:** sbscorpsales-ship-it/Mission-75  
 **Audit branch:** audit/gativx-completion-gap-ledger-20261125  
 **Primary repair branch:** fix/gativx-ui-test-guest-reset  
 **Primary repair head:** b6c04d41dc67bd191ed0cf8966331eb5661a9887  
 **Primary PR:** [#112](https://github.com/sbscorpsales-ship-it/Mission-75/pull/112), open, draft, unmerged  
 **Passing Activity-navigation candidate:** [#115](https://github.com/sbscorpsales-ship-it/Mission-75/pull/115), head d37733e3b08a585344506f73534b6e93ac2c1aea  
-**Combined Finish & Save integration:** [#117](https://github.com/sbscorpsales-ship-it/Mission-75/pull/117), head 7bb41d9de3cc43b4e03b4e54faf94f6ee48c3417, full CI pending  
-**Web visual-completeness preview:** [#116](https://github.com/sbscorpsales-ship-it/Mission-75/pull/116), head 090678d93dc6f373b2313e0239c0158dc54f5a30  
+**Combined Finish & Save integration:** [#117](https://github.com/sbscorpsales-ship-it/Mission-75/pull/117), head 7bb41d9de3cc43b4e03b4e54faf94f6ee48c3417, run #638 cancelled before full UI completion; newer queue-failure candidate is PR #121.  
+**Latest Design C visual review:** [#119](https://github.com/sbscorpsales-ship-it/Mission-75/pull/119), head b75a0639b34e5c7329db801c3ff423f406f9ce7e; earlier isolated visual-completeness preview remains in [#116](https://github.com/sbscorpsales-ship-it/Mission-75/pull/116).  
 **Cumulative report PR:** [#118](https://github.com/sbscorpsales-ship-it/Mission-75/pull/118), open, draft, unmerged  
-**Finish & Save PR:** [#114](https://github.com/sbscorpsales-ship-it/Mission-75/pull/114), open, draft, unmerged  
+**Finish & Save PR:** [#114](https://github.com/sbscorpsales-ship-it/Mission-75/pull/114), open, draft, unmerged.
+**Latest queue-failure correction:** [#121](https://github.com/sbscorpsales-ship-it/Mission-75/pull/121), head 4415daa439bd9446ef08842c9486cb0494a93613, CI #641 failed only at the UI suite; simulator/unsigned release/IPA packaging passed.
+**Profile navigation follow-up:** [#122](https://github.com/sbscorpsales-ship-it/Mission-75/pull/122), head 804a88b56051636104bb7c4c2ca264df3c725188, CI #642 in progress.  
 **Protected consolidation PR:** [#107](https://github.com/sbscorpsales-ship-it/Mission-75/pull/107), open, draft, untouched
 
 ## Release verdict
@@ -35,12 +37,12 @@ No pull request has been merged.
 | iOS Design C dashboard | Implemented-but-unverified | Native dashboard contains the approved step ring, metrics, mission, Guru, journey and community sections. UI test evidence exists on another repair SHA; physical iPhone visual comparison remains outstanding. |
 | iOS daily activity/Health metrics | Implemented-but-unverified | Core Motion and HealthKit code reads daily metrics and separates daily totals from workout sessions. No physical iPhone data-parity or background-delivery acceptance. |
 | iOS GPS activity | Implemented-but-unverified | Core Location recorder includes route segmentation, draft persistence, pause/resume and recovery. Screen-locked/background route behaviour has not been verified on the owner's iPhone. |
-| iOS Finish & Save | Implemented-but-unverified | Recovery-time policy, local-first history, HealthKit retry/outbox and duplicate-export coalescing are implemented on PR #114 and now stacked into PR #117. PR #117 adds four step-reconciliation tests to the 13 existing Finish & Save tests; its combined full suite is running. The UI suite still does not drive a complete Finish & Save flow, and no physical-device save/export test exists. |
+| iOS Finish & Save | Implemented-but-unverified | Local-first history, recovered-session finish policy, stable-ID upsert and HealthKit outbox/coalescing are implemented. PR #121 adds synchronous outbox queue acceptance and retains the same GPS draft/session ID if queue write/read-back fails. Run #641 passed 76/76 unit tests, including the coalesced-failure test, but the UI suite failed at Profile navigation (1/2 UI tests passed); the queue-write-failure path is not yet driven end-to-end by UI tests. No physical-device save/export test exists. |
 | Apple Health workout export | Implemented-but-unverified | HealthKit workout export and retry queue exist, with unit coverage. A signed app carrying the HealthKit entitlement and an actual iPhone export/read-back are still required. |
 | GATIVX Guru and 30/90/180/365-day journey | Implemented-but-unverified | Goal, purpose, emotion, next-action and journey logic exist; the 8 goal/journey unit tests passed in CI #628. iOS values are locally persisted; cross-device cloud persistence is not proven. |
 | Missions | Missing | iOS currently exposes one fixed “Today · Consistency” mission and a step-progress view, not a goal-linked mission engine with member-created missions, milestones and reviews. |
 | Community | Missing | iOS explicitly gates the feed/shared missions. No live community feed, groups, sharing, moderation, blocking or reporting. |
-| Profile | Implemented-but-unverified | Account identity, local photo, appearance, motion/location and Health settings exist. Profile tab navigation passed in PR #115 UI run #637; settings/photo-picker behavior and account lifecycle are not fully end-to-end verified. Photo is local-only. |
+| Profile | Implemented-but-unverified | Account identity, local photo, appearance, motion/location and Health settings exist. PR #120 run #640 passed Profile navigation, but PR #121 run #641 reproduced a main-run-loop/query timeout after tapping Profile. PR #122 removes the redundant Profile NavigationStack and is under full CI validation; settings/photo-picker behavior and account lifecycle remain unverified. Photo is local-only. |
 | Notifications | Missing | iOS explicitly states notifications are inactive; no delivery pipeline or member notification controls are implemented. |
 | Apps hub | Missing | No Apps destination in the current five-tab iOS shell. |
 | Android authentication | Implemented-but-unverified | Supabase email/password auth, encrypted Android Keystore session storage and refresh-token handling exist. No phone OTP or physical-device auth acceptance. |
@@ -55,9 +57,9 @@ No pull request has been merged.
 | Nutrition, hydration, sleep and strength | Missing | Web has basic weight/water/protein journal fields. A complete food diary, nutrition analysis, measured sleep integration and strength-training programme are not present across platforms. |
 | Motion 3D route replay | Missing | No 3D route playback/flyover implementation. |
 | Referrals, subscriptions, learning rewards, admin and moderation | Missing | Product blueprint defines these modules; the audited repair branch does not contain the required end-to-end systems. |
-| iOS CI/release | Verified (CI scope only) | PR #115 run #637 passed 58 unit tests and 2 UI tests, then simulator build, unsigned Release build and IPA packaging/upload. The combined Finish & Save PR #117 full suite is still running. Unsigned IPA is not installable and does not prove device acceptance. |
+| iOS CI/release | Verified (CI scope only) | PR #120 run #640 passed 75 unit tests and 2 UI tests, simulator build, unsigned Release build and IPA packaging. PR #121 run #641 passed 76 unit tests, but 1/2 UI tests failed at Profile navigation; simulator build, unsigned Release build and IPA packaging/upload passed. PR #122 run #642 is rerunning the full suite with the Profile tab stack removed. Unsigned IPA is not installable and does not prove device acceptance. |
 | Android CI/build | Verified (CI scope only) | CI #171 passed 20 source-safeguard assertions, built the debug APK and uploaded it. This proves compilation/static safeguards, not installation, sensors, Health Connect or customer acceptance. |
-| Web CI | Verified (CI scope only) | PR #116 run #45675295670 passed the structural release gate, existing mobile browser smoke and the separate visual-preview navigation/screenshot checks: 25 PASS assertions, 0 FAIL. Eight screenshots were uploaded. The Supabase client is mocked and external network is blocked; this is not live-backend or production acceptance. |
+| Web CI | Verified (CI scope only) | PR #119 run #45686178223 passed 51 assertions total: 15 static/release checks, 7 mobile browser smoke checks and 29 Design C screen/navigation checks; 0 FAIL. Ten screens and Day/Night behavior were checked and screenshots uploaded. The Design C page is a separate visual review; Supabase is mocked and external network is blocked. This is not live-backend or production acceptance. |
 | Signed iOS installation/physical acceptance | Blocked | Requires a valid Apple Developer signing identity and provisioning profile with HealthKit capability, then owner iPhone testing. |
 | Android device/production acceptance | Blocked | Requires emulator/physical-device validation, a signed release bundle and owner-controlled Play Console/release configuration. |
 | Web production deployment | Blocked | No verified production Pages deployment/URL and live-backend acceptance were found for the audited repair head. |
@@ -67,10 +69,15 @@ No pull request has been merged.
 
 | Item | Observed state |
 |---|---|
-| PR #112 | Head b6c04d41dc67bd191ed0cf8966331eb5661a9887; base feat/consolidated-gativx-runjeet; open/draft |
-| PR #114 | Head 87318182360d4369ea2f7a773a27dd3fa3e7c558; open/draft; its recorded base is the older PR #112 commit fa92bb43... |
-| PR #114 base freshness | Current PR #112 head is 7 commits ahead of the recorded PR #114 base. Refresh/stack PR #114 only after the current iOS validation stabilises; do not merge automatically. |
-| PR #107 | Open/draft at c19bdbd...; not edited or merged in this audit |
+| Main | Head 143889db3e72540fb478b76c486082f45395e9bd; default branch; unchanged by this sprint run |
+| PR #112 | Head b6c04d41dc67bd191ed0cf8966331eb5661a9887; base feat/consolidated-gativx-runjeet; open/draft/unmerged |
+| PR #114 | Head 87318182360d4369ea2f7a773a27dd3fa3e7c558; base fix/gativx-ui-test-guest-reset at fa92bb43...; open/draft/unmerged |
+| PR #114 base freshness | Current PR #112 head is 7 commits ahead of the recorded PR #114 base. Keep both open; refresh only after the combined validation stabilises. |
+| PR #120 | Head 66635d847964b90ab9b8a3d5b74dbb64257c09dd; run #640 full iOS suite passed 75 unit + 2 UI tests; open/draft/unmerged |
+| PR #121 | Head 4415daa439bd9446ef08842c9486cb0494a93613; run #641 failed at Profile UI query after 76/76 unit tests passed; build and unsigned IPA packaging passed; open/draft/unmerged |
+| PR #122 | Head 804a88b56051636104bb7c4c2ca264df3c725188; stacked on #121; run #642 in progress; open/draft/unmerged |
+| PR #119 | Head b75a0639b34e5c7329db801c3ff423f406f9ce7e; Design C visual review, run #436 passed 51/51 assertions; open/draft/unmerged |
+| PR #107 | Open/draft at c19bdbd307df7048cefd86bd3e6064ac4f4e3042; untouched and unmerged |
 | Other work | PRs #110 (Android build validation), #108 (approved dashboard), #100 (auth recovery), #97 (target progression), #90 (sleep), #102 (family/device identity) and #1 (data hub) remain open. Review each diff before deciding what belongs in the consolidated product; do not assume every open PR is integrated. |
 
 ## CI evidence and exact outcomes
@@ -534,3 +541,50 @@ The open PR metadata and associated workflow runs were checked again from GitHub
 PR #121's run #45713205787 was still in progress at 03:58 IST. Its project-generation, scheme-validation, and first-run/auth/layout/permission source checks had passed; the full unit/UI test step was still running. No test count or build/package success is claimed for PR #121 yet.
 
 These historical results are recorded to preserve the distinction between unit-suite success, UI-suite success, workflow completion, and physical-device acceptance.
+
+
+---
+
+## 2026-11-26 04:50 IST — PR #121 UI failure inspected; Profile follow-up PR #122 under validation
+
+### Repository state reverified from GitHub
+- Default branch `main` head: `143889db3e72540fb478b76c486082f45395e9bd`.
+- PR #112: `b6c04d41dc67bd191ed0cf8966331eb5661a9887`, open/draft/unmerged.
+- PR #114: `87318182360d4369ea2f7a773a27dd3fa3e7c558`, open/draft/unmerged; its base remains seven commits behind PR #112.
+- PR #107: `c19bdbd307df7048cefd86bd3e6064ac4f4e3042`, open/draft/unmerged; no PR #107 branch, files, refs or metadata were changed.
+- PR #120: `66635d847964b90ab9b8a3d5b74dbb64257c09dd`, open/draft/unmerged.
+- PR #121: `4415daa439bd9446ef08842c9486cb0494a93613`, open/draft/unmerged.
+- PR #122: `804a88b56051636104bb7c4c2ca264df3c725188`, open/draft/unmerged, stacked on #121.
+- PR #119: `b75a0639b34e5c7329db801c3ff423f406f9ce7e`, open/draft/unmerged.
+
+### PR #121 — run #641 exact result and log diagnosis
+- Workflow conclusion: **FAIL**. Full source SHA: `4415daa439bd9446ef08842c9486cb0494a93613`.
+- XCTest unit suite: **76 passed, 0 failed, 0 cancelled**.
+- XCTest UI suite: **2 executed; 1 passed, 1 failed, 0 cancelled**. `testHomeStartWalkNavigatesWithoutStartingSession` passed. `testDashboardSectionsMetricsAndPrimaryNavigation` failed at `GATIVXDashboardUITests.swift:295` after tapping Profile; XCTest reported the app main run loop busy for 30 seconds and then a matching-snapshot timeout (test duration 1449.883 seconds).
+- The 26.3 MB simulator app build passed. Unsigned iPhone Release build passed. Unsigned IPA packaging, integrity validation and upload passed (artifact [15071362791](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45713205787/artifacts/15071362791)). The aggregate release gate correctly failed only because XCTest failed.
+- The downloaded XCTest result bundle ([artifact 15070049678](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45713205787/artifacts/15070049678)) was inspected. It records a keyboard task queue timeout and an invalid SwiftUI frame warning during the GURU keyboard-editing segment, followed later by the Profile-tab main-run-loop timeout. These diagnostics are observed; the exact causal relationship is **not proven**.
+- PR #121 changes `saveActivityWorkout` to report synchronous durable outbox acceptance and retains the same recoverable GPS draft/session ID if queue creation/read-back fails. The full unit suite passed, but the failed UI navigation means PR #121 is not green. There is still no UI test that performs a real local Finish & Save, relaunch and history read-back; no physical HealthKit export is claimed.
+- [Run #641 and full workflow logs](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45713205787).
+
+### PR #122 — Profile tab navigation correction
+- Created isolated branch `fix/gativx-profile-tab-navigation-20261126` from PR #121.
+- Commit `804a88b56051636104bb7c4c2ca264df3c725188` removes the redundant `NavigationStack` wrapper from the Profile Form, which has no navigation destinations, and adds an iOS CI source safeguard for the flat Profile tab plus its existing accessibility/UI-test target.
+- The existing full UI navigation test is unchanged; no tests were skipped, narrowed or weakened.
+- **Run #642 is in progress** on the exact PR #122 head. Project generation, scheme validation and first-run/auth/layout/permission source checks passed; the full unit/UI suite is running. No test pass is claimed for PR #122 until the full job logs and result bundle are inspected.
+- [PR #122](https://github.com/sbscorpsales-ship-it/Mission-75/pull/122) · [Run #642](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45720247757).
+
+### Android and Web CI logs independently reconciled
+- **Android run #171** on `19c679a7f2ef675176c0009148865563fca2fd00`: **20 PASS, 0 FAIL** source safeguards; Gradle reported `BUILD SUCCESSFUL` with 35 actionable tasks; debug APK artifact `15042071077` uploaded. No emulator/physical Android test was run. [Run #171](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45652707476).
+- **Web run #436** on Design C review head `b75a0639b34e5c7329db801c3ff423f406f9ce7e`: **51 PASS, 0 FAIL** across 15 static/release checks, 7 mobile browser smoke assertions and 29 Design C review assertions. Ten screens, Day/Night mode, period selector, mobile overflow and preview-only disclosures were checked. The page is a separate visual review; its metrics/data are illustrative, Supabase is mocked, and no production deployment occurred. [Run #436](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45686178223) · [Screenshot artifact](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45686178223/artifacts/15056846592).
+
+### Current gap-ledger interpretation
+- **Verified (CI scope only):** PR #120 full iOS simulator suite/build/package; PR #115 Activity navigation suite; Android run #171 source/build; Web run #436 static/browser/Design C review.
+- **Implemented-but-unverified:** PR #121 Finish & Save/outbox queue-failure handling; Profile navigation pending PR #122; HealthKit real-device flow; Android Health Connect/WalkOn runtime; live account auth and shared-backend sync.
+- **Missing:** complete guided onboarding; full goal-linked Missions; live Community/moderation; notification delivery; Apps hub; complete Android/Web parity; Universal Data Hub provider/reconciliation adapters; remaining nutrition/hydration/sleep/strength, data export/deletion, 3D replay and business/reward modules.
+- **Blocked:** signed iPhone installation/HealthKit/background GPS require the owner's Apple signing identity/provisioning profile with HealthKit capability and actual iPhone testing. Android runtime acceptance requires an emulator or physical Android device. Live Supabase/RLS tenant-isolation requires a controlled staging project, known migration state and two test accounts. Production deployment remains unverified.
+
+### Next action
+1. Inspect PR #122 run #642's full XCTest result and job logs; do not declare Profile fixed unless both UI tests and all unit tests pass on this exact head.
+2. If #642 passes, retain PR #122 draft/unmerged and rerun the combined Finish & Save queue-failure path with a deterministic persistence-failure test seam; do not claim physical HealthKit.
+3. Add an honest local Finish & Save UI acceptance path covering finish, app relaunch and history read-back.
+4. Continue the missing-feature audit and keep PR #112, PR #114 and PR #107 untouched/unmerged.
