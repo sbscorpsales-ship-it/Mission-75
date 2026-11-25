@@ -1,6 +1,6 @@
 # GATIVX 3-Day Engineering Sprint Report
 
-**Last updated:** 2026-11-26 00:03 IST (18:33 UTC)  
+**Last updated:** 2026-11-26 02:45 IST (21:15 UTC)  
 **Repository:** sbscorpsales-ship-it/Mission-75  
 **Audit branch:** audit/gativx-completion-gap-ledger-20261125  
 **Primary repair branch:** fix/gativx-ui-test-guest-reset  
@@ -375,3 +375,62 @@ Design/parity status: the visual review is ready for owner inspection. This does
 
 ### Next action
 Inspect run #640's complete logs. Require the full unit/UI suite to execute, then verify simulator build, unsigned Release build and IPA packaging. If the GURU UI stall remains, continue from the xcresult diagnostics rather than changing the test or claiming a pass.
+
+
+---
+
+## 2026-11-26 02:45 IST — automation run 3: GURU keyboard mitigation passes the full iOS CI suite
+
+### Latest repository and PR state verified
+- Default branch `main`: `143889db3e72540fb478b76c486082f45395e9bd`.
+- PR #107 remains open/draft/unmerged at `c19bdbd307df7048cefd86bd3e6064ac4f4e3042`; no PR #107 file, branch or metadata was changed.
+- PR #112 remains open/draft/unmerged at `b6c04d41dc67bd191ed0cf8966331eb5661a9887`.
+- PR #114 remains open/draft/unmerged at `87318182360d4369ea2f7a773a27dd3fa3e7c558`, based on `fa92bb43a6b2064e0d412e4607c575057535ca1b`. A direct commit comparison confirms PR #112's head is 7 commits ahead of that base. No retarget or merge was performed.
+- PR #115 remains open/draft/unmerged at `d37733e3b08a585344506f73534b6e93ac2c1aea`.
+- PR #117 remains open/draft/unmerged at `7bb41d9de3cc43b4e03b4e54faf94f6ee48c3417`.
+- PR #118 remains open/draft/unmerged at `21c1b54a447214d7ad5500e48f0d0cc64e8576b1` before this report-only update.
+- PR #119 remains open/draft/unmerged at `b75a0639b34e5c7329db801c3ff423f406f9ce7e`.
+- PR #120 remains open/draft/unmerged at `66635d847964b90ab9b8a3d5b74dbb64257c09dd`, based on PR #117 integration head `7bb41d9de3cc43b4e03b4e54faf94f6ee48c3417`.
+- PR #110 remains open/draft/unmerged at `d0dbfb67377a298f90bc732a1c16d46546bef185`; this is the Android debug-build validation PR. The separate Android sync-acknowledgement branch is recorded below.
+- All PRs remain unmerged. No change was made to PR #107.
+
+### PR #120 full iOS validation — PASS
+- Candidate branch: `fix/gativx-guru-goal-keyboard-layout-20261126`.
+- Source commit: `66635d847964b90ab9b8a3d5b74dbb64257c09dd`.
+- Workflow run #640: [45694454367](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45694454367), completed successfully. The job log was downloaded and inspected.
+- XCTest unit suite: **75 passed, 0 failed, 0 cancelled**.
+- XCTest UI suite: **2 passed, 0 failed, 0 cancelled**.
+- UI test `testDashboardSectionsMetricsAndPrimaryNavigation` passed. The recorded sequence entered GURU, focused the goal field, typed “Walk consistently”, dismissed the keyboard with Done, selected a 180-day journey, started the journey, changed the next-selection control to 30 days while the active journey remained 180 days, closed GURU, navigated to Activity and verified the Activity screen, navigated to Missions, Community and Profile, and verified the Profile identity control.
+- UI test `testHomeStartWalkNavigatesWithoutStartingSession` passed; the Home Start Walk control navigated to Activity without starting a recording, and the Finish & Save button was present.
+- The #640 log contains no recurrence of the earlier `Invalid frame dimension`, main-thread-busy or event-loop-idle-timeout diagnostics. The GURU keyboard mitigation is therefore validated for this simulator UI sequence, not proven across every iPhone size or physical device.
+- iPhone Simulator build: **BUILD SUCCEEDED**.
+- Unsigned iPhone Release build: **BUILD SUCCEEDED**.
+- IPA packaging: ZIP integrity check passed; bundle identity/version metadata verified. Unsigned IPA artifact [15061672408](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45694454367/artifacts/15061672408), 698,523 bytes. Simulator artifact [15060788600](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45694454367/artifacts/15060788600). XCTest result bundle artifact [15061078309](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45694454367/artifacts/15061078309).
+- Workflow job: **1 success, 0 failures, 0 cancelled**. The aggregate release gate reported all automated gates passed.
+- The IPA is unsigned. This does not establish iOS installation/signing, physical iPhone HealthKit, background GPS or real-device save/export acceptance.
+
+### What this changes in the gap ledger
+- **GURU goal keyboard and the previously failing GURU-dismissal → Activity transition:** Verified in the #640 simulator UI sequence on PR #120's exact source head. Keep the change as an unmerged candidate pending owner review.
+- **Profile navigation:** Verified in the same #640 simulator UI sequence, which opened Profile and found the authenticated member identity element. Profile photo picker, settings persistence and account lifecycle remain implemented-but-unverified.
+- **Finish & Save:** The 17 dedicated Finish & Save regression tests and 24 activity-session persistence/recovery tests passed within the 75-unit suite. Atomic local history read-back, recovery upsert, retryable HealthKit outbox and duplicate/coalescing policies have unit-level evidence. The UI suite does not execute a full walk recording and save/read-back cycle; HealthKit export is not exercised against a real iPhone. Overall feature remains **implemented-but-unverified**, with its covered unit behaviors verified in CI.
+- **iOS release pipeline:** Verified for simulator build, unsigned device-target Release build and IPA packaging on this source revision only. Signed install and device acceptance remain blocked.
+- **GURU logic and journey model:** Unit and UI coverage passed in CI for the tested path. Cross-device persistence and live account sync remain unverified.
+- The older PR #117 run #638 was cancelled after its UI timeout; run #640 on the PR #120 merge commit is the successful full-suite result for the corrected combined candidate. Do not rewrite the historical #638 outcome.
+
+### Android and Web Hub latest evidence rechecked
+- Android sync acknowledgement branch `feat/gativx/android-sync-ack-20261125`, source commit `19c679a7f2ef675176c0009148865563fca2fd00`, workflow run #171 [45652707476](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45652707476): inspected the job log. **20 source-safeguard assertions passed, 0 failed**; Gradle reported `BUILD SUCCESSFUL` in 26 seconds; debug APK artifact was produced. No JVM/instrumentation test, emulator, physical Android device, Health Connect provider or signed release test ran. Device behavior remains implemented-but-unverified / blocked.
+- Web Design C review PR #119, exact head `b75a0639b34e5c7329db801c3ff423f406f9ce7e`, run #436 [45686178223](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45686178223): job completed successfully. Logs show 15 structural release assertions, 7 existing mobile browser smoke assertions and 29 Design C review assertions: **51 PASS, 0 FAIL**. All ten review screens, five primary navigation destinations, Day/Night toggle, period selector, 390px mobile overflow, preview disclosures and zero browser/page errors were checked. Screenshot artifact [15056846592](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45686178223/artifacts/15056846592).
+- The `app-v2.html` blob on `main` and PR #119's Design C branch was independently fetched and compared: both have blob SHA `8089f536017ffb3a60a8bb99291313a3f5413927`. The original working Web Hub file is unchanged. PR #119 is a visual-only review page; it is not a live production deployment or implementation of the gated features.
+- Web smoke tests use mocked/local Supabase fixtures and block external network calls. Live auth, RLS, account isolation, production migration and Pages deployment remain unverified/blocked.
+
+### Files and commits changed in this run
+- No new application source commit was made in this automation run. The tested source change is the already-open PR #120 commit `66635d847964b90ab9b8a3d5b74dbb64257c09dd`, changing only `ios/GATIVX/ContentView.swift` and `.github/workflows/gativx-ios.yml` relative to its parent. Its change removes vertical expansion and a redundant simultaneous tap gesture from the GURU goal TextField while preserving binding, FocusState, Done submission and accessibility ID; the workflow guard now checks the native focus binding. No test case was removed, filtered or weakened.
+- This report update changes only `GATIVX_3_DAY_SPRINT_REPORT.md` on the existing documentation branch. No production app, database, release configuration or user data was changed.
+
+### Remaining blockers and next action
+1. Keep PR #120 open/draft and unmerged. Review its two-file diff and retain the #640 evidence; do not merge automatically.
+2. Do not refresh or merge PR #114 yet. Its base is seven commits behind PR #112; after owner review, plan an explicit safe rebase/stack and rerun the complete combined suite before any merge decision.
+3. Add a true UI/integration test for a completed GPS walk: finish, local atomic write/read-back, app relaunch recovery, queued HealthKit export result and visible saved history. The current UI test checks navigation and presence of Finish & Save, not the actual save gesture.
+4. Continue the missing-feature ledger: guided first-run onboarding; full Missions engine; Community groups/feed/moderation; notifications; Apps hub; Android parity; web parity; Universal Data Hub; export/deletion; nutrition/hydration/sleep/strength; 3D route replay; subscriptions/referrals/rewards/admin.
+5. Obtain owner-controlled Apple signing identity/profile with HealthKit entitlement for physical iPhone installation and IOS-01..14 acceptance. Obtain Android emulator/device with Health Connect for screen-locked GPS, save/recovery and sync tests. Obtain a non-production Supabase environment with reproducible schema/migrations and two test accounts for RLS/tenant isolation/idempotency tests. Verify a controlled Pages deployment and live web auth before claiming production readiness.
+6. Preserve Design C and the existing product decisions. Keep PR #107 untouched and every PR unmerged.
