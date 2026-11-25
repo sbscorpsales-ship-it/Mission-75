@@ -1,0 +1,377 @@
+<!doctype html>
+<html lang="en" data-theme="night">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b0f14">
+<title>GATIVX — Design C review</title>
+<style>
+:root[data-theme="night"]{color-scheme:dark;--bg:#0b0f14;--surface:#141a22;--surface2:#1b232d;--surface3:#202b36;--text:#f4f7fa;--muted:#a0acba;--line:#2b3541;--track:#303b47;--lime:#c7ff3d;--cyan:#61dfff;--violet:#a68bff;--orange:#ffab62;--red:#ff7c82;--shadow:0 18px 48px #0005}
+:root[data-theme="day"]{color-scheme:light;--bg:#f3f6f3;--surface:#ffffff;--surface2:#edf2ed;--surface3:#e5ece6;--text:#17221b;--muted:#68776e;--line:#d8e1d9;--track:#dce5dc;--lime:#7ba900;--cyan:#1689aa;--violet:#7054bd;--orange:#bb641c;--red:#c34b53;--shadow:0 12px 30px #24362812}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text);font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+body{min-height:100dvh}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible{outline:3px solid var(--cyan);outline-offset:3px}
+.shell{width:min(100%,430px);height:100dvh;min-height:620px;margin:0 auto;background:var(--bg);display:flex;flex-direction:column;position:relative;overflow:hidden;border-inline:1px solid var(--line)}
+@media(min-width:700px){body{padding:18px;background:radial-gradient(ellipse at 50% 0,#263a2b 0,transparent 52%),#070a0e}.shell{height:min(920px,calc(100dvh - 36px));min-height:680px;border:1px solid var(--line);border-radius:30px;box-shadow:var(--shadow)}}
+.topbar{height:66px;flex:0 0 66px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;border-bottom:1px solid var(--line);background:var(--bg)}
+.brand{display:flex;align-items:center;gap:9px;min-width:0}
+.brand img{width:35px;height:35px;object-fit:contain;border-radius:10px}
+.brand-name{font-weight:950;letter-spacing:2px;font-size:17px}
+.brand-name span{color:var(--lime)}
+.brand-sub{font-size:9px;letter-spacing:1.2px;color:var(--muted);font-weight:800}
+.header-actions{display:flex;align-items:center;gap:7px}
+.icon-btn,.avatar-btn{width:36px;height:36px;border:1px solid var(--line);border-radius:12px;background:var(--surface);display:grid;place-items:center;font-size:16px}
+.icon-btn.active{border-color:var(--lime);color:var(--lime)}
+.avatar-btn{border-radius:50%;font-size:11px;font-weight:900;background:var(--surface3);color:var(--lime)}
+.demo-strip{flex:0 0 auto;min-height:29px;padding:6px 14px;background:color-mix(in srgb,var(--orange) 13%,var(--surface));border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:center;gap:7px;color:var(--muted);font-size:9px;letter-spacing:.7px;font-weight:800;text-align:center}
+.demo-strip strong{color:var(--orange)}
+.main{flex:1;overflow-y:auto;overscroll-behavior:contain;padding:16px 15px calc(22px + env(safe-area-inset-bottom));scrollbar-width:none}
+.main::-webkit-scrollbar{display:none}
+.screen{display:none;animation:fadeIn .18s ease-out}
+.screen.active{display:block}
+@keyframes fadeIn{from{opacity:.5;transform:translateY(4px)}to{opacity:1;transform:none}}
+.page-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin:2px 0 15px}
+.eyebrow{margin:0 0 5px;color:var(--lime);font-size:9px;letter-spacing:1.7px;font-weight:900}
+h1{font-size:27px;line-height:1.08;letter-spacing:-.8px;margin:0;font-weight:850}
+h2{font-size:18px;line-height:1.15;letter-spacing:-.3px;margin:0;font-weight:820}
+h3{font-size:14px;line-height:1.2;margin:0;font-weight:800}
+p{margin:0}
+.subcopy{font-size:12px;color:var(--muted);margin-top:6px}
+.demo-tag{flex:0 0 auto;border:1px solid color-mix(in srgb,var(--orange) 50%,var(--line));color:var(--orange);border-radius:20px;padding:5px 8px;font-size:8px;letter-spacing:1px;font-weight:900}
+.periods{display:grid;grid-template-columns:repeat(4,1fr);padding:3px;background:var(--surface2);border:1px solid var(--line);border-radius:13px;margin:0 0 14px}
+.periods button{border:0;border-radius:10px;background:transparent;padding:8px 2px;font-size:10px;color:var(--muted);font-weight:800}
+.periods button.selected{background:var(--surface);color:var(--text);box-shadow:0 1px 4px #0002}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:19px;padding:15px;min-width:0}
+.hero{display:grid;grid-template-columns:minmax(0,1fr) 122px;gap:10px;align-items:center;background:linear-gradient(135deg,var(--surface3),var(--surface));border:1px solid color-mix(in srgb,var(--lime) 25%,var(--line));border-radius:23px;padding:17px;overflow:hidden}
+.hero .hero-kicker{font-size:9px;font-weight:900;letter-spacing:1.5px;color:var(--lime)}
+.hero h2{font-size:21px;line-height:1.1;margin:8px 0 6px;max-width:210px}
+.hero p{font-size:11px;color:var(--muted)}
+.hero-foot{display:flex;align-items:center;gap:8px;margin-top:14px}
+.mini-track{height:6px;flex:1;background:var(--track);border-radius:10px;overflow:hidden}
+.mini-track i{display:block;height:100%;background:var(--lime);border-radius:10px}
+.hero-foot b{font-size:10px;color:var(--lime)}
+.big-ring{width:116px;height:116px;border-radius:50%;display:grid;place-items:center;background:conic-gradient(var(--lime) 0 62%,var(--track) 62% 100%);position:relative;margin:auto}
+.big-ring:before{content:"";position:absolute;inset:10px;border-radius:50%;background:var(--surface)}
+.ring-center{position:relative;text-align:center}
+.ring-center strong{display:block;font-size:24px;line-height:1;font-weight:900;letter-spacing:-1px}
+.ring-center span{font-size:8px;color:var(--muted);font-weight:900;letter-spacing:1px}
+.section-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:21px 1px 10px}
+.section-head span{font-size:9px;color:var(--muted);font-weight:850;letter-spacing:1px}
+.metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-top:10px}
+.metric{padding:13px;border-radius:17px;background:var(--surface);border:1px solid var(--line);min-width:0}
+.metric-top{display:flex;align-items:center;justify-content:space-between;gap:6px;color:var(--muted);font-size:9px;letter-spacing:1px;font-weight:850}
+.metric-icon{width:25px;height:25px;border-radius:9px;background:var(--surface3);display:grid;place-items:center;font-size:13px;color:var(--lime)}
+.metric strong{display:block;font-size:24px;line-height:1.1;letter-spacing:-.8px;margin:8px 0 3px}
+.metric small{font-size:10px;color:var(--muted)}
+.metric .source{display:block;margin-top:8px;color:var(--orange);font-size:8px;letter-spacing:.7px;font-weight:900}
+.ring-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.ring-card{padding:12px 8px;text-align:center}
+.mini-ring{width:58px;height:58px;margin:0 auto 9px;border-radius:50%;display:grid;place-items:center;position:relative}
+.mini-ring:before{content:"";position:absolute;inset:7px;border-radius:50%;background:var(--surface)}
+.mini-ring span{position:relative;font-size:12px;font-weight:900}
+.ring-card b{display:block;font-size:10px}
+.ring-card small{font-size:9px;color:var(--muted)}
+.two-col{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.feature-card{min-height:142px;display:flex;flex-direction:column;justify-content:space-between}
+.feature-icon{width:34px;height:34px;border-radius:12px;display:grid;place-items:center;background:var(--surface3);font-size:17px}
+.feature-card p{font-size:10px;color:var(--muted);margin-top:6px}
+.feature-card button,.primary-btn,.secondary-btn{border:0;border-radius:12px;padding:10px 12px;font-size:10px;font-weight:900;letter-spacing:.3px}
+.primary-btn{background:var(--lime);color:#17220a}
+.secondary-btn{background:var(--surface3);color:var(--text);border:1px solid var(--line)}
+.chart-card{padding:15px}
+.chart-legend{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:9px}
+.chart-bars{height:112px;display:flex;align-items:flex-end;justify-content:space-around;gap:8px;padding:10px 2px 0;border-bottom:1px solid var(--line);margin-top:10px}
+.bar-wrap{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;height:100%;justify-content:flex-end}
+.bar{width:100%;max-width:23px;border-radius:7px 7px 2px 2px;background:linear-gradient(180deg,var(--cyan),color-mix(in srgb,var(--cyan) 35%,var(--surface3)))}
+.bar.today{background:linear-gradient(180deg,var(--lime),color-mix(in srgb,var(--lime) 35%,var(--surface3)))}
+.bar-wrap small{font-size:8px;color:var(--muted)}
+.activity-row{display:flex;align-items:center;gap:11px;padding:12px 0;border-bottom:1px solid var(--line)}
+.activity-row:last-child{border-bottom:0;padding-bottom:0}
+.activity-icon{width:38px;height:38px;border-radius:13px;display:grid;place-items:center;background:var(--surface3);font-size:17px}
+.activity-info{flex:1;min-width:0}
+.activity-info b{display:block;font-size:12px}
+.activity-info small{font-size:10px;color:var(--muted)}
+.activity-value{text-align:right;font-size:11px;font-weight:850}
+.activity-value small{display:block;font-size:9px;color:var(--muted);font-weight:500}
+.route-map{height:178px;border-radius:15px;overflow:hidden;background:#15232b;border:1px solid var(--line);position:relative}
+.route-map svg{width:100%;height:100%;display:block}
+.map-label{position:absolute;left:10px;top:10px;border-radius:8px;padding:5px 7px;background:#0b0f14dd;color:#d9e4e8;font-size:8px;letter-spacing:.8px;font-weight:900}
+.route-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
+.route-stats div{background:var(--surface2);border-radius:12px;padding:10px}
+.route-stats strong{display:block;font-size:16px}
+.route-stats small{font-size:9px;color:var(--muted)}
+.pill-row{display:flex;gap:7px;flex-wrap:wrap}
+.pill{border:1px solid var(--line);border-radius:20px;padding:7px 10px;background:var(--surface2);font-size:9px;font-weight:800;color:var(--muted)}
+.pill.selected{color:var(--lime);border-color:var(--lime)}
+.workout-types{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.type-card{text-align:center;padding:14px 8px}
+.type-card .type-icon{font-size:21px;margin-bottom:6px}
+.type-card b{display:block;font-size:10px}
+.type-card small{font-size:8px;color:var(--muted)}
+.progress-line{height:7px;border-radius:20px;background:var(--track);overflow:hidden;margin:10px 0 6px}
+.progress-line i{display:block;height:100%;border-radius:20px;background:var(--lime)}
+.milestone{display:flex;gap:11px;padding:12px 0;border-bottom:1px solid var(--line)}
+.milestone:last-child{border-bottom:0}
+.milestone-dot{width:27px;height:27px;border-radius:50%;background:var(--surface3);display:grid;place-items:center;color:var(--lime);font-size:11px;font-weight:900;flex:0 0 27px}
+.milestone b{display:block;font-size:11px}
+.milestone small{font-size:9px;color:var(--muted)}
+.group-card{padding:14px;min-height:108px}
+.group-card .group-icon{font-size:21px;margin-bottom:8px}
+.group-card p{font-size:10px;color:var(--muted);margin-top:5px}
+.feed-item{padding:13px 0;border-bottom:1px solid var(--line)}
+.feed-item:last-child{border:0;padding-bottom:0}
+.feed-head{display:flex;align-items:center;gap:8px}
+.feed-avatar{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:var(--surface3);font-size:10px;font-weight:900;color:var(--cyan)}
+.feed-head b{font-size:10px}
+.feed-head small{display:block;font-size:8px;color:var(--muted)}
+.feed-item p{font-size:11px;margin:9px 0 0}
+.coach-hero{padding:18px;background:linear-gradient(140deg,color-mix(in srgb,var(--violet) 18%,var(--surface)),var(--surface));border-color:color-mix(in srgb,var(--violet) 45%,var(--line))}
+.coach-hero .guru-mark{width:40px;height:40px;border-radius:14px;display:grid;place-items:center;background:color-mix(in srgb,var(--violet) 20%,var(--surface3));color:var(--violet);font-size:19px;margin-bottom:12px}
+.coach-hero h2{font-size:23px}
+.coach-hero p{font-size:11px;color:var(--muted);margin-top:7px}
+.coach-action{margin-top:12px;padding:14px;border-radius:15px;background:var(--surface2);border:1px solid var(--line)}
+.coach-action b{display:block;font-size:12px;margin:5px 0}
+.coach-action p{font-size:10px;color:var(--muted)}
+.profile-head{display:flex;align-items:center;gap:13px;padding:16px}
+.profile-avatar{width:55px;height:55px;border-radius:50%;background:var(--surface3);display:grid;place-items:center;color:var(--lime);font-weight:950;font-size:18px}
+.profile-meta{flex:1}
+.profile-meta b{display:block;font-size:14px}
+.profile-meta small{font-size:10px;color:var(--muted)}
+.setting-row{display:flex;align-items:center;gap:10px;padding:13px 0;border-bottom:1px solid var(--line)}
+.setting-row:last-child{border:0}
+.setting-row span{flex:1;font-size:11px}
+.setting-row small{display:block;color:var(--muted);font-size:9px}
+.status{border-radius:20px;padding:4px 7px;font-size:8px;font-weight:900;letter-spacing:.5px;background:var(--surface3);color:var(--muted)}
+.status.off{color:var(--orange)}
+.app-provider{display:flex;align-items:center;gap:11px;padding:12px 0;border-bottom:1px solid var(--line)}
+.app-provider:last-child{border:0}
+.provider-icon{width:39px;height:39px;border-radius:13px;background:var(--surface3);display:grid;place-items:center;font-size:17px}
+.provider-info{flex:1}
+.provider-info b{display:block;font-size:11px}
+.provider-info small{font-size:9px;color:var(--muted)}
+.notice{display:flex;gap:10px;padding:12px 0;border-bottom:1px solid var(--line)}
+.notice:last-child{border:0}
+.notice-dot{width:8px;height:8px;border-radius:50%;background:var(--lime);margin-top:5px}
+.notice b{display:block;font-size:11px}
+.notice small{font-size:9px;color:var(--muted)}
+.bottom-nav{height:72px;flex:0 0 72px;padding:7px 7px calc(7px + env(safe-area-inset-bottom));border-top:1px solid var(--line);background:color-mix(in srgb,var(--bg) 93%,transparent);display:grid;grid-template-columns:repeat(5,1fr);gap:2px;backdrop-filter:blur(18px)}
+.bottom-nav button{border:0;background:transparent;border-radius:13px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:var(--muted);font-size:8px;font-weight:800}
+.bottom-nav button .nav-icon{font-size:17px;line-height:1}
+.bottom-nav button.active{color:var(--lime);background:color-mix(in srgb,var(--lime) 10%,var(--surface))}
+.empty-state{padding:16px;border:1px dashed var(--line);border-radius:15px;color:var(--muted);font-size:10px;text-align:center}
+.footer-note{font-size:9px;color:var(--muted);text-align:center;padding:15px 8px 2px}
+dialog{border:1px solid var(--line);border-radius:20px;background:var(--surface);color:var(--text);padding:20px;width:min(340px,calc(100% - 30px));box-shadow:var(--shadow)}
+dialog::backdrop{background:#0009;backdrop-filter:blur(3px)}
+dialog h2{margin-bottom:8px}
+dialog p{font-size:11px;color:var(--muted);margin-bottom:15px}
+dialog button{width:100%}
+@media(max-width:360px){.hero{grid-template-columns:minmax(0,1fr) 104px;padding:14px}.big-ring{width:100px;height:100px}.ring-center strong{font-size:21px}.hero h2{font-size:18px}.metric strong{font-size:21px}.topbar{padding-inline:12px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;scroll-behavior:auto!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="shell" id="app-shell">
+<header class="topbar">
+  <div class="brand">
+    <img src="./gativx-logo.jpg" alt="GATIVX logo">
+    <div><div class="brand-name">GATI<span>VX</span></div><div class="brand-sub">FROM GOALS TO XCELLENCE</div></div>
+  </div>
+  <div class="header-actions">
+    <button class="icon-btn" data-nav="guru" aria-label="Open GURU">✦</button>
+    <button class="icon-btn" data-nav="apps" aria-label="Connected apps">▦</button>
+    <button class="icon-btn" data-nav="notifications" aria-label="Notifications">♧</button>
+    <button class="avatar-btn" data-nav="profile" aria-label="Open profile">M</button>
+    <button class="icon-btn" id="theme-toggle" aria-label="Switch to day mode">☼</button>
+  </div>
+</header>
+<div class="demo-strip"><strong>DESIGN C REVIEW</strong><span>Illustrative sample data only · No account or health service connected</span></div>
+<main class="main" id="main-content">
+<section class="screen active" id="screen-home" aria-labelledby="home-title">
+  <div class="page-heading">
+    <div><p class="eyebrow">TODAY · YOUR JOURNEY</p><h1 id="home-title">Move with purpose.</h1><p class="subcopy">Small steps today. Meaningful progress over time.</p></div>
+    <span class="demo-tag">SAMPLE</span>
+  </div>
+  <div class="periods" role="group" aria-label="Progress period">
+    <button class="selected" type="button">Today</button><button type="button">Week</button><button type="button">Month</button><button type="button">Year</button>
+  </div>
+  <article class="hero">
+    <div><p class="hero-kicker">YOUR DAILY MISSION</p><h2>Consistency builds momentum.</h2><p>A balanced view of movement, activity and the reason you started.</p><div class="hero-foot"><div class="mini-track"><i style="width:62%"></i></div><b>62%</b></div></div>
+    <div class="big-ring" aria-label="Sample step progress 6240 of 10000"><div class="ring-center"><strong>6,240</strong><span>STEPS</span></div></div>
+  </article>
+  <div class="section-head"><h2>Today's activity</h2><span>MEASURED DATA PREVIEW</span></div>
+  <div class="metrics">
+    <article class="metric"><div class="metric-top"><span>STEPS</span><span class="metric-icon">↟</span></div><strong>6,240</strong><small>of 10,000 daily goal</small><span class="source">ILLUSTRATIVE</span></article>
+    <article class="metric"><div class="metric-top"><span>DISTANCE</span><span class="metric-icon">⌁</span></div><strong>4.2 km</strong><small>walking distance</small><span class="source">ILLUSTRATIVE</span></article>
+    <article class="metric"><div class="metric-top"><span>ACTIVE CALORIES</span><span class="metric-icon">♨</span></div><strong>318 kcal</strong><small>of 500 kcal goal</small><span class="source">ILLUSTRATIVE</span></article>
+    <article class="metric"><div class="metric-top"><span>ACTIVE MINUTES</span><span class="metric-icon">◷</span></div><strong>38 min</strong><small>movement time</small><span class="source">ILLUSTRATIVE</span></article>
+  </div>
+  <div class="section-head"><h2>Activity rings</h2><span>DAILY GOALS</span></div>
+  <div class="ring-grid">
+    <article class="card ring-card"><div class="mini-ring" style="background:conic-gradient(var(--lime) 0 62%,var(--track) 62% 100%)"><span>62%</span></div><b>Move</b><small>6,240 steps</small></article>
+    <article class="card ring-card"><div class="mini-ring" style="background:conic-gradient(var(--cyan) 0 64%,var(--track) 64% 100%)"><span>64%</span></div><b>Energy</b><small>318 kcal</small></article>
+    <article class="card ring-card"><div class="mini-ring" style="background:conic-gradient(var(--violet) 0 73%,var(--track) 73% 100%)"><span>73%</span></div><b>Heart points</b><small>22 of 30</small></article>
+  </div>
+  <div class="section-head"><h2>Your next step</h2><span>GOAL + PURPOSE</span></div>
+  <div class="two-col">
+    <article class="card feature-card"><div><div class="feature-icon">◎</div><p class="eyebrow">MISSION 75</p><h3>Build a steady routine</h3><p>Daily movement, one achievable milestone at a time.</p></div><button class="primary-btn" data-nav="missions">View mission</button></article>
+    <article class="card feature-card"><div><div class="feature-icon">✦</div><p class="eyebrow">GATIVX GURU</p><h3>Reconnect with your why</h3><p>A practical next action guided by your purpose.</p></div><button class="secondary-btn" data-nav="guru">Open GURU</button></article>
+  </div>
+  <div class="section-head"><h2>Weekly activity</h2><span>DEMO TREND</span></div>
+  <article class="card chart-card"><div class="chart-legend"><span style="color:var(--cyan)">●</span> Daily movement <span style="margin-left:auto">Sample minutes</span></div><div class="chart-bars"><div class="bar-wrap"><div class="bar" style="height:42%"></div><small>M</small></div><div class="bar-wrap"><div class="bar" style="height:67%"></div><small>T</small></div><div class="bar-wrap"><div class="bar" style="height:55%"></div><small>W</small></div><div class="bar-wrap"><div class="bar today" style="height:82%"></div><small>T</small></div><div class="bar-wrap"><div class="bar" style="height:30%"></div><small>F</small></div><div class="bar-wrap"><div class="bar" style="height:48%"></div><small>S</small></div><div class="bar-wrap"><div class="bar" style="height:22%"></div><small>S</small></div></div></article>
+  <div class="section-head"><h2>Latest workout</h2><span>ROUTE PREVIEW</span></div>
+  <article class="card"><div class="activity-row"><div class="activity-icon">↗</div><div class="activity-info"><b>Morning walk</b><small>Sample session · 38 min</small></div><div class="activity-value">4.2 km<small>5.8 km/h avg</small></div></div><button class="secondary-btn" style="width:100%;margin-top:12px" data-nav="activity">Open activity dashboard</button></article>
+  <div class="section-head"><h2>Wellness snapshot</h2><span>OPTIONAL SOURCES</span></div>
+  <div class="two-col">
+    <article class="card"><p class="eyebrow">SLEEP</p><h2>Connect a source</h2><p class="subcopy">Sleep insights appear when valid data is available.</p><span class="status off">NOT CONNECTED</span></article>
+    <article class="card"><p class="eyebrow">HYDRATION</p><h2>1.2 / 2.0 L</h2><p class="subcopy">Sample manual log only.</p><span class="source">ILLUSTRATIVE</span></article>
+  </div>
+</section>
+
+<section class="screen" id="screen-activity" aria-labelledby="activity-title">
+  <div class="page-heading"><div><p class="eyebrow">MOVEMENT · GPS</p><h1 id="activity-title">Activity</h1><p class="subcopy">Start an intentional session. Your daily steps remain separate.</p></div><span class="demo-tag">SAMPLE</span></div>
+  <div class="pill-row" style="margin-bottom:12px"><span class="pill selected">Walking</span><span class="pill">Running</span><span class="pill">Cycling</span><span class="pill">Hiking</span></div>
+  <article class="card">
+    <div class="section-head" style="margin-top:0"><h2>Route recorder</h2><span>PREVIEW ONLY</span></div>
+    <div class="route-map"><span class="map-label">ILLUSTRATIVE ROUTE · NO LIVE GPS</span><svg viewBox="0 0 390 178" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Illustrative route map"><defs><pattern id="grid" width="34" height="34" patternUnits="userSpaceOnUse"><path d="M34 0H0V34" fill="none" stroke="#31424a" stroke-width="1"/></pattern></defs><rect width="390" height="178" fill="#172a31"/><rect width="390" height="178" fill="url(#grid)"/><path d="M-10 120 C60 90 80 148 140 110 S245 65 290 100 S350 130 410 55" fill="none" stroke="#294e55" stroke-width="18" opacity=".45"/><path d="M-10 35 C60 62 110 20 180 54 S300 20 410 42" fill="none" stroke="#3a5058" stroke-width="7" opacity=".5"/><path d="M36 143 C70 118 95 120 118 98 S160 88 190 101 S232 113 260 81 S309 67 348 34" fill="none" stroke="#c7ff3d" stroke-width="4" stroke-linecap="round" stroke-dasharray="0"/><circle cx="36" cy="143" r="6" fill="#c7ff3d" stroke="#0b0f14" stroke-width="3"/><circle cx="348" cy="34" r="6" fill="#61dfff" stroke="#0b0f14" stroke-width="3"/></svg></div>
+    <div class="route-stats"><div><strong>4.2 km</strong><small>Distance · sample</small></div><div><strong>38:12</strong><small>Moving time · sample</small></div><div><strong>5.8 km/h</strong><small>Average speed · sample</small></div></div>
+    <button class="primary-btn" style="width:100%;margin-top:13px" data-dialog="tracking">Preview Start Walk</button>
+    <p class="subcopy" style="font-size:9px;margin-top:9px">This review page does not access GPS, sensors or background services.</p>
+  </article>
+  <div class="section-head"><h2>Activity summary</h2><span>SESSION METRICS</span></div>
+  <div class="metrics"><article class="metric"><div class="metric-top">SESSION STEPS</div><strong>4,180</strong><small>Sample session count</small></article><article class="metric"><div class="metric-top">ELEVATION GAIN</div><strong>42 m</strong><small>Sample route estimate</small></article><article class="metric"><div class="metric-top">AVG PACE</div><strong>10:02</strong><small>min / km · sample</small></article><article class="metric"><div class="metric-top">HEART RATE</div><strong>—</strong><small>Connect a supported source</small></article></div>
+  <div class="section-head"><h2>Recent activities</h2><span>LOCAL HISTORY PREVIEW</span></div>
+  <article class="card"><div class="activity-row"><div class="activity-icon">🚶</div><div class="activity-info"><b>Evening walk</b><small>Yesterday · sample record</small></div><div class="activity-value">2.8 km</div></div><div class="activity-row"><div class="activity-icon">🏃</div><div class="activity-info"><b>Easy run</b><small>Monday · sample record</small></div><div class="activity-value">3.1 km</div></div></article>
+</section>
+
+<section class="screen" id="screen-workouts" aria-labelledby="workouts-title">
+  <div class="page-heading"><div><p class="eyebrow">TRAINING HISTORY</p><h1 id="workouts-title">Workouts</h1><p class="subcopy">A clear record of the sessions you choose to start.</p></div><span class="demo-tag">SAMPLE</span></div>
+  <div class="workout-types">
+    <article class="card type-card"><div class="type-icon">🚶</div><b>Walk</b><small>GPS session</small></article>
+    <article class="card type-card"><div class="type-icon">🏃</div><b>Run</b><small>GPS session</small></article>
+    <article class="card type-card"><div class="type-icon">🚴</div><b>Cycle</b><small>GPS session</small></article>
+    <article class="card type-card"><div class="type-icon">🏋</div><b>Strength</b><small>Workout log</small></article>
+    <article class="card type-card"><div class="type-icon">🧘</div><b>Mobility</b><small>Workout log</small></article>
+    <article class="card type-card"><div class="type-icon">🥾</div><b>Hike</b><small>GPS session</small></article>
+  </div>
+  <div class="section-head"><h2>This week</h2><span>ILLUSTRATIVE SUMMARY</span></div>
+  <div class="metrics"><article class="metric"><div class="metric-top">SESSIONS</div><strong>4</strong><small>Sample workouts</small></article><article class="metric"><div class="metric-top">TOTAL TIME</div><strong>2h 18m</strong><small>Sample moving time</small></article><article class="metric"><div class="metric-top">TOTAL DISTANCE</div><strong>12.6 km</strong><small>Sample GPS distance</small></article><article class="metric"><div class="metric-top">CONSISTENCY</div><strong>3 days</strong><small>Sample active days</small></article></div>
+  <div class="section-head"><h2>Workout history</h2><span>NEWEST FIRST</span></div>
+  <article class="card"><div class="activity-row"><div class="activity-icon">🚶</div><div class="activity-info"><b>Morning walk</b><small>Today · 38 min · sample</small></div><div class="activity-value">4.2 km</div></div><div class="activity-row"><div class="activity-icon">🏃</div><div class="activity-info"><b>Easy run</b><small>Yesterday · 24 min · sample</small></div><div class="activity-value">3.1 km</div></div><div class="activity-row"><div class="activity-icon">🚴</div><div class="activity-info"><b>Cycle</b><small>Monday · 42 min · sample</small></div><div class="activity-value">5.3 km</div></div><div class="activity-row"><div class="activity-icon">🧘</div><div class="activity-info"><b>Mobility</b><small>Sunday · 34 min · sample</small></div><div class="activity-value">34 min</div></div></article>
+</section>
+
+<section class="screen" id="screen-health" aria-labelledby="health-title">
+  <div class="page-heading"><div><p class="eyebrow">WELLNESS · INSIGHTS</p><h1 id="health-title">Health & Progress</h1><p class="subcopy">Only valid connected or member-entered data belongs here.</p></div><span class="demo-tag">SAMPLE</span></div>
+  <div class="metrics"><article class="metric"><div class="metric-top">ACTIVE CALORIES</div><strong>318 kcal</strong><small>Sample · 64% of goal</small></article><article class="metric"><div class="metric-top">HEART POINTS</div><strong>22 pts</strong><small>Sample · 73% of goal</small></article><article class="metric"><div class="metric-top">HYDRATION</div><strong>1.2 L</strong><small>Manual sample entry</small></article><article class="metric"><div class="metric-top">SLEEP</div><strong>—</strong><small>No connected source</small></article></div>
+  <div class="section-head"><h2>Progress trend</h2><span>7-DAY SAMPLE</span></div>
+  <article class="card chart-card"><div class="chart-legend"><span style="color:var(--lime)">●</span> Daily steps <span style="margin-left:auto">Sample only</span></div><div class="chart-bars"><div class="bar-wrap"><div class="bar" style="height:32%"></div><small>M</small></div><div class="bar-wrap"><div class="bar" style="height:48%"></div><small>T</small></div><div class="bar-wrap"><div class="bar" style="height:60%"></div><small>W</small></div><div class="bar-wrap"><div class="bar today" style="height:78%"></div><small>T</small></div><div class="bar-wrap"><div class="bar" style="height:55%"></div><small>F</small></div><div class="bar-wrap"><div class="bar" style="height:85%"></div><small>S</small></div><div class="bar-wrap"><div class="bar" style="height:42%"></div><small>S</small></div></div></article>
+  <div class="section-head"><h2>Recovery & wellness</h2><span>SOURCE STATUS</span></div>
+  <article class="card"><div class="setting-row"><span><b>Sleep insights</b><small>Connect Apple Health or Health Connect</small></span><span class="status off">NOT CONNECTED</span></div><div class="setting-row"><span><b>Heart-rate trends</b><small>Requires a supported health source</small></span><span class="status off">UNAVAILABLE</span></div><div class="setting-row"><span><b>Hydration log</b><small>Member-entered values only</small></span><span class="status">MANUAL</span></div><div class="setting-row"><span><b>Body measurements</b><small>Optional private progress log</small></span><span class="status">OPTIONAL</span></div></article>
+</section>
+
+<section class="screen" id="screen-community" aria-labelledby="community-title">
+  <div class="page-heading"><div><p class="eyebrow">MOVE TOGETHER</p><h1 id="community-title">Community</h1><p class="subcopy">Encouragement, shared goals and privacy by choice.</p></div><span class="demo-tag">SAMPLE</span></div>
+  <article class="card coach-hero"><div class="guru-mark">◎</div><p class="eyebrow">YOUR PEOPLE · YOUR PACE</p><h2>Progress feels better together.</h2><p>Private groups, opt-in challenges and achievements that celebrate meaningful effort.</p></article>
+  <div class="section-head"><h2>Your groups</h2><span>PREVIEW LAYOUT</span></div>
+  <div class="two-col"><article class="card group-card"><div class="group-icon">🌿</div><h3>Walking circles</h3><p>Small groups for encouragement and shared goals.</p></article><article class="card group-card"><div class="group-icon">🏅</div><h3>Consistency club</h3><p>Celebrate showing up, not only the numbers.</p></article></div>
+  <div class="section-head"><h2>Community challenges</h2><span>OPT-IN</span></div>
+  <article class="card"><div class="activity-row"><div class="activity-icon">↗</div><div class="activity-info"><b>7-day movement streak</b><small>Sample challenge · 5 of 7 days</small></div><span class="status">DEMO</span></div><div class="progress-line"><i style="width:71%"></i></div><div class="activity-row"><div class="activity-icon">🤝</div><div class="activity-info"><b>First steps together</b><small>Sample challenge · 2 of 3 walks</small></div><span class="status">DEMO</span></div></article>
+  <div class="section-head"><h2>Community feed</h2><span>ILLUSTRATIVE POSTS</span></div>
+  <article class="card"><div class="feed-item"><div class="feed-head"><div class="feed-avatar">A</div><div><b>Member achievement</b><small>Sample post · not a real member</small></div></div><p>“One small step completed today. Showing up matters.”</p></div><div class="feed-item"><div class="feed-head"><div class="feed-avatar">R</div><div><b>Group check-in</b><small>Sample post · not a real member</small></div></div><p>“A gentle walk after a busy day made all the difference.”</p></div><p class="subcopy">Real community requires member consent, privacy controls, reporting, blocking and moderation before launch.</p></article>
+</section>
+
+<section class="screen" id="screen-guru" aria-labelledby="guru-title">
+  <div class="page-heading"><div><p class="eyebrow">PURPOSE · CLARITY · ACTION</p><h1 id="guru-title">GATIVX GURU</h1><p class="subcopy">When motivation slows, reconnect with why you started.</p></div><span class="demo-tag">SAMPLE</span></div>
+  <article class="card coach-hero"><div class="guru-mark">✦</div><p class="eyebrow">YOUR PURPOSE ANCHOR</p><h2>Make progress meaningful.</h2><p>Your goal becomes stronger when it is connected to a reason and the emotion behind that reason.</p></article>
+  <div class="section-head"><h2>Your goal journey</h2><span>ILLUSTRATIVE PROFILE</span></div>
+  <article class="card"><p class="eyebrow">GOAL</p><h2>Build a consistent walking routine</h2><p class="subcopy">Purpose: feel energetic and confident in everyday life.</p><div class="setting-row"><span>Desired feeling</span><b>Confident · Energised</b></div><div class="setting-row"><span>Journey pace</span><b>90 days · sample</b></div></article>
+  <div class="section-head"><h2>One practical next action</h2><span>SMALL & ACHIEVABLE</span></div>
+  <article class="card"><div class="feature-icon">↗</div><h2 style="margin-top:10px">Take a 12-minute walk after lunch.</h2><p class="subcopy">A sample suggestion. A real GURU action should use the member's own goal, purpose, preferences and valid activity data.</p><button class="primary-btn" style="width:100%;margin-top:14px" data-dialog="guru">Preview action response</button></article>
+</section>
+
+<section class="screen" id="screen-missions" aria-labelledby="missions-title">
+  <div class="page-heading"><div><p class="eyebrow">GOAL ENGINE</p><h1 id="missions-title">Missions</h1><p class="subcopy">Turn a personal purpose into daily actions and milestones.</p></div><span class="demo-tag">SAMPLE</span></div>
+  <article class="card coach-hero"><p class="eyebrow">YOUR ACTIVE MISSION</p><h2>Mission 75 · Build consistency</h2><p>Progress is based on verified activity and member check-ins, not placeholder values.</p><div class="progress-line"><i style="width:62%"></i></div><div class="hero-foot"><b>62% complete · sample</b></div></article>
+  <div class="section-head"><h2>Milestone journey</h2><span>90-DAY SAMPLE</span></div>
+  <article class="card"><div class="milestone"><div class="milestone-dot">✓</div><div><b>Start with your why</b><small>Goal, purpose and desired feeling set</small></div></div><div class="milestone"><div class="milestone-dot">2</div><div><b>Build a steady rhythm</b><small>Complete 3 movement days each week</small></div></div><div class="milestone"><div class="milestone-dot">3</div><div><b>Review your progress</b><small>Weekly reflection and next-step adjustment</small></div></div><div class="milestone"><div class="milestone-dot">4</div><div><b>Celebrate the achievement</b><small>Finish the mission and choose what is next</small></div></div></article>
+  <div class="section-head"><h2>Daily action</h2><span>ONE STEP AT A TIME</span></div>
+  <article class="card"><h3>Today's small win</h3><p class="subcopy">Choose a comfortable 10–15 minute walk. If today is a recovery day, choose rest without losing your purpose.</p><button class="secondary-btn" style="width:100%;margin-top:12px" data-nav="activity">Open activity</button></article>
+</section>
+
+<section class="screen" id="screen-profile" aria-labelledby="profile-title">
+  <div class="page-heading"><div><p class="eyebrow">YOUR ACCOUNT</p><h1 id="profile-title">Profile</h1><p class="subcopy">Identity, preferences and control of your data.</p></div><span class="demo-tag">SAMPLE</span></div>
+  <article class="card profile-head"><div class="profile-avatar">M</div><div class="profile-meta"><b>Preview Member</b><small>Design-review profile · no account connected</small></div><span class="status off">PREVIEW</span></article>
+  <div class="section-head"><h2>Preferences</h2><span>LOCAL PREVIEW</span></div>
+  <article class="card"><div class="setting-row"><span><b>Appearance</b><small>System, Day or Night</small></span><span class="status">DAY / NIGHT</span></div><div class="setting-row"><span><b>Units</b><small>Metric · km, kg and kcal</small></span><span class="status">METRIC</span></div><div class="setting-row"><span><b>Privacy</b><small>Control activity sharing and connected sources</small></span><span class="status">MEMBER CONTROL</span></div><div class="setting-row"><span><b>Data export</b><small>Member-accessible export workflow</small></span><span class="status off">NOT BUILT</span></div><div class="setting-row"><span><b>Account deletion</b><small>Secure deletion and confirmation workflow</small></span><span class="status off">NOT BUILT</span></div></article>
+  <div class="section-head"><h2>Connected services</h2><span>STATUS</span></div>
+  <article class="card"><div class="setting-row"><span>Health data providers</span><span class="status off">NOT CONNECTED</span></div><div class="setting-row"><span>Cloud backup</span><span class="status off">PREVIEW ONLY</span></div></article>
+</section>
+
+<section class="screen" id="screen-apps" aria-labelledby="apps-title">
+  <div class="page-heading"><div><p class="eyebrow">UNIVERSAL DATA HUB</p><h1 id="apps-title">Connected Apps</h1><p class="subcopy">Connect compatible sources with clear permissions and provenance.</p></div><span class="demo-tag">SAMPLE</span></div>
+  <article class="card"><div class="app-provider"><div class="provider-icon">♥</div><div class="provider-info"><b>Apple Health</b><small>iPhone · HealthKit daily totals and workouts</small></div><span class="status off">NOT CONNECTED</span></div><div class="app-provider"><div class="provider-icon">✚</div><div class="provider-info"><b>Health Connect</b><small>Android · compatible health and fitness apps</small></div><span class="status off">NOT CONNECTED</span></div><div class="app-provider"><div class="provider-icon">⌚</div><div class="provider-info"><b>Garmin</b><small>Wearable data · authorised integration required</small></div><span class="status off">PLANNED</span></div><div class="app-provider"><div class="provider-icon">↗</div><div class="provider-info"><b>Strava</b><small>Activity import · authorised API required</small></div><span class="status off">PLANNED</span></div></article>
+  <div class="section-head"><h2>Data trust</h2><span>NON-NEGOTIABLE</span></div>
+  <article class="card"><div class="setting-row"><span><b>Source provenance</b><small>Identify where every metric came from</small></span><span class="status">REQUIRED</span></div><div class="setting-row"><span><b>Duplicate prevention</b><small>Reconcile overlapping sources; never blindly add</small></span><span class="status">REQUIRED</span></div><div class="setting-row"><span><b>Permission control</b><small>Member can review and revoke each source</small></span><span class="status">REQUIRED</span></div></article>
+  <p class="footer-note">No provider is connected from this design preview. Each integration requires separate implementation and acceptance.</p>
+</section>
+
+<section class="screen" id="screen-notifications" aria-labelledby="notifications-title">
+  <div class="page-heading"><div><p class="eyebrow">YOUR UPDATES</p><h1 id="notifications-title">Notifications</h1><p class="subcopy">Useful reminders, mission updates and account notices.</p></div><span class="demo-tag">SAMPLE</span></div>
+  <article class="card"><div class="notice"><span class="notice-dot"></span><div><b>Mission reminder</b><small>Sample notification · Take one small step today.</small></div></div><div class="notice"><span class="notice-dot"></span><div><b>Weekly progress ready</b><small>Sample notification · Review your movement and consistency.</small></div></div><div class="notice"><span class="notice-dot"></span><div><b>Health source needs attention</b><small>Sample notification · Review permissions or sync status.</small></div></div></article>
+  <div class="section-head"><h2>Delivery settings</h2><span>PREVIEW STATUS</span></div>
+  <article class="card"><div class="setting-row"><span>Push delivery</span><span class="status off">NOT ACTIVE</span></div><div class="setting-row"><span>Reminder preferences</span><span class="status off">NOT CONNECTED</span></div><div class="setting-row"><span>Quiet hours</span><span class="status off">NOT CONFIGURED</span></div></article>
+  <p class="footer-note">These are example notification layouts only. No push messages are sent.</p>
+</section>
+</main>
+<nav class="bottom-nav" aria-label="Primary navigation">
+  <button class="active" data-nav="home" aria-current="page"><span class="nav-icon">⌂</span><span>Home</span></button>
+  <button data-nav="activity"><span class="nav-icon">↗</span><span>Activity</span></button>
+  <button data-nav="workouts"><span class="nav-icon">◷</span><span>Workouts</span></button>
+  <button data-nav="health"><span class="nav-icon">♡</span><span>Health</span></button>
+  <button data-nav="community"><span class="nav-icon">◎</span><span>Community</span></button>
+</nav>
+</div>
+<dialog id="preview-dialog" aria-labelledby="dialog-title"><h2 id="dialog-title">Design preview only</h2><p id="dialog-message">This interaction is shown for layout review. Live tracking, account sync and device integrations are not active on this page.</p><button class="primary-btn" id="dialog-close">Close</button></dialog>
+<script>
+(function(){
+  const root=document.documentElement;
+  const themeButton=document.getElementById("theme-toggle");
+  const dialog=document.getElementById("preview-dialog");
+  const dialogTitle=document.getElementById("dialog-title");
+  const dialogMessage=document.getElementById("dialog-message");
+  const main=document.getElementById("main-content");
+  function openScreen(name){
+    const target=document.getElementById("screen-"+name);
+    if(!target)return;
+    document.querySelectorAll(".screen").forEach(el=>el.classList.toggle("active",el===target));
+    document.querySelectorAll("[data-nav]").forEach(el=>{
+      const active=el.dataset.nav===name;
+      el.classList.toggle("active",active);
+      if(el.closest(".bottom-nav")){if(active)el.setAttribute("aria-current","page");else el.removeAttribute("aria-current");}
+    });
+    main.scrollTo({top:0,behavior:"instant"});
+    target.focus({preventScroll:true});
+  }
+  document.querySelectorAll("[data-nav]").forEach(el=>el.addEventListener("click",()=>openScreen(el.dataset.nav)));
+  themeButton.addEventListener("click",()=>{
+    const next=root.dataset.theme==="night"?"day":"night";
+    root.dataset.theme=next;
+    themeButton.textContent=next==="night"?"☼":"☾";
+    themeButton.setAttribute("aria-label",next==="night"?"Switch to day mode":"Switch to night mode");
+  });
+  document.querySelectorAll(".periods button").forEach(el=>el.addEventListener("click",()=>{
+    document.querySelectorAll(".periods button").forEach(btn=>btn.classList.toggle("selected",btn===el));
+  }));
+  document.querySelectorAll("[data-dialog]").forEach(el=>el.addEventListener("click",()=>{
+    const kind=el.dataset.dialog;
+    dialogTitle.textContent=kind==="tracking"?"Preview Start Walk":"GURU action preview";
+    dialogMessage.textContent=kind==="tracking"?"This is a visual interaction only. The page does not request location, count steps, record a route, save a workout or run in the background.":"This is an illustrative coaching response. A real GURU action must be based on the member's own goal, purpose, desired feeling and valid data.";
+    dialog.showModal();
+  }));
+  document.getElementById("dialog-close").addEventListener("click",()=>dialog.close());
+  dialog.addEventListener("click",event=>{if(event.target===dialog)dialog.close();});
+})();
+</script>
+</body>
+</html>

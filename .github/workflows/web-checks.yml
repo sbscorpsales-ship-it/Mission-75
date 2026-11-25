@@ -2,13 +2,17 @@ name: GATIVX web release checks
 
 on:
   push:
-    branches: ["main", "gativx/dashboard-connected-data-v2", "fix/gativx/**"]
+    branches: ["main", "gativx/dashboard-connected-data-v2", "fix/gativx/**", "feat/gativx/**"]
     paths:
       - "index.html"
       - "app-v2.html"
       - "sw.js"
       - "scripts/check-web.mjs"
       - "scripts/browser-smoke.mjs"
+      - "gativx-design-c-review.html"
+      - "gativx-logo.jpg"
+      - "scripts/design-review-smoke.mjs"
+      - "GATIVX_DESIGN_C_REVIEW_README.md"
       - ".github/workflows/web-checks.yml"
   pull_request:
     branches: [main]
@@ -17,6 +21,10 @@ on:
       - "app-v2.html"
       - "scripts/check-web.mjs"
       - "scripts/browser-smoke.mjs"
+      - "gativx-design-c-review.html"
+      - "gativx-logo.jpg"
+      - "scripts/design-review-smoke.mjs"
+      - "GATIVX_DESIGN_C_REVIEW_README.md"
       - ".github/workflows/web-checks.yml"
   workflow_dispatch:
 
@@ -41,3 +49,16 @@ jobs:
         run: npx playwright install chromium
       - name: Run mobile browser smoke test
         run: node scripts/browser-smoke.mjs
+      - name: Run GATIVX Design C review navigation and screenshot checks
+        run: node scripts/design-review-smoke.mjs
+      - name: Upload GATIVX Design C review screenshots
+        uses: actions/upload-artifact@v4
+        with:
+          name: GATIVX-Design-C-Review-Screenshots
+          path: |
+            artifacts/gativx-design-c-review/*.png
+            gativx-design-c-review.html
+            gativx-logo.jpg
+            GATIVX_DESIGN_C_REVIEW_README.md
+          if-no-files-found: error
+          retention-days: 14
