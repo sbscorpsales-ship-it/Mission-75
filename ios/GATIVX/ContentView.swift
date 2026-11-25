@@ -511,6 +511,7 @@ struct ContentView: View {
     @AppStorage("gativx.heartPointsGoal") private var heartPointsGoal = 30
     @AppStorage("gativx.dailyStepGoal") private var dailyStepGoal = 10_000
     @State private var selectedTab = 0
+    @State private var isProfilePhotoPickerPresented = false
     @State private var selectedProfilePhoto: PhotosPickerItem?
     @State private var profilePhotoData: Data?
     @State private var profilePhotoStatus = "No member photo selected."
@@ -1426,13 +1427,20 @@ struct ContentView: View {
                             .font(.caption).foregroundStyle(.secondary)
                     }
                 }
-                PhotosPicker(
+                // Keep the PhotosUI picker dormant while Profile is rendered.
+                // The previous inline PhotosPicker caused the simulator's main
+                // run loop to become unresponsive when the Profile tab was opened.
+                Button {
+                    isProfilePhotoPickerPresented = true
+                } label: {
+                    Label(profilePhotoData == nil ? "Choose member photo" : "Change member photo", systemImage: "photo")
+                }
+                .photosPicker(
+                    isPresented: $isProfilePhotoPickerPresented,
                     selection: $selectedProfilePhoto,
                     matching: .images,
                     photoLibrary: .shared()
-                ) {
-                    Label(profilePhotoData == nil ? "Choose member photo" : "Change member photo", systemImage: "photo")
-                }
+                )
                 .onChange(of: selectedProfilePhoto) { _, item in
                     guard let item else { return }
                     Task { await saveMemberProfilePhoto(item) }
