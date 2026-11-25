@@ -55,6 +55,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: GATIVX-Design-C-Review-Screenshots
-          path: artifacts/gativx-design-c-review/*.png
+          path: |
+            artifacts/gativx-design-c-review/*.png
+            gativx-design-c-review.html
+            gativx-logo.svg
           if-no-files-found: error
           retention-days: 14
