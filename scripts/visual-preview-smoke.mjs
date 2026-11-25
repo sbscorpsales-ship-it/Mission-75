@@ -7,7 +7,7 @@ import {chromium} from "playwright";
 const htmlPath=path.resolve("gativx-visual-preview.html");
 assert.ok(fs.existsSync(htmlPath),"visual preview HTML must exist");
 const html=fs.readFileSync(htmlPath,"utf8");
-for(const id of ["home","journey","record","walk","coach","explore","missions","community","profile","apps","notifications"]){
+for(const id of ["home","journey","record","walk","coach","explore","missions","community","member-profile","apps","notifications"]){
   assert.ok(html.includes('id="'+id+'"'),"missing screen panel: "+id);
 }
 for(const label of ["SCREEN PREVIEW","VISUAL PREVIEW","No real members","No reminders or push notifications are scheduled"]){
@@ -30,7 +30,7 @@ try{
   await capture("home");
   await page.locator('[data-panel="explore"]').click();
   await capture("explore");
-  for(const name of ["missions","community","profile","apps","notifications"]){
+  for(const name of ["missions","community","member-profile","apps","notifications"]){
     await page.locator('[data-go="'+name+'"]').click();
     await capture(name);
   }
