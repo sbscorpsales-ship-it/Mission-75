@@ -145,6 +145,27 @@ final class GATIVXFinishSaveRegressionTests: XCTestCase {
         XCTAssertFalse(coalescer.isInFlight(id))
     }
 
+    func testExportFailureIsDeliveredToEveryCoalescedCaller() {
+        var coalescer = HealthKitWorkoutExportCoalescer()
+        let id = UUID()
+        var outcomes: [String] = []
+
+        _ = coalescer.begin(id: id) { result in
+            if case .failure = result { outcomes.append("finish:failure") }
+            else { outcomes.append("finish:success") }
+        }
+        _ = coalescer.begin(id: id) { result in
+            if case .failure = result { outcomes.append("retry:failure") }
+            else { outcomes.append("retry:success") }
+        }
+
+        let error = NSError(domain: "GATIVXHealthKitTests", code: 42)
+        coalescer.finish(id: id).forEach { $0(.failure(error)) }
+
+        XCTAssertEqual(outcomes, ["finish:failure", "retry:failure"])
+        XCTAssertFalse(coalescer.isInFlight(id))
+    }
+
     func testNewRequestAfterCompletionStartsAFreshExport() {
         var coalescer = HealthKitWorkoutExportCoalescer()
         let id = UUID()
