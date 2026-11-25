@@ -69,6 +69,7 @@ async function open(name) {
 try {
   await page.goto(baseUrl + "/gativx-design-c-review.html", { waitUntil: "networkidle" });
   await check((await page.title()).includes("GATIVX") && (await page.title()).includes("Design C"), "page title identifies the GATIVX Design C review");
+  await check(await page.locator(".brand img").evaluate(image => image.complete && image.naturalWidth > 0), "verified GATIVX logo asset loads successfully");
   await check(await page.locator(".demo-strip").innerText().then(text => text.includes("Illustrative sample data only")), "sample-data disclosure is visible");
   await check(await page.locator(".bottom-nav [data-nav]").count() === 5, "five approved primary navigation destinations are present");
   await check(await page.locator(".screen").count() === 10, "all ten dashboard and supporting screens are present");
