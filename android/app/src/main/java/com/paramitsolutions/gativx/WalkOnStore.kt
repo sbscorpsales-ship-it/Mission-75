@@ -128,12 +128,17 @@ internal object WalkOnStore {
         return finished.takeIf { it.points.isNotEmpty() }
     }
 
-    fun markSynced(context: Context, id: String) {
+    fun markSynced(context: Context, id: String): Boolean {
         val history = readSessions(context, COMPLETED_KEY) ?: run {
-            setStatus(context, "Saved route history could not be read. The encrypted original is preserved; sync status was not changed.")
-            return
+            setStatus(context, "Saved route history could not be read. The encrypted original is preserved; sync acknowledgement was not changed.")
+            return false
         }
-        writeEncrypted(context, COMPLETED_KEY, encodeSessions(history.map { if (it.id == id) it.copy(synced = true) else it }))
+        if (history.none { it.id == id }) {
+            setStatus(context, "The uploaded route was not found in local history. Its sync acknowledgement was not changed.")
+            return false
+        }
+        val updated = history.map { if (it.id == id) it.copy(synced = true) else it }
+        return writeEncrypted(context, COMPLETED_KEY, encodeSessions(updated))
     }
 
     private fun readSession(context: Context, key: String): WalkOnSession? {
