@@ -388,7 +388,17 @@ struct ContentView: View {
         let recordID = routeRecorder.activitySessionID ?? activeSessionID ?? UUID()
         activeSessionID = recordID
         sessionStatus = "Finishing activity and saving your route…"
-        let finishedAt = Date()
+        // A recovered draft saved without resuming GPS must end at its last GPS fix,
+        // not at the current clock, so a long app-termination gap is not counted as
+        // walking time, pedometer steps or an Apple Health workout interval.
+        // This must be evaluated before routeRecorder.stop() clears isRecording.
+        let recoveredWithoutResume = routeRecorder.recoveredStartedAt != nil && !routeRecorder.isRecording
+        let finishedAt = ActivitySessionFinishPolicy.effectiveFinishDate(
+            now: Date(),
+            startedAt: start,
+            lastRoutePointAt: routeRecorder.points.last?.timestamp,
+            recoveredWithoutResume: recoveredWithoutResume
+        )
         let activity = selectedActivity
         pedometer.stopUpdates()
         routeRecorder.stop()
