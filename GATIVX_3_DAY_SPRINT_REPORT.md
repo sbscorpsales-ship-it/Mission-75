@@ -181,3 +181,8 @@ The six-file PR #114 patch was re-read against the current PR #112 changes:
 - **Run #629** on the same SHA: 71 unit tests passed, 0 failed; the dashboard UI test failed at line 295 with an accessibility-query timeout; the second UI test did not complete before the 40-minute test-step timeout. Simulator and unsigned Release/IPA packaging succeeded, but the aggregate gate failed. [Run #629](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45633166732)
 
 **Integration decision:** preserve PR #114 as-is for now. After PR #115 proves or disproves the Activity-tab correction, create a fresh isolated integration branch from the then-current PR #112 head, apply the PR #114 six-file patch without rewriting either existing branch, and run the complete combined suite. Keep both PRs open/draft and do not merge any PR.
+
+
+## Final PR metadata recheck — 25 November 2026, 22:51 IST
+
+A final live metadata read changed one detail from the earlier snapshot: GitHub now reports PR #114 `mergeable: true` (the earlier read returned false). Its recorded base SHA is still `fa92bb43a6b2064e0d412e4607c575057535ca1b`, while PR #112's current head is `b6c04d41dc67bd191ed0cf8966331eb5661a9887` (seven commits ahead of that base). This mergeability flag is not evidence that the six-file patch has been validated on the current combined tree. Keep PR #114 open and draft; no merge or base retargeting was performed.
