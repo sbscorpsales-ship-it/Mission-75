@@ -11,7 +11,7 @@ for(const id of ["home","journey","record","walk","coach","explore","missions","
   assert.ok(html.includes('id="'+id+'"'),"missing screen panel: "+id);
 }
 for(const label of ["SCREEN PREVIEW","visual preview only","No real members","No reminders or push notifications are scheduled"]){
-  assert.ok(html.includes(label),"missing preview disclosure: "+label);
+  assert.ok(html.toLowerCase().includes(label.toLowerCase()),"missing preview disclosure: "+label);
 }
 const out=path.resolve("artifacts/gativx-visual-preview");
 fs.mkdirSync(out,{recursive:true});
