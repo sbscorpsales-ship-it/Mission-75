@@ -1,3 +1,4 @@
+// The web release smoke suite also runs the isolated visual-completeness preview.
 import { chromium } from "playwright";
 import { pathToFileURL } from "node:url";
 import path from "node:path";
