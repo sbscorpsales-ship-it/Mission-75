@@ -309,3 +309,55 @@ Design/parity status: the visual review is ready for owner inspection. This does
 3. Reconfirm Finish & Save local persistence, HealthKit outbox acknowledgement and Profile navigation on the combined tree; retain all existing regression tests.
 4. Continue Android instrumentation and Supabase staging/RLS readiness work independently of device-only acceptance.
 5. Keep PR #107 untouched and all PRs unmerged.
+
+---
+
+## 2026-11-26 01:49 IST — automation run 2: latest-state audit and GURU UI-stall investigation
+
+### Repository, branch and PR state verified from GitHub
+- Default branch: `main` at `143889db3e72540fb478b76c486082f45395e9bd`. The current `app-v2.html` blob on main is `8089f536017ffb3a60a8bb99291313a3f5413927`; no main-branch app file was changed in this run.
+- PR #107 remains open/draft/unmerged at `c19bdbd307df7048cefd86bd3e6064ac4f4e3042`. Its metadata, branch and files were not changed.
+- PR #112 remains open/draft/unmerged at `b6c04d41dc67bd191ed0cf8966331eb5661a9887`; run #636 is still the observed failed full-suite result.
+- PR #114 remains open/draft/unmerged at `87318182360d4369ea2f7a773a27dd3fa3e7c558`, base `fa92bb43a6b2064e0d412e4607c575057535ca1b`. Its base is still seven commits behind PR #112's head. GitHub reports mergeable true at this read; this does not validate the stale-base patch on the latest combined tree. No retarget or merge was performed.
+- PR #115 remains open/draft/unmerged at `d37733e3b08a585344506f73534b6e93ac2c1aea`.
+- PR #117 remains open/draft/unmerged at `7bb41d9de3cc43b4e03b4e54faf94f6ee48c3417`.
+- PR #118 remains open/draft/unmerged; this update is being committed to its existing report branch.
+- PR #119 remains open/draft/unmerged at `b75a0639b34e5c7329db801c3ff423f406f9ce7e`.
+- New isolated PR #120 is open/draft/unmerged, head `c9414c2f734dce1577e8f193a36b517902774a4a`, based on PR #117 head `7bb41d9de3cc43b4e03b4e54faf94f6ee48c3417`. Its diff is exactly one file, `ios/GATIVX/ContentView.swift` (2 additions, 3 deletions). No PR was merged.
+
+### Exact CI results and inspected logs
+
+**iOS**
+- PR #112, run #636 (`45652420651`): 58 unit tests passed, 0 failed; 2 UI tests executed, 1 passed and 1 failed, 0 cancelled. Failure: Activity-tab navigation after GURU dismissal; app event loop/accessibility query timed out. [Run #636](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45652420651)
+- PR #114, run #628 (`45633053186`): 71 unit tests passed, 0 failed; 2 UI tests passed, 0 failed; simulator build, unsigned Release build, IPA packaging and aggregate release gate passed. [Run #628](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45633053186)
+- PR #114, run #629 (`45633166732`): 71 unit tests passed, 0 failed; the dashboard UI test failed at the Profile query at `GATIVXDashboardUITests.swift:295`; the other UI test did not complete before the 40-minute test-step timeout. Simulator build, unsigned Release build and IPA packaging passed; aggregate gate failed. [Run #629](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45633166732)
+- PR #115, run #637 (`45663157699`): 58 unit tests passed, 0 failed; 2 UI tests passed, 0 failed, 0 cancelled. Profile navigation, Community/Missions navigation, and Home Start Walk navigation passed in this simulator UI suite. Simulator build, unsigned Release build, IPA packaging and upload passed. [Run #637](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45663157699)
+- PR #117, run #638 (`45674730866`): **75 unit tests passed, 0 failed**. The UI suite did not produce a completed UI case: `testDashboardSectionsMetricsAndPrimaryNavigation` started, reached the GURU goal editing flow, then stalled after closing the GURU sheet and tapping Activity. XCTest reported the app main run loop busy for 30 seconds and failed to receive the idle notification; the 40-minute UI test step timed out. The second UI test was not reached. Overall workflow conclusion: cancelled after the timed-out test step. Simulator build, unsigned Release build, IPA packaging and uploads completed successfully. Do not count the UI suite as a pass. [Run #638](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45674730866)
+- The PR #117 xcresult artifact (`15053478071`, 24,221,988 bytes) was downloaded and inspected, including the XCTest session log and app standard output. The app emitted SwiftUI `Invalid frame dimension (negative or non-finite)` warnings during the GURU keyboard sequence. XCTest subsequently logged `Unable to perform work on main run loop, process main thread busy for 30.0s` and `App event loop idle notification not received`. This is a reproducible diagnostic clue; the exact SwiftUI layout root cause is not yet proven.
+- PR #120 run #639 (`45694286567`) is **in progress** on exact head `c9414c2f734dce1577e8f193a36b517902774a4a`. No test result is claimed yet. [Run #639](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45694286567)
+
+**Android**
+- Run #171 (`45652707476`) was rechecked from job logs: 20 source-safeguard assertions passed, 0 failed; Gradle debug APK build reported `BUILD SUCCESSFUL`; APK artifact `15042071077` uploaded. No JVM/instrumentation test, emulator run, physical-device test, Health Connect provider interaction, signed bundle or Play release was performed. [Run #171](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45652707476) · [Debug APK](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45652707476/artifacts/15042071077)
+
+**Web Hub and Design C review**
+- PR #119 run #436 (`45686178223`) passed on exact head `b75a0639b34e5c7329db801c3ff423f406f9ce7e`: structural gate 15 PASS/0 FAIL; existing mobile browser smoke 7 PASS/0 FAIL; Design C review navigation 29 PASS/0 FAIL. Total: 51 PASS assertions, 0 FAIL. The ten-screen visual review, five primary navigation destinations, Day/Night switch, period selector, 390px mobile overflow, preview-only disclosures, browser console and uncaught exceptions were checked. Screenshot/review artifact: [15056846592](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45686178223/artifacts/15056846592). [Run #45686178223](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45686178223)
+- The production `app-v2.html` on main remains blob `8089f536017ffb3a60a8bb99291313a3f5413927`; PR #119 does not change it. Web smoke fixtures use mocked/local Supabase and blocked external network. The design review is a visual-only prototype, not production feature completion, live-backend acceptance or Pages deployment.
+
+### Engineering change made in this run — PR #120
+- Created isolated branch `fix/gativx-guru-goal-keyboard-layout-20261126` from PR #117 head `7bb41d9de3cc43b4e03b4e54faf94f6ee48c3417`.
+- Commit `c9414c2f734dce1577e8f193a36b517902774a4a` changes only the GURU goal input in `ios/GATIVX/ContentView.swift`: removes vertical TextField expansion and the redundant simultaneous tap gesture, retaining the same binding, FocusState, Done submit behavior, accessibility identifier and rounded-border style. Other GURU fields, sheet behavior, Finish & Save code and tests are unchanged.
+- Opened draft PR #120 against the PR #117 integration branch, not main, so the PR diff is exactly one file and does not include inherited PR #107 or other stacked changes.
+- This is a hypothesis-driven UI-layout mitigation based on the xcresult evidence. It is not a confirmed fix. Run #639 is the full, unfiltered validation; inspect all logs before updating status.
+
+### Gap ledger status carried forward
+- iOS auth, onboarding, goal/purpose, daily metrics, GPS, Finish & Save and HealthKit remain implemented-but-unverified where noted in the ledger. Profile navigation is verified in CI scope on PR #115; profile settings, photo picker, identity lifecycle and export/deletion remain unverified or missing.
+- Android auth, Health Connect and WalkOn foundations remain implemented-but-unverified; remaining feature hub modules and Android behavioral/instrumentation tests remain missing. Device acceptance is blocked.
+- Web Hub core flows remain implemented-but-unverified; PR #119 verifies the Design C review prototype only. Production Community, Missions, Profile, Apps and Notifications parity remains missing/incomplete.
+- Shared Supabase migrations/RLS/outbox code remain implemented-but-unverified. A reproducible clean baseline, live two-account isolation, cross-platform contract tests and production migration verification remain missing/blocked.
+- Signed iOS installation, physical iPhone HealthKit/background GPS, Android device acceptance, live Supabase credentials/test accounts and production Pages deployment remain blocked. No such acceptance is claimed.
+
+### Next action
+1. Inspect the exact run #639 job logs and xcresult. If all 75 unit tests, both UI tests, simulator build, unsigned Release build and IPA packaging pass, retain PR #120 as an unmerged review candidate; if not, isolate the next actual runtime/layout cause.
+2. Do not merge PR #120, #117, #115, #114, #112, #119, #118 or PR #107.
+3. Keep Design C and the original main-branch `app-v2.html` unchanged.
+4. Continue the gap-ledger work only on isolated branches; physical-device and live-backend gates remain blocked pending the exact external evidence listed above.
