@@ -36,6 +36,8 @@ struct ContentView: View {
     @State private var runJeetArchiveStatus = "No RunJeet daily totals imported."
     @State private var sessionStarted: Date?
     @State private var isFinishingSession = false
+    // Explicit recovery resume is tracked separately from GPS permission state;
+    // the pedometer may still run when Core Location cannot restart.
     @State private var recoveredSessionWasResumed = false
     @State private var activeSessionID: UUID?
     @State private var sessionStatus = "Start a session to count steps."
