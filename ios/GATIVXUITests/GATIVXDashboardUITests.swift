@@ -283,4 +283,30 @@ final class GATIVXDashboardUITests: XCTestCase {
         XCTAssertTrue(app.descendants(matching: .any)["gativx-member-login-id"].exists,
                       "Profile must show the current member identity or explicit local-only status.")
     }
+
+    func testHomeStartWalkNavigatesWithoutStartingSession() {
+        let app = XCUIApplication()
+        app.launch()
+
+        let guestEntry = app.buttons["gativx-continue-guest"]
+        XCTAssertTrue(guestEntry.waitForExistence(timeout: 10))
+        guestEntry.tap()
+
+        let homeStart = app.buttons.matching(
+            NSPredicate(format: "label CONTAINS[c] %@", "START WALK")
+        ).firstMatch
+        XCTAssertTrue(homeStart.waitForExistence(timeout: 5))
+        homeStart.tap()
+
+        let activityTab = app.tabBars.buttons["Activity"]
+        XCTAssertTrue(activityTab.waitForExistence(timeout: 5))
+        XCTAssertTrue(activityTab.isSelected,
+                      "Home START WALK must navigate to Activity.")
+        XCTAssertTrue(app.scrollViews["gativx-activity-screen"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons["Start Walk"].waitForExistence(timeout: 5),
+                      "The Activity screen must present the explicit start action.")
+        XCTAssertFalse(app.buttons["Finish & save activity"].exists,
+                       "Navigating from Home must not silently start GPS or pedometer recording.")
+    }
+
 }
