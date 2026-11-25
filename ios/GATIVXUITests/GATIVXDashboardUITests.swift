@@ -19,7 +19,7 @@ final class GATIVXDashboardUITests: XCTestCase {
         // UserDefaults persist between XCTest methods on the same simulator.
         // Force the local-only entry flag off so every test starts at Welcome,
         // independent of a guest choice made by an earlier test run.
-        app.launchArguments += ["-gativx.localModeEntered", "NO"]
+        app.launchArguments += ["-gativx-ui-test-reset-local-mode"]
         app.launch()
     }
 
