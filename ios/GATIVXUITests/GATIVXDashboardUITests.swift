@@ -15,9 +15,23 @@ final class GATIVXDashboardUITests: XCTestCase {
         start.press(forDuration: 0.05, thenDragTo: end)
     }
 
+    private func launchFreshGuestApp(_ app: XCUIApplication) {
+        // UserDefaults persist between XCTest methods on the same simulator.
+        // Force the local-only entry flag off so every test starts at Welcome,
+        // independent of a guest choice made by an earlier test run.
+        app.launchArguments += ["-gativx.localModeEntered", "NO"]
+        app.launch()
+    }
+
+    private func tabButton(_ app: XCUIApplication, label: String) -> XCUIElement {
+        // SwiftUI exposes tab items as Buttons whose identifiers can be SF
+        // Symbols (for example "figure.walk"), not the visible tab title.
+        app.buttons.matching(NSPredicate(format: "label == %@", label)).firstMatch
+    }
+
     func testDashboardSectionsMetricsAndPrimaryNavigation() {
         let app = XCUIApplication()
-        app.launch()
+        launchFreshGuestApp(app)
 
         XCTAssertTrue(app.staticTexts["CREATE YOUR GATIVX ACCOUNT"].waitForExistence(timeout: 10),
                       "First launch must show registration/sign-in before the member dashboard.")
@@ -57,7 +71,7 @@ final class GATIVXDashboardUITests: XCTestCase {
         XCTAssertLessThanOrEqual(profileControl.frame.maxX, appWindow.frame.maxX - 6,
                                  "The member profile control must retain a visible trailing inset.")
 
-        let homeTab = app.tabBars.buttons["Home"]
+        let homeTab = tabButton(app, label: "Home")
         XCTAssertTrue(homeTab.waitForExistence(timeout: 5))
         XCTAssertTrue(homeTab.isSelected, "The Home tab must be selected after member entry.")
 
@@ -217,7 +231,7 @@ final class GATIVXDashboardUITests: XCTestCase {
         )
         XCTAssertFalse(guruCloseButton.exists, "The Guru sheet must be gone before Activity navigation.")
 
-        let activityTab = app.tabBars.buttons["Activity"]
+        let activityTab = tabButton(app, label: "Activity")
         XCTAssertTrue(activityTab.waitForExistence(timeout: 5))
         activityTab.tap()
         XCTAssertTrue(activityTab.isSelected, "Selecting Activity must change the active tab.")
@@ -255,7 +269,7 @@ final class GATIVXDashboardUITests: XCTestCase {
         XCTAssertTrue(activityScreen.waitForExistence(timeout: 10),
                       "Guru's Start a walk action must open the Activity screen.")
 
-        let missionsTab = app.tabBars.buttons["Missions"]
+        let missionsTab = tabButton(app, label: "Missions")
         XCTAssertTrue(missionsTab.waitForExistence(timeout: 5))
         missionsTab.tap()
         XCTAssertTrue(missionsTab.isSelected, "Selecting Missions must change the active tab.")
@@ -265,7 +279,7 @@ final class GATIVXDashboardUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["TODAY · CONSISTENCY"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["Begin walking mission"].exists)
 
-        let communityTab = app.tabBars.buttons["Community"]
+        let communityTab = tabButton(app, label: "Community")
         XCTAssertTrue(communityTab.waitForExistence(timeout: 5))
         communityTab.tap()
         XCTAssertTrue(communityTab.isSelected, "Selecting Community must change the active tab.")
@@ -275,7 +289,7 @@ final class GATIVXDashboardUITests: XCTestCase {
         )
         XCTAssertTrue(app.descendants(matching: .any)["gativx-community-gated"].waitForExistence(timeout: 5))
 
-        let profileTab = app.tabBars.buttons["Profile"]
+        let profileTab = tabButton(app, label: "Profile")
         XCTAssertTrue(profileTab.waitForExistence(timeout: 5))
         profileTab.tap()
         XCTAssertTrue(profileTab.isSelected, "Selecting Profile should switch the active tab.")
@@ -286,7 +300,7 @@ final class GATIVXDashboardUITests: XCTestCase {
 
     func testHomeStartWalkNavigatesWithoutStartingSession() {
         let app = XCUIApplication()
-        app.launch()
+        launchFreshGuestApp(app)
 
         let guestEntry = app.buttons["gativx-continue-guest"]
         XCTAssertTrue(guestEntry.waitForExistence(timeout: 10))
@@ -298,7 +312,7 @@ final class GATIVXDashboardUITests: XCTestCase {
         XCTAssertTrue(homeStart.waitForExistence(timeout: 5))
         homeStart.tap()
 
-        let activityTab = app.tabBars.buttons["Activity"]
+        let activityTab = tabButton(app, label: "Activity")
         XCTAssertTrue(activityTab.waitForExistence(timeout: 5))
         XCTAssertTrue(activityTab.isSelected,
                       "Home START WALK must navigate to Activity.")
