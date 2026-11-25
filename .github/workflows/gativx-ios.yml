@@ -158,7 +158,7 @@ jobs:
           # are rerun on this isolated repair branch. The 58 passing unit tests
           # are intentionally not repeated. Other branches retain the full suite.
           TEST_SCOPE=()
-          if [ "\${GITHUB_HEAD_REF:-}" = "fix/gativx-ui-test-guest-reset" ]; then
+          if [ "${GITHUB_HEAD_REF:-}" = "fix/gativx-ui-test-guest-reset" ]; then
             TEST_SCOPE+=("-only-testing:GATIVXUITests/GATIVXDashboardUITests/testDashboardSectionsMetricsAndPrimaryNavigation")
             TEST_SCOPE+=("-only-testing:GATIVXUITests/GATIVXDashboardUITests/testHomeStartWalkNavigatesWithoutStartingSession")
           fi
@@ -169,7 +169,7 @@ jobs:
             -derivedDataPath build/GATIVX-Tests \
             -resultBundlePath build/GATIVX.xcresult \
             -parallel-testing-enabled NO \
-            "\${TEST_SCOPE[@]}" \
+            "${TEST_SCOPE[@]}" \
             CODE_SIGNING_ALLOWED=NO \
             test
 
