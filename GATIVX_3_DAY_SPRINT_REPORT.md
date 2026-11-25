@@ -8,7 +8,8 @@
 **Primary PR:** [#112](https://github.com/sbscorpsales-ship-it/Mission-75/pull/112), open, draft, unmerged  
 **Passing Activity-navigation candidate:** [#115](https://github.com/sbscorpsales-ship-it/Mission-75/pull/115), head d37733e3b08a585344506f73534b6e93ac2c1aea  
 **Combined Finish & Save integration:** [#117](https://github.com/sbscorpsales-ship-it/Mission-75/pull/117), head 7bb41d9de3cc43b4e03b4e54faf94f6ee48c3417, full CI pending  
-**Web visual-completeness preview:** [#116](https://github.com/sbscorpsales-ship-it/Mission-75/pull/116), head 21bfe65da8b7d49b7fd133f799f0639eb1609ba2  
+**Web visual-completeness preview:** [#116](https://github.com/sbscorpsales-ship-it/Mission-75/pull/116), head 090678d93dc6f373b2313e0239c0158dc54f5a30  
+**Cumulative report PR:** [#118](https://github.com/sbscorpsales-ship-it/Mission-75/pull/118), head af41f9888594eb06d33b27e7b42827254f1e8da8  
 **Finish & Save PR:** [#114](https://github.com/sbscorpsales-ship-it/Mission-75/pull/114), open, draft, unmerged  
 **Protected consolidation PR:** [#107](https://github.com/sbscorpsales-ship-it/Mission-75/pull/107), open, draft, untouched
 
@@ -202,7 +203,8 @@ A final live metadata read changed one detail from the earlier snapshot: GitHub 
 - PR #114 remains open/draft/unmerged at 87318182360d4369ea2f7a773a27dd3fa3e7c558; its base is still the older fa92bb43a6b2064e0d412e4607c575057535ca1b, seven commits behind PR #112's current head.
 - PR #115 remains open/draft/unmerged at d37733e3b08a585344506f73534b6e93ac2c1aea, stacked on PR #112.
 - PR #117 remains open/draft/unmerged at 7bb41d9de3cc43b4e03b4e54faf94f6ee48c3417, stacked on PR #115. Its only product changes are the six iOS files listed below.
-- PR #116 remains open/draft/unmerged at 21bfe65da8b7d49b7fd133f799f0639eb1609ba2, based on main.
+- PR #116 remains open/draft/unmerged at 090678d93dc6f373b2313e0239c0158dc54f5a30, based on main. Its last source/test change is 21bfe65; the final commit only removes the duplicate report file.
+- PR #118 remains open/draft/unmerged at af41f9888594eb06d33b27e7b42827254f1e8da8; it is the documentation-only report PR.
 - PR #107 remains open/draft/unmerged at c19bdbd307df7048cefd86bd3e6064ac4f4e3042; no PR #107 branch, file, base, metadata or review state was changed. No PR was merged.
 
 ### Verified engineering changes and commits
@@ -218,7 +220,8 @@ A final live metadata read changed one detail from the earlier snapshot: GitHub 
 - Commit 066810a88e1b2ffd9b891c9e75bcd73b4070ae59: scripts/browser-smoke.mjs and scripts/visual-preview-smoke.mjs — stabilised panel/card navigation and separated preview smoke from normal browser smoke.
 - Commit 8248d79995837943edf6227b0b99a9b637be70c4: scripts/browser-smoke.mjs — switched browser fixtures to a local HTTP origin, seeded the cloud fixture only once across reloads, and asserted account-isolation storage before/after reload.
 - Commit 21bfe65da8b7d49b7fd133f799f0639eb1609ba2: scripts/browser-smoke.mjs, .github/workflows/web-checks.yml, and restored app-v2.html to the exact main-branch blob 8089f536017ffb3a60a8bb99291313a3f5413927. The final PR #116 diff does not alter the working app file.
-- Run #45675295670 — PASS on PR #116 head 21bfe65: 25 PASS assertions across the structural release gate, existing mobile browser smoke and visual preview checks; 0 FAIL. Eight screenshots were captured at 390x844: Home, Explore, Missions, Community, Profile, Connected Apps, Notifications and Profile-header entry. Screenshot artifact 15052765109 is 3.5 MB. The new screens are explicitly preview-only; they are not production feature completion. Run: https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45675295670
+- Commit 090678d93dc6f373b2313e0239c0158dc54f5a30 deletes the duplicate sprint-report snapshot from PR #116; the canonical cumulative report is tracked separately in PR #118.
+- Run #45675295670 — PASS on the code-bearing PR #116 head 21bfe65: 25 PASS assertions across the structural release gate, existing mobile browser smoke and visual preview checks; 0 FAIL. The only later PR #116 commit removes the duplicate report file. Eight screenshots were captured at 390x844: Home, Explore, Missions, Community, Profile, Connected Apps, Notifications and Profile-header entry. Screenshot artifact 15052765109 is 3.5 MB. The new screens are explicitly preview-only; they are not production feature completion. Run: https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45675295670
 - The original app-v2.html remains byte-for-byte the same blob as main. No Pages deployment was attempted. The preview is not live on the production URL.
 
 ### Exact CI evidence rechecked
