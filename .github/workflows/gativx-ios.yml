@@ -139,7 +139,7 @@ jobs:
           print("PASS: no unnecessary Contacts permission")
           PY
 
-      - name: Run GATIVX tests (serial simulator, 40-minute cap; targeted UI rerun only)
+      - name: Run full GATIVX unit and UI test suites (serial simulator, 40-minute cap)
         id: xctest
         timeout-minutes: 40
         run: |
