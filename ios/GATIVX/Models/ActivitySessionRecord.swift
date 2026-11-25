@@ -1,7 +1,7 @@
 import Foundation
 import CoreLocation
 
-struct ActivitySessionRecord: Codable, Identifiable {
+struct ActivitySessionRecord: Codable, Identifiable, Equatable {
     let id: UUID
     /// Authenticated Supabase user who owned this activity when it was recorded.
     /// Nil means the legacy or local-only record has no verified account owner.
@@ -43,6 +43,34 @@ struct ActivitySessionRecord: Codable, Identifiable {
             let current = CLLocation(latitude: pair.1.latitude, longitude: pair.1.longitude)
             return total + current.distance(from: previous)
         }
+    }
+
+    /// A session can be uploaded to the activity cloud only when it contains
+    /// a measured step count or a GPS route. Metadata-only legacy imports stay local.
+    var hasCloudSyncPayload: Bool {
+        steps != nil || !(routePoints?.isEmpty ?? true)
+    }
+
+    /// Merge a recovered copy of the same session without losing better local data.
+    /// The existing record remains authoritative for identity, original start and owner.
+    func mergingRecovery(_ incoming: ActivitySessionRecord) -> ActivitySessionRecord {
+        let existingPoints = routePoints ?? []
+        let incomingPoints = incoming.routePoints ?? []
+        let useIncomingRoute = incoming.gpsDistanceMeters > gpsDistanceMeters ||
+            (incoming.gpsDistanceMeters == gpsDistanceMeters && incomingPoints.count > existingPoints.count)
+        let mergedSteps = [steps, incoming.steps].compactMap { $0 }.max()
+        let mergedMotionDistance = [motionDistanceMeters, incoming.motionDistanceMeters].compactMap { $0 }.max()
+
+        return ActivitySessionRecord(
+            id: id,
+            activity: activity,
+            startedAt: startedAt,
+            finishedAt: max(finishedAt, incoming.finishedAt),
+            steps: mergedSteps,
+            routePoints: useIncomingRoute ? incoming.routePoints : routePoints,
+            motionDistanceMeters: mergedMotionDistance,
+            ownerID: ownerID
+        )
     }
 
     var durationText: String {

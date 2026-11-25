@@ -1,0 +1,186 @@
+import Foundation
+import CoreFoundation
+
+/// Imports RunJeet schema-1 JSON backups into GATIVX's canonical activity model.
+/// Daily step totals are returned separately: they are not merged into HealthKit totals.
+struct RunJeetBackupImport {
+    let activities: [ActivitySessionRecord]
+    let dailyStepsByDay: [String: Int]
+}
+
+enum RunJeetBackupImportError: LocalizedError {
+    case invalidBackup
+    case unsupportedSchema
+    case invalidDailySteps(String)
+    case invalidSession(String)
+
+    var errorDescription: String? {
+        switch self {
+        case .invalidBackup:
+            return "This file is not a valid RunJeet backup."
+        case .unsupportedSchema:
+            return "This RunJeet backup version is not supported."
+        case .invalidDailySteps(let day):
+            return "The RunJeet backup contains an invalid step total for \(day)."
+        case .invalidSession(let id):
+            return "The RunJeet backup contains an invalid activity session: \(id)."
+        }
+    }
+}
+
+struct RunJeetBackupImporter {
+    // RunJeet was introduced in 2026. Keep imported timestamps within a
+    // representable, plausible archive range and require integer epoch milliseconds.
+    private static let earliestTimestampMilliseconds = 946_684_800_000.0 // 2000-01-01
+    private static let latestTimestampMilliseconds = 4_102_444_800_000.0 // 2100-01-01
+    private static let maximumSessionDurationSeconds = 86_400
+    private static let maximumDailySteps = 1_000_000
+    private static let maximumSessionSteps = 200_000
+
+    func decode(_ data: Data) throws -> RunJeetBackupImport {
+        guard let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              root["app"] as? String == "RunJeet" else {
+            throw RunJeetBackupImportError.invalidBackup
+        }
+        guard integer(root["schema"]) == 1,
+              let state = root["state"] as? [String: Any],
+              let rawDailySteps = state["stepsByDay"] as? [String: Any],
+              let rawSessions = state["sessions"] as? [[String: Any]] else {
+            throw RunJeetBackupImportError.unsupportedSchema
+        }
+
+        var dailySteps: [String: Int] = [:]
+        for (day, rawValue) in rawDailySteps {
+            guard Self.isValidDay(day),
+                  let steps = integer(rawValue),
+                  (0...Self.maximumDailySteps).contains(steps) else {
+                throw RunJeetBackupImportError.invalidDailySteps(day)
+            }
+            dailySteps[day] = steps
+        }
+
+        let activities = try rawSessions.map { try decodeSession($0) }
+        return RunJeetBackupImport(activities: activities, dailyStepsByDay: dailySteps)
+    }
+
+    /// Assign ownership only after the member explicitly chooses an account import.
+    /// A local-only import keeps ownerID nil and is never silently uploaded.
+    func assigningOwnerID(_ ownerID: String?, to records: [ActivitySessionRecord]) -> [ActivitySessionRecord] {
+        records.map { record in
+            ActivitySessionRecord(
+                id: record.id,
+                activity: record.activity,
+                startedAt: record.startedAt,
+                finishedAt: record.finishedAt,
+                steps: record.steps,
+                routePoints: record.routePoints,
+                motionDistanceMeters: record.motionDistanceMeters,
+                ownerID: ownerID
+            )
+        }
+    }
+
+    /// Merge imported sessions without overwriting existing records. Existing IDs win.
+    func merging(_ imported: [ActivitySessionRecord], into existing: [ActivitySessionRecord]) -> [ActivitySessionRecord] {
+        var merged = existing
+        var knownIDs = Set(existing.map(\.id))
+        for record in imported where knownIDs.insert(record.id).inserted {
+            merged.append(record)
+        }
+        return merged.sorted { $0.finishedAt > $1.finishedAt }
+    }
+
+    private func decodeSession(_ raw: [String: Any]) throws -> ActivitySessionRecord {
+        let identifier = raw["id"] as? String ?? "(missing id)"
+        guard let id = UUID(uuidString: identifier),
+              let startedAt = millisecondsDate(raw["startedAt"]),
+              let finishedAt = millisecondsDate(raw["endedAt"]),
+              finishedAt >= startedAt,
+              let duration = integer(raw["durationSec"]),
+              (0...Self.maximumSessionDurationSeconds).contains(duration),
+              finishedAt.timeIntervalSince(startedAt) <= Double(Self.maximumSessionDurationSeconds),
+              let rawPoints = raw["points"] as? [[String: Any]],
+              let rawDistance = raw["distanceM"] as? NSNumber,
+              CFGetTypeID(rawDistance) != CFBooleanGetTypeID(),
+              rawDistance.doubleValue.isFinite, rawDistance.doubleValue >= 0 else {
+            throw RunJeetBackupImportError.invalidSession(identifier)
+        }
+
+        let points = try rawPoints.map { point -> GATIVXRoutePoint in
+            guard let latitude = finiteDouble(point["lat"]),
+                  let longitude = finiteDouble(point["lon"]),
+                  (-90...90).contains(latitude),
+                  (-180...180).contains(longitude),
+                  let timestamp = millisecondsDate(point["ts"]),
+                  let accuracy = finiteDouble(point["accuracy"]),
+                  accuracy >= 0 else {
+                throw RunJeetBackupImportError.invalidSession(identifier)
+            }
+            return GATIVXRoutePoint(
+                latitude: latitude,
+                longitude: longitude,
+                timestamp: timestamp,
+                horizontalAccuracy: accuracy,
+                breakBefore: false
+            )
+        }
+
+        let rawStepValue = raw["sessionSteps"]
+        let rawSteps = integer(rawStepValue)
+        if rawStepValue != nil && rawSteps == nil {
+            // A present but malformed step value is not the same as an unavailable reading.
+            throw RunJeetBackupImportError.invalidSession(identifier)
+        }
+        if let rawSteps, !(0...Self.maximumSessionSteps).contains(rawSteps) {
+            throw RunJeetBackupImportError.invalidSession(identifier)
+        }
+        // RunJeet's MVP initializes sessionSteps to zero even when no step source
+        // was connected. Preserve only positive readings as measured session steps.
+        let measuredSteps = (rawSteps ?? 0) > 0 ? rawSteps : nil
+        let measuredDistance = rawDistance.doubleValue > 0 ? rawDistance.doubleValue : nil
+
+        return ActivitySessionRecord(
+            id: id,
+            activity: "Walking",
+            startedAt: startedAt,
+            finishedAt: finishedAt,
+            steps: measuredSteps,
+            routePoints: points.isEmpty ? nil : points,
+            motionDistanceMeters: measuredDistance,
+            ownerID: nil
+        )
+    }
+
+    private func millisecondsDate(_ value: Any?) -> Date? {
+        guard let milliseconds = finiteDouble(value),
+              milliseconds.rounded(.towardZero) == milliseconds,
+              (Self.earliestTimestampMilliseconds...Self.latestTimestampMilliseconds).contains(milliseconds) else {
+            return nil
+        }
+        return Date(timeIntervalSince1970: milliseconds / 1000)
+    }
+
+    private func finiteDouble(_ value: Any?) -> Double? {
+        guard let number = value as? NSNumber,
+              CFGetTypeID(number) != CFBooleanGetTypeID(),
+              number.doubleValue.isFinite else { return nil }
+        return number.doubleValue
+    }
+
+    private func integer(_ value: Any?) -> Int? {
+        guard let number = value as? NSNumber,
+              CFGetTypeID(number) != CFBooleanGetTypeID(),
+              let exactInteger = Int(exactly: number.doubleValue) else { return nil }
+        return exactInteger
+    }
+
+    private static func isValidDay(_ value: String) -> Bool {
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        formatter.dateFormat = "yyyy-MM-dd"
+        guard let date = formatter.date(from: value) else { return false }
+        return formatter.string(from: date) == value
+    }
+}

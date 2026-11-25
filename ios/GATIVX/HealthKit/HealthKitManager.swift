@@ -2,15 +2,6 @@ import Foundation
 import HealthKit
 import Combine
 
-private struct PendingHealthWorkout: Codable, Identifiable {
-    let id: UUID
-    let activity: String
-    let startedAt: Date
-    let finishedAt: Date
-    let steps: Int?
-    let distanceMeters: Double?
-}
-
 /// Reads measured Apple Health aggregates and exports completed GATIVX workouts.
 /// HealthKit is the authority for the all-source daily total; Core Motion is never added to it.
 @MainActor
@@ -39,19 +30,14 @@ final class HealthKitManager: ObservableObject {
     private var refreshAgain = false
     private var pendingCompletions: [() -> Void] = []
 
-    private let workoutOutboxKey = "gativx.healthkit.workout-export-outbox.v1"
+    private let workoutOutbox = HealthKitWorkoutOutboxStore()
     @Published private(set) var pendingWorkoutExportCount = 0
     @Published private(set) var isWorkoutOutboxReadable = true
     private var isRetryingWorkoutOutbox = false
 
     private func loadPendingWorkouts() -> [PendingHealthWorkout]? {
-        guard let data = UserDefaults.standard.data(forKey: workoutOutboxKey) else {
-            isWorkoutOutboxReadable = true
-            pendingWorkoutExportCount = 0
-            return []
-        }
         do {
-            let items = try JSONDecoder().decode([PendingHealthWorkout].self, from: data)
+            let items = try workoutOutbox.load()
             isWorkoutOutboxReadable = true
             pendingWorkoutExportCount = items.count
             return items
@@ -62,35 +48,31 @@ final class HealthKitManager: ObservableObject {
         }
     }
 
-    private func savePendingWorkouts(_ items: [PendingHealthWorkout]) -> Bool {
+    private func enqueueWorkout(_ item: PendingHealthWorkout) -> Bool {
         do {
-            let data = try JSONEncoder().encode(items)
-            UserDefaults.standard.set(data, forKey: workoutOutboxKey)
-            guard let saved = UserDefaults.standard.data(forKey: workoutOutboxKey),
-                  let verified = try? JSONDecoder().decode([PendingHealthWorkout].self, from: saved),
-                  verified.map(\.id) == items.map(\.id) else {
-                isWorkoutOutboxReadable = false
-                statusMessage = "Apple Health export queue could not be verified. The export was not marked complete."
-                return false
-            }
+            let items = try workoutOutbox.enqueue(item)
             isWorkoutOutboxReadable = true
-            pendingWorkoutExportCount = verified.count
+            pendingWorkoutExportCount = items.count
             return true
         } catch {
-            statusMessage = "Apple Health export could not be queued: \(error.localizedDescription)"
+            isWorkoutOutboxReadable = false
+            statusMessage = "Apple Health export could not be queued safely: \(error.localizedDescription)"
             return false
         }
     }
 
-    private func enqueueWorkout(_ item: PendingHealthWorkout) -> Bool {
-        guard var items = loadPendingWorkouts() else { return false }
-        if !items.contains(where: { $0.id == item.id }) { items.append(item) }
-        return savePendingWorkouts(items)
-    }
-
-    private func acknowledgeWorkout(_ id: UUID) {
-        guard let items = loadPendingWorkouts() else { return }
-        _ = savePendingWorkouts(items.filter { $0.id != id })
+    @discardableResult
+    private func acknowledgeWorkout(_ id: UUID) -> Bool {
+        do {
+            let remaining = try workoutOutbox.acknowledge(id)
+            isWorkoutOutboxReadable = true
+            pendingWorkoutExportCount = remaining.count
+            return true
+        } catch {
+            isWorkoutOutboxReadable = false
+            statusMessage = "Apple Health export acknowledgement could not be verified. Original queue data was preserved."
+            return false
+        }
     }
 
     func retryPendingWorkoutExports() {
@@ -108,8 +90,19 @@ final class HealthKitManager: ObservableObject {
         let item = items[index]
         saveActivityWorkout(id: item.id, activity: item.activity, startedAt: item.startedAt,
                             finishedAt: item.finishedAt, steps: item.steps,
-                            distanceMeters: item.distanceMeters) { [weak self] _ in
-            Task { @MainActor in self?.retryNextWorkout(items, index: index + 1) }
+                            distanceMeters: item.distanceMeters) { [weak self] result in
+            Task { @MainActor in
+                guard let self else { return }
+                switch result {
+                case .success:
+                    self.statusMessage = "Apple Health confirmed a queued GATIVX workout export."
+                case .failure(let error):
+                    // Keep the item queued for retry and surface the actual HealthKit
+                    // failure instead of silently discarding it during background retry.
+                    self.statusMessage = "Apple Health export remains pending: " + error.localizedDescription
+                }
+                self.retryNextWorkout(items, index: index + 1)
+            }
         }
     }
 
@@ -124,17 +117,22 @@ final class HealthKitManager: ObservableObject {
 
     func requestReadAccessAndStart() {
         guard isAvailable else { statusMessage = "Apple Health is unavailable on this iPhone."; return }
-        store.requestAuthorization(toShare: [], read: [stepType, energyType, distanceType, exerciseType, heartRateType]) { [weak self] _, error in
+        // Ask for workout and measured-distance write access when the member connects,
+        // rather than surprising them with a second permission sheet only after a walk.
+        // HealthKit does not disclose whether read or write access was individually denied.
+        let workoutType = HKObjectType.workoutType()
+        let shareTypes: Set<HKSampleType> = [workoutType, distanceType]
+        let readTypes: Set<HKObjectType> = [stepType, energyType, distanceType, exerciseType, heartRateType, workoutType]
+        store.requestAuthorization(toShare: shareTypes, read: readTypes) { [weak self] _, error in
             Task { @MainActor in
                 guard let self else { return }
                 if let error {
                     self.statusMessage = "Health permission request failed: \(error.localizedDescription)"
                     return
                 }
-                // HealthKit intentionally does not reveal whether read access was denied.
                 UserDefaults.standard.set(true, forKey: self.connectionRequestedKey)
                 self.hasRequestedAccess = true
-                self.statusMessage = "Apple Health access was requested. Checking today's measured steps…"
+                self.statusMessage = "Apple Health permissions requested for measured health data and GATIVX workout export. Checking today's steps…"
                 self.startObserving()
                 self.refreshRecentDays()
                 self.refreshTodayEnergy()
@@ -376,7 +374,20 @@ final class HealthKitManager: ObservableObject {
             let existing = HKSampleQuery(sampleType: workoutType, predicate: syncPredicate, limit: 1, sortDescriptors: nil) { [weak self] _, samples, queryError in
                 guard let self else { return }
                 if let queryError { DispatchQueue.main.async { completion(.failure(queryError)) }; return }
-                if samples?.isEmpty == false { DispatchQueue.main.async { self.acknowledgeWorkout(id); completion(.success(())) }; return }
+                if samples?.isEmpty == false {
+                    DispatchQueue.main.async {
+                        if self.acknowledgeWorkout(id) {
+                            completion(.success(()))
+                        } else {
+                            completion(.failure(NSError(
+                                domain: "GATIVXHealthKit",
+                                code: 7,
+                                userInfo: [NSLocalizedDescriptionKey: "The workout already exists in Apple Health, but its export queue could not be safely acknowledged. It will be reconciled again on retry."]
+                            )))
+                        }
+                    }
+                    return
+                }
 
                 let type: HKWorkoutActivityType
                 switch activity.lowercased() {
@@ -453,8 +464,15 @@ final class HealthKitManager: ObservableObject {
                                         if let finishError {
                                             completion(.failure(finishError))
                                         } else if workout != nil {
-                                            self.acknowledgeWorkout(id)
-                                            completion(.success(()))
+                                            if self.acknowledgeWorkout(id) {
+                                                completion(.success(()))
+                                            } else {
+                                                completion(.failure(NSError(
+                                                    domain: "GATIVXHealthKit",
+                                                    code: 8,
+                                                    userInfo: [NSLocalizedDescriptionKey: "Apple Health saved the workout, but the export queue could not be safely acknowledged. The workout will be reconciled again on retry."]
+                                                )))
+                                            }
                                         } else {
                                             completion(.failure(NSError(
                                                 domain: "GATIVXHealthKit",

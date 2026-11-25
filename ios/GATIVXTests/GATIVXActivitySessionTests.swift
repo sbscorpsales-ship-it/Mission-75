@@ -59,6 +59,400 @@ final class GATIVXActivitySessionTests: XCTestCase {
         XCTAssertNil(decoded.ownerID)
     }
 
+    func testMetadataOnlyImportedSessionIsNotCloudSyncEligible() {
+        let metadataOnly = activityRecord(steps: nil)
+        let withMeasuredSteps = activityRecord(steps: 12)
+        let withGPSRoute = activityRecord(
+            steps: nil,
+            routePoints: [routePoint(latitude: 15.85, longitude: 74.50)]
+        )
+
+        XCTAssertFalse(metadataOnly.hasCloudSyncPayload)
+        XCTAssertTrue(withMeasuredSteps.hasCloudSyncPayload)
+        XCTAssertTrue(withGPSRoute.hasCloudSyncPayload)
+    }
+
+    @MainActor
+    func testStartingNewActivityCannotReplaceRecoveredGPSDraft() throws {
+        let suiteName = "GATIVXGPSDraftTests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(suiteName, isDirectory: true)
+        defer {
+            try? FileManager.default.removeItem(at: directory)
+            defaults.removePersistentDomain(forName: suiteName)
+        }
+
+        let startedAt = Date(timeIntervalSince1970: 1_800_000_000)
+        let sessionID = UUID()
+        let draft: [String: Any] = [
+            "startedAt": startedAt.timeIntervalSinceReferenceDate,
+            "activity": "Walking",
+            "sessionID": sessionID.uuidString,
+            "ownerID": "account-original",
+            "points": [[
+                "latitude": 15.85,
+                "longitude": 74.50,
+                "timestamp": startedAt.timeIntervalSinceReferenceDate,
+                "horizontalAccuracy": 5.0,
+                "breakBefore": true
+            ]]
+        ]
+        defaults.set(try JSONSerialization.data(withJSONObject: draft), forKey: "gativx.activeRouteDraft.v1")
+
+        let recorder = GPSRouteRecorder(
+            userDefaults: defaults,
+            directoryOverride: directory
+        )
+        XCTAssertEqual(recorder.recoveredStartedAt, startedAt)
+        XCTAssertEqual(recorder.recoveredActivity, "Walking")
+        XCTAssertEqual(recorder.points.count, 1)
+        XCTAssertEqual(recorder.activitySessionID, sessionID)
+        XCTAssertEqual(recorder.activityOwnerID, "account-original")
+
+        recorder.start(activity: "Running", ownerID: "account-new")
+
+        XCTAssertEqual(recorder.recoveredStartedAt, startedAt)
+        XCTAssertEqual(recorder.recoveredActivity, "Walking")
+        XCTAssertEqual(recorder.points.count, 1)
+        XCTAssertEqual(recorder.activitySessionID, sessionID)
+        XCTAssertEqual(recorder.activityOwnerID, "account-original")
+    }
+
+    @MainActor
+    func testStartingNewActivityCannotOverwriteUnreadableGPSDraft() throws {
+        let suiteName = "GATIVXUnreadableGPSDraftTests." + UUID().uuidString
+        let defaults = UserDefaults(suiteName: suiteName)!
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(suiteName, isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let draftURL = directory.appendingPathComponent("active-route-draft.json")
+        let corruptData = Data("preserve-this-route".utf8)
+        try corruptData.write(to: draftURL)
+        defer {
+            try? FileManager.default.removeItem(at: directory)
+            defaults.removePersistentDomain(forName: suiteName)
+        }
+
+        let recorder = GPSRouteRecorder(
+            userDefaults: defaults,
+            directoryOverride: directory
+        )
+        XCTAssertTrue(recorder.hasUnreadableDraft)
+        XCTAssertNil(recorder.recoveredStartedAt)
+
+        recorder.start(activity: "Running", ownerID: "new-account")
+
+        XCTAssertTrue(recorder.hasUnreadableDraft)
+        XCTAssertEqual(try Data(contentsOf: draftURL), corruptData)
+        XCTAssertTrue(recorder.status.contains("remains preserved"))
+    }
+
+    func testRecoveryUpsertMergesLongerRouteAndPreservesKnownStepsAndOwner() {
+        let sessionID = UUID()
+        let startedAt = Date(timeIntervalSince1970: 1_800_000_000)
+        let pointA = routePoint(latitude: 15.8500, longitude: 74.5000, breakBefore: true)
+        let pointB = routePoint(latitude: 15.8501, longitude: 74.5000)
+        let pointC = routePoint(latitude: 15.8510, longitude: 74.5000)
+        let existing = ActivitySessionRecord(
+            id: sessionID,
+            activity: "Walking",
+            startedAt: startedAt,
+            finishedAt: startedAt.addingTimeInterval(60),
+            steps: 120,
+            routePoints: [pointA, pointB],
+            motionDistanceMeters: 12,
+            ownerID: "account-original"
+        )
+        let recovered = ActivitySessionRecord(
+            id: sessionID,
+            activity: "Running",
+            startedAt: startedAt.addingTimeInterval(5),
+            finishedAt: startedAt.addingTimeInterval(120),
+            steps: 118,
+            routePoints: [pointA, pointC],
+            motionDistanceMeters: 10,
+            ownerID: "account-original"
+        )
+        let store = ActivitySessionStore()
+
+        let merged = store.upserting(recovered, into: [existing])
+
+        XCTAssertEqual(merged.count, 1, "Recovery must not create a duplicate session")
+        XCTAssertEqual(merged[0].id, sessionID)
+        XCTAssertEqual(merged[0].activity, "Walking")
+        XCTAssertEqual(merged[0].startedAt, startedAt)
+        XCTAssertEqual(merged[0].finishedAt, recovered.finishedAt)
+        XCTAssertEqual(merged[0].steps, 120, "A recovered lower count must not replace a known count")
+        XCTAssertEqual(merged[0].routePoints?.count, 2)
+        XCTAssertGreaterThan(merged[0].gpsDistanceMeters, existing.gpsDistanceMeters)
+        XCTAssertEqual(merged[0].ownerID, "account-original", "Recovery must not transfer an owned session")
+        XCTAssertEqual(merged[0].motionDistanceMeters, 12)
+
+        let repeatedRecovery = store.upserting(merged[0], into: merged)
+        XCTAssertEqual(repeatedRecovery.count, 1, "Repeating recovery must remain idempotent")
+        XCTAssertEqual(repeatedRecovery[0].id, sessionID)
+        XCTAssertEqual(repeatedRecovery[0].steps, 120)
+        XCTAssertEqual(repeatedRecovery[0].routePoints?.count, 2)
+        XCTAssertEqual(repeatedRecovery[0].ownerID, "account-original")
+    }
+
+    func testRecoveryUpsertDoesNotAssignOwnerToLocalOnlySession() {
+        let sessionID = UUID()
+        let startedAt = Date(timeIntervalSince1970: 1_800_000_000)
+        let existing = ActivitySessionRecord(
+            id: sessionID,
+            activity: "Walking",
+            startedAt: startedAt,
+            finishedAt: startedAt.addingTimeInterval(60),
+            steps: 120,
+            routePoints: nil,
+            motionDistanceMeters: nil,
+            ownerID: nil
+        )
+        let recovered = ActivitySessionRecord(
+            id: sessionID,
+            activity: "Walking",
+            startedAt: startedAt,
+            finishedAt: startedAt.addingTimeInterval(90),
+            steps: 125,
+            routePoints: nil,
+            motionDistanceMeters: nil,
+            ownerID: "newly-signed-in-account"
+        )
+
+        let merged = ActivitySessionStore().upserting(recovered, into: [existing])
+
+        XCTAssertEqual(merged.count, 2, "A different owner must receive a separate record rather than merging into local-only history.")
+        XCTAssertEqual(merged.first(where: { $0.ownerID == nil })?.steps, 120)
+        XCTAssertEqual(merged.first(where: { $0.ownerID == "newly-signed-in-account" })?.steps, 125)
+        XCTAssertNil(
+            existing.mergingRecovery(recovered).ownerID,
+            "The existing local-only record must retain its nil owner even if a different-owner recovery is presented."
+        )
+    }
+
+    func testRecoveryUpsertKeepsSameUUIDIsolatedAcrossOwners() {
+        let sessionID = UUID()
+        let startedAt = Date(timeIntervalSince1970: 1_800_000_000)
+        let existing = ActivitySessionRecord(
+            id: sessionID,
+            activity: "Walking",
+            startedAt: startedAt,
+            finishedAt: startedAt.addingTimeInterval(60),
+            steps: 120,
+            routePoints: nil,
+            motionDistanceMeters: nil,
+            ownerID: "account-A"
+        )
+        let recovered = ActivitySessionRecord(
+            id: sessionID,
+            activity: "Running",
+            startedAt: startedAt.addingTimeInterval(5),
+            finishedAt: startedAt.addingTimeInterval(90),
+            steps: 250,
+            routePoints: nil,
+            motionDistanceMeters: nil,
+            ownerID: "account-B"
+        )
+
+        let records = ActivitySessionStore().upserting(recovered, into: [existing])
+
+        XCTAssertEqual(records.count, 2, "The same UUID under different owners must not be merged.")
+        XCTAssertEqual(records.first(where: { $0.ownerID == "account-A" })?.steps, 120)
+        XCTAssertEqual(records.first(where: { $0.ownerID == "account-B" })?.steps, 250)
+        XCTAssertEqual(records.first(where: { $0.ownerID == "account-A" })?.activity, "Walking")
+        XCTAssertEqual(records.first(where: { $0.ownerID == "account-B" })?.activity, "Running")
+    }
+
+    func testRecoveryUpsertFillsMissingStepsAndKeepsLongerExistingRoute() {
+        let sessionID = UUID()
+        let startedAt = Date(timeIntervalSince1970: 1_800_000_000)
+        let pointA = routePoint(latitude: 15.8500, longitude: 74.5000, breakBefore: true)
+        let pointB = routePoint(latitude: 15.8510, longitude: 74.5000)
+        let pointC = routePoint(latitude: 15.8520, longitude: 74.5000)
+        let existing = ActivitySessionRecord(
+            id: sessionID,
+            activity: "Walking",
+            startedAt: startedAt,
+            finishedAt: startedAt.addingTimeInterval(60),
+            steps: nil,
+            routePoints: [pointA, pointB, pointC],
+            motionDistanceMeters: nil,
+            ownerID: "account-original"
+        )
+        let recovered = ActivitySessionRecord(
+            id: sessionID,
+            activity: "Walking",
+            startedAt: startedAt,
+            finishedAt: startedAt.addingTimeInterval(90),
+            steps: 95,
+            routePoints: [pointA, pointB],
+            motionDistanceMeters: 20,
+            ownerID: "account-original"
+        )
+        let store = ActivitySessionStore()
+
+        let merged = store.upserting(recovered, into: [existing])
+
+        XCTAssertEqual(merged.count, 1)
+        XCTAssertEqual(merged[0].steps, 95, "A verified recovered step count should fill a missing value")
+        XCTAssertEqual(merged[0].routePoints?.count, 3, "The longer previously saved route must win")
+        XCTAssertEqual(merged[0].ownerID, "account-original")
+        XCTAssertEqual(merged[0].motionDistanceMeters, 20)
+    }
+
+    func testActivityOutboxMergesRecoveredRouteAndPreservesNewerRevision() {
+        let sessionID = UUID()
+        let startedAt = Date(timeIntervalSince1970: 1_800_000_000)
+        let pointA = routePoint(latitude: 15.8500, longitude: 74.5000, breakBefore: true)
+        let pointB = routePoint(latitude: 15.8501, longitude: 74.5000)
+        let pointC = routePoint(latitude: 15.8510, longitude: 74.5000)
+        let existing = ActivitySessionRecord(
+            id: sessionID,
+            activity: "Walking",
+            startedAt: startedAt,
+            finishedAt: startedAt.addingTimeInterval(60),
+            steps: 250,
+            routePoints: [pointA, pointB],
+            motionDistanceMeters: 18,
+            ownerID: "account-original"
+        )
+        let recovered = ActivitySessionRecord(
+            id: sessionID,
+            activity: "Running",
+            startedAt: startedAt.addingTimeInterval(5),
+            finishedAt: startedAt.addingTimeInterval(120),
+            steps: nil,
+            routePoints: [pointA, pointC],
+            motionDistanceMeters: 12,
+            ownerID: "account-original"
+        )
+        let queuedAt = Date(timeIntervalSince1970: 1_800_000_100)
+        let firstRevision = UUID()
+        let newerRevision = UUID()
+        let queued = ActivitySessionOutboxQueue.upserting(
+            existing,
+            ownerID: "account-original",
+            into: [],
+            revisionID: firstRevision,
+            queuedAt: queuedAt
+        )
+
+        let updated = ActivitySessionOutboxQueue.upserting(
+            recovered,
+            ownerID: "account-original",
+            into: queued,
+            revisionID: newerRevision
+        )
+
+        XCTAssertEqual(updated.count, 1, "Recovery must update the pending session instead of creating a duplicate")
+        XCTAssertEqual(updated[0].ownerID, "account-original")
+        XCTAssertEqual(updated[0].record.ownerID, "account-original")
+        XCTAssertEqual(updated[0].record.steps, 250, "A recovered draft must not discard the known step count")
+        XCTAssertEqual(updated[0].record.routePoints, recovered.routePoints, "The improved route must replace the stale queued route")
+        XCTAssertEqual(updated[0].record.finishedAt, recovered.finishedAt)
+        XCTAssertEqual(updated[0].queuedAt, queuedAt)
+        XCTAssertEqual(updated[0].revisionID, newerRevision)
+        XCTAssertNotEqual(updated[0].revisionID, firstRevision)
+
+        let staleAcknowledgement = ActivitySessionOutboxQueue.acknowledging(queued[0], from: updated)
+        XCTAssertEqual(staleAcknowledgement, updated, "An older in-flight upload must not acknowledge the recovered revision")
+
+        let repeatedRecovery = ActivitySessionOutboxQueue.upserting(
+            recovered,
+            ownerID: "account-original",
+            into: updated,
+            revisionID: UUID()
+        )
+        XCTAssertEqual(repeatedRecovery, updated, "Retrying the same recovery must remain idempotent")
+    }
+
+    func testActivityOutboxKeepsSameSessionUUIDIsolatedByOwner() {
+        let sessionID = UUID()
+        let startedAt = Date(timeIntervalSince1970: 1_800_000_000)
+        let memberA = ActivitySessionRecord(
+            id: sessionID,
+            activity: "Walking",
+            startedAt: startedAt,
+            finishedAt: startedAt.addingTimeInterval(60),
+            steps: 100,
+            routePoints: nil,
+            motionDistanceMeters: nil,
+            ownerID: "member-a"
+        )
+        let memberB = ActivitySessionRecord(
+            id: sessionID,
+            activity: "Running",
+            startedAt: startedAt,
+            finishedAt: startedAt.addingTimeInterval(90),
+            steps: 200,
+            routePoints: nil,
+            motionDistanceMeters: nil,
+            ownerID: "member-b"
+        )
+        let first = ActivitySessionOutboxQueue.upserting(memberA, ownerID: "member-a", into: [])
+        let both = ActivitySessionOutboxQueue.upserting(memberB, ownerID: "member-b", into: first)
+
+        XCTAssertEqual(both.count, 2, "Identical session UUIDs owned by different accounts must not collide")
+        XCTAssertEqual(Set(both.map(\.ownerID)), Set(["member-a", "member-b"]))
+        XCTAssertEqual(both.first(where: { $0.ownerID == "member-a" })?.record.steps, 100)
+        XCTAssertEqual(both.first(where: { $0.ownerID == "member-b" })?.record.steps, 200)
+    }
+
+    func testCrashAfterHistoryWriteBeforeDraftClearRecoversSameSessionOnDisk() throws {
+        let (store, directory, defaults, suiteName) = makeActivityStore()
+        defer { cleanUpActivityStore(directory, defaults: defaults, suiteName: suiteName) }
+
+        let sessionID = UUID()
+        let startedAt = Date(timeIntervalSince1970: 1_800_000_000)
+        let pointA = routePoint(latitude: 15.8500, longitude: 74.5000, breakBefore: true)
+        let shortPoint = routePoint(latitude: 15.8501, longitude: 74.5000)
+        let longerPoint = routePoint(latitude: 15.8510, longitude: 74.5000)
+        let alreadyWritten = ActivitySessionRecord(
+            id: sessionID,
+            activity: "Walking",
+            startedAt: startedAt,
+            finishedAt: startedAt.addingTimeInterval(60),
+            steps: 250,
+            routePoints: [pointA, shortPoint],
+            motionDistanceMeters: 18,
+            ownerID: "account-original"
+        )
+        try store.save([alreadyWritten])
+
+        // Simulate a crash after the history write succeeded but before the GPS draft was cleared.
+        let recoveredDraft = ActivitySessionRecord(
+            id: sessionID,
+            activity: "Running",
+            startedAt: startedAt,
+            finishedAt: startedAt.addingTimeInterval(120),
+            steps: nil,
+            routePoints: [pointA, longerPoint],
+            motionDistanceMeters: 12,
+            ownerID: "account-original"
+        )
+        let recoveredHistory = store.upserting(recoveredDraft, into: try store.load())
+        try store.save(recoveredHistory)
+
+        // A second relaunch/retry must not append another copy or lose the better measurements.
+        let repeatedHistory = store.upserting(recoveredDraft, into: try store.load())
+        try store.save(repeatedHistory)
+        let persisted = try store.load()
+
+        XCTAssertEqual(persisted.count, 1)
+        let restored = try XCTUnwrap(persisted.first)
+        XCTAssertEqual(restored.id, sessionID)
+        XCTAssertEqual(restored.activity, "Walking")
+        XCTAssertEqual(restored.startedAt, startedAt)
+        XCTAssertEqual(restored.finishedAt, recoveredDraft.finishedAt)
+        XCTAssertEqual(restored.steps, 250)
+        XCTAssertEqual(restored.routePoints?.count, 2)
+        XCTAssertGreaterThan(restored.gpsDistanceMeters, alreadyWritten.gpsDistanceMeters)
+        XCTAssertEqual(restored.motionDistanceMeters, 18)
+        XCTAssertEqual(restored.ownerID, "account-original")
+    }
+
     func testDurationUsesMinutesAndSeconds() {
         let start = Date(timeIntervalSince1970: 1_800_000_000)
         let record = activityRecord(
@@ -67,6 +461,35 @@ final class GATIVXActivitySessionTests: XCTestCase {
         )
 
         XCTAssertEqual(record.durationText, "2:05")
+    }
+
+    func testActivityStoreCanRetryAfterTransientSaveFailure() throws {
+        let suiteName = "GATIVXRetrySaveTests.\\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        let blockingPath = FileManager.default.temporaryDirectory
+            .appendingPathComponent(suiteName, isDirectory: false)
+        let blockingData = Data("temporary-storage-blocker".utf8)
+        try blockingData.write(to: blockingPath)
+        defer {
+            try? FileManager.default.removeItem(at: blockingPath)
+            defaults.removePersistentDomain(forName: suiteName)
+        }
+        let store = ActivitySessionStore(
+            userDefaults: defaults,
+            directoryOverride: blockingPath
+        )
+        let record = activityRecord(ownerID: "account-retry")
+
+        XCTAssertThrowsError(try store.save([record]))
+        XCTAssertEqual(try Data(contentsOf: blockingPath), blockingData)
+
+        // Once storage becomes available, the same activity can be retried and verified.
+        try FileManager.default.removeItem(at: blockingPath)
+        try store.save([record])
+        let restored = try store.load()
+
+        XCTAssertEqual(restored.map(\.id), [record.id])
+        XCTAssertEqual(restored.first?.ownerID, "account-retry")
     }
 
     func testActivityStoreAtomicallySavesAndReadsBackHistory() throws {
@@ -124,7 +547,7 @@ final class GATIVXActivitySessionTests: XCTestCase {
     }
 
     func testActivityStorePreservesLegacyDataWhenMigrationWriteFails() throws {
-        let suiteName = "GATIVXTests.\\(UUID().uuidString)"
+        let suiteName = "GATIVXTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!
         let blockingFile = FileManager.default.temporaryDirectory
             .appendingPathComponent(suiteName, isDirectory: false)
@@ -149,6 +572,45 @@ final class GATIVXActivitySessionTests: XCTestCase {
             legacyData
         )
         XCTAssertEqual(try Data(contentsOf: blockingFile), blockingData)
+    }
+
+    func testMemberProfilePhotoStoreSavesAndReadsBackData() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("GATIVXPhotoTests.\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = MemberProfilePhotoStore(directoryOverride: directory)
+        let photoData = Data([0xFF, 0xD8, 0xFF, 0xD9])
+
+        try store.save(photoData)
+
+        XCTAssertEqual(try store.load(), photoData)
+        XCTAssertTrue(FileManager.default.fileExists(
+            atPath: directory.appendingPathComponent("member-profile-photo.jpg").path
+        ))
+    }
+
+    func testMemberProfilePhotoStoreRejectsEmptyDataWithoutReplacingExistingPhoto() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("GATIVXPhotoTests.\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = MemberProfilePhotoStore(directoryOverride: directory)
+        let existingPhoto = Data([0xFF, 0xD8, 0xFF, 0xD9])
+        try store.save(existingPhoto)
+
+        XCTAssertThrowsError(try store.save(Data()))
+        XCTAssertEqual(try store.load(), existingPhoto)
+    }
+
+    func testMemberProfilePhotoStoreDeletesPhoto() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("GATIVXPhotoTests.\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = MemberProfilePhotoStore(directoryOverride: directory)
+        try store.save(Data([0xFF, 0xD8, 0xFF, 0xD9]))
+
+        try store.delete()
+
+        XCTAssertNil(try store.load())
     }
 
     private func makeActivityStore() -> (ActivitySessionStore, URL, UserDefaults, String) {
