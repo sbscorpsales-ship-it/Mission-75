@@ -396,7 +396,7 @@ Inspect run #640's complete logs. Require the full unit/UI suite to execute, the
 
 ### PR #120 full iOS validation — PASS
 - Candidate branch: `fix/gativx-guru-goal-keyboard-layout-20261126`.
-- Source commit: `66635d847964b90ab9b8a3d5b74dbb64257c09dd`.
+- PR source head: `66635d847964b90ab9b8a3d5b74dbb64257c09dd`; the PR workflow checked out GitHub's synthetic merge commit `f80b4a016fb76b081805a81777bfea5decf8a28c` (PR #117 integration base plus PR #120 candidate).
 - Workflow run #640: [45694454367](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45694454367), completed successfully. The job log was downloaded and inspected.
 - XCTest unit suite: **75 passed, 0 failed, 0 cancelled**.
 - XCTest UI suite: **2 passed, 0 failed, 0 cancelled**.
