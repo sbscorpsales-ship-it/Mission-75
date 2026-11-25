@@ -280,13 +280,10 @@ const SUPABASE_PUBLISHABLE_KEY='sb_publishable_XAGRFtrWrFqJ-SfXh2WbRQ_jCcPnr-6';
 let cloudClient=null,cloudUser=null,cloudBusy=false,cloudSyncQueued=false,signupReady=false;
 function activateCloudUser(user){
  if(!user){
-  // A signed-out transition must isolate device storage even if an auth callback
-  // arrives after activeAccountId has already been cleared or restored separately.
-  const hadAuthenticatedUser=!!cloudUser||!!activeAccountId||stateStorageKey.startsWith(KEY+'.user.');
-  if(hadAuthenticatedUser){
-   if(stateStorageKey.startsWith(KEY+'.user.'))persist();
+  if(activeAccountId){
+   persist();
    activeAccountId=null;
-   // Once this browser has held an account, never reopen the shared legacy store while signed out.
+   // After an account has owned the shared v2 store, never reopen that store while signed out.
    try{localStorage.setItem(ACCOUNT_MIGRATED_KEY,'1')}catch(migrationError){console.error('GATIVX account isolation marker could not be saved',migrationError)}
    stateStorageKey=KEY+'.device';
    let deviceSaved=null;

@@ -8,7 +8,7 @@ const contentTypes={".html":"text/html; charset=utf-8",".js":"text/javascript; c
 const server=http.createServer((request,response)=>{
   let pathname;
   try{pathname=decodeURIComponent(new URL(request.url,"http://127.0.0.1").pathname)}catch{response.writeHead(400);response.end("Bad request");return}
-  const relative=pathname==="/"?"index.html":pathname.replace(/^\\/+/, "");
+  const relative=pathname==="/"?"index.html":(pathname.startsWith("/")?pathname.slice(1):pathname);
   const target=path.resolve(root,relative);
   if(target!==root&&!target.startsWith(root+path.sep)){response.writeHead(403);response.end("Forbidden");return}
   fs.readFile(target,(error,body)=>{
