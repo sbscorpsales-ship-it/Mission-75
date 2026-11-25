@@ -153,30 +153,15 @@ jobs:
             xcodebuild -showdestinations -project ios/GATIVX.xcodeproj -scheme GATIVX || true
             exit 1
           fi
-          # Run only the two previously failing dashboard UI tests on this repair
-          # branch. Other branches continue to run the complete test suite.
-          if [ "${GITHUB_HEAD_REF:-}" = "fix/gativx-ui-test-guest-reset" ]; then
-            xcodebuild \
-              -project ios/GATIVX.xcodeproj \
-              -scheme GATIVX \
-              -destination "platform=iOS Simulator,id=$SIMULATOR_ID" \
-              -derivedDataPath build/GATIVX-Tests \
-              -resultBundlePath build/GATIVX.xcresult \
-              -parallel-testing-enabled NO \
-              -only-testing:GATIVXUITests/GATIVXDashboardUITests/testDashboardSectionsMetricsAndPrimaryNavigation \
-              CODE_SIGNING_ALLOWED=NO \
-              test
-          else
-            xcodebuild \
-              -project ios/GATIVX.xcodeproj \
-              -scheme GATIVX \
-              -destination "platform=iOS Simulator,id=$SIMULATOR_ID" \
-              -derivedDataPath build/GATIVX-Tests \
-              -resultBundlePath build/GATIVX.xcresult \
-              -parallel-testing-enabled NO \
-              CODE_SIGNING_ALLOWED=NO \
-              test
-          fi
+                    xcodebuild \
+            -project ios/GATIVX.xcodeproj \
+            -scheme GATIVX \
+            -destination "platform=iOS Simulator,id=$SIMULATOR_ID" \
+            -derivedDataPath build/GATIVX-Tests \
+            -resultBundlePath build/GATIVX.xcresult \
+            -parallel-testing-enabled NO \
+            CODE_SIGNING_ALLOWED=NO \
+            test
 
       - name: Upload XCTest result bundle and dashboard screenshot evidence
         if: always()
