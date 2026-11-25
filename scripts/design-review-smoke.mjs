@@ -86,6 +86,7 @@ try {
 
   await page.locator("#theme-toggle").click();
   await check(await page.locator("html").getAttribute("data-theme") === "day", "Day mode switches on without changing screen layout");
+  await page.locator("#app-shell").screenshot({ path: path.join(artifactDir, "home-day.png"), animations: "disabled" });
   await page.locator("#theme-toggle").click();
   await check(await page.locator("html").getAttribute("data-theme") === "night", "Night mode switches back without changing screen layout");
 
