@@ -27,6 +27,10 @@ This review follows `docs/GATIVX-FINAL-DAY-NIGHT-DESIGN-LOCK.md`: shared hierarc
 - The Start Walk and GURU buttons show a disclosure rather than performing real activity or coaching.
 - This is not a production deployment or evidence that the missing product modules are implemented.
 
+## Brand asset
+
+The preview uses the existing `gativx-logo.jpg` asset. The separate legacy SVG wrapper was not used because its embedded JPEG data is malformed; the original asset was left untouched.
+
 ## Automated review
 
 `scripts/design-review-smoke.mjs` checks all ten screens, mobile overflow, Day/Night switching, period selection, preview-only disclosures and browser errors. It captures one 390x844 screenshot per screen in the `GATIVX-Design-C-Review-Screenshots` CI artifact.
