@@ -90,6 +90,8 @@ final class SupabaseRESTClient: ObservableObject {
     private var refreshToken: String?
     private var isRetryingHealthOutbox = false
     private var isRetryingActivityOutbox = false
+    // Supabase refresh tokens are single-use; concurrent callers must share one refresh.
+    private var refreshTask: Task<AuthSession, Error>?
 
     init() {
         if let saved = readSession() {
@@ -624,21 +626,42 @@ final class SupabaseRESTClient: ObservableObject {
     }
 
     private func refreshSession() async throws {
-        guard let refreshToken else { throw ClientError.notSignedIn }
+        // Reuse an in-flight refresh. Supabase rotates refresh tokens, so two
+        // simultaneous 401 handlers must never submit the same token twice.
+        if let refreshTask {
+            let session = try await refreshTask.value
+            accessToken = session.accessToken
+            self.refreshToken = session.refreshToken
+            saveSession(session)
+            return
+        }
+
+        guard let currentRefreshToken = refreshToken else { throw ClientError.notSignedIn }
         var request = URLRequest(url: baseURL.appendingPathComponent("auth/v1/token").appending(queryItems: [URLQueryItem(name: "grant_type", value: "refresh_token")]))
         request.httpMethod = "POST"
         request.setValue(publishableKey, forHTTPHeaderField: "apikey")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.httpBody = try JSONSerialization.data(withJSONObject: ["refresh_token": refreshToken])
-        let (data, response) = try await URLSession.shared.data(for: request)
-        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
-            clearSession()
-            throw Self.serverError(data)
+        request.httpBody = try JSONSerialization.data(withJSONObject: ["refresh_token": currentRefreshToken])
+
+        let task = Task<AuthSession, Error> {
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+                throw Self.serverError(data)
+            }
+            return try JSONDecoder().decode(AuthSession.self, from: data)
         }
-        let session = try JSONDecoder().decode(AuthSession.self, from: data)
-        accessToken = session.accessToken
-        self.refreshToken = session.refreshToken
-        saveSession(session)
+        refreshTask = task
+
+        do {
+            let session = try await task.value
+            accessToken = session.accessToken
+            self.refreshToken = session.refreshToken
+            saveSession(session)
+            refreshTask = nil
+        } catch {
+            refreshTask = nil
+            throw error
+        }
     }
 
     func signOut() {
