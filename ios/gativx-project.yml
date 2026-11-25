@@ -16,7 +16,7 @@ targets:
         CFBundleVersion: "1"
         CFBundleShortVersionString: "1.0.0"
         NSHealthUpdateUsageDescription: "GATIVX saves a walking, running or hiking workout to Apple Health when you choose to finish an activity."
-        NSHealthShareUsageDescription: "GATIVX reads your daily step count and active energy from Apple Health to show your fitness progress."
+        NSHealthShareUsageDescription: "GATIVX reads your daily steps, active energy, walking and running distance, exercise minutes, heart rate and workouts from Apple Health to show your fitness progress."
         NSMotionUsageDescription: "GATIVX uses motion activity to display live step and walking-distance estimates while you use the app."
         NSLocationWhenInUseUsageDescription: "GATIVX records your GPS route only while you explicitly start an activity."
         NSLocationAlwaysAndWhenInUseUsageDescription: "GATIVX uses location during an active walk so route recording can continue when your iPhone screen is locked."
