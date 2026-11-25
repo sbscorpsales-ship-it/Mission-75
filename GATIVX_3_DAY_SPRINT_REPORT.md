@@ -116,3 +116,29 @@ No pull request has been merged.
 3. Refresh PR #114 onto the latest PR #112 head only after the full iOS validation is stable; preserve its Finish & Save tests and keep both PRs open.
 4. Continue from the gap ledger, prioritising member onboarding, activity reliability, HealthKit/Health Connect acceptance, Missions, Community, Notifications and cross-platform parity.
 5. Keep PR #107 untouched and unmerged. Do not claim signed installation, physical-device acceptance or production deployment without their evidence.
+
+
+---
+
+## 2026-11-25 22:48 IST — latest verified state (supersedes earlier pending labels)
+
+### Branches and pull requests rechecked
+- PR #112 remains open/draft/unmerged at `b6c04d41dc67bd191ed0cf8966331eb5661a9887`.
+- PR #114 remains open/draft/unmerged at `87318182360d4369ea2f7a773a27dd3fa3e7c558`; its base is still `fa92bb43a6b2064e0d412e4607c575057535ca1b`, which is 7 commits behind current PR #112 head. GitHub currently reports PR #114 as not mergeable. Do not refresh/merge until a reviewed integration plan is ready.
+- PR #107 remains open/draft/unmerged at `c19bdbd307df7048cefd86bd3e6064ac4f4e3042`; no PR #107 files, branch refs or metadata were changed.
+- New isolated candidate PR #115 is open/draft/unmerged. Head branch `fix/gativx-activity-tab-transition-20261125`, commit `d37733e3b08a585344506f73534b6e93ac2c1aea`, base `fix/gativx-ui-test-guest-reset` at PR #112 head.
+
+### Latest iOS full-suite evidence
+- **Run #636 — FAIL** on PR #112 head `b6c04d41dc67bd191ed0cf8966331eb5661a9887`. Exact XCTest totals from the job log: **58 unit tests passed, 0 failed; 2 UI tests executed, 1 passed and 1 failed; 0 cancelled**. The failing test is `testDashboardSectionsMetricsAndPrimaryNavigation` at `GATIVXDashboardUITests.swift:237`. After the Guru sheet was dismissed, XCTest tapped the Activity tab; the app did not emit an event-loop-idle notification, subsequent accessibility queries stalled, and XCTest timed out. This is now a reproducible Activity-tab transition failure on the full-suite run, not evidence of a Profile-only defect. The second UI test `testHomeStartWalkNavigatesWithoutStartingSession` passed.
+- Run #636 also completed the iPhone Simulator build, source entitlement/privacy checks, unsigned iPhone Release build and unsigned IPA packaging successfully. The aggregate release gate correctly failed because XCTest failed. No signed/device behavior is inferred. [Run #636](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45652420651)
+- **Candidate correction in PR #115:** commit `d37733e3b08a585344506f73534b6e93ac2c1aea` removes the unused nested `NavigationStack` around Activity (there are no Activity navigation destinations), adds a stable Activity-tab accessibility identifier, and updates both Activity-tab UI test queries to use it. This is a hypothesis-driven, isolated correction; it is not yet verified.
+- **Run #637 — IN PROGRESS** on the PR #115 head at report time. No test outcome is claimed. [Run #637](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45663157699)
+
+### Latest Android evidence
+- **Run #171 — PASS** on `19c679a7f2ef675176c0009148865563fca2fd00`: all six WalkOn source safeguard assertions passed, Gradle debug APK build completed successfully (35 actionable tasks executed), and the APK artifact uploaded successfully. This is source/static-check plus debug-build evidence only; no emulator/physical Android device test, Health Connect live read, signing or Play deployment was performed. [Run #171](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45652707476) · [Debug APK artifact](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45652707476/artifacts/15042071077)
+
+### Next actions
+1. Inspect the actual logs and exact test counts from run #637 when it completes. If it fails, retain the failure and investigate the remaining event-loop/accessibility issue; do not narrow the suite.
+2. Keep PR #114 unmerged and stale until PR #112/PR #115 navigation validation stabilises. Then reconcile the overlapping Finish & Save, HealthKit and ContentView changes on a new isolated integration branch and rerun the complete suite.
+3. Continue the documented product gap work. The current code still gates Community and Notifications, has only a fixed consistency mission, lacks an Apps tab, and does not provide complete onboarding or a complete Android/Web parity experience.
+4. Preserve Design C, keep PR #107 untouched, and keep all signing, physical-device and production-release claims blocked until direct evidence exists.
