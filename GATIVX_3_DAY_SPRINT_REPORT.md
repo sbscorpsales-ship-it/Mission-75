@@ -450,3 +450,70 @@ The GitHub commit endpoint was also queried using each branch name, not just rem
 - `fix/gativx-ui-test-guest-reset` → `b6c04d41dc67bd191ed0cf8966331eb5661a9887`
 - `fix/gativx-finish-save-validate` → `87318182360d4369ea2f7a773a27dd3fa3e7c558`
 - `docs/gativx-sprint-report-20261125` was `39a9d0e630de6e329a8c9427b15ac6111a9a8647` at fetch time; this report update advances it to `8b23fcc0d22663788ae1cc0c00739dfd07cfa259`.
+
+
+---
+
+## 2026-11-26 03:56 IST — latest refs, full iOS log reconciliation, and HealthKit queue-failure correction
+
+### Repository and pull-request state (read from GitHub at this run)
+- `main`: `143889db3e72540fb478b76c486082f45395e9bd`.
+- PR #107: open/draft/unmerged, head `c19bdbd307df7048cefd86bd3e6064ac4f4e3042`; branch and PR metadata were not changed.
+- PR #112: open/draft/unmerged, head `b6c04d41dc67bd191ed0cf8966331eb5661a9887`.
+- PR #114: open/draft/unmerged, head `87318182360d4369ea2f7a773a27dd3fa3e7c558`; base remains the older PR #112 commit `fa92bb43a6b2064e0d412e4607c575057535ca1b`. GitHub compare confirms PR #112 head is exactly **7 commits ahead** of that base. No automatic retarget or merge was performed.
+- PR #119: open/draft/unmerged, head `b75a0639b34e5c7329db801c3ff423f406f9ce7e`.
+- PR #120: open/draft/unmerged, head `66635d847964b90ab9b8a3d5b74dbb64257c09dd`, based on the PR #117 integration head `7bb41d9de3cc43b4e03b4e54faf94f6ee48c3417`.
+- New PR #121: open/draft/unmerged, head `4415daa439bd9446ef08842c9486cb0494a93613`, based on PR #120. It is an isolated candidate for HealthKit queue-failure recovery.
+- PR #118 is the cumulative report PR. This append-only report update advances its documentation branch.
+- No pull request was merged.
+
+### iOS CI — run #640, exact log inspection
+Source SHA: `66635d847964b90ab9b8a3d5b74dbb64257c09dd` (PR #120).
+
+- Unit suite: **75 passed, 0 failed, 0 unexpected failures**.
+- UI suite: **2 passed, 0 failed, 0 cancelled**.
+- Total: **77 XCTest cases passed**.
+- `GATIVXFinishSaveRegressionTests`: 17 passed.
+- `GATIVXActivitySessionTests`: 24 passed.
+- `GATIVXGoalJourneyTests`: 8 passed.
+- `GPSRouteDraftPersistenceTests`: 3 passed.
+- `HealthKitWorkoutOutboxStoreTests`: 5 passed.
+- `HealthSyncOutboxStoreTests`: 7 passed.
+- `RunJeetBackupImporterTests`: 8 passed.
+- `RunJeetDailyStepsArchiveStoreTests`: 3 passed.
+- UI test `testDashboardSectionsMetricsAndPrimaryNavigation` passed in 367.881 seconds. It exercised first-run auth, dashboard metrics, GURU goal edit and keyboard dismissal, journey duration, GURU-to-Activity navigation, Missions, Community and Profile. The Profile screen and member identity identifiers were found.
+- UI test `testHomeStartWalkNavigatesWithoutStartingSession` passed in 28.632 seconds.
+- The run log contains no `Invalid frame dimension` or main-run-loop-busy timeout. Benign Apple telemetry/AppIntents metadata warnings remain; they did not fail the job.
+- Simulator build, source entitlement/privacy checks, unsigned iPhone Release build, IPA packaging, ZIP integrity check and artifact uploads all passed.
+- Run: https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45694454367
+- Artifacts: XCTest result bundle `15061078309`; simulator build `15060788600`; unsigned IPA `15061672408`.
+- **Scope limitation:** this is simulator evidence. The IPA is unsigned; it does not prove installation, physical iPhone HealthKit writes, background GPS, or device acceptance.
+
+### Android and Web CI log reconciliation
+- Android run #171 on `19c679a7f2ef675176c0009148865563fca2fd00`: **20/20** source safeguards printed PASS; Gradle debug APK build reported `BUILD SUCCESSFUL`; debug APK artifact `15042071077` uploaded. No Android emulator or physical-device test ran. Run: https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45652707476
+- Web Design C run #45686178223 on `b75a0639b34e5c7329db801c3ff423f406f9ce7e`: structural release gate **15 PASS**, existing mobile browser smoke **7 PASS**, Design C review **29 PASS**; 0 failed assertions. Ten screens, Day/Night, mobile overflow, navigation, sample-data disclosure, and browser console/uncaught-exception checks passed. Screenshot/review artifact `15056846592` uploaded (902,780 bytes). This remains a local visual review prototype, not a live production deployment. Run: https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45686178223
+
+### New Finish & Save defect found and isolated correction — PR #121
+Source inspection found a gap not covered by the previous passing unit suite:
+- `ContentView.finishActivitySession()` first saved and read back local activity history, then called `HealthKitManager.saveActivityWorkout()`, but cleared the GPS draft unconditionally after that call.
+- If the HealthKit outbox enqueue/read-back itself failed, the local activity history remained saved but there was no durable outbox item. The Profile retry action only drains the outbox and cannot reconstruct the missing queue entry from local history. The route draft was also cleared, leaving no same-session retry action.
+- PR #121 changes `saveActivityWorkout` to return synchronous acceptance only after the durable outbox enqueue/read-back succeeds. Finish & Save now clears the GPS draft only when that acceptance is true. On enqueue failure it retains the route draft and same session UUID, restores the Finish & Save action, and explains that the local history is saved and queue creation can be retried. Re-saving upserts the same UUID rather than adding a duplicate.
+- Added `testExportFailureIsDeliveredToEveryCoalescedCaller` and four workflow source guards for synchronous queue acceptance, conditional draft clearing, same-session retry, and coalesced failure delivery.
+- Files changed: `ios/GATIVX/HealthKit/HealthKitManager.swift`, `ios/GATIVX/ContentView.swift`, `ios/GATIVXTests/GATIVXFinishSaveRegressionTests.swift`, `.github/workflows/gativx-ios.yml`.
+- Commit: `4415daa439bd9446ef08842c9486cb0494a93613`.
+- PR: https://github.com/sbscorpsales-ship-it/Mission-75/pull/121
+- CI run #45713205787 was **in progress** at 2026-11-26 03:56 IST. No test/build result is claimed for PR #121 until its run completes and logs are inspected.
+
+### Updated verification and remaining defects
+- **Verified (simulator only):** iOS full unit/UI suite on PR #120 source; GURU keyboard-to-Activity transition; Activity/Missions/Community/Profile tab navigation; Profile identity; simulator build; unsigned Release build and IPA package integrity.
+- **Verified (CI scope only):** Android source safeguards/debug APK build; Web static/browser/Design C review checks.
+- **Implemented-but-unverified:** iOS Finish & Save local-first persistence, recovery, stable-ID upsert and HealthKit outbox; Android Health Connect/WalkOn; browser GPS and Supabase client; account auth and goal/GURU logic. The new queue-failure preservation change in PR #121 remains unverified until its CI completes.
+- **Missing:** complete guided onboarding; goal-linked mission engine; live Community, moderation and sharing; notification delivery; Apps hub; full Android parity; Universal Data Hub provider adapters/reconciliation; full nutrition/hydration/sleep/strength experiences; data export/account deletion; 3D route replay; subscription/referral/reward/admin systems.
+- **Blocked:** physical iPhone HealthKit/background GPS and signed installation require the owner-controlled Apple Developer signing identity/provisioning profile with HealthKit capability and actual iPhone acceptance. Android device/Health Connect acceptance requires an emulator or physical Android device. Live Supabase/RLS tenant-isolation acceptance requires a controlled non-production project, known migration state and two test accounts. Production web deployment requires owner-approved deployment access and live-backend verification.
+- The UI suite still does not drive a complete recorded walk through Finish & Save, relaunch, history read-back and Apple Health read-back. The new PR #121 specifically protects the outbox enqueue-failure branch but does not replace this end-to-end acceptance.
+
+### Next action
+1. Inspect PR #121 run #45713205787 logs and exact XCTest counts; reject or correct any failure without narrowing tests.
+2. If it passes, keep PR #121 draft/unmerged and review the change against the updated Finish & Save gap.
+3. Add a deterministic, honest end-to-end local Finish & Save UI path only if it can exercise the real persistence/orchestration without pretending simulator HealthKit is a physical iPhone.
+4. Continue the cross-platform gap ledger; do not promote preview-only screens to implemented features.
