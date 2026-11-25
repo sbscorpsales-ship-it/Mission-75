@@ -168,3 +168,16 @@ No pull request has been merged.
 2. Once iOS is stable, integrate the six-file Finish & Save/HealthKit patch on a fresh branch and rerun all 71 unit tests plus both UI tests and packaging.
 3. Establish a reproducible Supabase test project and migration baseline before expanding cloud-backed Community or member data.
 4. Add actual Android JVM/instrumentation tests and web live-backend contract tests; do not promote static source checks into behavioral acceptance.
+
+
+## Finish & Save six-file patch compatibility review — 25 November 2026
+
+The six-file PR #114 patch was re-read against the current PR #112 changes:
+
+- PR #114 adds two pure policy/coalescing source files, changes `ContentView.swift` and `HealthKitManager.swift`, and adds regression coverage plus one existing test-string correction.
+- PR #112 also changes `ContentView.swift`, but the inspected hunks are in separate areas: live step reconciliation, Profile photo presentation, Community navigation and UI-test launch/accessibility setup. No direct same-line collision was found in the inspected patches. `HealthKitManager.swift` and the two new pure helper files are not changed by PR #112.
+- The PR #114 branch is still based on the older `fa92bb43...` version of the repair branch. Current PR #112 is seven commits ahead. GitHub reports PR #114 as not mergeable. Therefore this is a source-level compatibility assessment only; the combined tree has not yet been built or tested.
+- **Run #628** on PR #114 SHA `87318182360d4369ea2f7a773a27dd3fa3e7c558`: exact XCTest log totals are 71 unit tests passed, 0 failed; 2 UI tests passed, 0 failed; simulator build, unsigned Release build and IPA packaging succeeded. [Run #628](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45633053186)
+- **Run #629** on the same SHA: 71 unit tests passed, 0 failed; the dashboard UI test failed at line 295 with an accessibility-query timeout; the second UI test did not complete before the 40-minute test-step timeout. Simulator and unsigned Release/IPA packaging succeeded, but the aggregate gate failed. [Run #629](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45633166732)
+
+**Integration decision:** preserve PR #114 as-is for now. After PR #115 proves or disproves the Activity-tab correction, create a fresh isolated integration branch from the then-current PR #112 head, apply the PR #114 six-file patch without rewriting either existing branch, and run the complete combined suite. Keep both PRs open/draft and do not merge any PR.
