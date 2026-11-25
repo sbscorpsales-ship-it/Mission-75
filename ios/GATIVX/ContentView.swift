@@ -36,6 +36,7 @@ struct ContentView: View {
     @State private var runJeetArchiveStatus = "No RunJeet daily totals imported."
     @State private var sessionStarted: Date?
     @State private var isFinishingSession = false
+    @State private var recoveredSessionWasResumed = false
     @State private var activeSessionID: UUID?
     @State private var sessionStatus = "Start a session to count steps."
     @State private var liveMotionSteps: Int?
@@ -361,6 +362,7 @@ struct ContentView: View {
         let start = Date()
         sessionStarted = start
         activeSessionID = UUID()
+        recoveredSessionWasResumed = false
         sessionSteps = nil
         sessionMotionDistanceMeters = nil
         // GPS recording is independent of the motion sensor. A device without
@@ -392,7 +394,7 @@ struct ContentView: View {
         // not at the current clock, so a long app-termination gap is not counted as
         // walking time, pedometer steps or an Apple Health workout interval.
         // This must be evaluated before routeRecorder.stop() clears isRecording.
-        let recoveredWithoutResume = routeRecorder.recoveredStartedAt != nil && !routeRecorder.isRecording
+        let recoveredWithoutResume = routeRecorder.recoveredStartedAt != nil && !recoveredSessionWasResumed
         let finishedAt = ActivitySessionFinishPolicy.effectiveFinishDate(
             now: Date(),
             startedAt: start,
@@ -415,6 +417,7 @@ struct ContentView: View {
                     self.sessionSteps = nil
                     // Keep the original session ID and draft, and resume GPS so
                     // the member can continue recording after a sensor/permission failure.
+                    self.recoveredSessionWasResumed = true
                     self.routeRecorder.resumeRecovered()
                     self.sessionStatus = "No verified step count or GPS points were received. Nothing was saved or counted. Your session remains available. " + self.routeRecorder.status + " Check Motion & Location permissions, then retry Finish & Save."
                     self.isFinishingSession = false
@@ -481,6 +484,7 @@ struct ContentView: View {
                     // draft until that enqueue attempt has happened: a crash after the
                     // history write can then recover and retry the same session UUID.
                     self.routeRecorder.clearDraft()
+                    self.recoveredSessionWasResumed = false
                 } catch {
                     self.sessionStatus = "Could not save this activity on this iPhone: " + error.localizedDescription + ". Your GPS draft remains preserved; tap Finish & save activity to retry."
                     self.sessionStarted = start
@@ -1135,6 +1139,7 @@ struct ContentView: View {
                                 selectedActivity = routeRecorder.recoveredActivity ?? "Walking"
                                 sessionStarted = recoveredStart
                                 sessionSteps = nil
+                                recoveredSessionWasResumed = true
                                 routeRecorder.resumeRecovered()
                                 activeSessionID = routeRecorder.activitySessionID
                                 pedometer.startUpdates(from: recoveredStart) { data, error in

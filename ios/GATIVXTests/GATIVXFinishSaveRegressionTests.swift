@@ -24,6 +24,21 @@ final class GATIVXFinishSaveRegressionTests: XCTestCase {
         XCTAssertEqual(finish, now)
     }
 
+    func testRecoveredSessionAfterResumeEndsAtCurrentTime() {
+        let start = Date(timeIntervalSince1970: 1_800_000_000)
+        let lastFix = start.addingTimeInterval(1_200)
+        let now = start.addingTimeInterval(1_800)
+
+        let finish = ActivitySessionFinishPolicy.effectiveFinishDate(
+            now: now,
+            startedAt: start,
+            lastRoutePointAt: lastFix,
+            recoveredWithoutResume: false
+        )
+
+        XCTAssertEqual(finish, now)
+    }
+
     func testRecoveredSessionSavedWithoutResumeEndsAtLastGPSFix() {
         let start = Date(timeIntervalSince1970: 1_800_000_000)
         let lastFix = start.addingTimeInterval(1_200)
