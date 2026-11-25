@@ -9,7 +9,7 @@
 **Passing Activity-navigation candidate:** [#115](https://github.com/sbscorpsales-ship-it/Mission-75/pull/115), head d37733e3b08a585344506f73534b6e93ac2c1aea  
 **Combined Finish & Save integration:** [#117](https://github.com/sbscorpsales-ship-it/Mission-75/pull/117), head 7bb41d9de3cc43b4e03b4e54faf94f6ee48c3417, full CI pending  
 **Web visual-completeness preview:** [#116](https://github.com/sbscorpsales-ship-it/Mission-75/pull/116), head 090678d93dc6f373b2313e0239c0158dc54f5a30  
-**Cumulative report PR:** [#118](https://github.com/sbscorpsales-ship-it/Mission-75/pull/118), head af41f9888594eb06d33b27e7b42827254f1e8da8  
+**Cumulative report PR:** [#118](https://github.com/sbscorpsales-ship-it/Mission-75/pull/118), open, draft, unmerged  
 **Finish & Save PR:** [#114](https://github.com/sbscorpsales-ship-it/Mission-75/pull/114), open, draft, unmerged  
 **Protected consolidation PR:** [#107](https://github.com/sbscorpsales-ship-it/Mission-75/pull/107), open, draft, untouched
 
@@ -204,7 +204,7 @@ A final live metadata read changed one detail from the earlier snapshot: GitHub 
 - PR #115 remains open/draft/unmerged at d37733e3b08a585344506f73534b6e93ac2c1aea, stacked on PR #112.
 - PR #117 remains open/draft/unmerged at 7bb41d9de3cc43b4e03b4e54faf94f6ee48c3417, stacked on PR #115. Its only product changes are the six iOS files listed below.
 - PR #116 remains open/draft/unmerged at 090678d93dc6f373b2313e0239c0158dc54f5a30, based on main. Its last source/test change is 21bfe65; the final commit only removes the duplicate report file.
-- PR #118 remains open/draft/unmerged at af41f9888594eb06d33b27e7b42827254f1e8da8; it is the documentation-only report PR.
+- PR #118 remains open/draft/unmerged as the documentation-only report PR.
 - PR #107 remains open/draft/unmerged at c19bdbd307df7048cefd86bd3e6064ac4f4e3042; no PR #107 branch, file, base, metadata or review state was changed. No PR was merged.
 
 ### Verified engineering changes and commits
