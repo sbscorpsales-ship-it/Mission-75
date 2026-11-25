@@ -10,7 +10,7 @@ on:
       - "scripts/check-web.mjs"
       - "scripts/browser-smoke.mjs"
       - "gativx-design-c-review.html"
-      - "gativx-logo.svg"
+      - "gativx-logo.jpg"
       - "scripts/design-review-smoke.mjs"
       - "GATIVX_DESIGN_C_REVIEW_README.md"
       - ".github/workflows/web-checks.yml"
@@ -22,7 +22,7 @@ on:
       - "scripts/check-web.mjs"
       - "scripts/browser-smoke.mjs"
       - "gativx-design-c-review.html"
-      - "gativx-logo.svg"
+      - "gativx-logo.jpg"
       - "scripts/design-review-smoke.mjs"
       - "GATIVX_DESIGN_C_REVIEW_README.md"
       - ".github/workflows/web-checks.yml"
@@ -58,6 +58,6 @@ jobs:
           path: |
             artifacts/gativx-design-c-review/*.png
             gativx-design-c-review.html
-            gativx-logo.svg
+            gativx-logo.jpg
           if-no-files-found: error
           retention-days: 14
