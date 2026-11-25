@@ -876,6 +876,7 @@ struct ContentView: View {
                 .background(neon, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
             }
             .buttonStyle(.plain)
+            .accessibilityIdentifier("gativx-start-walk")
             Text("Track steps, active time and your GPS route.")
                 .font(.caption).foregroundStyle(.secondary)
         }
