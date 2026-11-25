@@ -227,6 +227,7 @@ jobs:
           motion_monitor = view.split("private func startLiveMotionMonitor()", 1)[1].split("private func loadActivityHistory()", 1)[0]
           finish_activity = view.split("private func finishActivitySession()", 1)[1].split("/// Prefer HealthKit", 1)[0]
           auth_handler = gps.split("func locationManagerDidChangeAuthorization", 1)[1].split("func locationManager(", 1)[0]
+          profile_tab_body = view.split("TabView(selection: $selectedTab)", 1)[1].split(".sheet(isPresented: $isNotificationsPresented)", 1)[0]
           save_workout_method = health.split("func saveActivityWorkout(", 1)[1].split("private func performActivityWorkoutExport(", 1)[0]
           workout_export = health.split("func saveActivityWorkout(", 1)[1].split("func disconnect()", 1)[0]
           duplicate_check = workout_export.find("if samples?.isEmpty == false")
@@ -291,6 +292,7 @@ jobs:
               "Apple Health workout export omits unavailable steps instead of inventing zero": '"com.paramitsolutions.gativx.measuredSteps"] = steps' in health and "steps ?? 0" not in health and "max(0, steps" not in health,
               "Apple Health requests measured read types and workout/distance write access": "let shareTypes: Set<HKSampleType> = [workoutType, distanceType]" in health and "let readTypes: Set<HKObjectType> = [stepType, energyType, distanceType, exerciseType, heartRateType, workoutType]" in health and "store.requestAuthorization(toShare: shareTypes, read: readTypes)" in health,
               "Apple Health workout export checks sync identifiers before duplicate writes": "HKMetadataKeySyncIdentifier" in health and "HKQuery.predicateForObjects(withMetadataKey: HKMetadataKeySyncIdentifier" in health,
+              "Profile tab avoids a redundant NavigationStack and retains its UI test target": "profileScreen" in profile_tab_body and "NavigationStack { profileScreen" not in profile_tab_body and '.accessibilityIdentifier("gativx-profile-screen")' in view and '"gativx-profile-screen"' in ui_tests,
               "Apple Health workout export is durably queued before HealthKit work": "enqueueWorkout(pending)" in health and "workoutOutbox.enqueue(item)" in health and "workout-export-outbox.v1" in health_outbox,
                "Finish & Save verifies local history before attempting HealthKit queue creation": all(term in finish_activity for term in ["try self.activityStore.save(history)", "let persistedHistory = try self.activityStore.load()", "let healthExportQueued = self.health.saveActivityWorkout("]) and finish_activity.index("try self.activityStore.save(history)") < finish_activity.index("let persistedHistory = try self.activityStore.load()") < finish_activity.index("let healthExportQueued = self.health.saveActivityWorkout(") and "testCrashAfterHistoryWriteBeforeDraftClearRecoversSameSessionOnDisk" in activity_outbox_tests,
                "HealthKit queue acceptance is returned synchronously to Finish & Save": "-> Bool" in save_workout_method and "guard enqueueWorkout(pending) else" in save_workout_method and "return false" in save_workout_method and "return true" in save_workout_method,
