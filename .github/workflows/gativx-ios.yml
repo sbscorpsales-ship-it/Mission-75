@@ -111,7 +111,7 @@ jobs:
           assert all(f'Text("{days} days").tag({days})' in view for days in (30, 90, 180, 365)), "30/90/180/365-day journey choices are required"
           assert "testJourneyCalculatesElapsedDaysRemainingAndProgress" in guru_tests and "testGuruAdaptsNextActionToRemainingDailySteps" in guru_tests and "testAllSupportedJourneyDurationsCalculateProgressAndCompletion" in guru_tests, "Guru and all four journey durations must have unit coverage"
           assert "gativx-journey-duration" in view and "gativx-start-journey" in view, "Journey controls need stable UI test targets"
-          assert "gativx-guru-goal" in view and "gativx-guru-goal" in ui_tests and "isGuruFieldFocused = true" in view, "Guru goal entry must expose an explicit, focusable UI control"
+          assert "gativx-guru-goal" in view and "gativx-guru-goal" in ui_tests and ".focused($isGuruFieldFocused)" in view, "Guru goal entry must expose a focusable UI control"
           assert "Community feed and shared missions are not available yet" in view and "gativx-community-gated" in view, "Community must be clearly gated until real shared data exists"
           assert "GATIVX notifications are not active in this build yet" in view and "gativx-notifications-gated" in view, "Notifications must be clearly gated until delivery is implemented"
           assert "gativx-guru-entry" in view and "YOUR GOAL JOURNEY" in view and "ONE PRACTICAL NEXT ACTION" in view, "Dashboard must expose the implemented Guru journey"
