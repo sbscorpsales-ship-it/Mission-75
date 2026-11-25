@@ -464,7 +464,7 @@ struct ContentView: View {
                     self.activeSessionID = nil
                     self.isFinishingSession = false
                     self.syncSavedActivitySessions()
-                    self.health.saveActivityWorkout(
+                    let healthExportQueued = self.health.saveActivityWorkout(
                         id: record.id,
                         activity: record.activity,
                         startedAt: record.startedAt,
@@ -480,12 +480,20 @@ struct ContentView: View {
                             self.sessionStatus = activity + " saved on this iPhone; Apple Health export needs attention: " + error.localizedDescription
                         }
                     }
-                    // The HealthKit method durably enqueues and reads back its outbox
-                    // synchronously before starting asynchronous export. Keep the GPS
-                    // draft until that enqueue attempt has happened: a crash after the
-                    // history write can then recover and retry the same session UUID.
-                    self.routeRecorder.clearDraft()
-                    self.recoveredSessionWasResumed = false
+                    if healthExportQueued {
+                        // The export outbox accepted and read back this stable session ID.
+                        // A later HealthKit permission/export failure remains retryable there.
+                        self.routeRecorder.clearDraft()
+                        self.recoveredSessionWasResumed = false
+                    } else {
+                        // Local history is verified, but the export queue could not be
+                        // written/read back. Keep the GPS draft and the same session ID
+                        // active so Finish & Save can retry queue creation without duplicating history.
+                        self.sessionStarted = start
+                        self.activeSessionID = recordID
+                        self.isFinishingSession = false
+                        self.sessionStatus = activity + " saved on this iPhone; Apple Health export could not be queued. Your GPS draft remains preserved. Tap Finish & save activity to retry."
+                    }
                 } catch {
                     self.sessionStatus = "Could not save this activity on this iPhone: " + error.localizedDescription + ". Your GPS draft remains preserved; tap Finish & save activity to retry."
                     self.sessionStarted = start

@@ -341,6 +341,7 @@ final class HealthKitManager: ObservableObject {
 
     /// Export one completed activity to Apple Health. The GATIVX local record is saved first,
     /// so HealthKit permission or signing failures never discard the member's activity.
+    @discardableResult
     func saveActivityWorkout(
         id: UUID,
         activity: String,
@@ -349,42 +350,41 @@ final class HealthKitManager: ObservableObject {
         steps: Int?,
         distanceMeters: Double?,
         completion: @escaping (Result<Void, Error>) -> Void
-    ) {
+    ) -> Bool {
+        let pending = PendingHealthWorkout(id: id, activity: activity, startedAt: startedAt,
+                                           finishedAt: finishedAt, steps: steps, distanceMeters: distanceMeters)
+        // Queue acceptance is synchronous and is the point at which Finish & Save
+        // may safely clear its recoverable GPS draft. If this write/read-back fails,
+        // the caller keeps the same session active so a later Finish can retry.
+        guard enqueueWorkout(pending) else {
+            completion(.failure(NSError(domain: "GATIVXHealthKit", code: 3,
+                userInfo: [NSLocalizedDescriptionKey: "The Apple Health export could not be safely queued. The local activity remains saved."])))
+            return false
+        }
+
         // Finish & Save and an outbox retry may request the same session together.
         // Perform one HealthKit export per stable session ID and resolve every caller.
-        guard exportCoalescer.begin(id: id, completion: completion) else { return }
-        performActivityWorkoutExport(
-            id: id,
-            activity: activity,
-            startedAt: startedAt,
-            finishedAt: finishedAt,
-            steps: steps,
-            distanceMeters: distanceMeters
-        ) { [weak self] result in
+        guard exportCoalescer.begin(id: id, completion: completion) else { return true }
+        performActivityWorkoutExport(pending: pending) { [weak self] result in
             Task { @MainActor in
                 guard let self else { return }
                 let parked = self.exportCoalescer.finish(id: id)
                 parked.forEach { $0(result) }
             }
         }
+        return true
     }
 
     private func performActivityWorkoutExport(
-        id: UUID,
-        activity: String,
-        startedAt: Date,
-        finishedAt: Date,
-        steps: Int?,
-        distanceMeters: Double?,
+        pending: PendingHealthWorkout,
         completion: @escaping (Result<Void, Error>) -> Void
     ) {
-        let pending = PendingHealthWorkout(id: id, activity: activity, startedAt: startedAt,
-                                           finishedAt: finishedAt, steps: steps, distanceMeters: distanceMeters)
-        guard enqueueWorkout(pending) else {
-            completion(.failure(NSError(domain: "GATIVXHealthKit", code: 3,
-                userInfo: [NSLocalizedDescriptionKey: "The Apple Health export could not be safely queued. The local activity remains saved."])))
-            return
-        }
+        let id = pending.id
+        let activity = pending.activity
+        let startedAt = pending.startedAt
+        let finishedAt = pending.finishedAt
+        let steps = pending.steps
+        let distanceMeters = pending.distanceMeters
         guard isAvailable else {
             completion(.failure(NSError(domain: "GATIVXHealthKit", code: 1, userInfo: [NSLocalizedDescriptionKey: "Apple Health is unavailable on this iPhone."])))
             return
