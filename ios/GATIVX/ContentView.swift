@@ -1737,7 +1737,9 @@ struct ContentView: View {
             // handshake when switching to Community after other tabs.
             communityScreen
                 .tabItem { Label("Community", systemImage: "person.3").accessibilityIdentifier("gativx-tab-community") }.tag(3)
-            NavigationStack { profileScreen.navigationTitle("Profile") }
+            // Profile is a settings form with no navigation destinations. Keep it flat like
+            // Activity and Community to avoid a nested stack during tab activation.
+            profileScreen
                 .tabItem { Label("Profile", systemImage: "person.crop.circle") }.tag(4)
         }
         .sheet(isPresented: $isNotificationsPresented) {
