@@ -34,6 +34,7 @@ final class HealthKitManager: ObservableObject {
     @Published private(set) var pendingWorkoutExportCount = 0
     @Published private(set) var isWorkoutOutboxReadable = true
     private var isRetryingWorkoutOutbox = false
+    private var exportCoalescer = HealthKitWorkoutExportCoalescer()
 
     private func loadPendingWorkouts() -> [PendingHealthWorkout]? {
         do {
@@ -341,6 +342,34 @@ final class HealthKitManager: ObservableObject {
     /// Export one completed activity to Apple Health. The GATIVX local record is saved first,
     /// so HealthKit permission or signing failures never discard the member's activity.
     func saveActivityWorkout(
+        id: UUID,
+        activity: String,
+        startedAt: Date,
+        finishedAt: Date,
+        steps: Int?,
+        distanceMeters: Double?,
+        completion: @escaping (Result<Void, Error>) -> Void
+    ) {
+        // Finish & Save and an outbox retry may request the same session together.
+        // Perform one HealthKit export per stable session ID and resolve every caller.
+        guard exportCoalescer.begin(id: id, completion: completion) else { return }
+        performActivityWorkoutExport(
+            id: id,
+            activity: activity,
+            startedAt: startedAt,
+            finishedAt: finishedAt,
+            steps: steps,
+            distanceMeters: distanceMeters
+        ) { [weak self] result in
+            Task { @MainActor in
+                guard let self else { return }
+                let parked = self.exportCoalescer.finish(id: id)
+                parked.forEach { $0(result) }
+            }
+        }
+    }
+
+    private func performActivityWorkoutExport(
         id: UUID,
         activity: String,
         startedAt: Date,

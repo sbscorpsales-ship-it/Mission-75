@@ -464,7 +464,7 @@ final class GATIVXActivitySessionTests: XCTestCase {
     }
 
     func testActivityStoreCanRetryAfterTransientSaveFailure() throws {
-        let suiteName = "GATIVXRetrySaveTests.\\(UUID().uuidString)"
+        let suiteName = "GATIVXRetrySaveTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!
         let blockingPath = FileManager.default.temporaryDirectory
             .appendingPathComponent(suiteName, isDirectory: false)
