@@ -7,6 +7,7 @@ import UIKit
 
 struct ContentView: View {
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.colorScheme) private var colorScheme
     @StateObject private var health = HealthKitManager()
     @StateObject private var cloud = SupabaseRESTClient()
     @StateObject private var routeRecorder = GPSRouteRecorder()
@@ -620,7 +621,7 @@ struct ContentView: View {
 
     private var dashboardIsNight: Bool {
         appearanceMode == "night" ||
-        (appearanceMode == "system" && UITraitCollection.current.userInterfaceStyle == .dark)
+        (appearanceMode == "system" && colorScheme == .dark)
     }
 
     private var homeDashboard: some View {
@@ -654,7 +655,7 @@ struct ContentView: View {
             .padding(.bottom, 28)
             .frame(width: width, alignment: .leading)
         }
-        .safeAreaInset(edge: .bottom, spacing: 0) { Color.clear.frame(height: 76) }
+        
         .background(pageBackground.ignoresSafeArea())
         .accessibilityIdentifier("gativx-home-dashboard")
     }
@@ -852,11 +853,8 @@ struct ContentView: View {
                  : "Ready for your next walk?")
                 .font(.headline)
             Button {
-                if sessionStarted == nil &&
-                    routeRecorder.recoveredStartedAt == nil &&
-                    !routeRecorder.hasUnreadableDraft {
-                    startActivitySession()
-                }
+                // Home is navigation only. GPS and pedometer recording begin
+                // only after the member explicitly starts an activity on Activity.
                 selectedTab = 1
             } label: {
                 HStack(spacing: 10) {
