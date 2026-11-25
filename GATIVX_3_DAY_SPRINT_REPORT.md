@@ -361,3 +361,17 @@ Design/parity status: the visual review is ready for owner inspection. This does
 2. Do not merge PR #120, #117, #115, #114, #112, #119, #118 or PR #107.
 3. Keep Design C and the original main-branch `app-v2.html` unchanged.
 4. Continue the gap-ledger work only on isolated branches; physical-device and live-backend gates remain blocked pending the exact external evidence listed above.
+
+---
+
+## 2026-11-26 01:50 IST — PR #120 source-guard correction; full validation queued
+
+### Correction to the preceding run status
+- PR #120's first CI run #639 (`45694286567`) did **not** reach XCTest. The workflow step `Verify GATIVX first-run auth, portrait layout and permissions` failed, and the full XCTest step was skipped. Therefore run #639 is not evidence for or against the keyboard mitigation.
+- The precise stale assertion required the literal `isGuruFieldFocused = true` tap-gesture assignment in `ContentView.swift`. The candidate intentionally removes that redundant gesture and relies on the native `.focused($isGuruFieldFocused)` binding. The workflow guard was updated to assert the focus binding itself, not the deleted implementation detail. No XCTest was skipped or weakened.
+- The corrected branch head is now `66635d847964b90ab9b8a3d5b74dbb64257c09dd`. PR #120 remains one isolated, two-file change: `ios/GATIVX/ContentView.swift` and `.github/workflows/gativx-ios.yml`. It is still based on PR #117 head `7bb41d9de3cc43b4e03b4e54faf94f6ee48c3417`.
+- New full iOS workflow run #640 (`45694454367`) has been created for the corrected head and is pending. No test result is available yet. [Run #640](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45694454367)
+- Run #639 remains in progress in its later build/package steps after the earlier source-guard failure; it must not be counted as a passing release gate. The full test suite was skipped on that run.
+
+### Next action
+Inspect run #640's complete logs. Require the full unit/UI suite to execute, then verify simulator build, unsigned Release build and IPA packaging. If the GURU UI stall remains, continue from the xcresult diagnostics rather than changing the test or claiming a pass.
