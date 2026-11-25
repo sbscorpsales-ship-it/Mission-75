@@ -517,3 +517,20 @@ Source inspection found a gap not covered by the previous passing unit suite:
 2. If it passes, keep PR #121 draft/unmerged and review the change against the updated Finish & Save gap.
 3. Add a deterministic, honest end-to-end local Finish & Save UI path only if it can exercise the real persistence/orchestration without pretending simulator HealthKit is a physical iPhone.
 4. Continue the cross-platform gap ledger; do not promote preview-only screens to implemented features.
+
+
+---
+
+## 2026-11-26 03:58 IST — historical PR run logs independently reconciled
+
+The open PR metadata and associated workflow runs were checked again from GitHub. This clarifies why the old PRs have mixed statuses:
+
+- **PR #112 / run #45652420651:** 58 unit tests passed, 0 unit failures. The first UI test failed at `GATIVXDashboardUITests.swift:237` with “Failed to get matching snapshot: Timed out while evaluating UI query”; the second UI test passed. The run failed overall. This is a UI query timeout, not a unit-test regression.
+- **PR #114 / latest run #45633166732:** 71 unit tests passed, 0 unit failures. The primary UI navigation test failed at `GATIVXDashboardUITests.swift:295` with a matching-snapshot timeout, and the 40-minute test step timed out. The preceding run #45633053186 passed 71 unit tests and both UI tests; the PR therefore has one successful and one later failed run. PR #114 remains based on a commit seven behind PR #112 and is not merged.
+- **PR #115 / run #45663157699:** 58 unit tests and 2 UI tests passed; the workflow completed successfully.
+- **PR #117 / run #45674730866:** all 75 unit tests passed, but the UI test step hit the 40-minute cap; the workflow run was cancelled. It is not a green full-suite result.
+- **PR #120 / run #45694454367:** later integrated candidate passed all 75 unit tests and both UI tests, with simulator build, unsigned Release build and IPA packaging/integrity all successful. This is the current best simulator baseline for the GURU keyboard/navigation correction.
+
+PR #121's run #45713205787 was still in progress at 03:58 IST. Its project-generation, scheme-validation, and first-run/auth/layout/permission source checks had passed; the full unit/UI test step was still running. No test count or build/package success is claimed for PR #121 yet.
+
+These historical results are recorded to preserve the distinction between unit-suite success, UI-suite success, workflow completion, and physical-device acceptance.
