@@ -31,6 +31,8 @@ try{
   await page.locator('[data-panel="explore"]').click();
   await capture("explore");
   for(const name of ["missions","community","member-profile","apps","notifications"]){
+    // Each preview card lives inside Explore; return there before selecting the next screen.
+    await page.locator('[data-panel="explore"]').click();
     await page.locator('[data-go="'+name+'"]').click();
     await capture(name);
   }
