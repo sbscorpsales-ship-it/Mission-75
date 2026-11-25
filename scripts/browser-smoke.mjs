@@ -1,13 +1,34 @@
+// The web release smoke suite also runs the isolated visual-completeness preview (including disclosure assertions).
 import { chromium } from "playwright";
-import { pathToFileURL } from "node:url";
+import fs from "node:fs";
+import http from "node:http";
 import path from "node:path";
+const root=process.cwd();
+const contentTypes={".html":"text/html; charset=utf-8",".js":"text/javascript; charset=utf-8",".css":"text/css; charset=utf-8",".png":"image/png",".svg":"image/svg+xml",".webmanifest":"application/manifest+json",".ico":"image/x-icon"};
+const server=http.createServer((request,response)=>{
+  let pathname;
+  try{pathname=decodeURIComponent(new URL(request.url,"http://127.0.0.1").pathname)}catch{response.writeHead(400);response.end("Bad request");return}
+  const relative=pathname==="/"?"index.html":(pathname.startsWith("/")?pathname.slice(1):pathname);
+  const target=path.resolve(root,relative);
+  if(target!==root&&!target.startsWith(root+path.sep)){response.writeHead(403);response.end("Forbidden");return}
+  fs.readFile(target,(error,body)=>{
+    if(error){response.writeHead(404);response.end("Not found");return}
+    response.writeHead(200,{"content-type":contentTypes[path.extname(target)]||"application/octet-stream","cache-control":"no-store"});
+    response.end(body);
+  });
+});
+await new Promise((resolve,reject)=>{server.once("error",reject);server.listen(0,"127.0.0.1",resolve)});
+server.unref();
+const origin="http://127.0.0.1:"+server.address().port;
+const localUrl=(file,query="")=>origin+"/"+file+query;
+
 const browser=await chromium.launch({headless:true});
 const page=await browser.newPage({viewport:{width:390,height:844},deviceScaleFactor:1});
 const errors=[];page.on("pageerror",e=>errors.push(e.message));
 const legacyFixtures={"mission75.dailyLogs":"preserve-existing-records-fixture","sb-crarbbsvcczwmtvxyrxo-auth-token":"preserve-auth-session-fixture"};
 await page.addInitScript((legacy)=>{for(const [key,value] of Object.entries(legacy))localStorage.setItem(key,value);sessionStorage.setItem("gativx.session.fixture","preserve-session-fixture");localStorage.setItem("gativx.v2.fresh.state",JSON.stringify({version:2,goal:{type:"Build strength",duration:"90 days"},entries:{[new Date().getFullYear()+"-"+String(new Date().getMonth()+1).padStart(2,"0")+"-"+String(new Date().getDate()).padStart(2,"0")]:{steps:1948,water:1500,protein:65,distance:.4}},walks:[]}));},legacyFixtures);
 await page.route("https://**/*",r=>r.abort());
-await page.goto(pathToFileURL(path.resolve("index.html")).href,{waitUntil:"domcontentloaded"});await page.waitForURL(url=>url.pathname.endsWith("/app-v2.html"),{timeout:10000});await page.waitForTimeout(300);
+await page.goto(localUrl("index.html"),{waitUntil:"domcontentloaded"});await page.waitForURL(url=>url.pathname.endsWith("/app-v2.html"),{timeout:10000});await page.waitForTimeout(300);
 const assert=(v,m)=>{if(!v)throw new Error(m)};
 assert(await page.locator("#steps").textContent().then(x=>x.trim())==="1,948","Fresh-store step value did not render");
 assert(await page.locator("a").filter({hasText:"Sync Apple Health now"}).evaluateAll(links=>links.some(link=>link.getAttribute("href")==="shortcuts://run-shortcut?name=try%202")),"One-tap Apple Health Shortcut launcher is missing or has the wrong shortcut name");
@@ -49,7 +70,7 @@ const healthImport=await browser.newPage({viewport:{width:390,height:844}});
 const healthErrors=[];healthImport.on("pageerror",e=>healthErrors.push(e.message));
 await healthImport.route("https://**/*",r=>r.abort());
 const now=new Date(),localDay=now.getFullYear()+"-"+String(now.getMonth()+1).padStart(2,"0")+"-"+String(now.getDate()).padStart(2,"0");
-await healthImport.goto(pathToFileURL(path.resolve("app-v2.html")).href+"?gativx_steps=1240&gativx_active_energy=345&gativx_date="+localDay,{waitUntil:"domcontentloaded"});
+await healthImport.goto(localUrl("app-v2.html")+"?gativx_steps=1240&gativx_active_energy=345&gativx_date="+localDay,{waitUntil:"domcontentloaded"});
 await healthImport.waitForTimeout(500);
 const healthImportDebug=await healthImport.evaluate(()=>({url:location.href,steps:document.querySelector("#steps")?.textContent.trim(),note:document.querySelector("#stepNote")?.textContent,local:localStorage.getItem("gativx.v2.fresh.state"),device:localStorage.getItem("gativx.v2.fresh.state.device"),pending:sessionStorage.getItem("gativx.pending-health-shortcut.v1")}));
 assert(healthImportDebug.steps==="1,240","Apple Health Shortcut steps did not reach the new GATIVX home: "+JSON.stringify(healthImportDebug));
@@ -67,7 +88,7 @@ await staleShortcut.addInitScript(()=>{
  localStorage.setItem("gativx.v2.fresh.state",JSON.stringify({version:2,goal:null,entries:{[day]:{steps:1855,stepsSource:"apple_health_shortcuts",stepsUpdatedAt:old}},walks:[]}));
 });
 await staleShortcut.route("https://**/*",r=>r.abort());
-await staleShortcut.goto(pathToFileURL(path.resolve("app-v2.html")).href,{waitUntil:"domcontentloaded"});
+await staleShortcut.goto(localUrl("app-v2.html"),{waitUntil:"domcontentloaded"});
 assert((await staleShortcut.locator("#steps").textContent()).trim()==="—","Stale 1,855 Shortcut sample was displayed as a current reading");
 assert((await staleShortcut.locator("#stepNote").textContent()).includes("No iPhone sensor reading"),"Stale Shortcut source label was not cleared");
 await staleShortcut.close();
@@ -77,7 +98,7 @@ await staleShortcut.close();
 const shortcutLanding=await browser.newPage({viewport:{width:390,height:844}});
 const shortcutLandingErrors=[];shortcutLanding.on("pageerror",e=>shortcutLandingErrors.push(e.message));
 await shortcutLanding.route("https://**/*",r=>r.abort());
-await shortcutLanding.goto(pathToFileURL(path.resolve("index.html")).href+"?gativx_steps=1855&gativx_date="+localDay,{waitUntil:"domcontentloaded"});
+await shortcutLanding.goto(localUrl("index.html")+"?gativx_steps=1855&gativx_date="+localDay,{waitUntil:"domcontentloaded"});
 await shortcutLanding.waitForURL(url=>url.pathname.endsWith("/app-v2.html"),{timeout:5000});
 await shortcutLanding.waitForFunction(()=>document.querySelector("#steps")?.textContent.trim()==="1,855");
 assert((await shortcutLanding.locator("#stepNote").textContent()).includes("Apple Health via Shortcuts"),"Root shortcut link did not preserve the Apple Health source");
@@ -94,7 +115,7 @@ await signedShortcut.addInitScript((day)=>{
  window.supabase={createClient:()=>({auth:{getSession:async()=>({data:{session:{user:{id:"shortcut-member"}}},error:null}),onAuthStateChange:()=>({data:{subscription:{unsubscribe(){}}}})},from(table){return {select(){return {eq:async()=>({data:table==="daily_logs"?[{log_date:day,steps:0,steps_source:"manual",steps_updated_at:null,active_energy_kcal:null,active_energy_source:null,active_energy_updated_at:null,walking_km:null,water_ml:null,protein_g:null,weight_kg:null}]:[],error:null})}},upsert:async(rows)=>{if(table==="daily_logs")window.__shortcutCloud.uploads.push(...rows);return {error:null}},insert:async()=>({error:null})}}})};
 },localDay);
 await signedShortcut.route("https://**/*",r=>r.abort());
-await signedShortcut.goto(pathToFileURL(path.resolve("app-v2.html")).href+"?gativx_steps=1855&gativx_date="+localDay,{waitUntil:"domcontentloaded"});
+await signedShortcut.goto(localUrl("app-v2.html")+"?gativx_steps=1855&gativx_date="+localDay,{waitUntil:"domcontentloaded"});
 await signedShortcut.waitForFunction(()=>document.querySelector("#steps")?.textContent.trim()==="1,855",{timeout:3000});
 await signedShortcut.waitForTimeout(500);
 const signedShortcutDebug=await signedShortcut.evaluate(()=>({cloudState:document.querySelector("#cloudState")?.textContent,cloudStatus:document.querySelector("#cloudStatus")?.textContent,steps:document.querySelector("#steps")?.textContent,stepNote:document.querySelector("#stepNote")?.textContent,uploads:window.__shortcutCloud.uploads,account:localStorage.getItem("gativx.v2.fresh.state.user.shortcut-member"),device:localStorage.getItem("gativx.v2.fresh.state.device")}));
@@ -113,13 +134,16 @@ const cloudErrors=[];cloudPage.on("pageerror",e=>cloudErrors.push(e.message));
 await cloudPage.addInitScript(()=>{
  const d=new Date(),day=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
  const localStamp=new Date(Date.now()-120000).toISOString(),remoteStamp=new Date(Date.now()-60000).toISOString();
- localStorage.setItem("gativx.v2.fresh.state",JSON.stringify({version:2,goal:null,entries:{[day]:{steps:1240,stepsSource:"apple_health_shortcuts",stepsUpdatedAt:localStamp,activeEnergyKcal:345,activeEnergySource:"apple_health_shortcuts",activeEnergyUpdatedAt:localStamp,weight:84,water:1700,protein:72,distance:.6}},walks:[{date:day,distance:.03,points:[{lat:12.97,lon:77.59,accuracy:5,time:Date.now()-10000},{lat:12.97018,lon:77.59,accuracy:5,time:Date.now()}],createdAt:new Date().toISOString()}]}));
+ if(localStorage.getItem("__gativx_cloud_fixture_seeded")!=="1"){
+  localStorage.setItem("gativx.v2.fresh.state",JSON.stringify({version:2,goal:null,entries:{[day]:{steps:1240,stepsSource:"apple_health_shortcuts",stepsUpdatedAt:localStamp,activeEnergyKcal:345,activeEnergySource:"apple_health_shortcuts",activeEnergyUpdatedAt:localStamp,weight:84,water:1700,protein:72,distance:.6}},walks:[{date:day,distance:.03,points:[{lat:12.97,lon:77.59,accuracy:5,time:Date.now()-10000},{lat:12.97018,lon:77.59,accuracy:5,time:Date.now()}],createdAt:new Date().toISOString()}]}));
+  localStorage.setItem("__gativx_cloud_fixture_seeded","1");
+ }
  window.__cloudMock={uploaded:[],inserts:[],currentUser:null,dailyRows:[]};
  window.supabase={createClient:()=>({auth:{getSession:async()=>({data:{session:null},error:null}),onAuthStateChange:()=>({data:{subscription:{unsubscribe(){}}}}),signInWithPassword:async({email})=>{window.__cloudMock.currentUser=email.startsWith("second")?"test-user-456":"test-user-123";return {data:{user:{id:window.__cloudMock.currentUser,user_metadata:{display_name:"GATIVX Tester"}}},error:null}},signUp:async()=>({data:{user:null,session:null},error:null}),signOut:async()=>{window.__cloudMock.currentUser=null;return {error:null}}},from(table){return {select(){return {eq:async()=>({data:table==="daily_logs"&&window.__cloudMock.currentUser==="test-user-123"?window.__cloudMock.dailyRows:[],error:null})}},upsert:async(rows)=>{window.__cloudMock.uploaded.push({user:window.__cloudMock.currentUser,rows});return {error:null}},insert:async(row)=>{window.__cloudMock.inserts.push({user:window.__cloudMock.currentUser,row});return {error:null}}}}})};
 });
 await cloudPage.addInitScript(()=>{const d=new Date(),day=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"),stamp=new Date(Date.now()-60000).toISOString();window.__cloudMock.dailyRows=[{log_date:day,steps:2100,steps_source:"apple_health",steps_updated_at:stamp,active_energy_kcal:410,active_energy_source:"apple_health",active_energy_updated_at:stamp}]});
 await cloudPage.route("https://**/*",r=>r.abort());
-await cloudPage.goto(pathToFileURL(path.resolve("app-v2.html")).href,{waitUntil:"domcontentloaded"});
+await cloudPage.goto(localUrl("app-v2.html"),{waitUntil:"domcontentloaded"});
 await cloudPage.locator("#cloudEmail").fill("tester@example.com");
 await cloudPage.locator("#cloudPassword").fill("not-a-real-password");
 await cloudPage.locator("#cloudSignIn").click();
@@ -158,6 +182,9 @@ assert(accountIsolation.uploads.length>=1&&accountIsolation.uploads.every(batch=
 assert(accountIsolation.walks.length>=1&&accountIsolation.walks.every(batch=>batch.user==="test-user-123"),"First account's GPS route was uploaded to a different member");
 await cloudPage.locator("#cloudSignOut").click();
 await cloudPage.waitForFunction(()=>document.querySelector("#cloudSignOut")?.style.display==="none"&&(()=>{try{const d=JSON.parse(localStorage.getItem("gativx.v2.fresh.state.device")||"null");return !!d&&Object.keys(d.entries||{}).length===0}catch{return false}})());
+const beforeReloadStorage=await cloudPage.evaluate(()=>({migrated:localStorage.getItem("gativx.v2.account-local-migrated"),device:localStorage.getItem("gativx.v2.fresh.state.device")}));
+assert(beforeReloadStorage.migrated==="1","Account isolation marker was not persisted before reload");
+assert(beforeReloadStorage.device!==null,"Empty signed-out device store was not persisted before reload");
 await cloudPage.reload({waitUntil:"domcontentloaded"});
 await cloudPage.locator("#steps").waitFor();
 await cloudPage.waitForTimeout(250);
@@ -167,6 +194,8 @@ const reloadedDeviceState=await cloudPage.evaluate(()=>({
  migrated:localStorage.getItem("gativx.v2.account-local-migrated"),
  device:localStorage.getItem("gativx.v2.fresh.state.device")
 }));
+assert(reloadedDeviceState.migrated==="1","Account isolation marker was lost after reload: "+JSON.stringify(reloadedDeviceState));
+assert(reloadedDeviceState.device!==null,"Signed-out device store was lost after reload: "+JSON.stringify(reloadedDeviceState));
 assert(reloadedDeviceState.steps==="—","Signed-out device exposed cached records after reload: "+JSON.stringify(reloadedDeviceState));
 await cloudPage.close();
 
@@ -179,7 +208,7 @@ await goalCloudPage.addInitScript(()=>{
  window.supabase={createClient:()=>({auth:{getSession:async()=>({data:{session:null},error:null}),onAuthStateChange:()=>({data:{subscription:{unsubscribe(){}}}}),signInWithPassword:async()=>{window.__goalCloud.currentUser="goal-user";return {data:{user:{id:"goal-user"}},error:null}},signUp:async()=>({data:{user:null,session:null},error:null}),signOut:async()=>{window.__goalCloud.currentUser=null;return {error:null}}},from(table){return {select(){return {eq:async()=>({data:table==="profiles"?(window.__goalCloud.profile?[window.__goalCloud.profile]:[]):[],error:null})}},upsert:async(row)=>{if(table==="profiles")window.__goalCloud.profile=row;window.__goalCloud.writes.push({table,row});return {error:null}},insert:async()=>({error:null})}}})};
 });
 await goalCloudPage.route("https://**/*",r=>r.abort());
-await goalCloudPage.goto(pathToFileURL(path.resolve("app-v2.html")).href,{waitUntil:"domcontentloaded"});
+await goalCloudPage.goto(localUrl("app-v2.html"),{waitUntil:"domcontentloaded"});
 await goalCloudPage.locator("#cloudEmail").fill("goal@example.com");
 await goalCloudPage.locator("#cloudPassword").fill("not-a-real-password");
 await goalCloudPage.locator("#cloudSignIn").click();
@@ -195,7 +224,7 @@ await secondDevicePage.addInitScript(()=>{
  window.supabase={createClient:()=>({auth:{getSession:async()=>({data:{session:null},error:null}),onAuthStateChange:()=>({data:{subscription:{unsubscribe(){}}}}),signInWithPassword:async()=>{window.__goalCloud.currentUser="goal-user";return {data:{user:{id:"goal-user"}},error:null}},signUp:async()=>({data:{user:null,session:null},error:null}),signOut:async()=>({error:null})},from(table){return {select(){return {eq:async()=>({data:table==="profiles"?(window.__goalCloud.profile?[window.__goalCloud.profile]:[]):[],error:null})}},upsert:async(row)=>{window.__goalCloud.writes.push({table,row});return {error:null}},insert:async()=>({error:null})}}})};
 });
 await secondDevicePage.route("https://**/*",r=>r.abort());
-await secondDevicePage.goto(pathToFileURL(path.resolve("app-v2.html")).href,{waitUntil:"domcontentloaded"});
+await secondDevicePage.goto(localUrl("app-v2.html"),{waitUntil:"domcontentloaded"});
 await secondDevicePage.locator("#cloudEmail").fill("goal@example.com");
 await secondDevicePage.locator("#cloudPassword").fill("not-a-real-password");
 await secondDevicePage.locator("#cloudSignIn").click();
@@ -216,7 +245,7 @@ await racePage.addInitScript(()=>{
  window.supabase={createClient:()=>({auth:{getSession:async()=>({data:{session:null},error:null}),onAuthStateChange:()=>({data:{subscription:{unsubscribe(){}}}}),signInWithPassword:async({email})=>{window.__race.currentUser=email.startsWith("first")?"race-user-A":"race-user-B";return {data:{user:{id:window.__race.currentUser},error:null}}},signUp:async()=>({data:{user:null,session:null},error:null}),signOut:async()=>{window.__race.currentUser=null;return {error:null}}},from(table){return {select(){return {eq:async()=>{const id=window.__race.currentUser;if(id==="race-user-A"&&window.__race.holdFirst){window.__race.holdFirst=false;await new Promise(resolve=>{window.__race.releaseFirst=resolve})}return {data:[],error:null}}}},upsert:async(rows)=>{window.__race.uploads.push({user:window.__race.currentUser,rows});return {error:null}},insert:async(row)=>{window.__race.inserts.push({user:window.__race.currentUser,row});return {error:null}}}}})};
 });
 await racePage.route("https://**/*",r=>r.abort());
-await racePage.goto(pathToFileURL(path.resolve("app-v2.html")).href,{waitUntil:"domcontentloaded"});
+await racePage.goto(localUrl("app-v2.html"),{waitUntil:"domcontentloaded"});
 await racePage.locator("#cloudEmail").fill("first@example.com");
 await racePage.locator("#cloudPassword").fill("not-a-real-password");
 await racePage.locator("#cloudSignIn").click();
@@ -251,7 +280,7 @@ await androidHealthPage.addInitScript(()=>{
  ]:[],error:null})}},upsert:async(rows)=>{window.__hcMock.uploaded.push(...rows);return {error:null}},insert:async()=>({error:null})}}})};
 });
 await androidHealthPage.route("https://**/*",r=>r.abort());
-await androidHealthPage.goto(pathToFileURL(path.resolve("app-v2.html")).href,{waitUntil:"domcontentloaded"});
+await androidHealthPage.goto(localUrl("app-v2.html"),{waitUntil:"domcontentloaded"});
 await androidHealthPage.locator("#cloudEmail").fill("android@example.com");
 await androidHealthPage.locator("#cloudPassword").fill("not-a-real-password");
 await androidHealthPage.locator("#cloudSignIn").click();
@@ -277,7 +306,7 @@ const v2=await browser.newPage({viewport:{width:390,height:844}});
 const v2Errors=[];v2.on("pageerror",e=>v2Errors.push(e.message));
 await v2.addInitScript(()=>{let emit;const geo=navigator.geolocation;if(!geo)throw new Error("Browser geolocation API is unavailable in the smoke-test context");Object.defineProperty(geo,"watchPosition",{configurable:true,value(callback){emit=callback;window.__emitGPS=(lat,lon,accuracy=5,time=Date.now())=>emit({coords:{latitude:lat,longitude:lon,accuracy},timestamp:time});return 7;}});Object.defineProperty(geo,"clearWatch",{configurable:true,value(){}});});
 await v2.route("https://**/*",r=>r.abort());
-await v2.goto(pathToFileURL(path.resolve("app-v2.html")).href,{waitUntil:"domcontentloaded"});
+await v2.goto(localUrl("app-v2.html"),{waitUntil:"domcontentloaded"});
 await v2.locator('[data-panel="walk"]').click();
 await v2.locator("#gpsStart").click();
 const baseTime=Date.now();
@@ -313,7 +342,7 @@ await ringPage.addInitScript(()=>{
  localStorage.setItem("gativx.v2.fresh.state",JSON.stringify({version:2,goal:null,entries:{},walks:[{id:"walk-ring-fixture",date:day,distance:2.1,points:[{lat:12.97,lon:77.59,time:Date.parse(start)},{lat:12.971,lon:77.59,time:Date.parse(end)}],startedAt:start,finishedAt:end,durationSeconds:1800,createdAt:end}]}));
 });
 await ringPage.route("https://**/*",r=>r.abort());
-await ringPage.goto(pathToFileURL(path.resolve("app-v2.html")).href,{waitUntil:"domcontentloaded"});
+await ringPage.goto(localUrl("app-v2.html"),{waitUntil:"domcontentloaded"});
 assert((await ringPage.locator("#ringHeartPoints").textContent()).trim()==="30","Completed 30-minute walk did not populate the third progress ring");
 assert((await ringPage.locator("#ringHeartPointsNote").textContent()).includes("0 min to 30 min walk target"),"Walk-minutes target/progress text is incorrect");
 assert((await ringPage.locator("#walkSaveStatus").textContent()).includes("1 WALKS SAVED"),"Walk history status does not reflect the saved local walk");
@@ -330,7 +359,7 @@ await recoveryPage.addInitScript(()=>{
  localStorage.setItem("gativx.v2.walk-recovery.v1",JSON.stringify([{walk,entry:{distance:0.42}}]));
 });
 await recoveryPage.route("https://**/*",r=>r.abort());
-await recoveryPage.goto(pathToFileURL(path.resolve("app-v2.html")).href,{waitUntil:"domcontentloaded"});
+await recoveryPage.goto(localUrl("app-v2.html"),{waitUntil:"domcontentloaded"});
 const replay=await recoveryPage.evaluate(()=>({state:JSON.parse(localStorage.getItem("gativx.v2.fresh.state")||"null"),journal:JSON.parse(localStorage.getItem("gativx.v2.walk-recovery.v1")||"[]")}));
 assert(replay.state?.walks?.filter(w=>w.id==="walk-recovery-fixture").length===1,"Pending completed walk was not restored exactly once");
 assert(replay.state?.entries?.[new Date().getFullYear()+"-"+String(new Date().getMonth()+1).padStart(2,"0")+"-"+String(new Date().getDate()).padStart(2,"0")]?.distance===0.42,"Recovered walk did not restore its daily distance");
@@ -340,3 +369,5 @@ await recoveryPage.close();
 console.log("PASS: premium dashboard rings, live status and journal replay");
 
 await browser.close();
+await new Promise(resolve=>server.close(resolve));
+
