@@ -231,7 +231,7 @@ final class GATIVXDashboardUITests: XCTestCase {
         )
         XCTAssertFalse(guruCloseButton.exists, "The Guru sheet must be gone before Activity navigation.")
 
-        let activityTab = tabButton(app, label: "Activity")
+        let activityTab = app.descendants(matching: .any)["gativx-tab-activity"].firstMatch
         XCTAssertTrue(activityTab.waitForExistence(timeout: 5))
         activityTab.tap()
         XCTAssertTrue(activityTab.isSelected, "Selecting Activity must change the active tab.")
@@ -314,7 +314,7 @@ final class GATIVXDashboardUITests: XCTestCase {
         XCTAssertTrue(homeStart.waitForExistence(timeout: 5))
         homeStart.tap()
 
-        let activityTab = tabButton(app, label: "Activity")
+        let activityTab = app.descendants(matching: .any)["gativx-tab-activity"].firstMatch
         XCTAssertTrue(activityTab.waitForExistence(timeout: 5))
         XCTAssertTrue(activityTab.isSelected,
                       "Home START WALK must navigate to Activity.")

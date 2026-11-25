@@ -1702,8 +1702,8 @@ struct ContentView: View {
         TabView(selection: $selectedTab) {
             NavigationStack { homeDashboard.navigationTitle("").toolbar(.hidden, for: .navigationBar) }
                 .tabItem { Label("Home", systemImage: "house.fill") }.tag(0)
-            NavigationStack { activityScreen.navigationTitle("").toolbar(.hidden, for: .navigationBar) }
-                .tabItem { Label("Activity", systemImage: "figure.walk") }.tag(1)
+            activityScreen
+                .tabItem { Label("Activity", systemImage: "figure.walk").accessibilityIdentifier("gativx-tab-activity") }.tag(1)
             NavigationStack {
                 missionsScreen
                     .navigationTitle("")
