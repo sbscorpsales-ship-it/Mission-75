@@ -1,0 +1,594 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#09120f"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="GATIVX"><link rel="manifest" href="./manifest.webmanifest"><link rel="apple-touch-icon" href="./apple-touch-icon.png"><title>GATIVX — Move with purpose</title>
+<style>
+:root{color-scheme:dark;--bg:#09120f;--card:#14231b;--line:#2b4435;--ink:#f4f8f2;--muted:#9aafa1;--lime:#c7ff3d;--cyan:#63d9ff}*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 90% 0,#254d30,transparent 36%),var(--bg);color:var(--ink);font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;padding:env(safe-area-inset-top) 0 calc(100px + env(safe-area-inset-bottom))}.app{max-width:760px;margin:auto;padding:0 18px}.top{height:76px;display:flex;align-items:center;justify-content:space-between}.brand{display:flex;align-items:center;gap:10px;font-weight:950;letter-spacing:2px}.brand img{width:40px;height:40px;object-fit:contain;border-radius:12px}.brand em{font-style:normal;color:var(--lime)}button,input,select{font:inherit}button{cursor:pointer}.avatar{width:42px;height:42px;border:1px solid #54705b;border-radius:50%;background:var(--card);color:var(--lime);font-weight:900}.intro{padding:16px 0 22px}.eyebrow{font-size:10px;letter-spacing:2px;color:var(--lime);font-weight:900}.intro h1{font-size:clamp(29px,7vw,42px);line-height:1.04;letter-spacing:-1.5px;margin:8px 0}.intro p{margin:0;color:var(--muted)}.mission{background:linear-gradient(130deg,#c7ff3d,#a8ed46 48%,#63d9ff);color:#0b1b11;border-radius:28px;padding:22px;min-height:185px;position:relative;overflow:hidden}.mission h2{font-size:29px;line-height:1.08;letter-spacing:-1px;margin:12px 0 7px}.mission p{margin:0;color:#294b30}.mission .eyebrow{color:#294b30}.mission-foot{display:flex;align-items:center;gap:12px;margin-top:22px}.bar{height:7px;flex:1;background:#23442a30;border-radius:20px;overflow:hidden}.bar i{display:block;height:100%;background:#102d1c;width:0}.mission-foot b{font-size:11px}.section{display:flex;justify-content:space-between;align-items:center;margin:25px 0 12px}.section h2{font-size:17px;margin:0}.section span{font-size:10px;color:var(--muted);letter-spacing:1px;font-weight:800}.metrics{display:grid;grid-template-columns:1.2fr 1fr;gap:10px}.metric,.card{border:1px solid var(--line);background:linear-gradient(145deg,#192b20,#111d17);border-radius:21px;padding:16px;min-height:116px}.metric.primary{grid-row:span 2;min-height:242px;display:flex;flex-direction:column;justify-content:space-between}.label{font-size:10px;letter-spacing:1.5px;color:var(--muted);font-weight:850}.metric strong{display:block;font-size:34px;letter-spacing:-1.5px;margin:8px 0}.metric.primary strong{font-size:48px;color:var(--lime)}small,.muted{color:var(--muted)}.source{color:var(--lime);font-size:10px;margin-top:8px}.quick{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.action{border:1px solid var(--line);border-radius:19px;padding:16px;background:var(--card);color:var(--ink);text-align:left;min-height:94px}.action b{display:block;margin-top:10px;font-size:13px}.action small{font-size:10px}.panel{display:none}.panel.active{display:block}.bottom{position:fixed;z-index:10;left:50%;bottom:max(10px,env(safe-area-inset-bottom));transform:translateX(-50%);width:min(510px,calc(100% - 22px));display:grid;grid-template-columns:repeat(6,minmax(0,1fr));padding:8px;background:#14221bed;border:1px solid #365342;border-radius:24px;box-shadow:0 12px 42px #0008;backdrop-filter:blur(20px)}.bottom button{border:0;background:transparent;color:var(--muted);padding:8px 2px;border-radius:15px;font-size:9px;font-weight:750}.bottom i{display:block;font-style:normal;font-size:19px;margin-bottom:3px}.bottom button.active{background:var(--lime);color:#102014}.formgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.formgrid label{font-size:11px;color:var(--muted)}.formgrid input,.formgrid select{display:block;width:100%;margin-top:6px;padding:12px;border:1px solid var(--line);border-radius:12px;background:#0d1812;color:var(--ink)}.formgrid textarea{display:block;width:100%;margin-top:6px;padding:12px;border:1px solid var(--line);border-radius:12px;background:#0d1812;color:var(--ink);font:inherit;resize:vertical}.primarybtn,.secondary{border:0;border-radius:14px;padding:14px;font-weight:900}.primarybtn{background:var(--lime);color:#102014}.secondary{background:#263c2d;color:var(--ink)}.wide{grid-column:1/-1}.empty{color:var(--muted);padding:20px;text-align:center;font-size:13px}.entry{display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--line);font-size:12px}.entry span{color:var(--muted)}.gpsbuttons{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px}.routeMap{margin-top:14px;border:1px solid #3b443d;border-radius:16px;overflow:hidden;background:#111713;min-height:190px}.routeMap svg{display:block;width:100%;height:190px}.routeMap .mapEmpty{padding:28px 12px;text-align:center;color:var(--muted);font-size:12px}.gpsbuttons button{font-size:12px;padding:12px 6px}.notice{font-size:11px;color:var(--muted);margin-top:12px}@media(min-width:700px){.app{padding:0 28px}.metrics{grid-template-columns:1.2fr 1fr 1fr}.metric.primary{grid-row:span 1;min-height:170px}.quick{grid-template-columns:repeat(4,1fr)}}
+/* GATIVX Fitness Summary — dark glass, electric lime and cyan */
+:root{--bg:#050605;--card:#202120;--line:#303330;--ink:#f8faf7;--muted:#a2a7a1;--lime:#d5ff32;--cyan:#16b9f4;--orange:#ff8a26;--violet:#a78bfa}
+body{background:#050605;color:var(--ink)}
+.app{max-width:760px;padding:0 17px}
+.top{height:74px}.brand img{width:43px;height:43px}.avatar{background:#202120;border-color:#414541;color:var(--lime)}
+.intro{padding:12px 0 17px}.intro h1{font-size:clamp(30px,8vw,42px);letter-spacing:-1.8px;margin:6px 0}.intro p{font-size:13px}
+.mission{border-radius:24px;background:linear-gradient(120deg,#d5ff32,#b4f33e 60%,#71ddae);min-height:142px;padding:18px 20px}
+.mission h2{font-size:24px}.mission-foot{margin-top:15px}
+.section{margin:20px 0 10px}.section h2{font-size:16px}
+.metrics{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.metric,.card{background:linear-gradient(145deg,#252725,#191b19);border:1px solid #303330;border-radius:20px;padding:15px;min-height:112px}
+.metric.primary{grid-row:auto;min-height:112px;display:block}
+.metric strong,.metric.primary strong{font-size:32px;letter-spacing:-1px;margin:8px 0 3px}
+.metric.primary strong{color:var(--violet)}
+.metric .label{font-size:9px;letter-spacing:1.2px}
+.metric small{font-size:10px}
+.source{font-size:9px}
+.quick{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.action{background:#202220;border-color:#333733;border-radius:18px;min-height:82px;padding:13px}
+.action b{font-size:12px}.action small{font-size:10px}
+.bottom{background:#242624ed;border-color:#424642;border-radius:28px;width:min(520px,calc(100% - 20px));padding:7px;box-shadow:0 10px 36px #000b}
+.bottom button{font-size:9px;padding:8px 1px}.bottom i{font-size:20px}
+.bottom button.active{background:var(--lime);color:#10140b}
+.summaryHero{display:grid;grid-template-columns:116px 1fr;align-items:center;gap:18px;border-radius:25px;padding:20px;background:linear-gradient(145deg,#242624,#1b1d1b);border:1px solid #303330;margin:7px 0 14px}
+.ring{width:112px;height:112px;border-radius:50%;display:grid;place-items:center;background:conic-gradient(var(--lime) 0deg,#343834 0deg);position:relative}
+.ring:before{content:"";position:absolute;inset:13px;border-radius:50%;background:#202220}
+.ringInner{position:relative;text-align:center;font-weight:950;font-size:22px;line-height:1}
+.ringInner small{display:block;font-size:8px;letter-spacing:1px;margin-top:5px}
+.summaryMove .label{color:#f2f4ef}.summaryMove strong{display:block;font-size:31px;color:var(--orange);letter-spacing:-1px;margin:4px 0}.summaryMove p{font-size:10px;color:var(--muted);margin:0}
+.summaryGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.summaryTile{min-height:154px;border:1px solid #303330;border-radius:22px;background:linear-gradient(145deg,#242624,#1b1d1b);padding:15px;position:relative;overflow:hidden}
+.tileHead{display:flex;align-items:center;justify-content:space-between;font-weight:850;font-size:15px}
+.tileArrow{width:25px;height:25px;border-radius:50%;background:#454945;color:#d9ded7;display:grid;place-items:center}
+.tileValue{font-size:34px;font-weight:950;letter-spacing:-1.4px;margin-top:16px}.tileNote{font-size:11px;color:var(--muted)}.summaryTile small{display:block;color:var(--muted);font-size:11px;line-height:1.5;margin-top:8px}.metricAction{display:inline-block;margin-top:9px;color:var(--lime);font-size:11px;font-weight:850;text-decoration:underline;text-underline-offset:3px}.metricActionButton{display:inline-block;margin-top:9px;padding:0;border:0;background:transparent;color:var(--lime);font:inherit;font-size:11px;font-weight:850;text-align:left;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.tileSteps .tileValue{color:var(--violet)}.tileDistance .tileValue{color:var(--cyan)}.tileCalories .tileValue{color:var(--orange)}.tileSessions .tileValue{color:var(--lime)}
+.activityTrendCard{padding:14px}.activityTrend{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:7px;align-items:end;min-height:118px}.trendDay{display:flex;flex-direction:column;align-items:center;justify-content:end;gap:6px;min-width:0}.trendValue{font-size:9px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}.trendTrack{height:72px;width:100%;display:flex;align-items:end;justify-content:center;border-radius:7px;background:#343834;overflow:hidden}.trendBar{width:65%;min-height:0;border-radius:6px 6px 2px 2px;background:var(--lime)}.trendBar.missing{height:2px!important;background:#70766d}.trendLabel{font-size:10px;color:var(--muted)}.activityTrendEmpty{color:var(--muted);font-size:12px;padding:10px 2px}
+.guruCard{margin-top:12px;border:1px solid #564020;border-radius:23px;padding:18px;background:radial-gradient(ellipse at 100% 0,#61401c66,transparent 60%),linear-gradient(140deg,#29241d,#1b1c19)}
+.guruTop{display:flex;align-items:center;gap:12px}.guruIcon{width:48px;height:48px;border-radius:16px;background:linear-gradient(145deg,#ffb347,#ff7a22);color:#201306;display:grid;place-items:center;font-size:24px;font-weight:1000}
+.guruCard h3{margin:0;font-size:18px}.guruCard p{color:#c0b7a9;font-size:12px;margin:4px 0 13px}.guruButton{width:100%;border:0;border-radius:14px;background:linear-gradient(90deg,#ffb347,#ff8527);color:#241507;padding:13px;font-weight:950}
+.section.tight{margin-top:18px}
+@media(min-width:700px){.summaryGrid{grid-template-columns:repeat(4,minmax(0,1fr))}.summaryTile{min-height:158px}.summaryHero{grid-template-columns:132px 1fr}.ring{width:124px;height:124px}}
+.goalPlan{margin-top:12px;padding:12px;border:1px solid #555;border-radius:14px;background:#20231f}.goalPlan .eyebrow{font-size:10px;font-weight:900;letter-spacing:.8px;color:var(--lime)}.goalPlan p{margin:7px 0 10px;font-size:12px;line-height:1.5}body[data-theme="light"] .goalPlan{background:#f6f9f4;border-color:#dce5dc}
+.healthRings{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin:0 0 12px}
+.healthRingCard{min-width:0;text-align:center;padding:12px 7px 10px;border:1px solid #303330;border-radius:19px;background:linear-gradient(145deg,#242624,#1b1d1b)}
+.healthRing{--progress:0deg;width:76px;height:76px;margin:0 auto 8px;border-radius:50%;display:grid;place-items:center;position:relative;background:conic-gradient(var(--ring-color) 0deg var(--progress),#3b403b var(--progress) 360deg)}
+.stepsRing{--ring-color:var(--lime)}.caloriesRing{--ring-color:var(--orange)}.heartRing{--ring-color:var(--cyan)}
+.healthRing:before{content:"";position:absolute;inset:8px;border-radius:50%;background:#202220}
+.healthRingCore{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;line-height:1.1}
+.healthRingCore b{font-size:16px;font-weight:950;font-variant-numeric:tabular-nums}
+.healthRingCore small{font-size:7px;letter-spacing:.5px;margin-top:4px}
+.healthRingTitle{font-size:12px;font-weight:900;margin-bottom:3px}
+.healthRingCard>small{display:block;min-height:26px;font-size:9px;line-height:1.35;color:var(--muted)}
+body[data-theme="light"] .healthRingCard{background:#fff;border-color:#dce5dc;box-shadow:0 5px 18px #1b34200b}
+body[data-theme="light"] .healthRing:before{background:#fff}
+body[data-theme="light"] .healthRing{background:conic-gradient(var(--ring-color) 0deg var(--progress),#e3eadf var(--progress) 360deg)}
+.tileSteps,.tileDistance{min-height:205px}
+
+/* Premium ring dashboard and concise operational status. */
+.statusPanel{margin:12px 0 16px;padding:15px 16px;border:1px solid #343a34;border-radius:20px;background:linear-gradient(145deg,#202420eF,#151815f2);box-shadow:0 12px 34px #0004}
+.statusPanelHead{display:flex;justify-content:space-between;align-items:center;margin-bottom:11px;font-size:9px;letter-spacing:1.5px;color:#f1f5ed}
+.statusPanelHead span{color:var(--muted);font-size:8px}
+.statusRows{display:grid;gap:9px}
+.statusRow{display:grid;grid-template-columns:8px minmax(85px,1fr) auto;gap:9px;align-items:center;min-height:25px}
+.statusDot{width:7px;height:7px;border-radius:50%;background:#737a72;box-shadow:0 0 0 3px #737a721c}
+.statusDot.good{background:#a8e85a;box-shadow:0 0 0 3px #a8e85a20}
+.statusDot.pending{background:#ffb454;box-shadow:0 0 0 3px #ffb45420}
+.statusLabel{font-size:11px;color:var(--muted)}
+.statusRow strong{font-size:9px;letter-spacing:.6px;text-align:right;color:#e7ece4}
+.healthRingCard{background:linear-gradient(155deg,#292d28,#191c19);border-color:#3a403a;box-shadow:inset 0 1px #ffffff0b,0 8px 22px #0002}
+.healthRing{width:84px;height:84px;box-shadow:0 0 24px color-mix(in srgb,var(--ring-color) 12%,transparent)}
+.healthRing:before{inset:9px;background:#1d211d}
+.healthRingCore b{font-size:17px}
+.healthRingTitle{font-size:12px;letter-spacing:.2px}
+.healthRingCard>small{min-height:28px}
+@media(min-width:700px){.statusRows{grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.statusRow{grid-template-columns:8px auto;grid-template-rows:auto auto;column-gap:9px}.statusDot{grid-row:1/3}.statusRow strong{grid-column:2;text-align:left}}
+body[data-theme="light"] .statusPanel{background:linear-gradient(145deg,#fff,#f5f8f2);border-color:#dce5dc;box-shadow:0 8px 24px #1b34200b}
+body[data-theme="light"] .statusPanelHead,body[data-theme="light"] .statusRow strong{color:#26362a}
+body[data-theme="light"] .healthRingCard{background:linear-gradient(155deg,#fff,#f5f8f2);border-color:#dce5dc}
+body[data-theme="light"] .healthRing:before{background:#fff}
+
+/* FINAL GATIVX DESIGN LOCK: same dashboard geometry; Day/Night are appearance-only. */
+.topActions{display:flex;align-items:center;gap:9px}
+.themeToggle{width:42px;height:42px;border-radius:50%;border:1px solid #414541;background:#202120;color:var(--lime);font-size:19px;font-weight:800;display:grid;place-items:center}
+.themeToggle:focus-visible,.avatar:focus-visible,.bottom button:focus-visible{outline:3px solid var(--cyan);outline-offset:3px}
+body[data-theme="light"]{color-scheme:light;--bg:#f4f7f2;--card:#ffffff;--line:#dce5dc;--ink:#17251b;--muted:#657468;--lime:#6d9f00;--cyan:#087fa8;--orange:#c66a12;--violet:#7054b8;background:#f4f7f2;color:#17251b}
+body[data-theme="light"] .themeToggle{background:#fff;border-color:#dce5dc;color:#426b00}
+body[data-theme="light"] .avatar{background:#fff;border-color:#dce5dc;color:#426b00}
+body[data-theme="light"] .summaryHero,
+body[data-theme="light"] .summaryTile,
+body[data-theme="light"] .metric,
+body[data-theme="light"] .card,
+body[data-theme="light"] .action{background:#fff;border-color:#dce5dc;color:#17251b;box-shadow:0 5px 18px #1b34200b}
+body[data-theme="light"] .summaryMove .label{color:#35463a}
+body[data-theme="light"] .summaryMove p,
+body[data-theme="light"] .tileNote,
+body[data-theme="light"] .summaryTile small,
+body[data-theme="light"] .muted,
+body[data-theme="light"] small{color:#657468}
+body[data-theme="light"] .ring:before{background:#fff}
+body[data-theme="light"] .ring{background:conic-gradient(var(--lime) 0deg,#e3eadf 0deg)}
+body[data-theme="light"] .bottom{background:#ffffffed;border-color:#dce5dc;box-shadow:0 10px 36px #243d241c}
+body[data-theme="light"] .bottom button{color:#657468}
+body[data-theme="light"] .bottom button.active{background:#c7ef79;color:#20310b}
+body[data-theme="light"] .guruCard{background:linear-gradient(140deg,#fff8eb,#fff);border-color:#f0d8b5}
+body[data-theme="light"] .guruCard p{color:#6b5c49}
+body[data-theme="light"] .formgrid input,
+body[data-theme="light"] .formgrid select,
+body[data-theme="light"] .formgrid textarea{background:#fff;color:#17251b;border-color:#dce5dc}
+body[data-theme="light"] .secondary{background:#e8eee6;color:#26362a}
+body[data-theme="light"] .routeMap{background:#eef3ed;border-color:#dce5dc}
+body[data-theme="light"] .routeMap svg rect{fill:#edf3eb}
+body[data-theme="light"] .trendTrack{background:#e7ede4}
+body[data-theme="light"] .trendBar{background:#80b918}
+body[data-theme="light"] .notice{color:#657468}
+body[data-theme="light"] .entry{border-color:#e3e9e1}
+body[data-theme="light"] .entry span{color:#657468}
+body[data-theme="light"] .mission{color:#17251b}
+body[data-theme="light"] .mission p,
+body[data-theme="light"] .mission .eyebrow{color:#294b30}
+@media(prefers-reduced-motion:no-preference){.themeToggle{transition:background .18s ease,color .18s ease,border-color .18s ease}.summaryTile,.card,.action,.bottom{transition:background-color .18s ease,border-color .18s ease}}
+
+
+/* Separate visual-completeness preview. Original app-v2.html remains unchanged. */
+.previewGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.previewCard{border:1px solid #343a34;border-radius:20px;padding:15px;background:linear-gradient(145deg,#242824,#191c19);min-height:120px}
+.previewCard h3{font-size:15px;margin:7px 0}.previewCard p{font-size:11px;color:var(--muted);margin:5px 0}
+.previewValue{font-size:27px;font-weight:950;letter-spacing:-1px;color:var(--lime);margin-top:10px}
+.previewTag{display:inline-block;border:1px solid #58634f;border-radius:99px;padding:4px 8px;color:var(--lime);font-size:9px;font-weight:900;letter-spacing:.6px}
+.previewList{display:grid;gap:9px}.previewRow{display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid var(--line);padding:12px 0;font-size:12px}
+.previewRow span{color:var(--muted);font-size:10px}.previewHero{border-radius:23px;padding:20px;background:linear-gradient(130deg,#d5ff32,#aeea4a 58%,#65d9ce);color:#142015;margin-bottom:14px}
+.previewHero h2{font-size:25px;line-height:1.08;margin:9px 0}.previewHero p{font-size:12px;color:#304632;margin:0}
+.previewAction{width:100%;text-align:left;border:1px solid var(--line);border-radius:17px;padding:15px;background:var(--card);color:var(--ink)}
+.previewAction b{display:block;margin:7px 0 3px}.previewAction small{font-size:10px;color:var(--muted)}
+.previewNote{border:1px dashed #66745f;border-radius:15px;padding:12px;font-size:11px;color:var(--muted);margin:12px 0}
+body[data-theme="light"] .previewCard,body[data-theme="light"] .previewAction{background:#fff;border-color:#dce5dc;color:#17251b}
+body[data-theme="light"] .previewRow{border-color:#e3e9e1}
+@media(min-width:700px){.previewGrid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+
+</style></head><body>
+<div class="app"><header class="top"><div class="brand"><img src="./gativx-master.png" alt="GATIVX"><span>GATI<em>V</em>X</span></div><div class="topActions"><button class="themeToggle" id="themeToggle" type="button" aria-label="Switch appearance" title="Switch Day/Night mode">☼</button><button class="avatar" id="profile">G</button></div></header>
+<section class="intro"><div class="eyebrow" id="dateLine"></div><h1>Move. Grow. Excel.</h1><p>Your day. Your pace. Your progress.</p></section>
+<p class="notice" style="margin:4px 0 12px">Already a member? <a href="./legacy-runtime.html" style="color:var(--lime);font-weight:800">Open your existing account & saved records</a>.</p>
+<p class="notice" style="margin:0 0 14px">Using iPhone? <a href="shortcuts://run-shortcut?name=try%202" style="color:var(--lime);font-weight:850">Sync Apple Health now</a>. Your existing Shortcut will return the measured reading to GATIVX. <a href="./apple-health-shortcut.html" style="color:var(--lime);font-weight:850">Shortcut setup guide</a>.</p>
+<article class="card" id="cloudAccount" style="margin:0 0 16px;padding:15px">
+ <div class="section" style="margin:0 0 10px"><h2>GATIVX Account & Backup</h2><span id="cloudState">DEVICE ONLY</span></div>
+ <p class="notice" style="margin:0 0 10px" id="cloudStatus">Sign in to securely sync this device's new GATIVX records to your private account.</p>
+ <div class="formgrid" id="cloudFields">
+  <label class="wide">Email<input id="cloudEmail" type="email" autocomplete="email" placeholder="Your account email"></label>
+  <label class="wide">Password<input id="cloudPassword" type="password" autocomplete="current-password" placeholder="Password"></label>
+  <label class="wide" id="cloudNameWrap" style="display:none">Name (for new account)<input id="cloudName" type="text" autocomplete="name" placeholder="Your name"></label>
+ </div>
+ <div class="gpsbuttons" style="grid-template-columns:repeat(2,minmax(0,1fr))">
+  <button class="primarybtn" id="cloudSignIn" type="button">Sign in</button>
+  <button class="secondary" id="cloudSignUp" type="button">Create account</button>
+  <button class="secondary" id="cloudSyncNow" type="button" style="display:none">Sync now</button>
+  <button class="secondary" id="cloudSignOut" type="button" style="display:none">Sign out</button>
+ </div>
+ <p class="notice">Your GATIVX v2 journal and saved walks sync only after you sign in. Existing legacy records are not imported, changed or deleted.</p>
+</article>
+<section class="panel active" id="home">
+<div class="summaryHero"><div class="ring" id="activityRing"><div class="ringInner"><b id="missionRingValue">—</b><small>MISSION</small></div></div><div class="summaryMove"><div class="label">TODAY'S ACTIVITY</div><strong>Every move counts.</strong><p id="todayDate"></p><div class="source" id="source">AWAITING HEALTH DATA</div></div></div>
+<div class="healthRings" aria-label="Daily health progress">
+ <article class="healthRingCard"><div class="healthRing stepsRing" id="stepsRing"><div class="healthRingCore"><b id="ringSteps">—</b><small>STEPS</small></div></div><div class="healthRingTitle">Move</div><small id="ringStepsNote">Awaiting measured steps</small></article>
+ <article class="healthRingCard"><div class="healthRing caloriesRing" id="caloriesRing"><div class="healthRingCore"><b id="ringCalories">—</b><small>ACTIVE KCAL</small></div></div><div class="healthRingTitle">Energy</div><small id="ringCaloriesNote">Awaiting active energy</small></article>
+ <article class="healthRingCard"><div class="healthRing heartRing" id="heartRing"><div class="healthRingCore"><b id="ringHeartPoints">—</b><small>WALK MIN</small></div></div><div class="healthRingTitle">Walking</div><small id="ringHeartPointsNote">No completed walk time yet</small></article>
+</div>
+<section class="statusPanel" aria-label="GATIVX system status">
+ <div class="statusPanelHead"><b>YOUR DATA STATUS</b><span>LIVE OVERVIEW</span></div>
+ <div class="statusRows">
+  <div class="statusRow"><span class="statusDot" id="healthStatusDot"></span><span class="statusLabel">Health data</span><strong id="healthConnectionStatus">AWAITING SOURCE</strong></div>
+  <div class="statusRow"><span class="statusDot" id="walkStatusDot"></span><span class="statusLabel">Walk history</span><strong id="walkSaveStatus">NO COMPLETED WALKS</strong></div>
+  <div class="statusRow"><span class="statusDot" id="cloudStatusDot"></span><span class="statusLabel">Cloud backup</span><strong id="cloudBackupStatus">DEVICE ONLY</strong></div>
+ </div>
+</section>
+<div class="summaryGrid">
+<article class="summaryTile tileSteps"><div class="tileHead">Step Count <span class="tileArrow">›</span></div><div class="tileNote">Today</div><div class="tileValue" id="steps">—</div><small id="stepNote">No iPhone sensor reading received yet.</small><a class="metricAction" href="shortcuts://run-shortcut?name=try%202">Sync Apple Health now</a><br><a class="metricAction" href="./apple-health-shortcut.html">Shortcut setup guide</a><small id="gpsStepNote">GPS-derived steps are shown separately after a recorded walk.</small></article>
+<article class="summaryTile tileDistance"><div class="tileHead">Today's Walk <span class="tileArrow">›</span></div><div class="tileNote">Today</div><div class="tileValue" id="distance">—</div><small>Only completed GPS walks appear here.</small><button class="metricActionButton" type="button" data-go="walk">Start a GPS walk</button></article>
+<article class="summaryTile tileCalories"><div class="tileHead">Active Calories <span class="tileArrow">›</span></div><div class="tileNote">Today</div><div class="tileValue" id="vActiveEnergy">—</div><small id="activeEnergySourceLabel">Awaiting Apple Health data</small></article>
+<article class="summaryTile tileSessions"><div class="tileHead">Water & Protein <span class="tileArrow">›</span></div><div class="tileNote">Daily wellness</div><div class="tileValue" style="font-size:23px"><span id="water">—</span></div><small><span id="protein">—</span> protein · tap Record to update</small></article>
+</div>
+<div class="section tight"><h2>7-day measured steps</h2><span id="activityTrendSource">NO DEVICE READINGS</span></div><article class="card activityTrendCard"><div id="activityTrend" class="activityTrend"><div class="empty">Connect Apple Health or sync your iPhone pedometer to build a real activity trend.</div></div></article>
+<div class="section"><h2>Today's walk</h2><span id="todayWalkCount">0 WALKS</span></div><article class="card" id="todayWalkSummary"><div class="empty">No walk recorded today. Start a walk when you head out.</div></article>
+<div class="section tight"><h2>Your mission</h2><span id="missionPct">GOAL NOT SET</span></div>
+<article class="mission"><div class="eyebrow">YOUR ACTIVE MISSION</div><h2 id="missionTitle">Your next chapter starts here.</h2><p id="missionSub">Choose a goal. Make today count.</p><div class="mission-foot"><div class="bar"><i id="missionBar"></i></div><b>GATIVX</b></div></article>
+<div class="guruCard"><div class="guruTop"><div class="guruIcon">ॐ</div><div><div class="eyebrow" style="color:#ffbd69">YOUR PERSONAL GUIDE</div><h3>GURU Mode</h3></div></div><p>Ask. Learn. Improve. Your daily guidance for movement, nutrition, recovery and mindset.</p><button class="guruButton" data-go="coach">ENTER GURU MODE&nbsp; →</button></div>
+<div class="section"><h2>Quick actions</h2><span>MAKE TODAY COUNT</span></div><div class="quick"><button class="action" data-go="walk">↗<b>Start a walk</b><small>Record a GPS route</small></button><button class="action" data-go="record">＋<b>Record progress</b><small>Update your journal</small></button><button class="action" data-go="journey">⌁<b>Your journey</b><small>Set milestones</small></button><button class="action" data-go="coach">ॐ<b>Ask GURU</b><small>Personal guidance</small></button></div>
+<div class="section"><h2>Recent progress</h2><span>YOUR JOURNAL</span></div><div class="card" id="recent"><div class="empty">Your new GATIVX journey begins here.</div></div></section>
+<section class="panel" id="journey"><div class="section"><h2>Your journey</h2><span>NEW START</span></div><div class="card"><div class="empty" id="journeyText">Your milestones will appear after your first new entry.</div></div><div class="section"><h2>Set your mission</h2></div><div class="card"><div class="formgrid"><label>Goal<select id="goalType"><option value="">Choose a goal</option><option>Weight loss</option><option>Build strength</option><option>Daily movement</option><option>Improve fitness</option><option>Better health habits</option></select></label><label>Duration<select id="goalDuration"><option value="">Choose duration</option><option>30 days</option><option>90 days</option><option>6 months</option><option>1 year</option></select></label><label class="wide">Why does this goal matter to you?<textarea id="goalPurpose" rows="3" maxlength="500" placeholder="Your health, family, confidence, independence, energy — write the real reason you want this."></textarea></label><label>Target weight (kg, optional)<input id="goalTargetWeight" type="number" min="1" max="500" step=".1" placeholder="e.g. 75"></label><label class="wide">How do you hope to feel when you achieve it?<input id="goalFeeling" maxlength="120" placeholder="e.g. stronger, energetic, confident, independent"></label><button class="primarybtn wide" id="saveGoal">Start my mission</button></div></div></section>
+<section class="panel" id="record"><div class="section"><h2>Daily journal</h2><span>NEW DATA ONLY</span></div><div class="card"><div class="formgrid"><label>Weight (kg)<input id="weightIn" type="number" step=".1" min="1" placeholder="Enter weight"></label><label>Water (ml)<input id="waterIn" type="number" min="0" placeholder="Enter water"></label><label>Protein (g)<input id="proteinIn" type="number" min="0" placeholder="Enter protein"></label><label>Steps<input id="stepsIn" type="number" min="0" placeholder="Only if measured"></label><button class="primarybtn wide" id="saveEntry">Save new entry</button></div><p class="notice">Manually entered steps are labelled as manual. No old records are imported.</p></div></section>
+<section class="panel" id="walk"><div class="section"><h2>GPS walk tracker</h2><span>NEW SESSIONS</span></div><div class="card"><div class="label">LIVE WALK</div><strong id="walkStatus">Ready when you are</strong><div class="metrics" style="margin-top:12px"><div><div class="label">DISTANCE</div><strong id="gpsDistance">0.00 km</strong></div><div><div class="label">FIXES</div><strong id="gpsFixes">0</strong></div><div><div class="label">EST. STEPS</div><strong id="gpsSteps">0</strong></div></div><div class="gpsbuttons"><button class="primarybtn" id="gpsStart">Start</button><button class="secondary" id="gpsPause" disabled>Pause</button><button class="secondary" id="gpsFinish" disabled>Finish</button></div><p class="notice">Keep this screen open during a walk. GPS uses this device's browser location and saves only new sessions on this device.</p><div id="gpsMap" class="routeMap"><div class="mapEmpty">Your live route will appear here after GPS fixes arrive.</div></div><div id="gpsHistory"></div></div></section>
+<section class="panel" id="coach"><div class="section"><h2>GURU Mode</h2><span>YOUR PERSONAL GUIDE</span></div><div class="guruCard"><div class="guruTop"><div class="guruIcon">ॐ</div><div><div class="eyebrow" style="color:#ffbd69">GATIVX INTELLIGENCE</div><h3>Progress over perfection.</h3></div></div><p>When your motivation drops, GURU reconnects you with why you started and helps you choose one manageable next action. Guidance is supportive, not judgemental.</p><div class="card" id="guruPurposeCard"><div class="eyebrow">WHY YOU STARTED</div><h3 id="guruGoal" style="margin:8px 0">Your mission is waiting</h3><p id="guruPurpose" class="notice">Set a goal and write your personal reason in Journey.</p><div class="section"><h2>One small next action</h2></div><p id="guruNextAction" class="notice">Your next step will appear after you define your mission.</p><div class="goalPlan" id="guruPlan"><div class="eyebrow">YOUR DAILY TARGET PLAN</div><p id="guruPlanText" class="notice">Starting targets: 5,000 steps and 250 active kcal. GURU will adjust these using your measured baseline.</p><button class="secondary" id="acceptGuruPlan" type="button" style="width:100%">Use these daily targets</button></div><button class="secondary" id="reconnectGuru" style="width:100%">Reconnect me to my purpose</button></div><button class="guruButton" data-go="walk">START TODAY'S WALK&nbsp; →</button></div></section>
+
+<section class="panel" id="explore">
+ <div class="section"><h2>Explore GATIVX</h2><span>SCREEN PREVIEW</span></div>
+ <div class="previewHero"><span class="previewTag" style="color:#20351b;border-color:#38542a">GATIVX PRODUCT EXPERIENCE</span><h2>Every part of your journey, in one place.</h2><p>Explore the planned member experience. These additional screens are visual previews, not connected production features.</p></div>
+ <div class="previewGrid">
+  <button class="previewAction" data-go="missions">🎯<b>Missions</b><small>Challenges, milestones and achievements</small></button>
+  <button class="previewAction" data-go="community">◎<b>Community</b><small>Groups, activity sharing and challenges</small></button>
+  <button class="previewAction" data-go="member-profile">◉<b>My Profile</b><small>Identity, preferences and privacy</small></button>
+  <button class="previewAction" data-go="apps">⌘<b>Connected Apps</b><small>Apple Health, Health Connect and devices</small></button>
+  <button class="previewAction" data-go="notifications">♧<b>Notifications</b><small>Reminders and progress updates</small></button>
+ </div>
+ <div class="previewNote">Visual preview only. No sample activity, member count, connection, reward or notification is represented as live data.</div>
+</section>
+<section class="panel" id="missions">
+ <div class="section"><h2>Missions</h2><span>YOUR GOALS</span></div>
+ <div class="previewHero"><span class="previewTag" style="color:#20351b;border-color:#38542a">YOUR NEXT CHAPTER</span><h2>Small actions. Meaningful progress.</h2><p>Turn a personal purpose into daily actions and milestones.</p></div>
+ <div class="previewGrid">
+  <article class="previewCard"><span class="label">ACTIVE MISSION</span><h3 id="previewMissionTitle">Your mission appears here</h3><div class="previewValue">—</div><p>Progress updates from your saved check-ins.</p></article>
+  <article class="previewCard"><span class="label">NEXT MILESTONE</span><h3>One step at a time</h3><div class="previewValue">—</div><p>Milestones unlock from verified activity.</p></article>
+  <article class="previewCard"><span class="label">CONSISTENCY</span><h3>Your streak</h3><div class="previewValue">—</div><p>No streak is shown until real records exist.</p></article>
+ </div>
+ <div class="section"><h2>Mission categories</h2><span>CHOOSE YOUR PATH</span></div>
+ <div class="previewGrid"><article class="previewCard"><h3>⚖️ Body & Fitness</h3><p>Weight, strength and endurance goals.</p></article><article class="previewCard"><h3>🚶 Daily Movement</h3><p>Build a sustainable activity routine.</p></article><article class="previewCard"><h3>🌱 Healthy Habits</h3><p>Sleep, hydration and consistency.</p></article></div>
+ <div class="previewNote">Preview: mission cards and progress visualisation. Existing Journey goal setup remains in the original working screen.</div>
+</section>
+<section class="panel" id="community">
+ <div class="section"><h2>Community</h2><span>MOVE TOGETHER</span></div>
+ <div class="previewHero"><span class="previewTag" style="color:#20351b;border-color:#38542a">YOUR PEOPLE. YOUR PACE.</span><h2>Progress feels better together.</h2><p>Find encouragement, join a group and celebrate meaningful milestones.</p></div>
+ <div class="previewGrid"><article class="previewCard"><span class="label">YOUR GROUPS</span><h3>Walking circles</h3><p>Private groups for shared goals and encouragement.</p></article><article class="previewCard"><span class="label">CHALLENGES</span><h3>Community missions</h3><p>Opt-in challenges with clear privacy settings.</p></article></div>
+ <div class="section"><h2>Community feed</h2><span>DESIGN PREVIEW</span></div>
+ <article class="previewCard"><div class="previewRow"><b>Member achievement</b><span>Sample layout</span></div><p>“One small step completed today.”</p><div class="previewRow"><b>Group check-in</b><span>Sample layout</span></div><p>“Showing up matters more than perfection.”</p></article>
+ <div class="previewNote">No real members, posts, likes or leaderboards are loaded. Blocking, reporting, moderation and sharing permissions must be implemented before launch.</div>
+</section>
+<section class="panel" id="member-profile">
+ <div class="section"><h2>My Profile</h2><span>MEMBER SPACE</span></div>
+ <div class="previewHero"><span class="previewTag" style="color:#20351b;border-color:#38542a">YOUR GATIVX IDENTITY</span><h2>Make this journey yours.</h2><p>Manage your details, preferences, connected services and personal data.</p></div>
+ <article class="previewCard" style="display:flex;align-items:center;gap:14px"><div class="avatar" style="display:grid;place-items:center;width:58px;height:58px">G</div><div><h3 style="margin:0">GATIVX Member</h3><p>Profile details will appear after account setup.</p></div></article>
+ <div class="section"><h2>Account & preferences</h2><span>SETTINGS</span></div>
+ <article class="previewCard previewList"><div class="previewRow"><b>Personal information</b><span>View / edit</span></div><div class="previewRow"><b>Goals & purpose</b><span>Manage</span></div><div class="previewRow"><b>Appearance</b><span>Day / Night</span></div><div class="previewRow"><b>Privacy & permissions</b><span>Review</span></div><div class="previewRow"><b>Export my data</b><span>Available after implementation</span></div><div class="previewRow"><b>Account security</b><span>Manage</span></div></article>
+ <div class="previewNote">The existing account sign-in and saved records remain in the original app. This screen is a design preview, not a replacement account manager.</div>
+</section>
+<section class="panel" id="apps">
+ <div class="section"><h2>Connected Apps</h2><span>DATA SOURCES</span></div>
+ <div class="previewHero"><span class="previewTag" style="color:#20351b;border-color:#38542a">YOUR DATA. YOUR CONTROL.</span><h2>Bring your activity together.</h2><p>Understand where each measurement comes from and when it was last updated.</p></div>
+ <div class="previewList">
+  <article class="previewCard"><div class="previewRow"><b>Apple Health</b><span>iPhone · Permission required</span></div><p>Steps, active energy and workout export. Native HealthKit acceptance is still required.</p></article>
+  <article class="previewCard"><div class="previewRow"><b>Health Connect</b><span>Android · Permission required</span></div><p>Android health and activity data, subject to supported device permissions.</p></article>
+  <article class="previewCard"><div class="previewRow"><b>GPS Activity</b><span>Device location</span></div><p>Route, distance and duration from supported tracking sessions.</p></article>
+  <article class="previewCard"><div class="previewRow"><b>GATIVX Cloud</b><span>Account sign-in</span></div><p>Backup and sync status should be shown only after server acknowledgement.</p></article>
+ </div>
+ <div class="previewNote">This page does not initiate a connection or imply that any service is connected. Existing Apple Health Shortcut flow is unchanged.</div>
+</section>
+<section class="panel" id="notifications">
+ <div class="section"><h2>Notifications</h2><span>YOUR RHYTHM</span></div>
+ <div class="previewHero"><span class="previewTag" style="color:#20351b;border-color:#38542a">GENTLE REMINDERS</span><h2>Support, never pressure.</h2><p>Choose useful reminders that respect your time and quiet hours.</p></div>
+ <article class="previewCard previewList"><div class="previewRow"><b>Daily movement reminder</b><span>Preference preview</span></div><div class="previewRow"><b>Mission check-in</b><span>Preference preview</span></div><div class="previewRow"><b>Weekly progress summary</b><span>Preference preview</span></div><div class="previewRow"><b>Community updates</b><span>Preference preview</span></div><div class="previewRow"><b>Quiet hours</b><span>Preference preview</span></div></article>
+ <div class="previewNote">Notification controls are visual only in this preview. No reminders or push notifications are scheduled.</div>
+</section>
+</div>
+<nav class="bottom" aria-label="Main navigation"><button class="active" data-panel="home"><i>⌂</i>Home</button><button data-panel="journey"><i>⌁</i>Journey</button><button data-panel="record"><i>＋</i>Record</button><button data-panel="walk"><i>↗</i>Walk</button><button data-panel="coach"><i>ॐ</i>GURU</button><button data-panel="explore"><i>✦</i>Explore</button></nav>
+<script async src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+(()=>{'use strict';const KEY='gativx.v2.fresh.state';// Keep legacy Mission-75/GATIVX browser records and auth sessions untouched.
+const $=id=>document.getElementById(id);const date=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};const blank=()=>({goal:null,entries:{},walks:[]});const ACCOUNT_MIGRATED_KEY='gativx.v2.account-local-migrated';let stateStorageKey=KEY;try{if(localStorage.getItem(ACCOUNT_MIGRATED_KEY)==='1')stateStorageKey=KEY+'.device'}catch{};let state=blank();try{const saved=JSON.parse(localStorage.getItem(stateStorageKey)||'null');if(saved&&saved.version===2)state={...blank(),...saved}}catch{};let activeAccountId=null;let motionDaily={};const persist=()=>localStorage.setItem(stateStorageKey,JSON.stringify({...state,version:2}));
+const WALK_RECOVERY_KEY='gativx.v2.walk-recovery.v1';
+function readWalkRecovery(){try{const value=JSON.parse(localStorage.getItem(WALK_RECOVERY_KEY)||'[]');return Array.isArray(value)?value:[]}catch{return []}}
+function writeWalkRecovery(records){const payload=JSON.stringify(records.slice(-5));localStorage.setItem(WALK_RECOVERY_KEY,payload);if(localStorage.getItem(WALK_RECOVERY_KEY)!==payload)throw new Error('Walk recovery journal read-back failed')}
+function recoverPendingWalks(){
+ const pending=readWalkRecovery();if(!pending.length)return;
+ const valid=[],invalid=[];
+ for(const record of pending){const walk=record&&record.walk;if(walk&&typeof walk.id==='string'&&walk.id&&Array.isArray(walk.points)&&walk.points.length>=2&&Number.isFinite(walk.distance)&&walk.distance>0&&record.entry&&typeof record.entry==='object'&&typeof walk.date==='string')valid.push(record);else invalid.push(record)}
+ if(!valid.length){console.warn('GATIVX recovery journal contains records requiring manual review');return}
+ let changed=false;
+ for(const record of valid){const walk=record.walk;if(!state.walks.some(item=>item&&item.id===walk.id)){state.walks.push(walk);state.entries[walk.date]={...record.entry};changed=true}}
+ if(changed)persist();
+ const saved=JSON.parse(localStorage.getItem(stateStorageKey)||'null');
+ const ids=new Set((saved&&Array.isArray(saved.walks)?saved.walks:[]).map(item=>item&&item.id).filter(Boolean));
+ const unresolved=valid.filter(record=>!ids.has(record.walk.id));
+ const retained=[...invalid,...unresolved];
+ writeWalkRecovery(retained);
+ if(unresolved.length)console.warn('GATIVX walk recovery remains pending',unresolved.length);
+}
+try{recoverPendingWalks()}catch(recoveryError){console.error('GATIVX pending walk recovery failed',recoveryError)}
+function expireStaleTodayShortcut(entry,day=date()){
+ if(!entry||entry.stepsSource!=='apple_health_shortcuts')return false;
+ const stamp=Date.parse(entry.stepsUpdatedAt||''),age=Date.now()-stamp;
+ if(day!==date())return false;
+ if(!Number.isFinite(stamp)||age>15*60*1000||age<0){
+  delete entry.steps;delete entry.stepsSource;delete entry.stepsUpdatedAt;
+  if(entry.activeEnergySource==='apple_health_shortcuts'){delete entry.activeEnergyKcal;delete entry.activeEnergySource;delete entry.activeEnergyUpdatedAt}
+  return true;
+ }
+ return false;
+}
+let expiredShortcutOnLoad=false;
+for(const entry of Object.values(state.entries||{})){if(expireStaleTodayShortcut(entry))expiredShortcutOnLoad=true}
+if(expiredShortcutOnLoad)persist();
+const LEGACY_IMPORT_KEY='gativx.v2.legacy-activity-import.v1';
+function migrateLegacyActivity(){
+ let done=false;try{done=localStorage.getItem(LEGACY_IMPORT_KEY)==='1'}catch{}if(done)return;
+ const read=(key,fallback)=>{try{const value=JSON.parse(localStorage.getItem(key)||'null');return value??fallback}catch{return fallback}};
+ const legacyLogs=read('mission75.logs.v1',{});
+ const legacyWalks=read('mission75.gps.sessions.v1',[]);
+ let changed=false;
+ if(legacyLogs&&typeof legacyLogs==='object'&&!Array.isArray(legacyLogs)){
+  for(const [day,old] of Object.entries(legacyLogs)){
+   if(!/^\d{4}-\d{2}-\d{2}$/.test(day)||!old||typeof old!=='object')continue;
+   const next={...old};if(Number(next.steps)===36){delete next.steps;delete next.stepsSource;delete next.stepsUpdatedAt}
+   const prior=state.entries[day]||{};const merged={...next,...prior};
+   if(Object.keys(merged).length){state.entries[day]=merged;changed=true}
+  }
+ }
+ if(Array.isArray(legacyWalks)){
+  for(const old of legacyWalks){
+   if(!old||typeof old!=='object')continue;
+   const started=old.startedAt||old.started_at||null;
+   const startedDate=started?new Date(started):null;
+   if(!startedDate||!Number.isFinite(startedDate.getTime()))continue;
+   const distanceMeters=Number(old.distanceMeters??old.distance_m);
+   if(!Number.isFinite(distanceMeters)||distanceMeters<=0)continue;
+   const id=String(old.id||('legacy-'+startedDate.getTime()+'-'+Math.round(distanceMeters)));
+   const exists=state.walks.some(w=>w.id===id||(Math.abs(Date.parse(w.startedAt||'')-startedDate.getTime())<=5000&&Math.abs((Number(w.distance)||0)*1000-distanceMeters)<=15));
+   if(exists)continue;
+   const rawPoints=Array.isArray(old.points)?old.points:[];
+   const points=rawPoints.map(p=>({lat:Number(p.lat??p.latitude),lon:Number(p.lon??p.longitude),time:Number(p.time??p.timestamp),accuracy:Number(p.accuracy)||0})).filter(p=>Number.isFinite(p.lat)&&Number.isFinite(p.lon)&&Math.abs(p.lat)<=90&&Math.abs(p.lon)<=180);
+   const distance=Number((distanceMeters/1000).toFixed(3));
+   const finished=old.finishedAt||old.finished_at||null;
+   const durationSeconds=Math.max(0,Math.min(86400,Number(old.durationSeconds??old.duration_seconds)||0));
+   const day=startedDate.getFullYear()+'-'+String(startedDate.getMonth()+1).padStart(2,'0')+'-'+String(startedDate.getDate()).padStart(2,'0');
+   state.walks.push({id,date:day,distance,gpsStepsEstimate:Math.round(distanceMeters/0.73),steps:null,points,startedAt:startedDate.toISOString(),finishedAt:finished&&Number.isFinite(Date.parse(finished))?new Date(finished).toISOString():null,durationSeconds,importedFromLegacy:true});
+   changed=true;
+  }
+ }
+ if(changed)persist();
+ try{localStorage.setItem(LEGACY_IMPORT_KEY,'1')}catch{}
+}
+migrateLegacyActivity();
+const fmt=n=>Number(n||0).toLocaleString('en-IN');let watch=null,paused=false,points=[],distance=0,lastAcceptedFix=null,segmentBreak=true,walkStartedAt=null,pausedAt=null,pausedMilliseconds=0;
+function show(name){document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('active',p.id===name));document.querySelectorAll('[data-panel]').forEach(b=>b.classList.toggle('active',b.dataset.panel===name));if(name==='walk')renderWalk();if(name==='journey')renderJourney()}document.querySelectorAll('[data-panel]').forEach(b=>b.onclick=()=>show(b.dataset.panel));document.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>show(b.dataset.go));$('profile').onclick=()=>show('member-profile');
+$('dateLine').textContent=new Intl.DateTimeFormat('en-IN',{weekday:'long',month:'long',day:'numeric'}).format(new Date()).toUpperCase();$('todayDate').textContent=date();
+function gpsStepsForDay(day){return state.walks.filter(w=>w.date===day).reduce((sum,w)=>sum+Math.max(0,Math.round(Number(w.gpsStepsEstimate??((Number(w.distance)||0)*1000/0.73))||0)),0)}
+function gpsDistanceForDay(day){return state.walks.filter(w=>w.date===day).reduce((sum,w)=>sum+Math.max(0,Number(w.distance)||0),0)}
+function completedWalkMinutesForDay(day){return Math.round(state.walks.filter(w=>w.date===day&&w.finishedAt).reduce((sum,w)=>sum+Math.max(0,Math.min(86400,Number(w.durationSeconds)||0)),0)/60)}
+function missionProgress(){if(!state.goal)return {checkInDays:0,durationDays:0,percent:0};const duration=String(state.goal.duration||"90 days").toLowerCase();const durationDays=duration.includes("30")?30:duration.includes("90")?90:duration.includes("6")?180:365;const created=new Date(state.goal.createdAt||Date.now());const start=new Date(created.getFullYear(),created.getMonth(),created.getDate());const startKey=start.getFullYear()+"-"+String(start.getMonth()+1).padStart(2,"0")+"-"+String(start.getDate()).padStart(2,"0");const todayKey=date();const active=new Set();for(const [day,entry] of Object.entries(state.entries||{})){if(day>=startKey&&day<=todayKey&&entry&&Object.values(entry).some(value=>value!==null&&value!==undefined&&value!==""))active.add(day)}for(const walk of state.walks||[]){if(walk.date>=startKey&&walk.date<=todayKey)active.add(walk.date)}const checkInDays=active.size;return {checkInDays,durationDays,percent:Math.min(100,Math.round(checkInDays/durationDays*100))}}
+function renderActivityTrend(){const days=[];const now=new Date();for(let offset=6;offset>=0;offset--){const d=new Date(now.getFullYear(),now.getMonth(),now.getDate()-offset),key=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"),entry=state.entries[key]||{},source=entry.stepsSource||"",measured=entry.steps!=null&&["apple_health","apple_health_shortcuts","health_connect"].includes(source),motion=motionDaily[key],steps=measured?Number(entry.steps):(motion?Number(motion.steps):null);days.push({key,label:d.toLocaleDateString("en-IN",{weekday:"short"}),steps:Number.isFinite(steps)&&steps>=0?steps:null,source:measured?source:motion?"iphone_pedometer":null})}const valid=days.filter(d=>d.steps!==null),max=Math.max(1,...valid.map(d=>d.steps));$("activityTrendSource").textContent=valid.length?"MEASURED DEVICE DATA":"NO DEVICE READINGS";$("activityTrend").innerHTML=valid.length?days.map(d=>{const height=d.steps===null?0:Math.max(2,Math.round(d.steps/max*72));return '<div class="trendDay"><span class="trendValue">'+(d.steps===null?"—":fmt(d.steps))+'</span><div class="trendTrack"><i class="trendBar '+(d.steps===null?"missing":"")+'" style="height:'+height+'px" title="'+(d.steps===null?"No reading":fmt(d.steps)+" steps · "+d.source)+'"></i></div><span class="trendLabel">'+d.label+'</span></div>'}).join(""):'<div class="activityTrendEmpty">No measured step history has reached this account yet. Manual entries and GPS estimates are deliberately excluded from this chart.</div>'}
+function render(){const x=state.entries[date()]||{},gpsSteps=gpsStepsForDay(date()),gpsDistance=gpsDistanceForDay(date());renderTodayWalk();renderActivityTrend();const motion=motionDaily[date()]||null,appleSteps=x.steps!=null&&['apple_health','apple_health_shortcuts','health_connect'].includes(x.stepsSource),shownSteps=appleSteps?Number(x.steps):(motion?Number(motion.steps):(x.steps==null?null:Number(x.steps)));$('steps').textContent=shownSteps==null?'—':fmt(shownSteps);$('stepNote').textContent=appleSteps?(x.stepsSource==='apple_health_shortcuts'?'Apple Health via Shortcuts'+(x.stepsUpdatedAt?' · received '+new Date(x.stepsUpdatedAt).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}):''):x.stepsSource==='health_connect'?'Android Health Connect':'Apple Health measured'):motion?'iPhone pedometer · synced '+(motion.measuredAt?new Date(motion.measuredAt).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}):'today'):x.steps!=null?'Manually entered · no device reading received':'No iPhone sensor reading received. This web app cannot read iPhone sensors directly; import Apple Health with Shortcuts or sync from the signed-in native app.';$('gpsStepNote').textContent=gpsSteps?'Separate GPS estimate: '+fmt(gpsSteps)+' steps':'GPS estimate: —';$('source').textContent=appleSteps?(x.stepsSource==='apple_health_shortcuts'?'APPLE HEALTH · SHORTCUTS':x.stepsSource==='health_connect'?'ANDROID HEALTH CONNECT':'APPLE HEALTH · MEASURED'):motion?'IPHONE PEDOMETER · SYNCED':x.steps!=null?'MANUAL ENTRY':'NO PEDOMETER DATA YET';$('vActiveEnergy').textContent=x.activeEnergyKcal==null?'—':fmt(x.activeEnergyKcal)+' kcal';$('activeEnergySourceLabel').textContent=x.activeEnergyKcal==null?'Awaiting Apple Health data':x.activeEnergySource==='apple_health_shortcuts'?'Apple Health via Shortcuts · active energy':x.activeEnergySource==='health_connect'?'Health Connect · active energy':'Apple Health measured active energy';$('distance').textContent=gpsDistance>0?gpsDistance.toFixed(2)+' km':(x.distance==null?'—':x.distance.toFixed(2)+' km');$('water').textContent=x.water?fmt(x.water)+' ml':'—';$('protein').textContent=x.protein?fmt(x.protein)+' g':'—';$('missionTitle').textContent=state.goal?state.goal.type:'Your next chapter starts here.';$('missionSub').textContent=state.goal?(state.goal.purpose||state.goal.duration+' · Your new mission is active.').slice(0,110):'Choose a goal. Make today count.';const mission=missionProgress();$('missionRingValue').textContent=state.goal?mission.percent+'%':'—';const missionRingAngle=state.goal?mission.percent*3.6:0;$('activityRing').style.background='conic-gradient(var(--lime) 0deg '+missionRingAngle+'deg,#343834 '+missionRingAngle+'deg 360deg)';$('missionPct').textContent=state.goal?'MISSION ACTIVE · '+mission.checkInDays+'/'+mission.durationDays+' CHECK-IN DAYS':'GOAL NOT SET';$('missionBar').style.width=state.goal?mission.percent+'%':'0%';$('journeyText').textContent=state.goal?mission.checkInDays+' of '+mission.durationDays+' days have a saved check-in. This measures consistency, not weight-loss or fitness outcome.':'Your milestones will appear after your first new entry.';renderGuru();renderTargetPlan();const rows=Object.entries(state.entries).sort((a,b)=>b[0].localeCompare(a[0])).slice(0,4);$('recent').innerHTML=rows.length?rows.map(([d,v])=>'<div class="entry"><b>'+d+'</b><span>'+(v.weight?v.weight+' kg · ':'')+(v.steps!=null?v.steps+' steps':'New entry')+'</span></div>').join(''):'<div class="empty">Your new GATIVX journey begins here.</div>';const targets=activeTargets(),stepGoal=targets.steps,calorieGoal=targets.activeKcal,stepProgress=appleSteps||motion?Math.min(100,shownSteps/stepGoal*100):0,calorieKnown=x.activeEnergyKcal!=null&&['apple_health','apple_health_shortcuts','health_connect'].includes(x.activeEnergySource),calorieProgress=calorieKnown?Math.min(100,Number(x.activeEnergyKcal)/calorieGoal*100):0;$('ringSteps').textContent=shownSteps==null?'—':fmt(shownSteps);$('ringCalories').textContent=calorieKnown?fmt(x.activeEnergyKcal):'—';const walkMinutes=completedWalkMinutesForDay(date()),walkMinuteGoal=30,walkMinuteProgress=Math.min(100,walkMinutes/walkMinuteGoal*100);$('ringHeartPoints').textContent=walkMinutes?fmt(walkMinutes):'—';$('stepsRing').style.setProperty('--progress',stepProgress*3.6+'deg');$('caloriesRing').style.setProperty('--progress',calorieProgress*3.6+'deg');$('heartRing').style.setProperty('--progress',walkMinuteProgress*3.6+'deg');$('ringStepsNote').textContent=shownSteps==null?'No measured reading':fmt(Math.max(0,stepGoal-shownSteps))+' to '+fmt(stepGoal)+' step target';$('ringCaloriesNote').textContent=calorieKnown?fmt(Math.max(0,calorieGoal-Number(x.activeEnergyKcal)))+' kcal to '+fmt(calorieGoal)+' kcal target':'No measured calorie reading';$('ringHeartPointsNote').textContent=walkMinutes?fmt(Math.max(0,walkMinuteGoal-walkMinutes))+' min to '+walkMinuteGoal+' min walk target':'No completed GPS walk today';const recoveryCount=readWalkRecovery().length,walkCount=(state.walks||[]).length,healthLabel=appleSteps?'APPLE HEALTH · MEASURED':motion?'IPHONE PEDOMETER · SYNCED':'NOT CONNECTED',walkLabel=recoveryCount?'RECOVERY PENDING':walkCount?walkCount+' WALKS SAVED':'NO COMPLETED WALKS',cloudLabel=$('cloudState').textContent||'DEVICE ONLY';$('healthConnectionStatus').textContent=healthLabel;$('walkSaveStatus').textContent=walkLabel;$('cloudBackupStatus').textContent=cloudLabel;$('healthStatusDot').className='statusDot '+(appleSteps||motion?'good':'');$('walkStatusDot').className='statusDot '+(recoveryCount?'pending':walkCount?'good':'');$('cloudStatusDot').className='statusDot '+(cloudLabel.includes('CURRENT')?'good':cloudLabel.includes('PENDING')?'pending':'');}
+$('saveGoal').onclick=()=>{const type=$('goalType').value,duration=$('goalDuration').value,purpose=$('goalPurpose').value.trim(),feeling=$('goalFeeling').value.trim();if(!type||!duration){alert('Choose a goal and duration first.');return}if(purpose.length<8){alert('Write a little about why this goal matters to you. Your purpose will help GURU guide you when motivation drops.');$('goalPurpose').focus();return}const targetWeight=Number($('goalTargetWeight').value)||null;state.goal={...state.goal,type,duration,purpose,feeling,targetWeight,startWeight:state.goal?.startWeight||latestWeight(),createdAt:state.goal?.createdAt||new Date().toISOString(),updatedAt:new Date().toISOString()};state.goal.targets=state.goal.targets||{steps:5000,activeKcal:250,source:'starter',accepted:false};persist();render();show('coach');if(cloudUser)cloudSync()};
+function latestWeight(){const rows=Object.values(state.entries||{}).filter(v=>Number(v?.weight)>0);return rows.length?Number(rows[rows.length-1].weight):null}
+function activeTargets(){return state.goal?.targets?.accepted?state.goal.targets:{steps:5000,activeKcal:250,source:'starter',accepted:false}}
+function measuredBaseline(){const stepsByDay={},kcal=[];for(const [d,v] of Object.entries(state.entries||{})){if(d<dateOffset(-6))continue;if(v?.steps!=null&&['apple_health','apple_health_shortcuts','health_connect'].includes(v.stepsSource))stepsByDay[d]=Number(v.steps);if(v?.activeEnergyKcal!=null&&['apple_health','apple_health_shortcuts','health_connect'].includes(v.activeEnergySource))kcal.push(Number(v.activeEnergyKcal))}for(const [d,v] of Object.entries(motionDaily||{})){if(d>=dateOffset(-6)&&Number(v?.steps)>0)stepsByDay[d]=Number(v.steps)}const steps=Object.values(stepsByDay).filter(Number.isFinite);return {steps:steps.length?steps.reduce((a,b)=>a+b,0)/steps.length:null,kcal:kcal.length?kcal.reduce((a,b)=>a+b,0)/kcal.length:null}}
+function dateOffset(n){const d=new Date();d.setDate(d.getDate()+n);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+function suggestTargets(){const b=measuredBaseline(),steps=b.steps==null?5000:Math.max(2500,Math.ceil((b.steps*1.1)/500)*500),activeKcal=b.kcal==null?250:Math.max(200,Math.ceil((b.kcal*1.1)/25)*25);return {steps:Math.min(12000,steps),activeKcal:Math.min(500,activeKcal),source:b.steps==null&&b.kcal==null?'starter':'baseline',accepted:false}}
+function renderTargetPlan(){const p=suggestTargets(),w=state.goal?.targetWeight,start=state.goal?.startWeight;$('guruPlanText').textContent='Suggested daily targets: '+fmt(p.steps)+' steps and '+fmt(p.activeKcal)+' active kcal. '+(w&&start?'Mission: '+start+' kg → '+w+' kg over '+(state.goal.duration||'your chosen timeline')+'. ':'')+(p.source==='starter'?'These are gentle starting targets until measured activity history is available.':'Based on your recent measured activity, with a gradual 10% progression.');$('acceptGuruPlan').textContent=state.goal?.targets?.accepted?'Update my daily targets':'Accept these daily targets';$('acceptGuruPlan').disabled=false}
+function renderGuru(reconnect=false){const goal=state.goal;if(!goal){$('guruGoal').textContent='Your mission is waiting';$('guruPurpose').textContent='Set a goal and write your personal reason in Journey.';$('guruNextAction').textContent='Choose one meaningful goal first. GURU will help you turn it into a small action.';return}const purpose=(goal.purpose||'').trim();$('guruGoal').textContent=goal.type+' · '+goal.duration;$('guruPurpose').textContent=purpose?('Your reason: '+purpose):'Your reason has not been added yet. Visit Journey to complete it.';const today=date(),hasWalk=state.walks.some(w=>w.date===today),entry=state.entries[today]||{},hasSteps=Number(entry.steps)>0||Number(motionDaily[today]?.steps)>0;let action;if(hasWalk||hasSteps)action='You have already recorded movement today. Protect your consistency: hydrate, recover well, and choose one small step that feels manageable.';else if(goal.type==='Build strength')action='Do one gentle 5–10 minute strength or mobility session at a comfortable level. Stop if anything hurts.';else if(goal.type==='Weight loss'||goal.type==='Improve fitness'||goal.type==='Daily movement')action='Take a comfortable 10-minute walk if it suits your energy today. Starting gently is enough.';else action='Choose one 10-minute habit that supports your health today: a gentle walk, mobility, or preparing a balanced meal.';if(reconnect){action=(purpose?'Remember why you started: '+purpose+'. ':'Your purpose is still worth defining. ')+ 'You do not need to solve the whole journey today. Your next small action: '+action;}$('guruNextAction').textContent=action;$('guruPurposeCard').dataset.purposeReady=purpose?'true':'false'}
+ $('acceptGuruPlan').onclick=()=>{if(!state.goal){show('journey');return}state.goal.targets={...suggestTargets(),accepted:true,acceptedAt:new Date().toISOString()};state.goal.updatedAt=new Date().toISOString();persist();render();if(cloudUser)cloudSync()};
+$('reconnectGuru').onclick=()=>renderGuru(true);
+$('saveEntry').onclick=()=>{const v={};for(const [k,id] of [['weight','weightIn'],['water','waterIn'],['protein','proteinIn'],['steps','stepsIn']]){const raw=$(id).value;if(raw!=='')v[k]=Number(raw)}if(!Object.keys(v).length){alert('Enter at least one value.');return}const entry={...(state.entries[date()]||{}),...v,updatedAt:new Date().toISOString()};if(v.steps!=null)entry.stepsSource='manual';state.entries[date()]=entry;persist();render();show('home');if(cloudUser)cloudSync()};
+
+const SUPABASE_URL='https://crarbbsvcczwmtvxyrxo.supabase.co';
+const SUPABASE_PUBLISHABLE_KEY='sb_publishable_XAGRFtrWrFqJ-SfXh2WbRQ_jCcPnr-6';
+let cloudClient=null,cloudUser=null,cloudBusy=false,cloudSyncQueued=false,signupReady=false;
+function activateCloudUser(user){
+ if(!user){
+  if(activeAccountId){
+   persist();
+   activeAccountId=null;
+   // After an account has owned the shared v2 store, never reopen that store while signed out.
+   try{localStorage.setItem(ACCOUNT_MIGRATED_KEY,'1')}catch(migrationError){console.error('GATIVX account isolation marker could not be saved',migrationError)}
+   stateStorageKey=KEY+'.device';
+   let deviceSaved=null;
+   try{deviceSaved=localStorage.getItem(stateStorageKey)}catch{}
+   if(deviceSaved){try{const parsed=JSON.parse(deviceSaved);state=parsed&&parsed.version===2?{...blank(),...parsed}:blank()}catch{state=blank()}}
+   else state=blank();
+   cloudUser=null;
+   motionDaily={};
+   persist();
+   render();renderWalk();
+  }else cloudUser=null;
+  return;
+ }
+ if(activeAccountId===user.id){cloudUser=user;return}
+ if(activeAccountId)persist();
+ motionDaily={};
+ const key=KEY+'.user.'+user.id;
+ let saved=null;
+ try{saved=localStorage.getItem(key)}catch{}
+ if(!saved&&!localStorage.getItem(ACCOUNT_MIGRATED_KEY)){
+  localStorage.setItem(key,JSON.stringify({...state,version:2}));
+  localStorage.setItem(ACCOUNT_MIGRATED_KEY,'1');
+  saved=localStorage.getItem(key);
+ }
+ if(saved){try{const parsed=JSON.parse(saved);state=parsed&&parsed.version===2?{...blank(),...parsed}:blank()}catch{state=blank()}}
+ else state=blank();
+ stateStorageKey=key;activeAccountId=user.id;cloudUser=user;
+ for(const [day,entry] of Object.entries(state.entries||{}))expireStaleTodayShortcut(entry,day);
+ persist();
+ render();renderWalk();
+}
+const cloudMsg=(message,stateLabel)=>{const e=$('cloudStatus');if(e)e.textContent=message;const s=$('cloudState');if(s)s.textContent=stateLabel||(cloudUser?'ACCOUNT CONNECTED':'DEVICE ONLY');const badge=$('cloudBackupStatus'),dot=$('cloudStatusDot');if(badge&&s)badge.textContent=s.textContent;if(dot)dot.className='statusDot '+(s&&s.textContent.includes('CURRENT')?'good':s&&s.textContent.includes('PENDING')?'pending':'')};
+function cloudUi(){
+ const signed=!!cloudUser;
+ $('cloudSignIn').style.display=signed?'none':'block';
+ $('cloudSignUp').style.display=signed?'none':'block';
+ $('cloudSyncNow').style.display=signed?'block':'none';
+ $('cloudSignOut').style.display=signed?'block':'none';
+ $('cloudFields').style.display=signed?'none':'grid';
+ cloudMsg(signed?'Signed in. Your private cloud backup is available.':'Not signed in. New records remain safely on this device.',signed?'CONNECTED':'DEVICE ONLY');
+}
+function validDay(day){return /^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(day)&&!Number.isNaN(Date.parse(day+'T00:00:00'))}
+function cloudDailyRow(day,x,userId){
+ const bounded=(v,min,max)=>v==null?null:(Number.isFinite(Number(v))&&Number(v)>=min&&Number(v)<=max?Number(v):null);
+ return {user_id:userId,log_date:day,steps:bounded(x.steps,0,200000)==null?null:Math.round(Number(x.steps)),steps_source:x.stepsSource||null,steps_updated_at:x.stepsUpdatedAt||null,active_energy_kcal:bounded(x.activeEnergyKcal,0,2147483647)==null?null:Math.round(Number(x.activeEnergyKcal)),active_energy_source:x.activeEnergySource||null,active_energy_updated_at:x.activeEnergyUpdatedAt||null,walking_km:bounded(x.distance,0,300),water_ml:bounded(x.water,0,20000)==null?null:Math.round(Number(x.water)),protein_g:bounded(x.protein,0,500),weight_kg:bounded(x.weight,25,400)};
+}
+function mergeCloudDaily(remote,local){
+ remote={...remote};
+ if(remote.stepsSource==='apple_health_shortcuts'&&expireStaleTodayShortcut({steps:remote.steps,stepsSource:remote.stepsSource,stepsUpdatedAt:remote.stepsUpdatedAt,activeEnergyKcal:remote.activeEnergyKcal,activeEnergySource:remote.activeEnergySource,activeEnergyUpdatedAt:remote.activeEnergyUpdatedAt},remote.date||date())){
+  remote.steps=null;remote.stepsSource=null;remote.stepsUpdatedAt=null;
+  if(remote.activeEnergySource==='apple_health_shortcuts'){remote.activeEnergyKcal=null;remote.activeEnergySource=null;remote.activeEnergyUpdatedAt=null}
+ }
+ const merged={...remote},remoteStepTime=Date.parse(remote.stepsUpdatedAt||'')||0,localStepTime=Date.parse(local.stepsUpdatedAt||'')||0,remoteEnergyTime=Date.parse(remote.activeEnergyUpdatedAt||'')||0,localEnergyTime=Date.parse(local.activeEnergyUpdatedAt||'')||0;
+ const keepRemoteSteps=remote.steps!=null&&(remoteStepTime>localStepTime||(remote.stepsSource==='manual'&&remoteStepTime===localStepTime));
+ const keepRemoteEnergy=remote.activeEnergyKcal!=null&&remoteEnergyTime>localEnergyTime;
+ for(const [k,v] of Object.entries(local||{})){
+  if(v===null||v===undefined||v==='')continue;
+  if(keepRemoteSteps&&['steps','stepsSource','stepsUpdatedAt'].includes(k))continue;
+  if(keepRemoteEnergy&&['activeEnergyKcal','activeEnergySource','activeEnergyUpdatedAt'].includes(k))continue;
+  merged[k]=v;
+ }
+ return merged;
+}
+async function cloudSync(){
+ if(!cloudClient||!cloudUser)return;
+ if(cloudBusy){cloudSyncQueued=true;return}
+ const syncUser=cloudUser,syncAccountId=syncUser.id,isCurrent=()=>cloudUser&&cloudUser.id===syncAccountId;
+ cloudBusy=true;cloudMsg('Syncing your private records…','SYNCING');
+ try{
+  const profileResult=await cloudClient.from('profiles').select('*').eq('id',syncAccountId);
+  if(!isCurrent())return;
+  if(profileResult.error)throw profileResult.error;
+  const remoteProfile=(profileResult.data||[])[0]||null;
+  if(remoteProfile&&remoteProfile.goal_type){
+   const remoteGoal={type:remoteProfile.goal_type,duration:remoteProfile.goal_duration||'90 days',purpose:remoteProfile.goal_purpose||'',feeling:remoteProfile.goal_feeling||'',createdAt:remoteProfile.goal_started_at||remoteProfile.goal_updated_at||new Date().toISOString(),updatedAt:remoteProfile.goal_updated_at||remoteProfile.goal_started_at||new Date().toISOString()};
+   const localGoalTime=Date.parse(state.goal?.updatedAt||state.goal?.createdAt||'')||0;
+   const remoteGoalTime=Date.parse(remoteGoal.updatedAt)||0;
+   if(!state.goal||remoteGoalTime>localGoalTime)state.goal=remoteGoal;
+  }
+  const daily=await cloudClient.from('daily_logs').select('*').eq('user_id',syncAccountId);
+  if(!isCurrent())return;
+  if(daily.error)throw daily.error;
+  const remoteByDay={};
+  (daily.data||[]).forEach(row=>{const day=String(row.log_date);if(!validDay(day))return;remoteByDay[day]={steps:row.steps==null?null:Number(row.steps),stepsSource:row.steps_source||null,stepsUpdatedAt:row.steps_updated_at||null,activeEnergyKcal:row.active_energy_kcal==null?null:Number(row.active_energy_kcal),activeEnergySource:row.active_energy_source||null,activeEnergyUpdatedAt:row.active_energy_updated_at||null,distance:row.walking_km==null?null:Number(row.walking_km),water:row.water_ml==null?null:Number(row.water_ml),protein:row.protein_g==null?null:Number(row.protein_g),weight:row.weight_kg==null?null:Number(row.weight_kg)}});
+  Object.keys(remoteByDay).forEach(day=>{state.entries[day]=mergeCloudDaily(remoteByDay[day],state.entries[day]||{})});
+  const motionResult=await cloudClient.from('motion_daily_steps').select('log_date,steps,distance_m,measured_at').eq('user_id',syncAccountId);
+  if(!isCurrent())return;
+  if(motionResult.error)throw motionResult.error;
+  motionDaily={};(motionResult.data||[]).forEach(row=>{const day=String(row.log_date);if(validDay(day))motionDaily[day]={steps:Number(row.steps)||0,distanceMeters:row.distance_m==null?null:Number(row.distance_m),measuredAt:row.measured_at||null}});
+  persist();
+  const rows=Object.keys(state.entries).filter(validDay).map(day=>cloudDailyRow(day,state.entries[day],syncAccountId));
+  if(rows.length){const up=await cloudClient.from('daily_logs').upsert(rows,{onConflict:'user_id,log_date'});if(!isCurrent())return;if(up.error)throw up.error;}
+  const walks=await cloudClient.from('walk_sessions').select('id,started_at,finished_at,duration_seconds,distance_m,route_points,steps').eq('user_id',syncAccountId);
+  if(!isCurrent())return;
+  if(walks.error)throw walks.error;
+  const localDayFromTimestamp=value=>{const d=new Date(value);if(!Number.isFinite(d.getTime()))return '';return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
+  const timestampMs=value=>{if(typeof value==='number'&&Number.isFinite(value))return value>0&&value<100000000000?value*1000:value;const parsed=Date.parse(value||'');return Number.isFinite(parsed)?parsed:NaN};
+  const remoteWalks=(walks.data||[]).map(w=>({cloudId:w.id,date:localDayFromTimestamp(w.started_at),distance:Number(w.distance_m||0)/1000,points:Array.isArray(w.route_points)?w.route_points:[],createdAt:w.started_at,startedAt:w.started_at,finishedAt:w.finished_at,durationSeconds:Number(w.duration_seconds||0),steps:w.steps}));
+  const localWalks=state.walks.slice();
+  const walkStartMs=w=>{const first=w.points&&w.points.length?(w.points[0].time??w.points[0].timestamp):null;return timestampMs(first??w.startedAt??w.createdAt)};
+  const matches=(a,b)=>Math.abs(walkStartMs(a)-walkStartMs(b))<=10000&&Math.abs((Number(a.distance)||0)-(Number(b.distance)||0))<=0.02;
+  for(const rw of remoteWalks){const i=localWalks.findIndex(l=>matches(l,rw));if(i>=0)localWalks[i]={...localWalks[i],...rw};else localWalks.push(rw)}
+  const syncedKey='gativx.v2.cloud.walks.'+syncAccountId;
+  let sent=[];try{sent=JSON.parse(localStorage.getItem(syncedKey)||'[]');if(!Array.isArray(sent))sent=[]}catch{}
+  for(const w of localWalks.filter(x=>!x.cloudId&&!sent.includes(x.createdAt))){
+   const pts=Array.isArray(w.points)?w.points:[];
+   const start=new Date(w.startedAt||((pts.length&&(pts[0].time||pts[0].timestamp))?pts[0].time||pts[0].timestamp:w.createdAt||Date.now())).toISOString();
+   const end=new Date(w.finishedAt||((pts.length&&(pts[pts.length-1].time||pts[pts.length-1].timestamp))?pts[pts.length-1].time||pts[pts.length-1].timestamp:w.createdAt||Date.now())).toISOString();
+   const seconds=Math.max(0,Math.min(86400,Math.round(Number(w.durationSeconds??((Date.parse(end)-Date.parse(start))/1000)))));
+   const walkSteps=w.steps==null?null:(Number.isInteger(Number(w.steps))&&Number(w.steps)>=0&&Number(w.steps)<=200000?Number(w.steps):null);
+   const ins=await cloudClient.from('walk_sessions').insert({user_id:syncAccountId,started_at:start,finished_at:end,duration_seconds:seconds,distance_m:Math.max(0,Math.round(Number(w.distance||0)*1000)),steps:walkSteps,route_points:pts});
+   if(!isCurrent())return;if(ins.error)throw ins.error;sent.push(w.createdAt);
+  }
+  localStorage.setItem(syncedKey,JSON.stringify(sent));
+  state.walks=localWalks;
+  if(state.goal){
+   const goal=state.goal;
+   const profilePayload={...(remoteProfile||{}),id:syncAccountId,goal_type:goal.type,goal_duration:goal.duration||null,goal_purpose:goal.purpose||null,goal_feeling:goal.feeling||null,goal_started_at:goal.createdAt||null,goal_updated_at:goal.updatedAt||goal.createdAt||new Date().toISOString(),updated_at:new Date().toISOString()};
+   const profileWrite=await cloudClient.from('profiles').upsert(profilePayload,{onConflict:'id'});
+   if(!isCurrent())return;
+   if(profileWrite.error)throw profileWrite.error;
+  }
+  persist();render();renderWalk();
+  clearPendingHealthShortcut();cloudMsg('Sync complete. Apple Health Shortcut readings and your other records are backed up to your account.','BACKUP CURRENT');
+ }catch(error){if(isCurrent()){console.error('GATIVX cloud sync failed',error);const hasLocalWalks=state.walks.some(w=>!w.cloudId);cloudMsg(hasLocalWalks?'Walk saved on this device. Cloud backup pending; GATIVX will retry automatically when connected.':'Cloud sync issue: '+(error&&error.message?error.message:'Please retry when connected.'),hasLocalWalks?'BACKUP PENDING':'SYNC ISSUE')}}
+ finally{cloudBusy=false;if(cloudSyncQueued){cloudSyncQueued=false;queueMicrotask(()=>cloudSync())}}
+}
+async function cloudAuth(mode){
+ if(!cloudClient){cloudMsg('Cloud service is still loading. Please try again shortly.','CONNECTING');return}
+ const email=$('cloudEmail').value.trim(),password=$('cloudPassword').value,name=$('cloudName').value.trim();
+ if(!email||!password){cloudMsg('Enter your email and password first.','DETAILS NEEDED');return}
+ if(password.length<6){cloudMsg('Use a password with at least 6 characters.','DETAILS NEEDED');return}
+ if(mode==='signup'&&!name){cloudMsg('Enter your name before creating the account.','DETAILS NEEDED');return}
+ cloudMsg(mode==='signup'?'Creating your account…':'Signing in…','AUTHENTICATING');
+ const result=mode==='signup'?await cloudClient.auth.signUp({email,password,options:{data:{display_name:name}}}):await cloudClient.auth.signInWithPassword({email,password});
+ if(result.error){cloudMsg(result.error.message,'SIGN-IN ISSUE');return}
+ if(mode==='signup'&&!result.data.session){cloudMsg('Account created. Confirm your email, then sign in here.','CONFIRM EMAIL');return}
+ activateCloudUser(result.data.user);applyPendingShortcutToActiveAccount();cloudUi();await cloudSync();
+}
+$('cloudSignIn').onclick=()=>cloudAuth('signin');
+$('cloudSignUp').onclick=()=>{if(!signupReady){signupReady=true;$('cloudNameWrap').style.display='block';$('cloudSignUp').textContent='Confirm account creation';cloudMsg('Enter your name, then confirm account creation.','CREATE ACCOUNT');return}cloudAuth('signup')};
+$('cloudSyncNow').onclick=()=>cloudSync();
+$('cloudSignOut').onclick=async()=>{const r=await cloudClient.auth.signOut();if(r.error){cloudMsg(r.error.message,'SIGN-OUT ISSUE');return}activateCloudUser(null);cloudUi()};
+function initCloud(){
+ if(!cloudClient&&window.supabase&&window.supabase.createClient)cloudClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
+ if(!cloudClient)return;
+ cloudClient.auth.getSession().then(r=>{if(r.error)throw r.error;activateCloudUser(r.data.session&&r.data.session.user||null);cloudUi();applyPendingShortcutToActiveAccount();if(cloudUser)cloudSync()}).catch(e=>cloudMsg(e.message||'Could not restore your account session.','SESSION ISSUE'));
+ cloudClient.auth.onAuthStateChange((event,session)=>{activateCloudUser(session&&session.user||null);cloudUi();if(cloudUser&&event==='SIGNED_IN'){applyPendingShortcutToActiveAccount();setTimeout(cloudSync,0)}});
+}
+initCloud();
+async function refreshPedometerFromCloud(){if(!cloudClient||!cloudUser)return;const userId=cloudUser.id,day=date();try{const [motion,daily]=await Promise.all([cloudClient.from('motion_daily_steps').select('log_date,steps,distance_m,measured_at').eq('user_id',userId),cloudClient.from('daily_logs').select('log_date,steps,steps_source,steps_updated_at,active_energy_kcal,active_energy_source,active_energy_updated_at,walking_km,water_ml,protein_g,weight_kg').eq('user_id',userId)]);if(motion.error)throw motion.error;if(daily.error)throw daily.error;if(!cloudUser||cloudUser.id!==userId||date()!==day)return;motionDaily={};(motion.data||[]).forEach(item=>{const key=String(item.log_date);if(validDay(key))motionDaily[key]={steps:Number(item.steps)||0,distanceMeters:item.distance_m==null?null:Number(item.distance_m),measuredAt:item.measured_at||null}});(daily.data||[]).forEach(item=>{const key=String(item.log_date);if(!validDay(key))return;const remote={steps:item.steps==null?null:Number(item.steps),stepsSource:item.steps_source||null,stepsUpdatedAt:item.steps_updated_at||null,activeEnergyKcal:item.active_energy_kcal==null?null:Number(item.active_energy_kcal),activeEnergySource:item.active_energy_source||null,activeEnergyUpdatedAt:item.active_energy_updated_at||null,distance:item.walking_km==null?null:Number(item.walking_km),water:item.water_ml==null?null:Number(item.water_ml),protein:item.protein_g==null?null:Number(item.protein_g),weight:item.weight_kg==null?null:Number(item.weight_kg)};state.entries[key]=mergeCloudDaily(remote,state.entries[key]||{})});persist();render()}catch(error){console.warn('GATIVX measured activity refresh unavailable',error)}}
+window.setInterval(()=>{if(!document.hidden)refreshPedometerFromCloud()},60000);
+window.setInterval(()=>{if(!document.hidden&&navigator.onLine&&cloudUser&&state.walks.some(w=>!w.cloudId))cloudSync()},30000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden){refreshPedometerFromCloud();if(cloudUser){applyPendingShortcutToActiveAccount();cloudSync()}}});
+window.addEventListener('online',()=>{if(cloudUser){applyPendingShortcutToActiveAccount();cloudSync()}});
+const cloudScript=document.querySelector('script[src*="supabase-js"]');
+if(cloudScript){cloudScript.addEventListener('load',initCloud,{once:true});cloudScript.addEventListener('error',()=>{if(!cloudClient)cloudMsg('Cloud library could not load. Your device data remains available offline.','OFFLINE')},{once:true})}
+
+function applyShortcutPayload(payload){
+ const importedDate=payload.date,steps=payload.steps,energy=payload.energy,stamp=payload.receivedAt||new Date().toISOString();
+ const dayParts=String(importedDate||'').split('-').map(Number),dayCheck=dayParts.length===3?new Date(dayParts[0],dayParts[1]-1,dayParts[2]):new Date(NaN);
+ if(dayParts.length!==3||dayCheck.getFullYear()!==dayParts[0]||dayCheck.getMonth()!==dayParts[1]-1||dayCheck.getDate()!==dayParts[2]||(steps===null&&energy===null))return false;
+ const prior=state.entries[importedDate]||{},next={...prior};let changed=false;
+ // A fresh, permissioned Health Samples result supersedes manual journal values.
+ // Keep native HealthKit values authoritative if they already exist.
+ if(steps!==null&&prior.stepsSource!=='apple_health'){next.steps=steps;next.stepsSource='apple_health_shortcuts';next.stepsUpdatedAt=stamp;changed=true}
+ if(energy!==null&&prior.activeEnergySource!=='apple_health'){next.activeEnergyKcal=energy;next.activeEnergySource='apple_health_shortcuts';next.activeEnergyUpdatedAt=stamp;changed=true}
+ if(changed){state.entries[importedDate]=next;persist();render()}
+ return changed;
+}
+const PENDING_HEALTH_SHORTCUT_KEY='gativx.pending-health-shortcut.v2';
+function readPendingHealthShortcut(){
+ try{const raw=localStorage.getItem(PENDING_HEALTH_SHORTCUT_KEY);if(raw)return JSON.parse(raw)}catch(error){console.warn('Could not read saved Apple Health Shortcut import',error)}
+ try{const legacy=sessionStorage.getItem('gativx.pending-health-shortcut.v1');if(legacy){const payload=JSON.parse(legacy);localStorage.setItem(PENDING_HEALTH_SHORTCUT_KEY,JSON.stringify(payload));return payload}}catch(error){console.warn('Could not recover previous Apple Health Shortcut import',error)}
+ return null;
+}
+function storePendingHealthShortcut(payload){
+ const raw=JSON.stringify(payload);let saved=false;
+ try{localStorage.setItem(PENDING_HEALTH_SHORTCUT_KEY,raw);saved=true}catch(error){console.warn('Persistent Shortcut storage unavailable',error)}
+ try{sessionStorage.setItem('gativx.pending-health-shortcut.v1',raw)}catch{}
+ return saved;
+}
+function clearPendingHealthShortcut(){
+ // Preserve browser storage namespaces; an empty value marks the queue as cleared.
+ try{localStorage.setItem(PENDING_HEALTH_SHORTCUT_KEY,'')}catch{}
+ try{sessionStorage.setItem('gativx.pending-health-shortcut.v1','')}catch{}
+}
+function applyPendingShortcutToActiveAccount(){
+ if(!cloudUser)return;
+ const payload=readPendingHealthShortcut();
+ if(payload)applyShortcutPayload(payload);
+}
+function importAppleHealthShortcut(){
+ const params=new URLSearchParams(window.location.search),hasSteps=params.has('gativx_steps'),hasEnergy=params.has('gativx_active_energy');
+ if(!hasSteps&&!hasEnergy)return;
+ const importedDate=params.get('gativx_date')||date(),parts=importedDate.split('-').map(Number),parsed=parts.length===3?new Date(parts[0],parts[1]-1,parts[2]):new Date(NaN);
+ const validDate=/^\d{4}-\d{2}-\d{2}$/.test(importedDate)&&parts.length===3&&parsed.getFullYear()===parts[0]&&parsed.getMonth()===parts[1]-1&&parsed.getDate()===parts[2];
+ const numeric=(raw,max)=>{if(raw==null||!/^\d+(?:,\d{3})*$/.test(raw.trim()))return null;const n=Number(raw.replace(/,/g,''));return Number.isSafeInteger(n)&&n>=0&&n<=max?n:null};
+ const steps=hasSteps?numeric(params.get('gativx_steps'),200000):null,energy=hasEnergy?numeric(params.get('gativx_active_energy'),20000):null;
+ if(validDate&&(steps!==null||energy!==null)){
+  const payload={date:importedDate,steps,energy,receivedAt:new Date().toISOString()};
+  storePendingHealthShortcut(payload);
+  applyShortcutPayload(payload);
+  if(cloudUser)cloudSync();
+ }else{
+  console.warn('Rejected invalid Apple Health Shortcut URL parameters',{date:importedDate,hasSteps,hasEnergy});
+  const status=$('stepNote');if(status)status.textContent='Apple Health import rejected: check the Shortcut date and numeric values.';
+ }
+ params.delete('gativx_steps');params.delete('gativx_active_energy');params.delete('gativx_date');
+ const clean=window.location.pathname+(params.toString()?'?'+params.toString():'')+window.location.hash;
+ window.history.replaceState({},'',clean);
+}
+function renderJourney(){const n=Object.keys(state.entries).length;$('journeyText').textContent=n?n+' new days recorded. Keep building from here.':'Your milestones will appear after your first new entry.'}
+function routeGraphic(route){const valid=(Array.isArray(route)?route:[]).map(p=>{if(!p||typeof p!=='object')return null;const lat=Number(p.lat??p.latitude),lon=Number(p.lon??p.longitude),rawTime=p.time??p.timestamp;const time=typeof rawTime==='number'?rawTime:(rawTime?Date.parse(rawTime):null);return {...p,lat,lon,time,breakBefore:!!(p.breakBefore??p.break_before)}}).filter(p=>Number.isFinite(p.lat)&&Number.isFinite(p.lon)&&Math.abs(p.lat)<=90&&Math.abs(p.lon)<=180);if(valid.length<2)return '<div class="mapEmpty">Route preview appears after at least two accurate GPS fixes.</div>';const lats=valid.map(p=>Number(p.lat)),lons=valid.map(p=>Number(p.lon)),minLat=Math.min(...lats),maxLat=Math.max(...lats),minLon=Math.min(...lons),maxLon=Math.max(...lons),dx=maxLon-minLon||0.00001,dy=maxLat-minLat||0.00001,pad=24,w=600,h=190,scale=Math.min((w-2*pad)/dx,(h-2*pad)/dy),usedW=dx*scale,usedH=dy*scale,ox=(w-usedW)/2,oy=(h-usedH)/2,segments=[];valid.forEach(p=>{if(!segments.length||p.breakBefore)segments.push([]);segments[segments.length-1].push(p)});const draw=segments.filter(segment=>segment.length>=2);if(!draw.length)return '<div class="mapEmpty">Route preview appears after two connected accurate GPS fixes.</div>';const xy=p=>(ox+(Number(p.lon)-minLon)*scale).toFixed(1)+','+(h-oy-(Number(p.lat)-minLat)*scale).toFixed(1),first=draw[0][0],last=draw[draw.length-1][draw[draw.length-1].length-1],lines=draw.map(segment=>'<polyline points="'+segment.map(xy).join(' ')+'" fill="none" stroke="#d5ff32" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>').join(''),a=xy(first).split(','),b=xy(last).split(',');return '<svg viewBox="0 0 600 190" role="img" aria-label="Recorded GPS route"><rect width="600" height="190" fill="#17221a"/>'+lines+'<circle cx="'+a[0]+'" cy="'+a[1]+'" r="7" fill="#63d9ff"/><circle cx="'+b[0]+'" cy="'+b[1]+'" r="7" fill="#ff8a26"/></svg>'}
+function renderTodayWalk(){const walks=state.walks.filter(w=>w.date===date()).slice().reverse();$('todayWalkCount').textContent=walks.length+' WALK'+(walks.length===1?'':'S');$('todayWalkSummary').innerHTML=walks.length?walks.map(w=>{const total=Math.max(0,Number(w.durationSeconds||0)),minutes=Math.floor(total/60),seconds=Math.floor(total%60),time=w.startedAt?new Date(w.startedAt).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}):'Time not recorded';return '<div class="entry"><b>'+time+' · '+Number(w.distance||0).toFixed(2)+' km</b><span>'+minutes+':'+String(seconds).padStart(2,'0')+' · '+fmt(w.gpsStepsEstimate||0)+' GPS-estimated steps</span></div>'}).join(''):'<div class="empty">No walk recorded today. Start a walk when you head out.</div>'}
+function renderWalk(){$('gpsMap').innerHTML=routeGraphic(points);$('gpsSteps').textContent=fmt(Math.round(distance/0.73));const history=state.walks.slice().sort((a,b)=>Date.parse(b.startedAt||b.createdAt||b.date||0)-Date.parse(a.startedAt||a.createdAt||a.date||0));$('gpsHistory').innerHTML=history.length?history.map(w=>{const km=Number(w.distance)||0,day=w.date||String(w.startedAt||w.createdAt||'').slice(0,10)||'Date unavailable',estimate=Number(w.gpsStepsEstimate??Math.round(km*1000/0.73));return '<div class="entry"><b>'+day+' · '+km.toFixed(2)+' km</b><span>'+(w.points||[]).length+' GPS fixes · ~'+fmt(estimate)+' estimated steps'+(w.importedFromLegacy?' · imported history':'')+'</span></div><div class="routeMap">'+routeGraphic(w.points)+'</div>'}).join(''):'<div class="empty">No saved GPS walks yet. Completed walks will appear here.</div>'}
+function addFix(pos){if(paused)return;const c=pos&&pos.coords;if(!c||!Number.isFinite(c.latitude)||!Number.isFinite(c.longitude)||!Number.isFinite(c.accuracy)||!Number.isFinite(pos.timestamp))return;const p={lat:c.latitude,lon:c.longitude,accuracy:c.accuracy,time:pos.timestamp};if(p.accuracy>50){lastAcceptedFix=null;segmentBreak=true;return}if(lastAcceptedFix){const a=lastAcceptedFix,rad=x=>x*Math.PI/180,R=6371000,dLat=rad(p.lat-a.lat),dLon=rad(p.lon-a.lon),h=Math.sin(dLat/2)**2+Math.cos(rad(a.lat))*Math.cos(rad(p.lat))*Math.sin(dLon/2)**2,delta=2*R*Math.asin(Math.sqrt(h)),elapsed=(p.time-a.time)/1000;if(elapsed<=0)return;if(elapsed<=30&&(delta>150||delta/elapsed>8)){lastAcceptedFix=null;segmentBreak=true;return}if(elapsed<=30)distance+=delta;else segmentBreak=true}p.breakBefore=segmentBreak;points.push(p);lastAcceptedFix=p;segmentBreak=false;$('gpsDistance').textContent=(distance/1000).toFixed(2)+' km';$('gpsFixes').textContent=points.length;$('gpsSteps').textContent=fmt(Math.round(distance/0.73));$('walkStatus').textContent='WALK IN PROGRESS ✓ · GPS signal active';}
+$('gpsStart').onclick=()=>{if(!navigator.geolocation){alert('GPS is not available in this browser.');return}points=[];distance=0;lastAcceptedFix=null;segmentBreak=true;paused=false;walkStartedAt=new Date();pausedAt=null;pausedMilliseconds=0;$('gpsDistance').textContent='0.00 km';$('gpsFixes').textContent='0';$('gpsSteps').textContent='0';$('gpsMap').innerHTML='<div class="mapEmpty">Waiting for accurate GPS fixes…</div>';$('walkStatus').textContent='Requesting GPS…';$('gpsStart').disabled=true;$('gpsPause').disabled=false;$('gpsFinish').disabled=false;watch=navigator.geolocation.watchPosition(pos=>{addFix(pos);$('gpsMap').innerHTML=routeGraphic(points)},e=>{$('walkStatus').textContent=e.code===1?'LOCATION PERMISSION DENIED · Allow Safari to access Location.':e.code===2?'GPS SIGNAL UNAVAILABLE · Move outdoors and retry.':'GPS SIGNAL TIMED OUT · Keep this screen open and wait for a clearer signal.';if(e.code===1){if(watch!==null)navigator.geolocation.clearWatch(watch);watch=null;$('gpsStart').disabled=false;$('gpsPause').disabled=true;$('gpsFinish').disabled=true}},{enableHighAccuracy:true,maximumAge:0,timeout:30000});$('walkStatus').textContent='WALK STARTED ✓ · Waiting for GPS signal'};
+$('gpsPause').onclick=()=>{paused=!paused;if(paused){pausedAt=Date.now()}else{if(pausedAt!==null)pausedMilliseconds+=Date.now()-pausedAt;pausedAt=null;lastAcceptedFix=null;segmentBreak=true}$('gpsPause').textContent=paused?'Resume':'Pause';$('walkStatus').textContent=paused?'WALK PAUSED':'WALK RESUMED ✓ · GPS tracking active'};
+$('gpsFinish').onclick=()=>{const finishButton=$('gpsFinish');if(finishButton.disabled)return;finishButton.disabled=true;try{if(watch!==null)navigator.geolocation.clearWatch(watch);watch=null;const savedPoints=points.map(p=>({...p}));const savedDistance=distance/1000;const savedGpsSteps=Math.round(distance/0.73);$('gpsStart').disabled=false;$('gpsPause').disabled=true;$('gpsPause').textContent='Pause';if(savedPoints.length<2||!Number.isFinite(savedDistance)||savedDistance<=0){$('walkStatus').textContent='WALK FINISHED · Not saved: at least two accurate GPS fixes and measurable distance are required. Try again outdoors with Location enabled.';finishButton.disabled=true;return}const today=date();const previousEntry=state.entries[today];const finishedAt=new Date();const startedAt=walkStartedAt||finishedAt;const totalPaused=pausedMilliseconds+(pausedAt===null?0:Date.now()-pausedAt);const durationSeconds=Math.max(0,Math.round((finishedAt-startedAt-totalPaused)/1000));const walk={id:(crypto.randomUUID?crypto.randomUUID():'walk-'+Date.now()+'-'+Math.random().toString(16).slice(2)),date:today,distance:Number(savedDistance.toFixed(3)),gpsStepsEstimate:savedGpsSteps,steps:null,points:savedPoints,startedAt:startedAt.toISOString(),finishedAt:finishedAt.toISOString(),durationSeconds,createdAt:finishedAt.toISOString()};const x=previousEntry||{};const nextEntry={...x,distance:Number(((x.distance||0)+savedDistance).toFixed(3))};let journaled=false;try{const pending=readWalkRecovery().filter(record=>record&&record.walk&&record.walk.id!==walk.id);pending.push({walk,entry:nextEntry});writeWalkRecovery(pending);journaled=true}catch(journalError){console.error('GATIVX walk recovery journal unavailable',journalError)}state.walks=state.walks.filter(item=>!item||item.id!==walk.id);state.walks.push(walk);state.entries[today]=nextEntry;try{persist();const saved=JSON.parse(localStorage.getItem(stateStorageKey)||'null');if(!(saved&&Array.isArray(saved.walks)&&saved.walks.some(item=>item&&item.id===walk.id)))throw new Error('Saved walk read-back verification failed');if(journaled)writeWalkRecovery(readWalkRecovery().filter(record=>!record||!record.walk||record.walk.id!==walk.id));$('walkStatus').textContent='WALK FINISHED & SAVED ✓ · '+savedDistance.toFixed(2)+' km · ~'+fmt(savedGpsSteps)+' estimated steps';finishButton.disabled=true;render();renderWalk();if(cloudUser)cloudSync()}catch(saveError){$('walkStatus').textContent=journaled?'WALK COMPLETED · RECOVERY PENDING. Keep this app data intact; it will retry on next launch.':'LOCAL SAVE FAILED · STORAGE IS FULL OR UNAVAILABLE. Keep this screen open and export/backup before closing.';finishButton.disabled=true;console.error('GATIVX walk save/recovery pending',saveError);try{render();renderWalk()}catch(renderError){console.error(renderError)}}}catch(error){finishButton.disabled=false;$('walkStatus').textContent='Could not finish GPS session: '+(error&&error.message?error.message:'unknown error');console.error('GATIVX GPS finish failed',error)}};
+importAppleHealthShortcut();render();if(state.walks.length)renderWalk();})()
+if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{}));}
+</script>
+<script>
+(()=>{const key='gativx.appearance.v1';const root=document.body;const button=document.getElementById('themeToggle');if(!button)return;
+const valid=v=>v==='light'||v==='dark';let saved=null;try{saved=localStorage.getItem(key)}catch{}
+const initial=valid(saved)?saved:(window.matchMedia&&window.matchMedia('(prefers-color-scheme: light)').matches?'light':'dark');
+function apply(theme,save){root.dataset.theme=theme;root.style.colorScheme=theme;button.textContent=theme==='dark'?'☼':'☾';button.setAttribute('aria-label',theme==='dark'?'Switch to Day Mode':'Switch to Night Mode');button.title=theme==='dark'?'Switch to Day Mode':'Switch to Night Mode';const meta=document.querySelector('meta[name="theme-color"]');if(meta)meta.content=theme==='dark'?'#050605':'#f4f7f2';if(save){try{localStorage.setItem(key,theme)}catch{}}}
+apply(initial,false);button.addEventListener('click',()=>apply(root.dataset.theme==='dark'?'light':'dark',true));
+})();
+</script>
+</body></html>
