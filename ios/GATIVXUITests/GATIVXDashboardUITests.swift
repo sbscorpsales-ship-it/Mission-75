@@ -279,7 +279,7 @@ final class GATIVXDashboardUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["TODAY · CONSISTENCY"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["Begin walking mission"].exists)
 
-        let communityTab = tabButton(app, label: "Community")
+        let communityTab = app.descendants(matching: .any)["gativx-tab-community"].firstMatch
         XCTAssertTrue(communityTab.waitForExistence(timeout: 5))
         communityTab.tap()
         XCTAssertTrue(communityTab.isSelected, "Selecting Community must change the active tab.")
