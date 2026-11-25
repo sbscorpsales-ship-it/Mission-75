@@ -142,3 +142,29 @@ No pull request has been merged.
 2. Keep PR #114 unmerged and stale until PR #112/PR #115 navigation validation stabilises. Then reconcile the overlapping Finish & Save, HealthKit and ContentView changes on a new isolated integration branch and rerun the complete suite.
 3. Continue the documented product gap work. The current code still gates Community and Notifications, has only a fixed consistency mission, lacks an Apps tab, and does not provide complete onboarding or a complete Android/Web parity experience.
 4. Preserve Design C, keep PR #107 untouched, and keep all signing, physical-device and production-release claims blocked until direct evidence exists.
+
+
+## Cross-platform test-readiness verification — 25 November 2026
+
+### Android source and CI scope
+- The audited PR #112 base contains native Android Kotlin/Compose code in `MainActivity.kt`, an encrypted local `WalkOnStore`, and a foreground `WalkOnLocationService`. The manifest declares location, foreground-service, activity-recognition, notification and Health Connect read permissions.
+- The feature hub explicitly marks Home, Activity and Profile as “Available” (for testing), Mission as “Testing”, and Wellness, Strength, GURU, Community, Motion 3D, Rewards, Referrals and Settings as “Coming soon”. The visible copy confirms that full goal planning/milestones, coaching, community and wellness features are not delivered in this Android build.
+- The repository tree at PR #112 base contains no Android `src/test` or `src/androidTest` source sets. The Android workflow runs `android/scripts/check-walkon.py` (six source-pattern safeguards in the current run) and `gradle assembleDebug`; it does not run JVM unit tests or instrumentation tests. Run #171 therefore proves the six source safeguards and successful debug APK compilation/package/upload, not runtime behavior.
+- The sync acknowledgement hardening on `feat/gativx/android-sync-ack-20261125` is a safe improvement, but the static assertions are not a substitute for behavioral tests. Add JVM-testable pure reconciliation logic and Android instrumentation coverage before treating Android save/sync as accepted.
+
+### Web Hub source and CI scope
+- The current web entry redirects to `app-v2.html`. Its five navigation destinations are Home, Journey, Record, Walk and GURU; the native five-tab information architecture is not present. The source has no Community feed, member Profile/settings, Notifications or Apps destination.
+- The browser walk UI explicitly instructs members to keep the screen open. It uses browser geolocation and local storage/recovery; this must not be described as native background GPS tracking.
+- Web run #411 passed its structural Node release gate and Playwright mobile browser smoke test on SHA `e005c1a512d93a5715b9b130e7eea019a2cf5ffe` (PR #108), not the current PR #112 head. The smoke test seeds local fixtures, aborts all external network requests and supplies a mocked Supabase client. It validates client-side navigation, goal/GURU behavior, sample health import and account-store logic, but it is not live Supabase, email-auth, production or deployment acceptance. [Run #411](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/44889592176)
+- The GitHub Pages workflow is configured only for pushes to `main` or manual dispatch. No Pages/deploy run appeared in the latest 100 repository workflow runs at this audit time. No production Pages URL or live deployment evidence is claimed.
+
+### Shared backend and reproducibility
+- The tracked `supabase/` tree contains ten incremental SQL migrations (daily Health sync, GPS sessions, owner RLS/RPC hardening and member goal/purpose fields). It does not contain a Supabase CLI `config.toml`, checked-in baseline schema, deterministic seed fixture or backend test suite. A clean Supabase environment cannot be proven reproducible from the repository alone.
+- The owner-scoped RLS migration revokes public/anon execution of trigger helpers and limits the GPS route RPC to authenticated callers; policies use `(select auth.uid())` for member ownership. Source inspection is positive, but there is no live two-account RLS isolation test or verified production migration state.
+- The web and Android workflows do not run a shared contract/integration suite against a controlled Supabase staging project. This remains implemented-but-unverified/blocked, not verified.
+
+### Engineering priority
+1. Keep the current isolated iOS Activity-tab candidate under full-suite CI.
+2. Once iOS is stable, integrate the six-file Finish & Save/HealthKit patch on a fresh branch and rerun all 71 unit tests plus both UI tests and packaging.
+3. Establish a reproducible Supabase test project and migration baseline before expanding cloud-backed Community or member data.
+4. Add actual Android JVM/instrumentation tests and web live-backend contract tests; do not promote static source checks into behavioral acceptance.
