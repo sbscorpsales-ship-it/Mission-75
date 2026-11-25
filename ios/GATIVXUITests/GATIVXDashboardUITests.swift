@@ -306,9 +306,11 @@ final class GATIVXDashboardUITests: XCTestCase {
         XCTAssertTrue(guestEntry.waitForExistence(timeout: 10))
         guestEntry.tap()
 
-        let homeStart = app.buttons.matching(
-            NSPredicate(format: "label CONTAINS[c] %@", "START WALK")
-        ).firstMatch
+        XCTAssertTrue(
+            app.descendants(matching: .any)["gativx-home-dashboard"].waitForExistence(timeout: 10),
+            "Explicit guest entry must display the Home dashboard before its actions are queried."
+        )
+        let homeStart = app.buttons["gativx-start-walk"]
         XCTAssertTrue(homeStart.waitForExistence(timeout: 5))
         homeStart.tap()
 
