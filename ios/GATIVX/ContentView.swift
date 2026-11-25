@@ -1278,13 +1278,12 @@ struct ContentView: View {
 
                 VStack(alignment: .leading, spacing: 12) {
                     Text("YOUR GOAL").font(.caption.weight(.bold)).foregroundStyle(.secondary)
-                    TextField("What do you want to achieve?", text: $guruGoal, axis: .vertical)
+                    TextField("What do you want to achieve?", text: $guruGoal)
                         .focused($isGuruFieldFocused)
                         .submitLabel(.done)
                         .onSubmit { dismissGuruKeyboard() }
                         .accessibilityIdentifier("gativx-guru-goal")
-                        .simultaneousGesture(TapGesture().onEnded { isGuruFieldFocused = true })
-                        .lineLimit(2...4).textFieldStyle(.roundedBorder)
+                        .textFieldStyle(.roundedBorder)
                     Text("YOUR PURPOSE").font(.caption.weight(.bold)).foregroundStyle(.secondary)
                     TextField("Why does this matter to you?", text: $guruPurpose, axis: .vertical)
                         .lineLimit(2...4).textFieldStyle(.roundedBorder)
