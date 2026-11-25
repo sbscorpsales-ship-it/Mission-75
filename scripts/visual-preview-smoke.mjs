@@ -51,7 +51,7 @@ try{
   }
   await page.locator("#profile").click();
   await page.locator("#member-profile.panel.active").waitFor({state:"visible"});
-  await capture("profile-header-entry");
+  await page.screenshot({path:path.join(out,"profile-header-entry.png"),fullPage:true});
   assert.deepEqual(errors,[],"browser runtime errors: "+errors.join("; "));
   console.log("PASS: 8 visual screens rendered and captured at 390x844.");
   console.log("PASS: Explore cards and header profile entry navigate to the expected panels.");
