@@ -106,6 +106,7 @@ try {
   await page.locator('[data-dialog="guru"]').click();
   await check((await page.locator("#dialog-message").innerText()).includes("member's own goal"), "GURU preview explains that live coaching is not connected");
   await page.locator("#dialog-close").click();
+  await open("home");
   await open("missions");
   await open("profile");
   await open("apps");
