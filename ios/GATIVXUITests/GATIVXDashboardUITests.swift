@@ -19,7 +19,7 @@ final class GATIVXDashboardUITests: XCTestCase {
         // UserDefaults persist between XCTest methods on the same simulator.
         // Force the local-only entry flag off so every test starts at Welcome,
         // independent of a guest choice made by an earlier test run.
-        app.launchArguments += ["-gativx.localModeEntered", "NO"]
+        app.launchArguments += ["-gativx-ui-test-reset-local-mode"]
         app.launch()
     }
 
@@ -279,7 +279,7 @@ final class GATIVXDashboardUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["TODAY · CONSISTENCY"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["Begin walking mission"].exists)
 
-        let communityTab = tabButton(app, label: "Community")
+        let communityTab = app.descendants(matching: .any)["gativx-tab-community"].firstMatch
         XCTAssertTrue(communityTab.waitForExistence(timeout: 5))
         communityTab.tap()
         XCTAssertTrue(communityTab.isSelected, "Selecting Community must change the active tab.")
@@ -306,9 +306,11 @@ final class GATIVXDashboardUITests: XCTestCase {
         XCTAssertTrue(guestEntry.waitForExistence(timeout: 10))
         guestEntry.tap()
 
-        let homeStart = app.buttons.matching(
-            NSPredicate(format: "label CONTAINS[c] %@", "START WALK")
-        ).firstMatch
+        XCTAssertTrue(
+            app.descendants(matching: .any)["gativx-home-dashboard"].waitForExistence(timeout: 10),
+            "Explicit guest entry must display the Home dashboard before its actions are queried."
+        )
+        let homeStart = app.buttons["gativx-start-walk"]
         XCTAssertTrue(homeStart.waitForExistence(timeout: 5))
         homeStart.tap()
 

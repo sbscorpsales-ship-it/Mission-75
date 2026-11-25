@@ -139,13 +139,12 @@ jobs:
           print("PASS: no unnecessary Contacts permission")
           PY
 
-      - name: Run GATIVX unit tests (serial simulator, 40-minute cap)
+      - name: Run full GATIVX unit and UI test suites (serial simulator, 40-minute cap)
         id: xctest
-        continue-on-error: true
         timeout-minutes: 40
         run: |
           SIMULATOR_ID="$(xcrun simctl list devices available -j | python3 -c 'import json, sys; data = json.load(sys.stdin); print(next((device["udid"] for devices in data["devices"].values() for device in devices if device["isAvailable"] and device["name"].startswith("iPhone")), ""))')"
-          echo "Selected iPhone simulator: ${SIMULATOR_ID:-<none>}"
+          echo "Selected iPhone simulator: \${SIMULATOR_ID:-<none>}"
           echo "Available simulator devices:"
           xcrun simctl list devices available
           if [ -z "$SIMULATOR_ID" ]; then
@@ -154,7 +153,7 @@ jobs:
             xcodebuild -showdestinations -project ios/GATIVX.xcodeproj -scheme GATIVX || true
             exit 1
           fi
-          xcodebuild \
+                    xcodebuild \
             -project ios/GATIVX.xcodeproj \
             -scheme GATIVX \
             -destination "platform=iOS Simulator,id=$SIMULATOR_ID" \

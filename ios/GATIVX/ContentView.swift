@@ -397,7 +397,9 @@ struct ContentView: View {
         let saveRecord: (Int?, Double?) -> Void = { queriedSteps, queriedDistance in
             DispatchQueue.main.async {
                 guard self.isFinishingSession, self.sessionStarted == start else { return }
-                let finalSteps = queriedSteps ?? self.sessionSteps
+                // A HealthKit/pedometer re-query can legitimately return zero or lag the live stream.
+                // Never let that lower a verified in-session count; retain the highest non-negative reading.
+                let finalSteps = [queriedSteps, self.sessionSteps].compactMap { $0 }.filter { $0 >= 0 }.max()
                 guard finalSteps != nil || !routePoints.isEmpty else {
                     // Do not discard an activity just because both sensors failed
                     // to return data. Keep the active session identity and durable
@@ -511,6 +513,7 @@ struct ContentView: View {
     @AppStorage("gativx.heartPointsGoal") private var heartPointsGoal = 30
     @AppStorage("gativx.dailyStepGoal") private var dailyStepGoal = 10_000
     @State private var selectedTab = 0
+    @State private var isProfilePhotoPickerPresented = false
     @State private var selectedProfilePhoto: PhotosPickerItem?
     @State private var profilePhotoData: Data?
     @State private var profilePhotoStatus = "No member photo selected."
@@ -876,6 +879,7 @@ struct ContentView: View {
                 .background(neon, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
             }
             .buttonStyle(.plain)
+            .accessibilityIdentifier("gativx-start-walk")
             Text("Track steps, active time and your GPS route.")
                 .font(.caption).foregroundStyle(.secondary)
         }
@@ -1425,13 +1429,20 @@ struct ContentView: View {
                             .font(.caption).foregroundStyle(.secondary)
                     }
                 }
-                PhotosPicker(
+                // Keep the PhotosUI picker dormant while Profile is rendered.
+                // The previous inline PhotosPicker caused the simulator's main
+                // run loop to become unresponsive when the Profile tab was opened.
+                Button {
+                    isProfilePhotoPickerPresented = true
+                } label: {
+                    Label(profilePhotoData == nil ? "Choose member photo" : "Change member photo", systemImage: "photo")
+                }
+                .photosPicker(
+                    isPresented: $isProfilePhotoPickerPresented,
                     selection: $selectedProfilePhoto,
                     matching: .images,
                     photoLibrary: .shared()
-                ) {
-                    Label(profilePhotoData == nil ? "Choose member photo" : "Change member photo", systemImage: "photo")
-                }
+                )
                 .onChange(of: selectedProfilePhoto) { _, item in
                     guard let item else { return }
                     Task { await saveMemberProfilePhoto(item) }
@@ -1699,11 +1710,11 @@ struct ContentView: View {
                     .toolbar(.hidden, for: .navigationBar)
             }
                 .tabItem { Label("Missions", systemImage: "target") }.tag(2)
-            NavigationStack {
-                communityScreen
-                    .navigationTitle("Community")
-                    .toolbar(.hidden, for: .navigationBar)
-            }
+            // This screen is a static, gated placeholder with no navigation
+            // destinations. Avoid an unnecessary NavigationStack here: the
+            // nested stack was stalling XCTest's main-thread idle/accessibility
+            // handshake when switching to Community after other tabs.
+            communityScreen
                 .tabItem { Label("Community", systemImage: "person.3").accessibilityIdentifier("gativx-tab-community") }.tag(3)
             NavigationStack { profileScreen.navigationTitle("Profile") }
                 .tabItem { Label("Profile", systemImage: "person.crop.circle") }.tag(4)
