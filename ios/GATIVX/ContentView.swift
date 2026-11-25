@@ -1700,11 +1700,11 @@ struct ContentView: View {
                     .toolbar(.hidden, for: .navigationBar)
             }
                 .tabItem { Label("Missions", systemImage: "target") }.tag(2)
-            NavigationStack {
-                communityScreen
-                    .navigationTitle("Community")
-                    .toolbar(.hidden, for: .navigationBar)
-            }
+            // This screen is a static, gated placeholder with no navigation
+            // destinations. Avoid an unnecessary NavigationStack here: the
+            // nested stack was stalling XCTest's main-thread idle/accessibility
+            // handshake when switching to Community after other tabs.
+            communityScreen
                 .tabItem { Label("Community", systemImage: "person.3").accessibilityIdentifier("gativx-tab-community") }.tag(3)
             NavigationStack { profileScreen.navigationTitle("Profile") }
                 .tabItem { Label("Profile", systemImage: "person.crop.circle") }.tag(4)
