@@ -2,7 +2,6 @@
 import { chromium } from "playwright";
 import { pathToFileURL } from "node:url";
 import path from "node:path";
-import { spawnSync } from "node:child_process";
 const browser=await chromium.launch({headless:true});
 const page=await browser.newPage({viewport:{width:390,height:844},deviceScaleFactor:1});
 const errors=[];page.on("pageerror",e=>errors.push(e.message));
@@ -343,6 +342,3 @@ console.log("PASS: premium dashboard rings, live status and journal replay");
 
 await browser.close();
 
-const previewSmoke=spawnSync(process.execPath,["scripts/visual-preview-smoke.mjs"],{stdio:"inherit"});
-if(previewSmoke.status!==0) throw new Error("GATIVX visual preview smoke test failed with exit code "+previewSmoke.status);
-console.log("PASS: GATIVX visual-completeness preview navigation and screenshots");

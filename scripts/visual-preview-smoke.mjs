@@ -27,16 +27,30 @@ try{
     await panel.waitFor({state:"visible"});
     await page.screenshot({path:path.join(out,name+".png"),fullPage:true});
   };
+  const openExplore=async()=>{
+    await page.locator('[data-panel="explore"]').click();
+    await page.locator("#explore.panel.active").waitFor({state:"visible"});
+  };
+  const openPreviewCard=async(name)=>{
+    await openExplore();
+    const card=page.locator('#explore [data-go="'+name+'"]');
+    await card.scrollIntoViewIfNeeded();
+    await card.waitFor({state:"visible"});
+    await card.click();
+    await page.locator("#"+name+".panel.active").waitFor({state:"visible"});
+  };
+
   await capture("home");
-  await page.locator('[data-panel="explore"]').click();
+  await openExplore();
   await capture("explore");
   for(const name of ["missions","community","member-profile","apps","notifications"]){
-    // Each preview card lives inside Explore; return there before selecting the next screen.
-    await page.locator('[data-panel="explore"]').click();
-    await page.locator('[data-go="'+name+'"]').click();
+    // Wait for Explore to become visible and the selected card to enter the viewport
+    // before interacting; this avoids racing the panel's display change after navigation.
+    await openPreviewCard(name);
     await capture(name);
   }
   await page.locator("#profile").click();
+  await page.locator("#member-profile.panel.active").waitFor({state:"visible"});
   await capture("profile-header-entry");
   assert.deepEqual(errors,[],"browser runtime errors: "+errors.join("; "));
   console.log("PASS: 8 visual screens rendered and captured at 390x844.");
