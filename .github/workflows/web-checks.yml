@@ -9,6 +9,10 @@ on:
       - "sw.js"
       - "scripts/check-web.mjs"
       - "scripts/browser-smoke.mjs"
+      - "gativx-design-c-review.html"
+      - "gativx-logo.svg"
+      - "scripts/design-review-smoke.mjs"
+      - "GATIVX_DESIGN_C_REVIEW_README.md"
       - ".github/workflows/web-checks.yml"
   pull_request:
     branches: [main]
@@ -41,3 +45,12 @@ jobs:
         run: npx playwright install chromium
       - name: Run mobile browser smoke test
         run: node scripts/browser-smoke.mjs
+      - name: Run GATIVX Design C review navigation and screenshot checks
+        run: node scripts/design-review-smoke.mjs
+      - name: Upload GATIVX Design C review screenshots
+        uses: actions/upload-artifact@v4
+        with:
+          name: GATIVX-Design-C-Review-Screenshots
+          path: artifacts/gativx-design-c-review/*.png
+          if-no-files-found: error
+          retention-days: 14
