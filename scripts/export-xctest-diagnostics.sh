@@ -4,8 +4,8 @@
 # inspectable without requiring a developer to open the full .xcresult bundle.
 set -uo pipefail
 
-RESULT_PATH="\${1:-build/GATIVX.xcresult}"
-OUTPUT_DIR="\${2:-build/GATIVX-XCTest-Diagnostics}"
+RESULT_PATH="${1:-build/GATIVX.xcresult}"
+OUTPUT_DIR="${2:-build/GATIVX-XCTest-Diagnostics}"
 STATUS_FILE="$OUTPUT_DIR/export-status.txt"
 
 mkdir -p "$OUTPUT_DIR"
@@ -22,7 +22,7 @@ run_json_export() {
   local filename="$2"
   shift 2
 
-  if "$@" > "$OUTPUT_DIR/$filename" 2> "$OUTPUT_DIR/\${label}.stderr"; then
+  if "$@" > "$OUTPUT_DIR/$filename" 2> "$OUTPUT_DIR/${label}.stderr"; then
     printf 'PASS: %s\n' "$label" | tee -a "$STATUS_FILE"
   else
     local code=$?
@@ -33,11 +33,10 @@ run_json_export() {
 
 run_directory_export() {
   local label="$1"
-  local directory="$2"
-  shift 2
+  shift
 
   mkdir -p "$OUTPUT_DIR"
-  if "$@" > "$OUTPUT_DIR/\${label}.log" 2>&1; then
+  if "$@" > "$OUTPUT_DIR/${label}.log" 2>&1; then
     printf 'PASS: %s\n' "$label" | tee -a "$STATUS_FILE"
   else
     local code=$?
@@ -65,11 +64,11 @@ run_json_export profile-navigation-test-activities profile-navigation-test-activ
   xcrun xcresulttool get test-results activities --path "$RESULT_PATH" \
   --test-id "GATIVXDashboardUITests/testDashboardSectionsMetricsAndPrimaryNavigation()" --format json
 
-run_directory_export failure-attachments attachments \
+run_directory_export failure-attachments \
   xcrun xcresulttool export attachments --path "$RESULT_PATH" \
   --output-path "$OUTPUT_DIR/attachments" --only-failures
 
-run_directory_export diagnostics diagnostics \
+run_directory_export diagnostics \
   xcrun xcresulttool export diagnostics --path "$RESULT_PATH" \
   --output-path "$OUTPUT_DIR/diagnostics"
 
