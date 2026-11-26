@@ -133,6 +133,10 @@ private fun GativxAndroidScreen() {
     }
 
     fun startWalkOn() {
+        if (WalkOnStartPolicy.shouldBlockNewSession(WalkOnStore.activeDraftState(context))) {
+            walkStatus = WalkOnStore.status(context)
+            return
+        }
         val existingWalk = WalkOnStore.active(context)
         if (existingWalk != null && existingWalk.ownerUserId != session?.userId) {
             walkStatus = "A WalkOn route belongs to another account or was recorded offline. Finish or explicitly assign it before starting a new route."
