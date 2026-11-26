@@ -265,13 +265,16 @@ internal object WalkOnStore {
         .put("points", JSONArray().also { array -> session.points.forEach { array.put(encodePoint(it)) } })
         .toString()
 
+    internal fun decodePointsStrict(pointsJson: JSONArray): List<WalkOnPoint> =
+        (0 until pointsJson.length()).map { index ->
+            decodePoint(pointsJson.getJSONObject(index))
+        }
+
     private fun decodeSession(json: JSONObject): WalkOnSession {
         val pointsJson = json.optJSONArray("points") ?: JSONArray()
         // A malformed point makes the encrypted record unreadable. Never
         // silently drop route points and then overwrite the original payload.
-        val points = (0 until pointsJson.length()).map { index ->
-            decodePoint(pointsJson.getJSONObject(index))
-        }
+        val points = decodePointsStrict(pointsJson)
         return WalkOnSession(
             id = json.getString("id"),
             activity = json.optString("activity", "Walking"),
