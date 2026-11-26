@@ -467,4 +467,53 @@ final class GATIVXDashboardUITests: XCTestCase {
         XCTAssertTrue(dashboard.waitForExistence(timeout: 10))
     }
 
+
+    func testDashboardFillsDeviceViewportAndExposesAllFiveTabs() {
+        let app = XCUIApplication()
+        launchFreshGuestApp(app)
+
+        let guestEntry = app.buttons["gativx-continue-guest"]
+        XCTAssertTrue(guestEntry.waitForExistence(timeout: 10),
+                      "The explicit local-only entry must be available before testing the member shell.")
+        guestEntry.tap()
+
+        let window = app.windows.firstMatch
+        XCTAssertTrue(window.waitForExistence(timeout: 5),
+                      "The iPhone app window must be measurable for viewport acceptance.")
+        let dashboard = app.descendants(matching: .any)["gativx-home-dashboard"].firstMatch
+        XCTAssertTrue(dashboard.waitForExistence(timeout: 10),
+                      "Member entry must render the full Home dashboard.")
+
+        let tabBar = app.tabBars.firstMatch
+        XCTAssertTrue(tabBar.waitForExistence(timeout: 5),
+                      "The persistent five-tab navigation must be visible after member entry.")
+
+        XCTAssertGreaterThan(dashboard.frame.width, window.frame.width * 0.95,
+                             "Home must occupy nearly the full available iPhone width.")
+        XCTAssertGreaterThan(dashboard.frame.height, window.frame.height * 0.68,
+                             "Home must occupy the available screen height, not a narrow middle strip.")
+        XCTAssertGreaterThanOrEqual(dashboard.frame.minX, window.frame.minX - 1)
+        XCTAssertLessThanOrEqual(dashboard.frame.maxX, window.frame.maxX + 1)
+        XCTAssertGreaterThanOrEqual(dashboard.frame.maxY, tabBar.frame.minY - 2,
+                                     "Home content must extend down to the persistent tab bar.")
+        XCTAssertGreaterThan(tabBar.frame.width, window.frame.width * 0.95,
+                             "Bottom navigation must span the device width.")
+        XCTAssertGreaterThanOrEqual(tabBar.frame.maxY, window.frame.maxY - 12,
+                                     "Bottom navigation must remain attached to the bottom safe area.")
+        XCTAssertEqual(tabBar.buttons.count, 5,
+                       "Home, Activity, Missions, Community and Profile must all be present together.")
+
+        for label in ["Home", "Activity", "Missions", "Community", "Profile"] {
+            let tab = tabBar.buttons.matching(NSPredicate(format: "label == %@", label)).firstMatch
+            XCTAssertTrue(tab.waitForExistence(timeout: 5), "Missing bottom navigation tab: \\(label)")
+            XCTAssertTrue(tab.isHittable, "The \\(label) tab must be visible and tappable.")
+            XCTAssertGreaterThanOrEqual(tab.frame.minX, window.frame.minX - 1)
+            XCTAssertLessThanOrEqual(tab.frame.maxX, window.frame.maxX + 1)
+        }
+
+        let screenshot = XCTAttachment(screenshot: app.screenshot())
+        screenshot.name = "GATIVX-Full-Viewport-Five-Tabs"
+        screenshot.lifetime = .keepAlways
+        add(screenshot)
+    }
 }
