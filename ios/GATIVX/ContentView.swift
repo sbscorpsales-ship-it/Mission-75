@@ -1195,7 +1195,7 @@ struct ContentView: View {
                 }
             }.padding(16)
         }
-        .safeAreaInset(edge: .bottom, spacing: 0) { Color.clear.frame(height: 76) }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(pageBackground.ignoresSafeArea())
         .accessibilityIdentifier("gativx-activity-screen")
         .fileImporter(
@@ -1250,7 +1250,7 @@ struct ContentView: View {
                 Button("Open GATIVX Guru") { isGuruPresented = true }.buttonStyle(.bordered)
             }.padding(16)
         }
-        .safeAreaInset(edge: .bottom, spacing: 0) { Color.clear.frame(height: 76) }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(pageBackground.ignoresSafeArea())
         .accessibilityIdentifier("gativx-missions-screen")
     }
@@ -1394,7 +1394,6 @@ struct ContentView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .padding(20)
-        .safeAreaInset(edge: .bottom, spacing: 0) { Color.clear.frame(height: 76) }
         .background(pageBackground.ignoresSafeArea())
     }
 
@@ -1579,7 +1578,6 @@ struct ContentView: View {
             }
         }
         .onAppear { loadRunJeetDailyStepsArchive() }
-        .safeAreaInset(edge: .bottom, spacing: 0) { Color.clear.frame(height: 76) }
         .accessibilityIdentifier("gativx-profile-screen")
     }
 
@@ -1725,6 +1723,45 @@ struct ContentView: View {
         }.preferredColorScheme(dashboardColorScheme)
     }
 
+
+    /// Fixed full-width member navigation. The iOS floating system tab bar
+    /// was detached from the bottom edge and could overlay scroll content.
+    /// This dock preserves the five destinations while reserving real layout space.
+    private var memberBottomNavigation: some View {
+        HStack(spacing: 0) {
+            tabNavigationItem(title: "Home", symbol: "house.fill", tag: 0)
+            tabNavigationItem(title: "Activity", symbol: "figure.walk", tag: 1)
+            tabNavigationItem(title: "Missions", symbol: "target", tag: 2)
+            tabNavigationItem(title: "Community", symbol: "person.3", tag: 3)
+            tabNavigationItem(title: "Profile", symbol: "person.crop.circle", tag: 4)
+        }
+        .padding(.horizontal, 6)
+        .padding(.top, 8)
+        .padding(.bottom, 6)
+        .frame(maxWidth: .infinity)
+        .background(pageBackground)
+        .overlay(alignment: .top) { Rectangle().fill(neon.opacity(0.22)).frame(height: 1) }
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("gativx-bottom-navigation")
+    }
+
+    private func tabNavigationItem(title: String, symbol: String, tag: Int) -> some View {
+        Button { selectedTab = tag } label: {
+            VStack(spacing: 4) {
+                Image(systemName: symbol).font(.system(size: 19, weight: .semibold))
+                Text(title).font(.system(size: 10, weight: .semibold))
+                    .lineLimit(1).minimumScaleFactor(0.8)
+            }
+            .foregroundStyle(selectedTab == tag ? neon : Color.secondary)
+            .frame(maxWidth: .infinity, minHeight: 48)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(title)
+        .accessibilityIdentifier("gativx-tab-\(title.lowercased())")
+        .accessibilityAddTraits(selectedTab == tag ? .isSelected : [])
+    }
+
     var body: some View {
         // Registration/sign-in is the first-run entry point. The dashboard is
         // shown only after account authentication or an explicit local-only choice.
@@ -1802,8 +1839,14 @@ struct ContentView: View {
             isProfilePhotoPickerPresented = false
             Task { await saveMemberProfilePhoto(item) }
         }
+        .toolbar(.hidden, for: .tabBar)
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            memberBottomNavigation
+                .background(pageBackground.ignoresSafeArea(edges: .bottom))
+        }
         .tint(neon)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(pageBackground.ignoresSafeArea())
         .preferredColorScheme(dashboardColorScheme)
         .onAppear {
             // Migrate existing journeys once, preserving the duration they were already using.
