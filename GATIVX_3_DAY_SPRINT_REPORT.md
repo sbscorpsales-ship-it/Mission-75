@@ -2020,3 +2020,11 @@ The owner reported that Guru appeared blank and restated that Guru is the heart 
 3. Verify that all Guru controls work, daily markers persist across app relaunch, and the Start Walk action transitions cleanly into Activity.
 4. Add a separately scoped follow-up for per-member cloud persistence, measured nutrition logging, richer recovery inputs, and reviewed video lessons.
 5. Keep release status **NOT READY** until full CI, simulator visual review, IPA package verification and physical-device acceptance are complete.
+
+### 2026-11-26T13:00:30Z — follow-up QA hardening
+- Preserved both visible brand strings required by the existing first-run CI guard: “GATIVX GURU” and “NURUN · YOUR PERSONAL GUIDE”; navigation title is “GATIVX Guru · NURUN”.
+- Updated the existing CI source invariant that previously expected Guru to be a .sheet; it now requires .fullScreenCover and the new Guru module/accessibility identifiers. This prevents the old partial-sheet assumption from falsely failing the new design.
+- Added stable accessibility IDs for the walking, nutrition and recovery check-in actions.
+- Expanded the UI test to exercise all three daily check-ins, including rerun-safe handling when today's completion is already saved.
+- Latest PR #135 head at this report update: df0ca7d086ac3492e6c3664ad17ec4ba315bdd84.
+- Workflow run #660 (ID 45824928668) is pending/queued; runs #657–#659 were cancelled by newer commits under the branch concurrency policy. Earlier run #656 is still showing in progress, but its real-time safeguard step failed because the CI invariant expected the old Guru sheet; the assertion was corrected on the latest branch. Wait for run #660 and inspect its logs rather than treating older cancelled runs as validation.
