@@ -111,9 +111,21 @@ BEGIN
   END IF;
 
   IF has_table_privilege('anon', 'public.gativx_postgres_default_probe', 'SELECT')
+     OR has_table_privilege('anon', 'public.gativx_postgres_default_probe', 'INSERT')
+     OR has_table_privilege('anon', 'public.gativx_postgres_default_probe', 'UPDATE')
+     OR has_table_privilege('anon', 'public.gativx_postgres_default_probe', 'DELETE')
      OR has_table_privilege('authenticated', 'public.gativx_postgres_default_probe', 'SELECT')
+     OR has_table_privilege('authenticated', 'public.gativx_postgres_default_probe', 'INSERT')
+     OR has_table_privilege('authenticated', 'public.gativx_postgres_default_probe', 'UPDATE')
+     OR has_table_privilege('authenticated', 'public.gativx_postgres_default_probe', 'DELETE')
      OR has_table_privilege('anon', 'public.gativx_supabase_admin_default_probe', 'SELECT')
-     OR has_table_privilege('authenticated', 'public.gativx_supabase_admin_default_probe', 'SELECT') THEN
+     OR has_table_privilege('anon', 'public.gativx_supabase_admin_default_probe', 'INSERT')
+     OR has_table_privilege('anon', 'public.gativx_supabase_admin_default_probe', 'UPDATE')
+     OR has_table_privilege('anon', 'public.gativx_supabase_admin_default_probe', 'DELETE')
+     OR has_table_privilege('authenticated', 'public.gativx_supabase_admin_default_probe', 'SELECT')
+     OR has_table_privilege('authenticated', 'public.gativx_supabase_admin_default_probe', 'INSERT')
+     OR has_table_privilege('authenticated', 'public.gativx_supabase_admin_default_probe', 'UPDATE')
+     OR has_table_privilege('authenticated', 'public.gativx_supabase_admin_default_probe', 'DELETE') THEN
     RAISE EXCEPTION 'new tables still inherit API-role privileges';
   END IF;
 
