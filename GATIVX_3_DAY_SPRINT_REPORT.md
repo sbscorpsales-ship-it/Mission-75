@@ -3135,3 +3135,53 @@ Run [#45891894462](https://github.com/sbscorpsales-ship-it/Mission-75/actions/ru
 - Both the outer GitHub artifact ZIP and nested unsigned IPA pass ZIP integrity. The IPA contains Payload/GATIVX.app/GATIVX, a 4,030,192-byte Mach-O executable with magic cffaedfe; bundle identifier/version are com.paramitsolutions.gativx / 1.0.0 / build 1. No embedded provisioning profile or _CodeSignature is present, as expected for an unsigned build.
 - The PR #136 built Info.plist also lacks UILaunchScreen, UILaunchStoryboardName and UILaunchStoryboards. This corroborates that the missing generated launch-screen key predates PR #145 and affects the exact priority PR #136 head too.
 - The PR #136 xcresult contains four 960 x 1440 app-window PNG attachments, but no 1206 x 2622 full-device capture. Its UI suite therefore did not measure or visually evidence the physical device viewport. The later PR #145 full-device Welcome and Dashboard captures directly show the centered 2:3 app window and black letterboxing.
+
+
+### Principal-engineer checkpoint — 2026-11-27 03:42 IST
+
+#### Repository state verified
+- Default branch `main` latest commit observed: `143889db3e72540fb478b76c486082f45395e9bd` (no new main commit in the latest commit search).
+- PR #136 remains open/draft at exact head `31e5b70d85537113e74dd003d06b3ae95ba323f4`; current run #45847572105 is completed/failure.
+- PR #146 remains open/draft at exact head `e03b4ffc359fcc5cf1a31236ba53f6b0007f082d`; run #45897137804 is still in progress at the simulator-build step after its XCTest step failed.
+- PR #147 is a new open/draft follow-up, branch `fix/gativx-reserve-dock-safe-area-20261127`, exact head `480e90e1324a5fa5302d7d0eed59193d08a2142b`, based on PR #146 exact head. Its workflow run was not yet returned by the commit-run lookup.
+- PR #107 remains open/unmerged at head `c19bdbd307df7048cefd86bd3e6064ac4f4e3042`; PR #112 remains open/unmerged at head `b6c04d41dc67bd191ed0cf8966331eb5661a9887`. No PR was merged or closed. No source change was made to #107 or #112.
+
+#### Priority PR #136 — exact-head evidence
+- Inspected PR diff and branch source at `31e5b70d85537113e74dd003d06b3ae95ba323f4`; it replaces native `TabView` plus custom dock with one selected-screen switch and five explicit dock buttons, moves Profile picker sheet hosting to the root, adds Guru keyboard fallback/accessibility containment and a five-tab navigation test.
+- Run #45847572105 on iPhone 17 Pro / iOS Simulator 26.4.1: unit suite **76 passed, 0 failed**; UI suite **9 executed, 8 passed, 1 failed**. The failure is `testDashboardFillsDeviceViewportAndExposesAllFiveTabs` at dock height **113.0625 pt > 76 pt**. Activity viewport relative to the app window, five-tab switching, Guru keyboard dismissal, Profile screen and other UI cases passed. The full-device display itself was not measured by this PR #136 test: it compared dashboard geometry only with `app.windows.firstMatch`.
+- The PR #136 screenshot attachment is **960 x 1440 px** (320 x 480 pt at 3x), an app-window capture rather than a full 1206 x 2622 device capture. It visibly includes a large black top band. Therefore PR #136 did not establish full-device viewport acceptance.
+- Downloaded the latest run #45847572105 IPA artifact #15146711639. Outer artifact ZIP and nested `GATIVX-unsigned.ipa` both pass ZIP integrity. The app contains a 4,030,192-byte arm64 Mach-O executable; bundle ID/version/build are `com.paramitsolutions.gativx / 1.0.0 / 1`. Built `Info.plist` has no `UILaunchScreen`, `UILaunchStoryboardName` or `UILaunchStoryboards`; there is no `_CodeSignature` or embedded provisioning profile. This is a structurally valid **unsigned** package, not an installable signed release.
+
+#### PR #146 — launch-screen metadata and latest test evidence
+- Exact diff at `e03b4ffc359fcc5cf1a31236ba53f6b0007f082d` changes two files: `.github/workflows/gativx-ios.yml` adds source/spec assertions and validates generated simulator/IPA `UILaunchScreen`; `ios/gativx-project.yml` adds `UILaunchScreen: {}` to the XcodeGen app target.
+- Run #45897137804 job #140173722472: project generation, scheme validation, first-run auth/portrait/permission checks, HealthKit entitlement source check and tracking safeguards completed successfully. Unit suite **76 passed, 0 failed**. The UI result bundle shows **5 UI test cases started: 4 passed and 1 failed assertion; 5 of the 10 declared UI test methods had not started when the test step ended. No final XCTest suite summary or cancelled count was emitted**, so the complete UI suite is not verified.
+- Passed UI cases include `testActivityScreenFillsViewportAboveFixedBottomNavigation`, `testAllFiveTabsSwitchScreensFromOneNavigationDock`, `testCommunityTabAfterMissionsFromFreshDashboard`, and `testDashboardFillsDeviceViewportAndExposesAllFiveTabs`. The latter now compares the app window with `XCUIScreen.main.screenshot()`; the 1206 x 2622 full-device capture and UI metrics show the app window filling the iPhone 17 Pro simulator display, with top origin at the top edge. The Activity screenshot is also 1206 x 2622 and shows Activity filling the usable viewport above the dock. These are simulator results, not physical-iPhone evidence.
+- The failing case is `testDashboardSectionsMetricsAndPrimaryNavigation`: mission card frame bottom **936.6667 pt** is below/behind bottom navigation top **785 pt**. The mission card was hittable, so the existing non-overlap assertion correctly failed. The UI session subsequently waited for the app to idle after a Guru walking-check-in tap and ended without a suite summary. The job continued to the simulator build; at this checkpoint step 14 was still in progress and Release/IPA steps had not yet run. The downloaded 24,966,141-byte XCTest artifact contains the full-device Activity and Home PNG attachments; the diagnostics companion explicitly says no completed `build/GATIVX.xcresult` bundle was produced.
+
+#### New safe engineering follow-up — PR #147
+- Created isolated branch `fix/gativx-reserve-dock-safe-area-20261127` from PR #146's exact head; committed `480e90e1324a5fa5302d7d0eed59193d08a2142b` (one file: `ios/GATIVX/ContentView.swift`).
+- Replaced the 56 pt clear safe-area placeholder plus bottom overlay with the actual 56 pt `memberBottomNavigation` inside `.safeAreaInset(edge: .bottom)`. This makes the dock itself reserve layout space for the member scroll views instead of allowing Home content to scroll behind an overlay. Existing dock frame (56 pt), 48 pt touch targets, five destinations, Design C and all content remain unchanged.
+- Opened draft PR #147 against PR #146's exact branch/head. Existing full-device, Activity, five-tab and mission-card non-overlap assertions are retained; no test was skipped or weakened. No CI result was available yet for #147 at checkpoint time.
+
+#### Gap ledger status changes
+| Area | Current status | Evidence / limitation |
+|---|---|---|
+| Full-device simulator viewport | verified in PR #146 partial UI run | Full-device Dashboard assertion and full-size screenshot pass; generated plist/Release IPA metadata check still pending because build step had not completed |
+| Activity viewport | verified in PR #146 simulator UI | Full-device Activity screenshot and viewport assertion pass |
+| Five-destination navigation | verified in PR #136 and PR #146 simulator UI | Explicit five-destination switch test passes |
+| Dock <=76 pt | verified in PR #146 partial UI; PR #136 failed | PR #146 compact-dock assertion passed; PR #136 exact head measured 113.0625 pt |
+| Home mission-card clearance from dock | blocked / failing | PR #146 measured mission card maxY 936.6667 pt vs dock minY 785 pt; PR #147 safe-area reservation fix awaits CI |
+| Guru keyboard dismissal | verified in PR #136 simulator UI | PR #136 Guru keyboard test passed; PR #146 suite did not reach its Guru keyboard method before interruption |
+| Profile root-hosted photo picker | implemented-but-unverified | Source guard passed; no completed photo selection interaction test |
+| Tracking safeguards | verified as CI checks | PR #136 run completed safeguards step; PR #146 safeguard step completed successfully; no physical sensor/background acceptance |
+| Finish & Save / recovery | implemented-but-unverified | Unit regression suite passes; actual reported iPhone HealthKit save failure needs signed-device evidence |
+| HealthKit / background GPS | implemented-but-unverified | Static/unit safeguards only; no physical iPhone evidence |
+| Signed iOS installation | blocked | Current IPA is unsigned; no Apple signing identity/provisioning profile or device installation evidence |
+
+#### Files/commits, test counts and next actions
+- PR #147 changed only `ios/GATIVX/ContentView.swift`, commit `480e90e1324a5fa5302d7d0eed59193d08a2142b`. No test result yet.
+- Report update changes only this report file on `docs/gativx-sprint-report-20261125`; commit SHA is recorded after this append.
+1. Poll PR #146 run #45897137804 until the simulator and unsigned Release/IPA steps finish. Inspect generated simulator and IPA Info.plist for `UILaunchScreen`, Mach-O executable, ZIP integrity, and exact job conclusions.
+2. Poll PR #147 for its exact-head workflow run. Inspect the complete UI result; require the mission card to end above the 56 pt dock while full-device window, Activity, five tabs, dock <=76 pt, Guru keyboard and Profile checks remain green.
+3. If the UI suite again stalls, use the test bundle/session log to identify the exact blocking interaction; do not raise timeouts or drop tests to manufacture a green result.
+4. Keep #107 untouched, #112 unmerged, all PRs open and Design C locked. Do not claim signed install, physical HealthKit, background GPS, Android device behavior or production deployment without direct evidence.
