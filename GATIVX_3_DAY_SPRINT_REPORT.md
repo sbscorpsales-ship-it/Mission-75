@@ -2469,3 +2469,95 @@ The outer artifact ZIPs and inner IPA ZIP passed integrity checks. The IPA conta
 5. Continue physical iPhone HealthKit/background GPS, signing/installation and Android device acceptance as separate blocked gates.
 
 **No PR was merged. PR #107 remains untouched; PR #112 and #114 remain open and unmerged. No production deployment or database change occurred.**
+
+
+## Run 9 — PR #140 correction, run #673 compile failure, and release-artifact false positive
+
+**Snapshot timestamp:** 2026-11-26T17:31:00Z (23:01 IST)  
+**Default branch head:** `143889db3e72540fb478b76c486082f45395e9bd`  
+**Open PR search:** 42 open pull requests.
+
+### Run #673 — exact result on the first PR #140 head
+
+[CI run #45866797556](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45866797556)  
+Job: `140071595602`  
+Tested head: `baf74d7abcff8222fec0101c0fabcc4b9ea12db1`  
+Conclusion: **failure**.
+
+The initial PR #140 version attempted to conditionally compose scenes with `if #available` inside `SceneBuilder`. Xcode's result bundle and job log report the exact compiler error:
+
+`ios/GATIVX/GATIVXApp.swift:18:9: error: closure containing control flow statement cannot be used with result builder 'SceneBuilder'`
+
+- XCTest: **0 tests executed; 0 passed, 0 failed, 0 skipped**. Both test suites were cancelled because the app build failed.
+- iOS Simulator build: failed on the same compiler error.
+- Unsigned iPhone Release build: failed on the same compiler error.
+- HealthKit source-entitlement check: passed.
+- Tracking safeguard source step: passed.
+- Simulator privacy/entitlement source validation: passed, but this did not prove a valid built app.
+- The packaging and upload steps nevertheless reported success. This was a false positive and the resulting artifacts were inspected.
+
+### Run #673 artifact integrity — packaging false positive
+
+[Run #673 artifacts](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45866797556)
+
+- Unsigned IPA artifact [15141460028](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45866797556/artifacts/15141460028): 1,479 bytes; SHA-256 `28b639ce8278bc6213da0e0fb41ec0ef1da5e7857bc5ed17c022693073c6f800`, matching GitHub's digest.
+- Simulator artifact [15139519749](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45866797556/artifacts/15139519749): 2,057 bytes; SHA-256 `5339edd7a75c664a2fe33630ff62645de093eef4da79b7cffbf2a8a392e0aaa7`, matching GitHub's digest.
+- Both outer ZIPs pass ZIP integrity, but the embedded app bundles are incomplete.
+- The IPA contains only `Payload/`, `Payload/GATIVX.app/`, `Info.plist` and `PkgInfo`. Its Info.plist declares `CFBundleExecutable=GATIVX`, but `Payload/GATIVX.app/GATIVX` is absent.
+- The simulator app contains `Info.plist`, `PkgInfo` and `__preview.dylib`, but no `GATIVX` executable.
+- Root cause: the workflow checked only that the .app directory and resulting ZIP existed. It did not check that the declared executable existed, was non-empty, or was executable. The package step ran despite the failed Release build because it used `if: always()`.
+
+**Conclusion:** run #673 did not produce a usable simulator app or IPA. The successful ZIP creation/upload statuses must not be reported as successful app builds.
+
+### PR #140 — invalid scene-role experiment reverted
+
+[PR #140](https://github.com/sbscorpsales-ship-it/Mission-75/pull/140) remains open/draft, based on PR #139.
+
+- Current head: `0fa5a4f5298d91d10dd5660d5ddefb5103518c78`.
+- The invalid conditional `SceneBuilder` change was reverted in that commit. The net PR diff now contains only `ios/GATIVX/ContentView.swift`.
+- Remaining candidate change: `.background(pageBackground, ignoresSafeAreaEdges: [])` on the 56 pt bottom dock. This keeps the root-painted home-indicator area outside the dock background/frame while retaining the existing 48 pt touch targets.
+- [Run #45867343777](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45867343777), run #674, job `140073462922`, is **in progress** on the reverted head. Checkout, Xcode selection, XcodeGen, project generation, scheme validation and first-run auth/portrait/permission checks passed. The full serial unit/UI test step is running; no final counts are available yet.
+- The full-device 2:3 window issue remains unresolved. No scene-role fix is claimed.
+
+### PR #141 — release artifact validation correction
+
+[PR #141](https://github.com/sbscorpsales-ship-it/Mission-75/pull/141) is open/draft, stacked on PR #139, with one workflow file changed.
+
+Current head: `3e6db077c936088f3b9213bbec984b47bf8820c1`.
+
+Changes in `.github/workflows/gativx-ios.yml`:
+- Verify the simulator app's declared `CFBundleExecutable` exists, is non-empty and executable before upload.
+- Gate simulator artifact upload on successful simulator build and privacy/executable validation.
+- Gate IPA packaging on a successful unsigned Release build.
+- Verify the Release app executable before copying it.
+- Verify the packaged IPA contains the declared non-empty executable and valid Mach-O magic.
+- Gate IPA upload on successful packaging.
+- Add source safeguards that preserve the artifact gating and executable checks.
+
+[Run #45867641292](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45867641292), run #677, job `140074693332`, is **in progress**. Checkout passed and Xcode selection is running; no test/build result is available yet.
+
+### Corrected current gap ledger
+
+| Area | Status | Evidence / next action |
+|---|---|---|
+| Five-destination navigation | verified | All five destinations passed on run #672. |
+| Dock <=76 pt | blocked | Still 113.0625 pt on run #672; PR #140 candidate pending run #674. |
+| Full-device window / Activity full-screen | blocked | Run #672 screenshot confirms centered 2:3 app window. The conditional scene-role attempt in run #673 did not compile and has been reverted. Investigate simulator scene/window state separately. |
+| Guru goal entry / keyboard dismissal | verified in simulator | Goal field tap, text entry and dismissal passed run #672; physical device remains unverified. |
+| Profile root-hosted photo picker | implemented-but-unverified | Source guard passed; actual Photos library selection not exercised. |
+| Tracking/HealthKit source safeguards | verified (source/CI only) | 68 checks passed on run #672; physical HealthKit/background GPS remains unverified. |
+| Simulator app / IPA packaging | blocked pending PR #141 | Run #673 produced incomplete app bundles despite successful ZIP/upload steps. PR #141 adds executable checks and build-outcome gating; CI pending. |
+| Physical iPhone signing/installation | blocked | Requires signing/provisioning and a real-device acceptance path. |
+| Android/Web Hub device/browser acceptance | implemented-but-unverified | Prior CI evidence is in earlier report sections; device/production acceptance remains outstanding. |
+| Community/notifications delivery | missing/gated | Still not implemented as live delivery. |
+
+### Protected work
+
+PR #107 remains untouched at `c19bdbd307df7048cefd86bd3e6064ac4f4e3042`. PR #112 remains open/unmerged at `b6c04d41dc67bd191ed0cf8966331eb5661a9887`. PR #114 remains open/unmerged at `87318182360d4369ea2f7a773a27dd3fa3e7c558`. No PR was merged; no production deployment or database change occurred.
+
+### Next actions
+
+1. Inspect the completed run #674 logs and screenshot attachments. Verify the dock's actual measured frame remains <=76 pt.
+2. Inspect run #677. Confirm that a failed build now skips packaging/upload and that a successful build produces a Mach-O executable in both simulator and IPA artifacts.
+3. Diagnose the centered 2:3 app window separately; do not ship an uncompiled SceneBuilder workaround or claim full-screen acceptance.
+4. Preserve all existing UI assertions, Guru behavior, five destinations and tracking safeguards.
