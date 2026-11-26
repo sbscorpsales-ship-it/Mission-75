@@ -2201,7 +2201,7 @@ Both changes are on the existing isolated PR #136 branch; no tests or assertions
 - Commit `6b40ee24bb7864b9d11d7eb76a909ab71190c606`: removed the extra safe-area-ignoring background attached directly to the bottom inset. The root already paints the full page background through its own safe-area-ignoring background modifier. This is a candidate fix for the 113.0625 pt measured accessibility frame; it is **not yet CI-verified**.
 - Commit `31e5b70d85537113e74dd003d06b3ae95ba323f4`: corrected the Guru UI test to use `scrollTowardTop` to bring the goal field back into view after the lower check-ins. The existing hittability, keyboard, text entry and journey assertions remain intact.
 
-At this snapshot, `fetch_commit_workflow_runs` had not yet surfaced a PR-triggered run for the new head `31e5b70d85537113e74dd003d06b3ae95ba323f4`. Do not treat the candidate corrections as verified until a new full CI run completes on that exact head.
+A new PR-triggered run has now surfaced for the exact latest head `31e5b70d85537113e74dd003d06b3ae95ba323f4`: [run #670](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45847572105). At the latest check, the workflow was **in progress** in the full serial iOS unit/UI test step; project generation, scheme validation and first-run/auth/portrait/permissions safeguards had completed successfully. Result bundle, tracking safeguards, simulator/Release builds and IPA packaging had not yet run. Do not treat either candidate correction as verified until run #670 completes on this exact head.
 
 ### IPA artifact integrity review
 
