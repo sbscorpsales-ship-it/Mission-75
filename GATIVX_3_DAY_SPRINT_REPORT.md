@@ -2160,3 +2160,74 @@ Status meanings: **verified** = the stated source/test/live-read check passed; *
 - Complete Android PR #137 run #45840866819 artifact review; do not claim device acceptance from CI.
 - Keep PRs #107, #112 and #114 untouched and unmerged. Keep all new PRs draft until their gates and owner acceptance pass.
 - Do not apply live Supabase migrations or deploy production until migration history and security review are resolved.
+
+
+## Run 6 — PR #136 CI diagnosis and targeted corrections
+
+**Snapshot timestamp:** 2026-11-26T15:18:16.259Z  
+**PR:** [#136 — single five-destination navigation and compact dock](https://github.com/sbscorpsales-ship-it/Mission-75/pull/136)  
+**CI run:** [#669](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45839928310)  
+**Tested head:** `4c686c06abbb41cf40c5388896f9403d74037b2a`  
+**Latest branch commit after this run:** `31e5b70d85537113e74dd003d06b3ae95ba323f4`
+
+### Exact CI result on tested head
+
+- Unit tests: **76 passed, 0 failed**.
+- UI tests: **9 executed, 7 passed, 2 failed, 0 unexpected failures**.
+- Tracking safeguard step: completed successfully.
+- HealthKit source-entitlement check: completed successfully.
+- iPhone Simulator build: succeeded.
+- Unsigned iPhone Release build: succeeded.
+- Unsigned IPA package/upload: succeeded.
+- Overall workflow/release validation: **FAILED because XCTest failed**. This is not a release-ready build.
+
+UI tests that passed:
+- Activity full-viewport test.
+- All five destinations switch from the single dock.
+- Community after Missions.
+- Guru keyboard dismissal in its dedicated fresh-Home test.
+- Home Start Walk navigation.
+- Notifications sheet dismissal.
+- Profile direct from fresh Home.
+
+Two UI failures:
+1. `testDashboardFillsDeviceViewportAndExposesAllFiveTabs`: measured accessibility frame for the bottom navigation was **113.0625 pt**, exceeding the **76 pt** maximum. The dock's inner HStack is explicitly 56 pt; the surrounding safe-area background expansion was a plausible contributor, not yet proven as the sole cause.
+2. `testDashboardSectionsMetricsAndPrimaryNavigation`: the Guru goal field was not hittable after the test had scrolled down to the walking, nutrition and recovery cards. Source order confirms the goal setup card is above those cards; the test then incorrectly continued scrolling down when it needed to return to the top.
+
+### Targeted changes committed after run #669
+
+Both changes are on the existing isolated PR #136 branch; no tests or assertions were removed or weakened.
+
+- Commit `6b40ee24bb7864b9d11d7eb76a909ab71190c606`: removed the extra safe-area-ignoring background attached directly to the bottom inset. The root already paints the full page background through its own safe-area-ignoring background modifier. This is a candidate fix for the 113.0625 pt measured accessibility frame; it is **not yet CI-verified**.
+- Commit `31e5b70d85537113e74dd003d06b3ae95ba323f4`: corrected the Guru UI test to use `scrollTowardTop` to bring the goal field back into view after the lower check-ins. The existing hittability, keyboard, text entry and journey assertions remain intact.
+
+At this snapshot, `fetch_commit_workflow_runs` had not yet surfaced a PR-triggered run for the new head `31e5b70d85537113e74dd003d06b3ae95ba323f4`. Do not treat the candidate corrections as verified until a new full CI run completes on that exact head.
+
+### IPA artifact integrity review
+
+- Artifact: [unsigned IPA artifact 15132035727](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45839928310/artifacts/15132035727)
+- GitHub artifact SHA-256: `841ebf40e4e7a72b94410c65154505fb1982027392a991bda5f6773e24ea0108`
+- Downloaded outer ZIP SHA-256 matched that digest; outer ZIP and embedded `GATIVX-unsigned.ipa` both passed archive integrity checks.
+- Bundle identifier: `com.paramitsolutions.gativx`; minimum iOS version: `17.0`; portrait orientation and HealthKit/Motion/Location usage descriptions are present.
+- The package contains no `_CodeSignature` or embedded provisioning profile. It is an **unsigned build artifact**, not a normally installable iPhone IPA. Physical signing, installation and HealthKit runtime remain separate gates.
+
+### Android route-integrity follow-up
+
+PR #137 run [#45840866819](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45840866819) completed successfully. Its CI job completed source safeguards, JVM unit tests and Debug APK build/upload. The six new JVM tests and 25 source safeguards are recorded in the PR report; no emulator or physical-device behaviour is claimed. Debug APK artifact: [15128630240](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45840866819/artifacts/15128630240).
+
+### Product gap-ledger delta
+
+- **iOS single navigation:** implemented-but-unverified on the new head. The five-tab switch, dedicated five-tab UI test and Activity viewport test passed on the previous tested head; dock-height acceptance still failed.
+- **iOS Profile navigation/photo picker:** direct-from-Home Profile test passed; root-hosted photo-picker source safeguard passed. The full cumulative flow still failed later in the same test because of the earlier Guru goal-field issue and downstream UI-idle timeout.
+- **iOS Guru:** dedicated keyboard-dismissal test passed; cumulative goal-entry/navigation test failed because its scroll direction was wrong. New test correction awaits CI.
+- **iOS Finish & Save local persistence:** 18/18 regression tests passed within the 76 passing unit tests. Physical HealthKit export remains unverified.
+- **Android unreadable active-draft protection:** CI verified on PR #137; device acceptance remains unverified.
+- **Web Hub stored-history HTML escaping:** PR #138 remains draft; its current CI result was not independently rechecked in this run.
+- **Community and notifications:** still missing as functional end-to-end product features; current iOS destinations are explicitly gated.
+- **Backend security/migration history:** existing live grant/default-privilege and migration-source reconciliation blockers remain unchanged. No production migration or Auth setting was changed.
+
+### Protected work and next action
+
+- PR #107, #112 and #114 remain open; this run made no changes to their branches or PRs.
+- No PR was merged. No production deployment or live database mutation occurred.
+- Next: inspect the new CI run on `31e5b70d85537113e74dd003d06b3ae95ba323f4`; verify dock height, Guru goal entry, all five tabs, Activity viewport, photo-picker flow, full unit/UI suites, safeguards, simulator/Release builds and IPA packaging on that exact head. If the dock still measures above 76 pt, inspect the new result-bundle hierarchy/screenshot before making another layout change.
