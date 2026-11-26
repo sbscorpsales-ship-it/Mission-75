@@ -539,12 +539,18 @@ struct ContentView: View {
     @State private var profilePhotoData: Data?
     @State private var profilePhotoStatus = "No member photo selected."
     @State private var isGuruPresented = false
-    @FocusState private var isGuruFieldFocused: Bool
+    private enum GuruField: Hashable { case goal, purpose, emotion, nextAction, mealNote }
+    @FocusState private var focusedGuruField: GuruField?
     @State private var isNotificationsPresented = false
     @AppStorage("gativx.guru.goal") private var guruGoal = ""
     @AppStorage("gativx.guru.purpose") private var guruPurpose = ""
     @AppStorage("gativx.guru.emotion") private var guruEmotion = ""
     @AppStorage("gativx.guru.nextAction") private var guruNextAction = ""
+    @AppStorage("gativx.guru.walkingDoneDate") private var guruWalkingDoneDate = ""
+    @AppStorage("gativx.guru.nutritionDoneDate") private var guruNutritionDoneDate = ""
+    @AppStorage("gativx.guru.recoveryCheckInDate") private var guruRecoveryCheckInDate = ""
+    @AppStorage("gativx.guru.recoveryFeeling") private var guruRecoveryFeeling = "Not checked in"
+    @AppStorage("gativx.guru.mealNote") private var guruMealNote = ""
     @AppStorage("gativx.journey.durationDays") private var guruJourneyDurationDays = 90
     @AppStorage("gativx.journey.activeDurationDays") private var guruActiveJourneyDurationDays = 0
     @AppStorage("gativx.journey.startedAt") private var guruJourneyStartedAt = 0.0
@@ -573,11 +579,54 @@ struct ContentView: View {
         GATIVXGuruCoach.purposeAnchor(goal: guruGoal, purpose: guruPurpose, emotion: guruEmotion)
     }
 
-    /// Use SwiftUI's focus binding as the single source of truth for Guru input.
-    /// Every Guru text field shares this binding, so the keyboard toolbar and
-    /// sheet dismissal do not need a second UIKit responder-resign path.
+    /// Use a field-specific SwiftUI focus binding as the single source of truth.
+    /// Clearing the active field releases the editor before the keyboard toolbar
+    /// or full-screen Guru experience is dismissed; no UIKit responder path is needed.
     private func dismissGuruKeyboard() {
-        isGuruFieldFocused = false
+        focusedGuruField = nil
+    }
+
+    private var guruTodayKey: String {
+        let date = Calendar.current.dateComponents([.year, .month, .day], from: Date())
+        return "\(date.year ?? 0)-\(date.month ?? 0)-\(date.day ?? 0)"
+    }
+
+    private var guruWalkingDoneToday: Bool { guruWalkingDoneDate == guruTodayKey }
+    private var guruNutritionDoneToday: Bool { guruNutritionDoneDate == guruTodayKey }
+    private var guruRecoveryCheckedToday: Bool { guruRecoveryCheckInDate == guruTodayKey }
+
+    private var guruWalkingGuidance: String {
+        guard let steps = displayedDailySteps else {
+            return "No verified step reading is available yet. Connect Apple Health or enable iPhone Motion & Fitness tracking. Until then, choose a comfortable walk and let GATIVX record it."
+        }
+        let remaining = max(0, dailyStepGoal - steps)
+        if remaining == 0 {
+            return "You have reached your step target. You do not need to chase extra steps. Notice how you feel and keep tomorrow achievable."
+        }
+        if remaining <= 500 {
+            return "Only \(remaining.formatted()) measured steps remain. If you feel comfortable, a relaxed 3–5 minute walk may help you finish."
+        }
+        if remaining <= 2_000 {
+            return "You have \(remaining.formatted()) measured steps remaining. Consider one comfortable 10-minute walk, then review your progress."
+        }
+        return "Your target is a guide, not a test. Start with 10 comfortable minutes. If that feels manageable, add another short walk later."
+    }
+
+    private var guruNutritionGuidance: String {
+        "For your next meal, aim for variety: vegetables and fruit, a sensible whole-grain portion, and a satisfying protein source such as dal, beans, curd, paneer, tofu or nuts. Drink water regularly. Your needs are individual; Guru does not prescribe a medical diet."
+    }
+
+    private var guruRecoveryGuidance: String {
+        switch guruRecoveryFeeling {
+        case "Tired":
+            return "Choose recovery over pressure today. Consider an easier walk, gentle mobility or rest. If you feel unwell, dizzy or have unusual pain, stop exercising and seek appropriate medical advice."
+        case "Rested":
+            return "Good to hear you feel rested. Build gradually and keep the effort comfortable. Recovery is part of progress, not time lost."
+        case "Okay":
+            return "Keep today's plan steady and comfortable. Notice energy, soreness and mood; reduce intensity if your body asks for it."
+        default:
+            return "Check in honestly before choosing your effort. Guru will not guess your sleep or recovery from missing data."
+        }
     }
 
     private var dashboardColorScheme: ColorScheme? {
@@ -1255,127 +1304,322 @@ struct ContentView: View {
         .accessibilityIdentifier("gativx-missions-screen")
     }
 
-    private var guruScreen: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                VStack(alignment: .leading, spacing: 8) {
-                    Label("GATIVX GURU", systemImage: "leaf.fill")
-                        .font(.caption.weight(.black)).foregroundStyle(neon)
-                    Text("Reconnect with your why.")
-                        .font(.largeTitle.weight(.bold))
-                        .accessibilityIdentifier("gativx-guru-heading")
-                    Text("When motivation gets low, return to the purpose behind your goal. Guru keeps your reason visible and helps you choose one manageable next step.")
-                        .font(.subheadline).foregroundStyle(.secondary)
-                }
-                .padding(18).frame(maxWidth: .infinity, alignment: .leading)
-                .background(cardBackground, in: RoundedRectangle(cornerRadius: 22))
-
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("YOUR GOAL").font(.caption.weight(.bold)).foregroundStyle(.secondary)
-                    TextField("What do you want to achieve?", text: $guruGoal)
-                        .focused($isGuruFieldFocused)
-                        .submitLabel(.done)
-                        .onSubmit { dismissGuruKeyboard() }
-                        .accessibilityIdentifier("gativx-guru-goal")
-                        .textFieldStyle(.roundedBorder)
-                    Text("YOUR PURPOSE").font(.caption.weight(.bold)).foregroundStyle(.secondary)
-                    TextField("Why does this matter to you?", text: $guruPurpose, axis: .vertical)
-                        .focused($isGuruFieldFocused)
-                        .lineLimit(2...4).textFieldStyle(.roundedBorder)
-                    Text("THE EMOTION BEHIND IT").font(.caption.weight(.bold)).foregroundStyle(.secondary)
-                    TextField("How will achieving it make you feel?", text: $guruEmotion, axis: .vertical)
-                        .focused($isGuruFieldFocused)
-                        .lineLimit(2...3).textFieldStyle(.roundedBorder)
-                    Text("ONE SMALL NEXT ACTION").font(.caption.weight(.bold)).foregroundStyle(.secondary)
-                    TextField("What is one action you can do today?", text: $guruNextAction, axis: .vertical)
-                        .focused($isGuruFieldFocused)
-                        .lineLimit(2...3).textFieldStyle(.roundedBorder)
-                    Text("Your answers are saved on this iPhone.")
-                        .font(.caption2).foregroundStyle(.secondary)
-                }
-                .padding(18).background(cardBackground, in: RoundedRectangle(cornerRadius: 22))
-
-                VStack(alignment: .leading, spacing: 12) {
-                    Label("YOUR GOAL JOURNEY", systemImage: "calendar.badge.clock")
-                        .font(.headline).foregroundStyle(neon)
-                    Text("Choose a pace you can sustain. Your journey progress is stored on this iPhone.")
-                        .font(.subheadline).foregroundStyle(.secondary)
-                    Picker("Journey duration", selection: $guruJourneyDurationDays) {
-                        Text("30 days").tag(30)
-                        Text("90 days").tag(90)
-                        Text("180 days").tag(180)
-                        Text("365 days").tag(365)
-                    }
-                    .pickerStyle(.segmented)
-                    .accessibilityIdentifier("gativx-journey-duration")
-                    if let journey = activeGuruJourney {
-                        Text(guruJourneyGoal.isEmpty ? guruGoal : guruJourneyGoal)
-                            .font(.headline)
-                        HStack {
-                            Text("DAY \(min(journey.elapsedDays + 1, journey.durationDays)) OF \(journey.durationDays)")
-                                .font(.caption.weight(.heavy)).tracking(0.5)
-                            Spacer()
-                            Text(journey.isComplete ? "COMPLETE" : "\(journey.daysRemaining) DAYS LEFT")
-                                .font(.caption.weight(.bold)).foregroundStyle(.secondary)
-                        }
-                        ProgressView(value: journey.progress).tint(neon)
-                            .accessibilityIdentifier("gativx-journey-progress")
-                        Text(journey.checkpointMessage)
-                            .font(.subheadline).foregroundStyle(.secondary)
-                        if journey.isComplete {
-                            Button("Start another cycle") {
-                                guruJourneyGoal = guruGoal.trimmingCharacters(in: .whitespacesAndNewlines)
-                                guruActiveJourneyDurationDays = guruJourneyDurationDays
-                                guruJourneyStartedAt = Date().timeIntervalSince1970
-                            }
-                            .buttonStyle(.borderedProminent).tint(neon).foregroundStyle(.black)
-                        }
-                    } else {
-                        Text("Start with your current goal: \(guruGoal.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "add a goal above" : guruGoal)")
-                            .font(.subheadline).foregroundStyle(.secondary)
-                        Button("Start my \(guruJourneyDurationDays)-day journey") {
-                            guruJourneyGoal = guruGoal.trimmingCharacters(in: .whitespacesAndNewlines)
-                            guruActiveJourneyDurationDays = guruJourneyDurationDays
-                            guruJourneyStartedAt = Date().timeIntervalSince1970
-                        }
-                        .buttonStyle(.borderedProminent).tint(neon).foregroundStyle(.black)
-                        .disabled(guruGoal.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                        .accessibilityIdentifier("gativx-start-journey")
-                    }
-                }
-                .padding(18).background(cardBackground, in: RoundedRectangle(cornerRadius: 22))
-
-                VStack(alignment: .leading, spacing: 10) {
-                    Label("WHEN YOUR GATI SLOWS", systemImage: "heart.text.square.fill")
-                        .font(.headline).foregroundStyle(neon)
-                    Text(guruPurposeAnchor).font(.body.weight(.medium))
-                    Text("ONE PRACTICAL NEXT ACTION").font(.caption.weight(.heavy)).foregroundStyle(.secondary)
-                    Text(guruSuggestedNextAction).font(.subheadline.weight(.semibold))
-                    Button("Save this as my next action") {
-                        guruNextAction = guruSuggestedNextAction
-                    }
-                    .buttonStyle(.bordered)
-                    if !guruNextAction.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                        Text("Your chosen action: " + guruNextAction)
-                            .font(.caption).foregroundStyle(.secondary)
-                    }
-                    Button {
-                        dismissGuruKeyboard()
-                        isGuruPresented = false
-                        selectedTab = 1
-                    } label: {
-                        Label("Start a walk", systemImage: "figure.walk")
-                            .font(.headline).frame(maxWidth: .infinity).padding(.vertical, 12)
-                    }
-                    .accessibilityIdentifier("gativx-guru-start-walk")
-                    .buttonStyle(.borderedProminent).tint(neon).foregroundStyle(.black)
-                }
-                .padding(18).background(cardBackground, in: RoundedRectangle(cornerRadius: 22))
-            }
-            .padding(16)
+    private func guruMetricCard(title: String, value: String, detail: String, symbol: String) -> some View {
+        VStack(alignment: .leading, spacing: 7) {
+            Image(systemName: symbol).font(.title3.weight(.bold)).foregroundStyle(neon)
+            Text(title.uppercased()).font(.caption2.weight(.heavy)).foregroundStyle(.secondary)
+            Text(value).font(.title2.weight(.bold).monospacedDigit())
+            Text(detail).font(.caption2).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
         }
+        .frame(maxWidth: .infinity, minHeight: 112, alignment: .leading)
+        .padding(13)
+        .background(cardBackground, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+    }
+
+    private var guruHeroCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .center) {
+                Image(systemName: "sparkles").font(.system(size: 27, weight: .black)).foregroundStyle(neon)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("GATIVX GURU").font(.caption.weight(.black)).tracking(1.3).foregroundStyle(neon)
+                    Text("NURUN · YOUR PERSONAL GUIDE").font(.caption2.weight(.bold)).tracking(1).foregroundStyle(.secondary)
+                }
+                Spacer()
+                Text("GATIVX").font(.caption.weight(.heavy)).tracking(1)
+            }
+            Text("Your goal. Your reason. Your next step.")
+                .font(.system(size: 27, weight: .bold, design: .rounded))
+                .fixedSize(horizontal: false, vertical: true)
+                .accessibilityIdentifier("gativx-guru-heading")
+            Text("Guru connects your walking, everyday food habits and recovery with the goal you chose. When your Gati slows, it brings you back to your WHY and helps you take one achievable action.")
+                .font(.subheadline).foregroundStyle(.secondary)
+            if !guruPurpose.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                Text("“\(guruPurpose)”")
+                    .font(.body.weight(.semibold))
+                    .padding(12)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(neon.opacity(0.10), in: RoundedRectangle(cornerRadius: 14))
+            }
+        }
+        .padding(19)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(cardBackground, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+    }
+
+    private var guruTodaySignalsCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Label("TODAY'S SIGNALS", systemImage: "waveform.path.ecg")
+                    .font(.caption.weight(.heavy)).tracking(0.8).foregroundStyle(neon)
+                Spacer()
+                Text(health.hasRequestedAccess ? "APPLE HEALTH" : "ON-DEVICE DATA")
+                    .font(.caption2.weight(.bold)).foregroundStyle(.secondary)
+            }
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+                guruMetricCard(title: "Steps", value: displayedDailySteps.map { $0.formatted() } ?? "—",
+                    detail: displayedDailySteps == nil ? "Waiting for a verified reading" : "Goal · \(dailyStepGoal.formatted())",
+                    symbol: "figure.walk")
+                guruMetricCard(title: "Distance", value: health.todayWalkingRunningDistanceKm.map { String(format: "%.2f km", $0) } ?? "—",
+                    detail: health.todayWalkingRunningDistanceKm == nil ? "No measured total available" : "Walking + running",
+                    symbol: "point.topleft.down.curvedto.point.bottomright.up")
+                guruMetricCard(title: "Active energy", value: health.todayActiveEnergyKcal.map { "\($0) kcal" } ?? "—",
+                    detail: "Measured active energy", symbol: "flame.fill")
+                guruMetricCard(title: "Exercise", value: health.todayExerciseMinutes.map { "\($0) min" } ?? "—",
+                    detail: "Apple Exercise minutes", symbol: "heart.fill")
+            }
+            Text("Only connected, measured values are shown. A dash means data is unavailable; Guru never fills gaps with invented numbers.")
+                .font(.caption2).foregroundStyle(.secondary)
+        }
+        .padding(16)
+        .background(cardBackground, in: RoundedRectangle(cornerRadius: 22))
+        .accessibilityIdentifier("gativx-guru-today-signals")
+    }
+
+    private var guruGoalSetupCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Label("YOUR NORTH STAR", systemImage: "scope")
+                .font(.headline).foregroundStyle(neon)
+            Text("Tell Guru what you are moving towards and why it matters. Your own words become the anchor when motivation dips.")
+                .font(.subheadline).foregroundStyle(.secondary)
+            Text("YOUR GOAL").font(.caption.weight(.bold)).foregroundStyle(.secondary)
+            TextField("What do you want to achieve?", text: $guruGoal)
+                .focused($focusedGuruField, equals: .goal).submitLabel(.done)
+                .onSubmit { dismissGuruKeyboard() }
+                .textFieldStyle(.roundedBorder)
+                .accessibilityIdentifier("gativx-guru-goal")
+            Text("YOUR PURPOSE").font(.caption.weight(.bold)).foregroundStyle(.secondary)
+            TextField("Why does this matter to you?", text: $guruPurpose, axis: .vertical)
+                .focused($focusedGuruField, equals: .purpose).lineLimit(2...4).textFieldStyle(.roundedBorder)
+                .accessibilityIdentifier("gativx-guru-purpose")
+            Text("THE EMOTION YOU WANT TO FEEL").font(.caption.weight(.bold)).foregroundStyle(.secondary)
+            TextField("How will achieving it make you feel?", text: $guruEmotion, axis: .vertical)
+                .focused($focusedGuruField, equals: .emotion).lineLimit(2...3).textFieldStyle(.roundedBorder)
+                .accessibilityIdentifier("gativx-guru-emotion")
+            Text("ONE SMALL NEXT ACTION").font(.caption.weight(.bold)).foregroundStyle(.secondary)
+            TextField("What is one action you can do today?", text: $guruNextAction, axis: .vertical)
+                .focused($focusedGuruField, equals: .nextAction).lineLimit(2...3).textFieldStyle(.roundedBorder)
+                .accessibilityIdentifier("gativx-guru-next-action")
+            Text("Saved on this iPhone. Cloud sync is not implied.")
+                .font(.caption2).foregroundStyle(.secondary)
+        }
+        .padding(18).background(cardBackground, in: RoundedRectangle(cornerRadius: 22))
+    }
+
+    private var guruWalkingCard: some View {
+        VStack(alignment: .leading, spacing: 11) {
+            Label("1 · WALKING & MOVEMENT", systemImage: "figure.walk")
+                .font(.headline).foregroundStyle(neon)
+            Text(guruWalkingGuidance).font(.subheadline)
+            ProgressView(value: stepProgress).tint(neon)
+            Text(displayedDailySteps.map { "\($0.formatted()) of \(dailyStepGoal.formatted()) measured steps" } ?? "Step progress appears when a verified source is connected.")
+                .font(.caption).foregroundStyle(.secondary)
+            Button {
+                guruWalkingDoneDate = guruTodayKey
+            } label: {
+                Label(guruWalkingDoneToday ? "Today's movement action checked" : "Mark today's movement action done",
+                      systemImage: guruWalkingDoneToday ? "checkmark.circle.fill" : "circle")
+                    .frame(maxWidth: .infinity).padding(.vertical, 5)
+            }
+            .buttonStyle(.bordered)
+            .accessibilityIdentifier("gativx-guru-walking-checkin")
+            .disabled(guruWalkingDoneToday)
+            Button {
+                dismissGuruKeyboard()
+                isGuruPresented = false
+                selectedTab = 1
+            } label: {
+                Label("Open walking tracker", systemImage: "location.fill")
+                    .font(.headline).frame(maxWidth: .infinity).padding(.vertical, 10)
+            }
+            .buttonStyle(.borderedProminent).tint(neon).foregroundStyle(.black)
+            .accessibilityIdentifier("gativx-guru-start-walk")
+        }
+        .padding(18).background(cardBackground, in: RoundedRectangle(cornerRadius: 22))
+        .accessibilityIdentifier("gativx-guru-walking")
+    }
+
+    private var guruNutritionCard: some View {
+        VStack(alignment: .leading, spacing: 11) {
+            Label("2 · FOOD & HYDRATION HABITS", systemImage: "leaf")
+                .font(.headline).foregroundStyle(neon)
+            Text(guruNutritionGuidance).font(.subheadline)
+            Text("A QUICK MEAL NOTE").font(.caption.weight(.bold)).foregroundStyle(.secondary)
+            TextField("What did you eat, or what is your next meal plan?", text: $guruMealNote, axis: .vertical)
+                .focused($focusedGuruField, equals: .mealNote)
+                .lineLimit(2...4).textFieldStyle(.roundedBorder)
+                .accessibilityIdentifier("gativx-guru-meal-note")
+            Text("This is your own note, not an analysed food diary or calorie estimate.")
+                .font(.caption2).foregroundStyle(.secondary)
+            Button {
+                guruNutritionDoneDate = guruTodayKey
+            } label: {
+                Label(guruNutritionDoneToday ? "Today's food habit checked" : "Mark today's food habit checked",
+                      systemImage: guruNutritionDoneToday ? "checkmark.circle.fill" : "circle")
+                    .frame(maxWidth: .infinity).padding(.vertical, 5)
+            }
+            .buttonStyle(.bordered)
+            .accessibilityIdentifier("gativx-guru-nutrition-checkin")
+            .disabled(guruNutritionDoneToday)
+        }
+        .padding(18).background(cardBackground, in: RoundedRectangle(cornerRadius: 22))
+        .accessibilityIdentifier("gativx-guru-nutrition")
+    }
+
+    private var guruRecoveryCard: some View {
+        VStack(alignment: .leading, spacing: 11) {
+            Label("3 · RECOVERY & READINESS", systemImage: "moon.stars")
+                .font(.headline).foregroundStyle(neon)
+            Text("How are you feeling today? Guru uses your check-in, not a guessed sleep or recovery score.")
+                .font(.subheadline).foregroundStyle(.secondary)
+            Picker("How are you feeling?", selection: $guruRecoveryFeeling) {
+                Text("Rested").tag("Rested")
+                Text("Okay").tag("Okay")
+                Text("Tired").tag("Tired")
+            }
+            .pickerStyle(.segmented)
+            .accessibilityIdentifier("gativx-guru-recovery-feeling")
+            Text(guruRecoveryGuidance).font(.subheadline)
+            Button {
+                guruRecoveryCheckInDate = guruTodayKey
+            } label: {
+                Label(guruRecoveryCheckedToday ? "Today's recovery check-in saved" : "Save today's recovery check-in",
+                      systemImage: guruRecoveryCheckedToday ? "checkmark.circle.fill" : "heart.text.square")
+                    .frame(maxWidth: .infinity).padding(.vertical, 5)
+            }
+            .buttonStyle(.bordered)
+            .accessibilityIdentifier("gativx-guru-recovery-save")
+            .disabled(guruRecoveryCheckedToday)
+        }
+        .padding(18).background(cardBackground, in: RoundedRectangle(cornerRadius: 22))
+        .accessibilityIdentifier("gativx-guru-recovery")
+    }
+
+    private var guruJourneyCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Label("YOUR GOAL JOURNEY", systemImage: "calendar.badge.clock")
+                .font(.headline).foregroundStyle(neon)
+            Text("Choose a pace you can sustain. Progress is based on your selected start date, not on assumed daily achievements.")
+                .font(.subheadline).foregroundStyle(.secondary)
+            Picker("Journey duration", selection: $guruJourneyDurationDays) {
+                Text("30 days").tag(30)
+                Text("90 days").tag(90)
+                Text("180 days").tag(180)
+                Text("365 days").tag(365)
+            }
+            .pickerStyle(.segmented).accessibilityIdentifier("gativx-journey-duration")
+            if let journey = activeGuruJourney {
+                Text(guruJourneyGoal.isEmpty ? guruGoal : guruJourneyGoal).font(.headline)
+                HStack {
+                    Text("DAY \(min(journey.elapsedDays + 1, journey.durationDays)) OF \(journey.durationDays)")
+                        .font(.caption.weight(.heavy)).tracking(0.5)
+                    Spacer()
+                    Text(journey.isComplete ? "COMPLETE" : "\(journey.daysRemaining) DAYS LEFT")
+                        .font(.caption.weight(.bold)).foregroundStyle(.secondary)
+                }
+                ProgressView(value: journey.progress).tint(neon)
+                    .accessibilityIdentifier("gativx-journey-progress")
+                Text(journey.checkpointMessage).font(.subheadline).foregroundStyle(.secondary)
+                if journey.isComplete {
+                    Button("Start another cycle") {
+                        guruJourneyGoal = guruGoal.trimmingCharacters(in: .whitespacesAndNewlines)
+                        guruActiveJourneyDurationDays = guruJourneyDurationDays
+                        guruJourneyStartedAt = Date().timeIntervalSince1970
+                    }.buttonStyle(.borderedProminent).tint(neon).foregroundStyle(.black)
+                }
+            } else {
+                Text("Start with your current goal: \(guruGoal.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "add a goal above" : guruGoal)")
+                    .font(.subheadline).foregroundStyle(.secondary)
+                Button("Start my \(guruJourneyDurationDays)-day journey") {
+                    guruJourneyGoal = guruGoal.trimmingCharacters(in: .whitespacesAndNewlines)
+                    guruActiveJourneyDurationDays = guruJourneyDurationDays
+                    guruJourneyStartedAt = Date().timeIntervalSince1970
+                }
+                .buttonStyle(.borderedProminent).tint(neon).foregroundStyle(.black)
+                .disabled(guruGoal.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .accessibilityIdentifier("gativx-start-journey")
+            }
+        }
+        .padding(18).background(cardBackground, in: RoundedRectangle(cornerRadius: 22))
+    }
+
+    private var guruPurposeAndActionCard: some View {
+        VStack(alignment: .leading, spacing: 11) {
+            Label("WHEN YOUR GATI SLOWS", systemImage: "heart.text.square.fill")
+                .font(.headline).foregroundStyle(neon)
+            Text(guruPurposeAnchor).font(.body.weight(.medium))
+            Text("ONE PRACTICAL NEXT ACTION").font(.caption.weight(.heavy)).foregroundStyle(.secondary)
+            Text(guruSuggestedNextAction).font(.subheadline.weight(.semibold))
+            Button("Save this as my next action") { guruNextAction = guruSuggestedNextAction }
+                .buttonStyle(.bordered)
+            if !guruNextAction.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                Text("Your chosen action: " + guruNextAction).font(.caption).foregroundStyle(.secondary)
+            }
+        }
+        .padding(18).background(cardBackground, in: RoundedRectangle(cornerRadius: 22))
+    }
+
+    private var guruLearningCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Label("LEARN WITH GURU", systemImage: "play.rectangle.on.rectangle")
+                .font(.headline).foregroundStyle(neon)
+            Text("Short, trusted guides to help you understand movement and everyday food choices. These links open the source publisher; they are not medical prescriptions.")
+                .font(.subheadline).foregroundStyle(.secondary)
+            Link(destination: URL(string: "https://www.who.int/health-topics/noncommunicable-diseases/physical-activity")!) {
+                HStack {
+                    Image(systemName: "figure.walk.circle.fill").font(.title2).foregroundStyle(neon)
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("WHO · Physical activity guide").font(.subheadline.weight(.semibold))
+                        Text("Movement, weekly activity and starting gradually").font(.caption).foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    Image(systemName: "arrow.up.right").foregroundStyle(.secondary)
+                }
+                .padding(12).background(pageBackground, in: RoundedRectangle(cornerRadius: 14))
+            }
+            Link(destination: URL(string: "https://nutritionsource.hsph.harvard.edu/healthy-eating-plate/")!) {
+                HStack {
+                    Image(systemName: "leaf.circle.fill").font(.title2).foregroundStyle(neon)
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("Harvard · Healthy Eating Plate").font(.subheadline.weight(.semibold))
+                        Text("A visual guide to balanced everyday meals").font(.caption).foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    Image(systemName: "arrow.up.right").foregroundStyle(.secondary)
+                }
+                .padding(12).background(pageBackground, in: RoundedRectangle(cornerRadius: 14))
+            }
+            Text("More video lessons can be added after content review and usage rights are confirmed.")
+                .font(.caption2).foregroundStyle(.secondary)
+        }
+        .padding(18).background(cardBackground, in: RoundedRectangle(cornerRadius: 22))
+        .accessibilityIdentifier("gativx-guru-learning")
+    }
+
+    private var guruScreen: some View {
+        ScrollView(showsIndicators: false) {
+            VStack(alignment: .leading, spacing: 15) {
+                guruHeroCard
+                guruTodaySignalsCard
+                guruGoalSetupCard
+                guruWalkingCard
+                guruNutritionCard
+                guruRecoveryCard
+                guruJourneyCard
+                guruPurposeAndActionCard
+                guruLearningCard
+                Text("NURUN Guru supports healthy habits and goal planning. It does not diagnose, treat or replace advice from a qualified health professional.")
+                    .font(.caption2).foregroundStyle(.secondary)
+                    .padding(.horizontal, 4)
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 12)
+            .padding(.bottom, 30)
+            .frame(maxWidth: .infinity, alignment: .topLeading)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(pageBackground.ignoresSafeArea())
         .scrollDismissesKeyboard(.interactively)
+        .accessibilityIdentifier("gativx-guru-fullscreen")
     }
 
     private var communityScreen: some View {
@@ -1811,10 +2055,12 @@ struct ContentView: View {
                 }
             }
         }
-        .sheet(isPresented: $isGuruPresented) {
+        .fullScreenCover(isPresented: $isGuruPresented) {
             NavigationStack {
                 guruScreen
-                    .navigationTitle("GATIVX Guru")
+                    .navigationTitle("GATIVX Guru · NURUN")
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbarBackground(pageBackground, for: .navigationBar)
                     .toolbar {
                         ToolbarItem(placement: .confirmationAction) {
                             Button("Close Guru") {
@@ -1830,6 +2076,8 @@ struct ContentView: View {
                         }
                     }
             }
+            .tint(neon)
+            .preferredColorScheme(dashboardColorScheme)
         }
         .sheet(isPresented: $isProfilePhotoPickerPresented) {
             profilePhotoPickerSheet
