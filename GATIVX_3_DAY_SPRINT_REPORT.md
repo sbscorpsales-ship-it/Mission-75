@@ -2983,3 +2983,9 @@ Run [#45883789402](https://github.com/sbscorpsales-ship-it/Mission-75/actions/ru
 2. If Welcome now fills the display but the post-guest dashboard does not, trace the member-shell/scene transition. If both remain reduced, investigate the SwiftUI scene/window host and simulator configuration; do not weaken the physical-screen assertions.
 3. Keep PR #136, #143, #144 and #145 as drafts; do not merge any PR. Preserve Design C. PR #107 remains untouched and PR #112 remains unmerged.
 4. Continue treating HealthKit, background GPS, Android Health Connect, actual photo selection, signed installation and production deployment as unverified until device/account evidence exists.
+
+
+### Additional source audit — 2026-11-27 01:56 IST
+- iOS auth code review: the app uses a Supabase publishable client key (no service-role key in the client) and stores the AuthSession in Keychain using `kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly`. Token payload claims are decoded locally for display/ownership hints, with the code explicitly stating that server-side authorization remains authoritative. Sign-in, sign-up, refresh, and password-reset paths exist; live provider/account behavior is still not accepted.
+- Guru goal/purpose code review: the deterministic coach uses the member-entered goal, purpose and desired emotion, does not infer emotions, and caps journey progress at 100%. The eight `GATIVXGoalJourneyTests` passed in the latest PR #143 run.
+- Scope confirmation: the current Community screen explicitly gates the shared feed as unavailable, and the Notifications sheet explicitly says delivery is inactive. Missions currently expose a basic walk-start action, not a verified end-to-end community mission service. These remain missing or implemented-but-unverified as recorded above.
