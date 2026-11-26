@@ -13,17 +13,9 @@ struct GATIVXApp: App {
         #endif
     }
 
-    @SceneBuilder
     var body: some Scene {
-        if #available(iOS 18.0, *) {
-            WindowGroup {
-                ContentView()
-            }
-            .windowManagerRole(.principal)
-        } else {
-            WindowGroup {
-                ContentView()
-            }
+        WindowGroup {
+            ContentView()
         }
     }
 }
