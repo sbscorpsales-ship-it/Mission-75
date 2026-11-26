@@ -46,5 +46,5 @@ BEGIN
   ) THEN
     RAISE EXCEPTION 'anon or authenticated still has broad public-schema default privileges';
   END IF;
-END
-$$;
+END;
+$;
