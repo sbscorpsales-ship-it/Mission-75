@@ -573,25 +573,11 @@ struct ContentView: View {
         GATIVXGuruCoach.purposeAnchor(goal: guruGoal, purpose: guruPurpose, emotion: guruEmotion)
     }
 
-    /// Clear SwiftUI focus and synchronously ask UIKit to resign the active editor.
-    /// Repeat on the next main-loop turn to cover SwiftUI keyboard-toolbar timing.
+    /// Use SwiftUI's focus binding as the single source of truth for Guru input.
+    /// Every Guru text field shares this binding, so the keyboard toolbar and
+    /// sheet dismissal do not need a second UIKit responder-resign path.
     private func dismissGuruKeyboard() {
         isGuruFieldFocused = false
-        UIApplication.shared.sendAction(
-            #selector(UIResponder.resignFirstResponder),
-            to: nil,
-            from: nil,
-            for: nil
-        )
-        DispatchQueue.main.async {
-            self.isGuruFieldFocused = false
-            UIApplication.shared.sendAction(
-                #selector(UIResponder.resignFirstResponder),
-                to: nil,
-                from: nil,
-                for: nil
-            )
-        }
     }
 
     private var dashboardColorScheme: ColorScheme? {
@@ -1294,12 +1280,15 @@ struct ContentView: View {
                         .textFieldStyle(.roundedBorder)
                     Text("YOUR PURPOSE").font(.caption.weight(.bold)).foregroundStyle(.secondary)
                     TextField("Why does this matter to you?", text: $guruPurpose, axis: .vertical)
+                        .focused($isGuruFieldFocused)
                         .lineLimit(2...4).textFieldStyle(.roundedBorder)
                     Text("THE EMOTION BEHIND IT").font(.caption.weight(.bold)).foregroundStyle(.secondary)
                     TextField("How will achieving it make you feel?", text: $guruEmotion, axis: .vertical)
+                        .focused($isGuruFieldFocused)
                         .lineLimit(2...3).textFieldStyle(.roundedBorder)
                     Text("ONE SMALL NEXT ACTION").font(.caption.weight(.bold)).foregroundStyle(.secondary)
                     TextField("What is one action you can do today?", text: $guruNextAction, axis: .vertical)
+                        .focused($isGuruFieldFocused)
                         .lineLimit(2...3).textFieldStyle(.roundedBorder)
                     Text("Your answers are saved on this iPhone.")
                         .font(.caption2).foregroundStyle(.secondary)
