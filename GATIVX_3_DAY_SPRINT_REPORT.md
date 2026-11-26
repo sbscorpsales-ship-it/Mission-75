@@ -1657,3 +1657,38 @@ The raw GitHub Actions job log and uploaded XCTest diagnostics were inspected. F
 3. Keep PR #112 and #114 open/unmerged; do not alter PR #107.
 4. Continue the Android/Web/backend gap work independently of the iOS UI retry.
 5. Release verdict remains **NOT RELEASE-READY**.
+
+
+## 2026-11-26 16:49 IST — Android/Web and locked-IA audit
+
+### Android (PR #129 branch)
+
+- Source head: `a4ba5b9d18299f4d725ebb8e8af3c070d94a4940`.
+- Workflow [#45761705362](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45761705362): **20/20 source safeguards passed**.
+- Gradle `:app:assembleDebug`: **BUILD SUCCESSFUL** (39 seconds); debug APK artifact `15090525185`.
+- No Android unit-test task, emulator test, or physical-device test ran in this workflow.
+- Current `MainActivity.kt` is still an early-access feature grid. Home, Activity and Profile are labelled Available; Mission is Testing; Wellness, Strength, GURU, Community, Motion 3D, Rewards, Referrals and Settings are marked Coming soon. This is not the locked five-destination production navigation.
+
+### Web Hub and Design C
+
+- `app-v2.html`, `index.html`, and `docs/GATIVX-FINAL-DAY-NIGHT-DESIGN-LOCK.md` have identical Git blob SHAs on `main` and the Design C review branch. The original Web Hub was not changed.
+- The live `app-v2.html` primary navigation remains Home / Journey / Record / Walk / GURU. It has Day/Night styling and local browser data, but its information architecture differs from both the native five-tab shell and the locked Design C IA.
+- Workflow [#45686178223](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45686178223): **51/51 checks passed**:
+  - `scripts/check-web.mjs`: 15/15 structural/release checks.
+  - `scripts/browser-smoke.mjs`: 7/7 Chromium smoke checks (shortcut import, account UI, namespaced storage, five nav tabs, no browser errors).
+  - `scripts/design-review-smoke.mjs`: 29/29 visual-prototype checks (ten screens, 390px no-overflow, Day/Night switch, navigation, preview-only disclosures, no console/page errors).
+- Design C review artifact `15056846592` contains screenshots for all ten prototype screens. Its README explicitly says it is visual-only, sample-data-only, and does not replace `app-v2.html`, native iOS or Android. It does not access Supabase, HealthKit, Health Connect, GPS, sensors, notifications or device storage.
+- The Design C review prototype's primary navigation is Home / Activity / Workouts / Health-Progress / Community. The locked design document names the same five primary destinations.
+- The iOS branch tested by PR #128 currently exposes Home / Activity / Missions / Community / Profile. The Android shell is a feature grid, and the Web Hub exposes Home / Journey / Record / Walk / GURU.
+
+### Cross-platform product gap — release blocker
+
+The authoritative design lock requires one shared information architecture: Home, Activity, Workouts, Health/Progress and Community, with GURU, Missions, Profile, Connected Apps and Notifications as supporting screens. Current iOS, Android and Web Hub navigation do not match that baseline. The separate Design C prototype does match it visually but is not a production app. This is recorded as **MISSING / cross-platform parity**, not as an implemented feature. No navigation redesign or production Web Hub edit was made in this run because the original Web Hub is protected and the native tab shell must be reconciled to the locked product IA without changing the approved visual design.
+
+### Current rerun status
+
+The same-commit retry of full iOS job `139875349179` is currently `in_progress` (`no conclusion yet`). It remains the complete unit/UI/build/package job; no tests were removed or narrowed.
+
+### Pipeline maintenance warnings
+
+The Android and Web workflow logs include GitHub Actions Node 20 deprecation notices and Node dependency deprecations (`punycode`, `url.parse()`). These did not fail the builds, but the workflows should migrate supported actions to current major versions in a separate maintenance change.
