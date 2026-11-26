@@ -24,7 +24,7 @@ final class GATIVXDashboardUITests: XCTestCase {
     }
 
     private func tabButton(_ app: XCUIApplication, label: String) -> XCUIElement {
-        app.buttons["gativx-tab-\\(label.lowercased())"]
+        app.buttons["gativx-tab-\(label.lowercased())"]
     }
 
     func testDashboardSectionsMetricsAndPrimaryNavigation() {
