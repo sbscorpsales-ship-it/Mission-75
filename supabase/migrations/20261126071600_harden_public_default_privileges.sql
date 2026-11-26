@@ -6,6 +6,9 @@
 -- and PostgreSQL's default PUBLIC EXECUTE would expose newly created functions.
 --
 -- This changes defaults only; existing tables/functions are not modified here.
+-- The global PUBLIC function revocation applies to all schemas for these two
+-- owners. Existing per-schema grants (for example anon/authenticated EXECUTE
+-- in storage/graphql) remain intact; only implicit PUBLIC execution is removed.
 -- Each new client-facing object must receive explicit grants and RLS policies.
 -- service_role defaults are intentionally preserved.
 
