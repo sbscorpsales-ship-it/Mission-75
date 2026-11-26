@@ -3128,3 +3128,10 @@ Run [#45891894462](https://github.com/sbscorpsales-ship-it/Mission-75/actions/ru
 - Visually inspected the 1206 x 2622 full-device Welcome and Dashboard captures. Both show the same rounded 2:3 app window centered on a black screen: Welcome is letterboxed before guest entry; Dashboard is letterboxed after guest entry. The dashboard image shows the dock inside the reduced app window, not at the physical screen bottom.
 - The 960 x 1440 app-window captures also show Activity content within the reduced window. This is consistent with the UI metrics, not a separate Activity-only sizing defect.
 - PR #146 run #45897137804 has now started. Job 140173722472 is in progress at the full serial XCTest step; project generation, scheme validation and first-run source/permission checks passed. No PR #146 test result is available yet.
+
+
+### PR #136 artifact re-check — 2026-11-27 02:51 IST
+- Downloaded PR #136's latest IPA artifact #15146711639 and XCTest result bundle artifact #15146161829 from run #45847572105.
+- Both the outer GitHub artifact ZIP and nested unsigned IPA pass ZIP integrity. The IPA contains Payload/GATIVX.app/GATIVX, a 4,030,192-byte Mach-O executable with magic cffaedfe; bundle identifier/version are com.paramitsolutions.gativx / 1.0.0 / build 1. No embedded provisioning profile or _CodeSignature is present, as expected for an unsigned build.
+- The PR #136 built Info.plist also lacks UILaunchScreen, UILaunchStoryboardName and UILaunchStoryboards. This corroborates that the missing generated launch-screen key predates PR #145 and affects the exact priority PR #136 head too.
+- The PR #136 xcresult contains four 960 x 1440 app-window PNG attachments, but no 1206 x 2622 full-device capture. Its UI suite therefore did not measure or visually evidence the physical device viewport. The later PR #145 full-device Welcome and Dashboard captures directly show the centered 2:3 app window and black letterboxing.
