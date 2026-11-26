@@ -1,6 +1,6 @@
 # GATIVX 3-Day Engineering Sprint Report
 
-**Last updated:** 2026-11-26 07:00 IST (01:30 UTC)  
+**Last updated:** 2026-11-26 09:48 IST (04:18 UTC)  
 **Repository:** sbscorpsales-ship-it/Mission-75  
 **Audit branch:** audit/gativx-completion-gap-ledger-20261125  
 **Primary repair branch:** fix/gativx-ui-test-guest-reset  
@@ -861,3 +861,97 @@ The live privilege audit found `anon` has SELECT, INSERT, UPDATE, DELETE, TRUNCA
 3. If direct Profile also stalls, inspect the Profile view's on-appear/state work and simulator diagnostics before changing architecture.
 4. Wait for run #645's remaining simulator/Release/IPA steps to finish and record their actual results separately from the failed XCTest step.
 5. Continue the full product audit; preserve PR #107, #112 and #114 and do not merge any PR.
+
+
+---
+
+## 2026-11-26 09:48 IST — full-suite recheck and cross-platform evidence
+
+**Report update commit:** pending in this section's first publication.  
+**Default branch head:** `143889db3e72540fb478b76c486082f45395e9bd` (main; latest commit visible on the default branch).  
+**Protected PR #107:** open, draft, unmerged; head `c19bdbd307df7048cefd86bd3e6064ac4f4e3042`. No files, refs, metadata or review state on #107 were changed.
+
+### Branch and PR state rechecked
+
+- **PR #112** remains open/draft/unmerged at `b6c04d41dc67bd191ed0cf8966331eb5661a9887`.
+- **PR #114** remains open/draft/unmerged at `87318182360d4369ea2f7a773a27dd3fa3e7c558`, based on `fa92bb43a6b2064e0d412e4607c575057535ca1b`. Comparing its head with the current #112 head shows it is **3 commits ahead and 7 commits behind** (diverged). Do not merge or blindly retarget it; perform a reviewed integration on an isolated branch and rerun the complete suite.
+- **PR #127** remains open/draft/unmerged at `01f0f24f263dad70394d05e17a3baba635dfc0fc`, stacked on PR #126. It adds the stable Profile tab accessibility identifier and a direct-from-Home Profile diagnostic test; it is not a product fix for the cumulative navigation hang.
+- **PR #125** remains open/draft/unmerged at `3d988cde0658f4bb101abaa242fbcba3169a8dfb`.
+- **PR #118** remains open/draft/unmerged; this report is maintained on `docs/gativx-sprint-report-20261125`.
+- No PR was merged and no production deployment or database change was made.
+
+### iOS — latest complete workflow, run #646
+
+[Run #646 — GATIVX iOS CI](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45747774883) completed **FAIL** on PR #127 head `01f0f24f263dad70394d05e17a3baba635dfc0fc`.
+
+Exact XCTest results from the job log:
+
+- Unit tests: **76 passed, 0 failed, 0 cancelled**. This includes **18/18 Finish & Save regression tests**.
+- UI tests: **3 executed; 2 passed, 1 failed, 0 cancelled**.
+- Passed UI tests: `testHomeStartWalkNavigatesWithoutStartingSession` and the new `testProfileTabRendersFromFreshDashboard`.
+- Failed UI test: `testDashboardSectionsMetricsAndPrimaryNavigation`, at `ios/GATIVXUITests/GATIVXDashboardUITests.swift:295`.
+
+The failure is now more precisely isolated. In the full journey, the test successfully opened and closed the Notifications sheet, opened Guru, edited the goal and dismissed the keyboard, used Guru's Start a walk action, reached Activity, opened Missions, and reached Community. It then tapped Profile. XCTest logged that the app event-loop idle notification was not received; subsequent accessibility snapshots timed out. The direct Home → Profile diagnostic passed on the same build in 35.127 seconds, and Home → Activity navigation passed. Therefore Profile is not universally broken on first entry; the unresolved defect is the cumulative tab/sheet/navigation sequence before Profile. This is a real app/UI responsiveness failure, not a missing accessibility identifier, and is **not fixed**.
+
+Other run #646 gates:
+
+- First-run auth, portrait and permission source checks: passed.
+- HealthKit source entitlement safeguard: passed.
+- Real-time tracking source safeguards: passed.
+- iPhone Simulator build: passed.
+- Simulator privacy/entitlement validation: passed.
+- Unsigned iPhone Release build: passed.
+- Unsigned IPA packaging and artifact upload: passed.
+- Aggregate release gate: failed only because XCTest failed.
+
+The IPA is unsigned. These results do not prove iPhone installation, physical HealthKit export, screen-locked GPS or device acceptance.
+
+### Finish & Save — exact prior candidate evidence
+
+PR #114 head `87318182360d4369ea2f7a773a27dd3fa3e7c558` has two same-source runs:
+
+- [Run #628](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45633053186): **71 unit tests passed, 0 failed; 2/2 UI tests passed; 0 cancelled**. Simulator build, unsigned Release build, IPA packaging/upload and aggregate automated release gate passed.
+- [Run #629](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45633166732): **71 unit tests passed, 0 failed; 1/2 UI tests passed, 1 failed; 0 cancelled**. The UI failure was the Profile transition; simulator build and unsigned IPA packaging/upload still passed, while the aggregate release gate correctly failed.
+
+Run #646's 18/18 Finish & Save unit regressions passing is further evidence for local persistence, recovered-session policy, idempotency, step reconciliation and HealthKit outbox failure/retry logic. It is not end-to-end proof of a real iPhone save or HealthKit export. PR #114 remains diverged from #112 and must not be merged as-is.
+
+### Android — verified build scope only
+
+[Android CI run #171](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45652707476) completed successfully. The job log records **20 source-safeguard assertions passed, 0 failed**, including Health Connect value preservation, foreground-service lifecycle, GPS segmentation/jump filters, encrypted route persistence, read-back verification, account isolation, retryable cloud sync and token refresh. Gradle reported **BUILD SUCCESSFUL in 26s** and the debug APK artifact was uploaded.
+
+Status remains **implemented-but-unverified** for Android product behaviour: this run did not install the APK on an emulator or physical Android phone, perform a live Health Connect read, or verify real background GPS and cloud account sync.
+
+### Web Hub and visual preview — original protected
+
+[Web release checks run #427](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45676157119) completed successfully with **25 PASS assertions, 0 FAIL**. The log covers v2 entry/shortcut routing, install metadata, measured progress rings, honest unavailable values, recovery journal persistence, local-store isolation, cloud retry, GPS controls, Guru purpose/next action, browser syntax, and the separate visual preview.
+
+The separate [PR #116 visual preview](https://github.com/sbscorpsales-ship-it/Mission-75/pull/116) renders eight screens at 390×844: existing Home, Journey, Record, Walk and Guru, plus preview-only Explore, Missions, Community, Profile, Connected Apps and Notifications. Its README explicitly says the new screens are visual-only and not production features. No Pages deployment was attempted.
+
+The original `app-v2.html` blob SHA is **`8089f536017ffb3a60a8bb99291313a3f5413927`** on both `main` and the PR #116 preview branch. It is byte-for-byte unchanged. Do not replace it with the visual preview.
+
+### Security candidate
+
+[PR #125 database security checks run #9](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45742076827) passed the isolated PostgreSQL migration and grant/member-isolation checks. This validates the migration semantics in an ephemeral test database only. The proposed grant correction has **not** been applied to the live Supabase project; migration-history reconciliation and a non-production project test remain outstanding.
+
+### Updated gap-ledger decisions
+
+| Area | Current status | Latest evidence / remaining acceptance |
+|---|---|---|
+| iOS Finish & Save local persistence and retry logic | Implemented-but-unverified | 18/18 regression tests pass on #646; physical iPhone Finish & Save and read-back remain untested. |
+| Profile and tab navigation | Implemented-but-unverified | Direct Home → Profile passes; full navigation sequence after Guru/Activity/Missions/Community still freezes at Profile. |
+| iOS build and unsigned packaging | Verified | Simulator and unsigned Release/IPA packaging pass on #646; signing, installation and device behaviour are not verified. |
+| Android build and source safeguards | Verified (CI scope only) | #171: 20 safeguards and debug APK build pass; emulator/physical device and Health Connect remain unverified. |
+| Web v2 and visual preview | Verified (browser CI scope only) | #427: 25 assertions pass; additional six preview screens are visual-only; no production Pages deployment. |
+| Original Web Hub | Verified unchanged | `app-v2.html` SHA identical on main and preview branch. |
+| Database least-privilege candidate | Verified (isolated SQL scope only) | #125 run #9 passes; live database remains unchanged. |
+| Missions, Community, Notifications and Apps as live product modules | Missing / gated | Preview-only screens do not count as implemented features; native iOS Community and Notifications remain explicitly gated. |
+| Physical iPhone HealthKit, background GPS and installation | Blocked | Requires a signed device build and real iPhone acceptance; no simulator result substitutes for this. |
+| Android device acceptance | Blocked | Requires Android emulator/device and Health Connect provider/permissions. |
+| Production deployment | Blocked / not attempted | No deployment evidence in this run. |
+
+### Next engineering actions
+
+1. Diagnose the cumulative navigation freeze around Profile by isolating the prior Guru-sheet dismissal and tab transitions; preserve the full existing UI test and do not reduce timeouts or remove assertions.
+2. Keep PR #112 and #114 open and unmerged. Reconcile #114's 3-ahead/7-behind branch only on a separate reviewed integration branch after the navigation defect is stable.
+3. Keep PR #107 untouched. Keep the visual preview separate from the working `app-v2.html`.
+4. Continue the full cross-platform gap ledger; do not describe visual-only preview screens, CI builds or source safeguards as live product acceptance.
