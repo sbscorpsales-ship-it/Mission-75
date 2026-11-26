@@ -99,6 +99,7 @@ This is **not a reason to wait for Apple Health or Google Health Connect**. GATI
 - Files changed by this run: `GATIVX_3_DAY_SPRINT_REPORT.md` only.
 - Audited source heads: iOS `9d25b1eb98a8da49aa1bfa7dbf4bdbdf82fc6f3b`; Android `a4ba5b9d18299f4d725ebb8e8af3c070d94a4940`; database `780eda0681f571ea7d6a70bde29b3df956027ac0`; Web Hub `app-v2.html` blob `8089f536017ffb3a60a8bb99291313a3f5413927`.
 - Report branch parent before this update: `5b5a714c78f3b58a6adfb0e2c930f4e494771b32`.
+- Report refresh commit SHA: `2ec1c067757bec75b82e7505c414a6f159f3bd11`.
 - No application source, dashboard, Design C asset, migration, PR #107, PR #112 or PR #114 was modified.
 - No PR was merged; no signed iOS install, physical-device test, live database migration or production deployment was performed.
 
