@@ -183,6 +183,32 @@ final class GATIVXDashboardUITests: XCTestCase {
                                  "Guru must start at the top safe area, without a large blank band.")
         XCTAssertGreaterThanOrEqual(guruScrollView.frame.maxY, window.frame.maxY - 100,
                                      "Guru must extend to the bottom safe area.")
+
+        let walkingCheckIn = app.buttons["gativx-guru-walking-checkin"]
+        for _ in 0..<20 where !walkingCheckIn.isHittable { scrollTowardBottom(guruScrollView) }
+        XCTAssertTrue(walkingCheckIn.isHittable)
+        walkingCheckIn.tap()
+        XCTAssertTrue(walkingCheckIn.label.localizedCaseInsensitiveContains("checked"),
+                      "The walking habit check-in must visibly save today's completion.")
+
+        let nutritionCheckIn = app.buttons["gativx-guru-nutrition-checkin"]
+        for _ in 0..<20 where !nutritionCheckIn.isHittable { scrollTowardBottom(guruScrollView) }
+        XCTAssertTrue(nutritionCheckIn.isHittable)
+        nutritionCheckIn.tap()
+        XCTAssertTrue(nutritionCheckIn.label.localizedCaseInsensitiveContains("checked"),
+                      "The nutrition habit check-in must visibly save today's completion.")
+
+        let recoveryPicker = app.segmentedControls["gativx-guru-recovery-feeling"]
+        for _ in 0..<20 where !recoveryPicker.isHittable { scrollTowardBottom(guruScrollView) }
+        XCTAssertTrue(recoveryPicker.isHittable)
+        recoveryPicker.buttons["Tired"].tap()
+        let recoverySave = app.buttons["gativx-guru-recovery-save"]
+        for _ in 0..<10 where !recoverySave.isHittable { scrollTowardBottom(guruScrollView) }
+        XCTAssertTrue(recoverySave.isHittable)
+        recoverySave.tap()
+        XCTAssertTrue(recoverySave.label.localizedCaseInsensitiveContains("saved"),
+                      "The recovery check-in must visibly save today's selection.")
+
         let goalField = app.textFields["gativx-guru-goal"]
         XCTAssertTrue(goalField.waitForExistence(timeout: 5))
         // The intro card sits above the goal form on a phone-sized sheet. Scroll
