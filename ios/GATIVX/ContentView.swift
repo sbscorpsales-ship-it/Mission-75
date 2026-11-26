@@ -584,6 +584,16 @@ struct ContentView: View {
     /// or full-screen Guru experience is dismissed; no UIKit responder path is needed.
     private func dismissGuruKeyboard() {
         focusedGuruField = nil
+        // SwiftUI focus is authoritative. One deferred responder-resign is a
+        // UIKit fallback for the keyboard accessory in the full-screen cover.
+        DispatchQueue.main.async {
+            UIApplication.shared.sendAction(
+                #selector(UIResponder.resignFirstResponder),
+                to: nil,
+                from: nil,
+                for: nil
+            )
+        }
     }
 
     private var guruTodayKey: String {
@@ -1435,6 +1445,7 @@ struct ContentView: View {
             .accessibilityIdentifier("gativx-guru-start-walk")
         }
         .padding(18).background(cardBackground, in: RoundedRectangle(cornerRadius: 22))
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("gativx-guru-walking")
     }
 
@@ -1462,6 +1473,7 @@ struct ContentView: View {
             .disabled(guruNutritionDoneToday)
         }
         .padding(18).background(cardBackground, in: RoundedRectangle(cornerRadius: 22))
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("gativx-guru-nutrition")
     }
 
@@ -1491,6 +1503,7 @@ struct ContentView: View {
             .disabled(guruRecoveryCheckedToday)
         }
         .padding(18).background(cardBackground, in: RoundedRectangle(cornerRadius: 22))
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("gativx-guru-recovery")
     }
 
@@ -1968,28 +1981,51 @@ struct ContentView: View {
     }
 
 
-    /// Fixed full-width member navigation. The iOS floating system tab bar
-    /// was detached from the bottom edge and could overlay scroll content.
-    /// This dock preserves the five destinations while reserving real layout space.
+    /// Render exactly one member destination at a time. A native TabView plus a
+    /// custom dock created duplicate accessibility tabs and reserved two tab-bar
+    /// heights; this switch is the sole navigation state for the five destinations.
+    @ViewBuilder
+    private var selectedMemberScreen: some View {
+        switch selectedTab {
+        case 1:
+            activityScreen
+        case 2:
+            missionsScreen
+        case 3:
+            communityScreen
+        case 4:
+            profileScreen
+        default:
+            NavigationStack {
+                homeDashboard
+                    .navigationTitle("")
+                    .toolbar(.hidden, for: .navigationBar)
+            }
+        }
+    }
+
+    /// Fixed full-width member navigation. The five touch targets are the only
+    /// tab controls in the accessibility tree and remain anchored to the bottom.
     private var memberBottomNavigation: some View {
         HStack(spacing: 0) {
-            tabNavigationItem(title: "Home", symbol: "house.fill", tag: 0)
-            tabNavigationItem(title: "Activity", symbol: "figure.walk", tag: 1)
-            tabNavigationItem(title: "Missions", symbol: "target", tag: 2)
-            tabNavigationItem(title: "Community", symbol: "person.3", tag: 3)
-            tabNavigationItem(title: "Profile", symbol: "person.crop.circle", tag: 4)
+            tabNavigationItem(title: "Home", symbol: "house.fill", tag: 0, identifier: "gativx-tab-home")
+            tabNavigationItem(title: "Activity", symbol: "figure.walk", tag: 1, identifier: "gativx-tab-activity")
+            tabNavigationItem(title: "Missions", symbol: "target", tag: 2, identifier: "gativx-tab-missions")
+            tabNavigationItem(title: "Community", symbol: "person.3", tag: 3, identifier: "gativx-tab-community")
+            tabNavigationItem(title: "Profile", symbol: "person.crop.circle", tag: 4, identifier: "gativx-tab-profile")
         }
         .padding(.horizontal, 6)
-        .padding(.top, 8)
-        .padding(.bottom, 6)
+        .padding(.top, 4)
+        .padding(.bottom, 4)
         .frame(maxWidth: .infinity)
+        .frame(height: 56)
         .background(pageBackground)
         .overlay(alignment: .top) { Rectangle().fill(neon.opacity(0.22)).frame(height: 1) }
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("gativx-bottom-navigation")
     }
 
-    private func tabNavigationItem(title: String, symbol: String, tag: Int) -> some View {
+    private func tabNavigationItem(title: String, symbol: String, tag: Int, identifier: String) -> some View {
         Button { selectedTab = tag } label: {
             VStack(spacing: 4) {
                 Image(systemName: symbol).font(.system(size: 19, weight: .semibold))
@@ -2002,7 +2038,7 @@ struct ContentView: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel(title)
-        .accessibilityIdentifier("gativx-tab-\(title.lowercased())")
+        .accessibilityIdentifier(identifier)
         .accessibilityAddTraits(selectedTab == tag ? .isSelected : [])
     }
 
@@ -2010,25 +2046,9 @@ struct ContentView: View {
         // Registration/sign-in is the first-run entry point. The dashboard is
         // shown only after account authentication or an explicit local-only choice.
         if cloud.isSignedIn || localModeEntered {
-        TabView(selection: $selectedTab) {
-            NavigationStack { homeDashboard.navigationTitle("").toolbar(.hidden, for: .navigationBar) }
-                .tabItem { Label("Home", systemImage: "house.fill") }.tag(0)
-            activityScreen
-                .tabItem { Label("Activity", systemImage: "figure.walk").accessibilityIdentifier("gativx-tab-activity") }.tag(1)
-            // Missions is a single scroll screen with no navigation destinations.
-            // Keep it flat so tab changes do not carry an unnecessary nested stack.
-            missionsScreen
-                .tabItem { Label("Missions", systemImage: "target").accessibilityIdentifier("gativx-tab-missions") }.tag(2)
-            // This screen is a static, gated placeholder with no navigation
-            // destinations. Avoid an unnecessary NavigationStack here: the
-            // nested stack was stalling XCTest's main-thread idle/accessibility
-            // handshake when switching to Community after other tabs.
-            communityScreen
-                .tabItem { Label("Community", systemImage: "person.3").accessibilityIdentifier("gativx-tab-community") }.tag(3)
-            // Profile is a settings form with no navigation destinations. Keep it flat like
-            // Activity and Community to avoid a nested stack during tab activation.
-            profileScreen
-                .tabItem { Label("Profile", systemImage: "person.crop.circle").accessibilityIdentifier("gativx-tab-profile") }.tag(4)
+        ZStack {
+            selectedMemberScreen
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .sheet(isPresented: $isNotificationsPresented) {
             NavigationStack {
@@ -2087,10 +2107,8 @@ struct ContentView: View {
             isProfilePhotoPickerPresented = false
             Task { await saveMemberProfilePhoto(item) }
         }
-        .toolbar(.hidden, for: .tabBar)
         .safeAreaInset(edge: .bottom, spacing: 0) {
             memberBottomNavigation
-                .background(pageBackground.ignoresSafeArea(edges: .bottom))
         }
         .tint(neon)
         .frame(maxWidth: .infinity, maxHeight: .infinity)

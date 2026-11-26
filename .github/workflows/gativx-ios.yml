@@ -82,7 +82,8 @@ jobs:
           root_end = view.index(".sheet(isPresented:", root_start)
           launch_root = view[root_start:root_end]
           assert "if cloud.isSignedIn || localModeEntered" in launch_root, "Member dashboard must require an authenticated account or explicit local-only entry"
-          assert "TabView(selection: $selectedTab)" in launch_root and "homeDashboard" in launch_root, "The approved dashboard tab shell must be available after member entry"
+          assert "selectedMemberScreen" in launch_root and "homeDashboard" in view and "memberBottomNavigation" in view, "The approved single-navigation dashboard shell must be available after member entry"
+          assert "TabView(selection: $selectedTab)" not in view, "A native TabView must not duplicate the persistent member dock"
           assert "        } else {\n            welcomeScreen\n        }\n    }\n}" in view, "First launch must present registration/sign-in before the dashboard"
           assert "gativx-continue-guest" in view and "gativx-auth-submit" in view and "gativx-auth-mode-toggle" in view, "Registration, sign-in and explicit local-only entry controls must be available"
           assert "authenticatedUserEmail" in cloud and "gativx-dashboard-member-identity" in view and "gativx-member-login-id" in view, "Authenticated login ID must be visible in the dashboard and Profile"
@@ -249,10 +250,10 @@ jobs:
           motion_monitor = view.split("private func startLiveMotionMonitor()", 1)[1].split("private func loadActivityHistory()", 1)[0]
           finish_activity = view.split("private func finishActivitySession()", 1)[1].split("/// Prefer HealthKit", 1)[0]
           auth_handler = gps.split("func locationManagerDidChangeAuthorization", 1)[1].split("func locationManager(", 1)[0]
-          profile_tab_body = view.split("TabView(selection: $selectedTab)", 1)[1].split(".sheet(isPresented: $isNotificationsPresented)", 1)[0]
+          profile_tab_body = view.split("private var selectedMemberScreen", 1)[1].split("private func tabNavigationItem", 1)[0]
           profile_screen = view.split("private var profileScreen", 1)[1].split("private func progressMeterCard", 1)[0]
           profile_photo_sheet = view.split("private var profilePhotoPickerSheet", 1)[1].split("private var profileScreen", 1)[0]
-          root_body = view.split("var body: some View", 1)[1].split(".tint(neon)", 1)[0]
+          root_body = view.split("var body: some View", 1)[1].split("} else {\\n            welcomeScreen", 1)[0]
           save_workout_method = health.split("func saveActivityWorkout(", 1)[1].split("private func performActivityWorkoutExport(", 1)[0]
           workout_export = health.split("func saveActivityWorkout(", 1)[1].split("func disconnect()", 1)[0]
           duplicate_check = workout_export.find("if samples?.isEmpty == false")
@@ -317,8 +318,9 @@ jobs:
               "Apple Health workout export omits unavailable steps instead of inventing zero": '"com.paramitsolutions.gativx.measuredSteps"] = steps' in health and "steps ?? 0" not in health and "max(0, steps" not in health,
               "Apple Health requests measured read types and workout/distance write access": "let shareTypes: Set<HKSampleType> = [workoutType, distanceType]" in health and "let readTypes: Set<HKObjectType> = [stepType, energyType, distanceType, exerciseType, heartRateType, workoutType]" in health and "store.requestAuthorization(toShare: shareTypes, read: readTypes)" in health,
               "Apple Health workout export checks sync identifiers before duplicate writes": "HKMetadataKeySyncIdentifier" in health and "HKQuery.predicateForObjects(withMetadataKey: HKMetadataKeySyncIdentifier" in health,
+              "Member navigation uses one explicit five-destination switch, not a duplicate native TabView": "private var selectedMemberScreen" in view and "TabView(selection: $selectedTab)" not in view and all(f'identifier: "gativx-tab-{name}"' in view for name in ("home", "activity", "missions", "community", "profile")) and ".frame(height: 56)" in view,
               "Profile tab avoids a redundant NavigationStack and retains its UI test target": "profileScreen" in profile_tab_body and "NavigationStack { profileScreen" not in profile_tab_body and '.accessibilityIdentifier("gativx-profile-screen")' in view and '"gativx-profile-screen"' in ui_tests,
-              "Profile tab has a stable identifier and a direct-from-Home UI test": '.accessibilityIdentifier("gativx-tab-profile")' in profile_tab_body and '"gativx-tab-profile"' in ui_tests and "func testProfileTabRendersFromFreshDashboard()" in ui_tests,
+              "Profile tab has a stable identifier and a direct-from-Home UI test": 'identifier: "gativx-tab-profile"' in profile_tab_body and '"gativx-tab-profile"' in ui_tests and "func testProfileTabRendersFromFreshDashboard()" in ui_tests,
               "Profile defers PhotosUI construction until an explicit member action": ".photosPicker(" not in profile_screen and "PhotosPicker(" not in profile_screen and "PhotosPicker(" in profile_photo_sheet and "gativx-profile-photo-picker-open" in profile_screen and "gativx-profile-photo-picker-cancel" in profile_photo_sheet and "gativx-profile-photo-picker-sheet" in ui_tests and "gativx-profile-photo-picker-cancel" in ui_tests,
               "Profile photo picker sheet is hosted at the root, not nested in the Profile tab": ".sheet(isPresented: $isProfilePhotoPickerPresented)" in root_body and ".sheet(isPresented: $isProfilePhotoPickerPresented)" not in profile_screen and ".onChange(of: selectedProfilePhoto)" in root_body and ".onChange(of: selectedProfilePhoto)" not in profile_screen and root_body.index(".sheet(isPresented: $isProfilePhotoPickerPresented)") > root_body.index(".fullScreenCover(isPresented: $isGuruPresented)"),
               "Apple Health workout export is durably queued before HealthKit work": "enqueueWorkout(pending)" in health and "workoutOutbox.enqueue(item)" in health and "workout-export-outbox.v1" in health_outbox,
