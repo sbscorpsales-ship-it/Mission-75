@@ -8,10 +8,10 @@
   if (root) root.GATIVXActivityEngine = api;
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
   "use strict";
-  const VERSION = "1.1.0";
+  const VERSION = "1.1.1";
   const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
   const finite = v => typeof v === "number" && Number.isFinite(v);
-  const ANCHORS = [[1,1.8],[2,2],[2.5,2.3],[3,2.5],[3.5,2.8],[4,3],[4.5,3.5],[5,3.8],[5.5,4.3],[6,4.8],[6.5,5.5],[7,6],[7.5,6.5],[8,7],[9,8.3],[10,9.8],[11,11],[12,12.5]];
+  const ANCHORS = [[1,1.8],[2,2],[2.5,2.3],[3,2.5],[3.5,2.8],[4,3],[4.5,3.5],[5,3.8],[5.5,4.3],[6,3.857],[6.5,5.5],[7,6],[7.5,6.5],[8,7],[9,8.3],[10,9.8],[11,11],[12,12.5]];
   function interpolate(speed) {
     if (speed <= ANCHORS[0][0]) return ANCHORS[0][1];
     for (let i=1;i<ANCHORS.length;i++) {
