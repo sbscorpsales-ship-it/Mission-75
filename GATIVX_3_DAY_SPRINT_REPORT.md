@@ -1718,3 +1718,22 @@ Both PRs remain open/draft. Their isolated PostgreSQL 17 CI jobs passed:
 - PR #130 run [#45775093000](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45775093000): migration apply, future-object default-privilege probes and grant/member-isolation verification all succeeded.
 
 These CI runs prove the migrations against a temporary local PostgreSQL 17 service, not against the live Supabase project. The production exposure remains until the two migrations are applied and grants are re-queried. I did not apply them because that is a live security change and no explicit production-change authorization was given. Required owner action: explicitly authorize applying these two tested migrations to `mission75-cloud`, then re-run the grant/default-privilege queries and enable leaked-password protection in Supabase Auth settings.
+
+
+## 2026-11-26T11:31:23.418Z — isolated iOS navigation fix queued for full CI
+
+### PR #132
+
+- New isolated branch: `fix/gativx-flat-missions-tab-20261126`.
+- Commit: `3232654ee65f8c512de47b0f52a609d9d6c45592`.
+- Draft PR: [#132 Keep Missions tab flat and guard GATIVX tab navigation](https://github.com/sbscorpsales-ship-it/Mission-75/pull/132).
+- Base: PR #128 diagnostics branch at `1885b9631b2f15468445e943ccc2e1fe5aec7de7`.
+- Files changed:
+  - `ios/GATIVX/ContentView.swift`: removed the unnecessary `NavigationStack` around Missions. Source inspection confirmed Missions has no NavigationLink or navigation destination; it is one scroll screen. Added a stable tab accessibility identifier. No visual content or layout was changed.
+  - `ios/GATIVXUITests/GATIVXDashboardUITests.swift`: added a focused Missions → Community regression test and left/right swipe assertions proving the dashboard does not page sideways away from Home. Existing cumulative navigation test and all prior assertions remain.
+- Workflow [#45811263546](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45811263546) has started. At the time of this report update, project checkout was successful and Xcode selection was in progress; no test result is claimed yet.
+- No tests were removed, skipped, disabled, or narrowed. No Design C assets or original Web Hub files changed. PR #107 remains untouched. No PR was merged.
+
+### Rerun of original diagnostics commit
+
+- Full same-commit retry [#45800363888](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45800363888), job `139875349179`, remains in the full unit/UI test step at this timestamp. The first attempt's 81 passed / 1 failed result remains the only completed result until this retry finishes.
