@@ -1265,6 +1265,7 @@ Read-only inspection of active project `mission75-cloud` (`crarbbsvcczwmtvxyrxo`
 - More importantly, `pg_default_acl` shows broad default table/sequence/function grants to `anon` and `authenticated` for future public objects created by both `postgres` and `supabase_admin`. Fixing only the current table would leave future tables/functions exposed.
 - Supabase Security Advisor still reports **Leaked Password Protection Disabled**.
 - Live migration history has **22 versions** through `20261113200433`; `main` contains only **10 SQL migration files** (PR #125's branch has 11). The missing migration history must be reconciled before claiming reproducible schema deployment.
+- Exact version comparison: the four exact filename matches are `20261107080246`, `20261109054134`, `20261109113101` and `20261110102013`. The 18 live version IDs without an exact filename match are `20261106053936`, `20261106054358`, `20261106090900`, `20261106090921`, `20261106095244`, `20261106103424`, `20261107021753`, `20261107080437`, `20261107140341`, `20261107140614`, `20261107183639`, `20261107184813`, `20261111061101`, `20261112081338`, `20261113150913`, `20261113172744`, `20261113200314` and `20261113200433`. Fifteen relevant GATIVX feature/fix branches were checked; none contained those exact missing filenames. Some may be represented by differently timestamped/consolidated repository migrations, so these are version-ID mismatches, not automatically 18 missing schema changes.
 
 ### Security changes opened and validated in isolated CI
 
@@ -1303,7 +1304,7 @@ The migration:
 
 ### Exact blockers and required owner actions
 
-1. **Live database:** restore the 12 migration versions absent from `main` (or approve a schema-baseline reconciliation), review PRs #125 and #130, then explicitly authorize a staged migration. Do not apply the security migrations to production before the history is reconciled.
+1. **Live database:** reconcile the 18 live migration version IDs that have no exact filename match in `main` (only 4 of 22 match exactly; some unmatched versions may be represented by differently timestamped or consolidated files), review PRs #125 and #130, then explicitly authorize a staged migration. Do not apply the security migrations to production before the history is reconciled.
 2. **Supabase Auth:** an owner must enable leaked-password protection in the project Auth settings, then rerun Security Advisor.
 3. **Physical iPhone:** simulator tests cannot validate HealthKit or locked-screen GPS. A signed test build and physical iPhone are required. The lowest-cost route is access to a Mac/Xcode with free Apple ID provisioning or an already-signed test device; a paid Apple Developer membership is not assumed.
 4. **Physical Android:** a test Android phone with Health Connect installed and permissions granted is required to validate real provider data and background/locked-screen tracking.
