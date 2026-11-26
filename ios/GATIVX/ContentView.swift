@@ -2112,14 +2112,11 @@ struct ContentView: View {
             isProfilePhotoPickerPresented = false
             Task { await saveMemberProfilePhoto(item) }
         }
-        // Reserve space for the dock without including the home-indicator safe area
-        // in the dock's own accessibility frame. The root background paints that area.
+        // Put the fixed dock inside the safe-area inset so every member
+        // scroll view reserves its full 56 pt height instead of scrolling
+        // content underneath an overlaid dock. The root background paints
+        // the home-indicator area without enlarging the dock's own frame.
         .safeAreaInset(edge: .bottom, spacing: 0) {
-            Color.clear
-                .frame(height: 56)
-                .accessibilityHidden(true)
-        }
-        .overlay(alignment: .bottom) {
             memberBottomNavigation
         }
         .tint(neon)
