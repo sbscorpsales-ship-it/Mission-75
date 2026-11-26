@@ -112,6 +112,34 @@ begin
     exception when insufficient_privilege then
         null;
     end;
+
+    update public.daily_action_progress
+       set completed = '{"walk": false}'::jsonb
+     where user_id = '00000000-0000-4000-8000-000000000001'
+       and action_date = date '2026-11-26';
+    if not found then
+        raise exception 'authenticated member could not update their own row';
+    end if;
+
+    if (select completed ->> 'walk'
+          from public.daily_action_progress
+         where user_id = '00000000-0000-4000-8000-000000000001'
+           and action_date = date '2026-11-26') <> 'false' then
+        raise exception 'authenticated member update did not persist on their own row';
+    end if;
+
+    insert into public.daily_action_progress (user_id, action_date, completed)
+    values ('00000000-0000-4000-8000-000000000001', date '2026-11-27', '{"strength": true}'::jsonb);
+    if not found then
+        raise exception 'authenticated member could not insert their own row';
+    end if;
+
+    delete from public.daily_action_progress
+     where user_id = '00000000-0000-4000-8000-000000000001'
+       and action_date = date '2026-11-27';
+    if not found then
+        raise exception 'authenticated member could not delete their own row';
+    end if;
 end;
-$$;
+$;
 reset role;
