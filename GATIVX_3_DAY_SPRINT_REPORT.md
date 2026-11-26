@@ -1757,3 +1757,10 @@ The current iOS source confirms that guest activity history is not deleted on si
 - The current sign-in transition does not present an explicit guest-history adoption/transfer choice. Therefore guest records remain on the device but are not automatically attached to the new account.
 
 Gap classification: **implemented local retention; missing explicit account-adoption flow**. Do not silently transfer guest history to an account. A safe future implementation needs a member-confirmed transfer showing the number of local sessions and the destination account before changing ownership. No history or account data was modified in this audit.
+
+
+## 2026-11-26T11:34:09.877Z — authentication parity check
+
+- Native iOS exposes a Forgot Password action and `SupabaseRESTClient.sendPasswordReset(email:)` posts to Supabase Auth `/auth/v1/recover`. The current UI test only checks that the button exists; no real recovery email was requested or verified.
+- Original Web Hub `app-v2.html` contains Supabase sign-up, password sign-in, session restoration and auth-state change handling. A source scan found no `resetPasswordForEmail`, `resetPassword`, `forgot password` or recovery action in that file.
+- Gap classification: **Web Hub password recovery missing; native recovery implemented-but-unverified**. The original Web Hub remains untouched. A future Web Hub copy should add recovery without modifying the protected original.
