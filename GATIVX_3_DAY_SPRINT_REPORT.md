@@ -742,3 +742,66 @@ The live privilege audit found `anon` has SELECT, INSERT, UPDATE, DELETE, TRUNCA
 - Least-privilege grants on `daily_action_progress`: **implemented in PR #125, not yet verified/applied**.
 - Leaked-password protection: **blocked on owner-controlled Auth setting**.
 - Live two-account isolation, outbox retry/idempotency and delete/export acceptance: **not yet verified**.
+
+
+---
+
+## 2026-11-26 07:50 IST — PR #644 Activity transition failure isolated; PostgreSQL least-privilege test expanded and passed
+
+### Repository and protected PR state
+- Default branch `main`: `143889db3e72540fb478b76c486082f45395e9bd`.
+- PR #107: open/draft/unmerged, head `c19bdbd307df7048cefd86bd3e6064ac4f4e3042`; no changes or ref updates made.
+- PR #112: open/draft/unmerged, head `b6c04d41dc67bd191ed0cf8966331eb5661a9887`.
+- PR #114: open/draft/unmerged, head `87318182360d4369ea2f7a773a27dd3fa3e7c558`; its base remains `fa92bb43a6b2064e0d412e4607c575057535ca1b`, seven commits behind PR #112 head.
+- PR #124: open/draft/unmerged, head `bb571cfb9aab5b8d78dffa95d7f379a95b30a903`.
+- PR #125: open/draft/unmerged, latest head `3d988cde0658f4bb101abaa242fbcba3169a8dfb`.
+- New PR #126: open/draft/unmerged, head `068d0670169ae2850a373c73d713a7173edbb113`, stacked on PR #124.
+- No pull request has been merged. Main and the original Web Hub remain unchanged.
+
+### PR #124 run #644 — exact full result
+- Head: `bb571cfb9aab5b8d78dffa95d7f379a95b30a903`.
+- Unit XCTest: **76 passed, 0 failed, 0 cancelled**.
+- UI XCTest: **1 passed, 1 failed, 0 cancelled**.
+- The passing UI test was `testHomeStartWalkNavigatesWithoutStartingSession`.
+- The primary navigation UI test failed at `GATIVXDashboardUITests.swift:237`. The actual sequence reached GURU, changed the 180-day journey, dismissed GURU, tapped the Activity tab, and then XCTest logged “App event loop idle notification not received”. The accessibility query timed out after 1,650.941 seconds.
+- This failure occurred at the GURU-to-Activity transition, **before Profile was opened**. The new PhotosPicker open/cancel UI assertions were not reached. Therefore PR #124 has not demonstrated that its Profile change works.
+- Independent checks passed: XcodeGen/project/scheme validation, first-run/auth/layout/permission source checks, HealthKit source entitlement checks, tracking safeguards, simulator build, simulator privacy/entitlement validation, unsigned iPhone Release build, IPA ZIP integrity/bundle identity/version checks and artifact upload.
+- Overall workflow failed because the full UI suite failed. [Run #644 and full job logs](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45735428080) · [Unsigned IPA artifact](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45735428080/artifacts/15080761532).
+- The earlier PR #123 run #643 had 76/76 unit tests pass but timed out at Profile. PR #122 run #642 passed 76 unit + 2 UI tests once. The UI navigation remains intermittent and is not accepted as fixed.
+
+### PR #126 — root-host the Profile photo picker sheet
+- Created isolated branch `fix/gativx-profile-picker-root-sheet-20261126` from PR #124.
+- Commit head: `068d0670169ae2850a373c73d713a7173edbb113`.
+- Moved the Profile photo picker sheet and selected-photo change handler from the Profile tab child view to the root TabView modifier chain beside the existing Notifications/GURU sheets. The PhotosPicker itself remains inside the on-demand sheet.
+- Added a CI source safeguard requiring the sheet and selection handler to remain root-hosted and absent from the Profile child view.
+- Preserved the full UI test, including Profile photo sheet open/cancel. No test was removed, narrowed or weakened.
+- PR: [#126](https://github.com/sbscorpsales-ship-it/Mission-75/pull/126), draft/unmerged.
+- Workflow [run #45742219740](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45742219740) was queued at report time; no test/build result is claimed.
+- This is a targeted hypothesis about nested sheet presentation interacting with TabView transitions, not a confirmed root cause or fix. The exact PR #126 full UI run must pass before acceptance.
+
+### PR #125 — least-privilege migration test now covers positive and negative member access
+- Extended `supabase/tests/daily_action_progress_security.sql` to verify both sides of the RLS contract:
+  - anonymous role cannot access the table;
+  - authenticated member A sees only their own row;
+  - member A cannot update, delete or insert member B's row;
+  - member A can update, insert and delete their own rows;
+  - grants exclude TRUNCATE, TRIGGER and REFERENCES while preserving authenticated CRUD.
+- The first test edit introduced a malformed final dollar-quoted block. Both the push and PR workflows failed on that syntax error (runs #4/#5). The delimiter was corrected to an explicit `$block$` pair; no test assertions were removed.
+- Final head: `3d988cde0658f4bb101abaa242fbcba3169a8dfb`.
+- Push run #8: [45742071700](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45742071700) — passed.
+- PR run #9: [45742076827](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45742076827) — passed.
+- Both exact logs show PostgreSQL 17 ephemeral service setup, migration application, and successful execution of the grant/RLS/member-isolation SQL test. No SQL was applied to the live Supabase project.
+- Status: migration semantics and RLS test are **verified in ephemeral PostgreSQL 17**; the live project change remains **implemented-but-unverified** pending staging review and migration-history reconciliation.
+
+### Current gap/status adjustments
+- iOS Activity/Profile navigation: **implemented-but-unverified**; repeated simulator event-loop/accessibility stalls persist. PR #126 is a candidate, not a fix claim.
+- Finish & Save local storage/recovery and HealthKit outbox queue failure: **implemented-but-unverified** at UI/device level. PR #124's 76 unit tests passed, including `testLocalSessionSurvivesHealthKitQueueFailureAndExportRemainsRetryable`, but no end-to-end UI relaunch/Finish & Save/HealthKit device acceptance exists.
+- Database grant correction: **verified in isolated PostgreSQL 17 CI only**; live Supabase remains unchanged.
+- Fresh-environment migration reproducibility, physical iPhone signing/HealthKit/background GPS, Android device/Health Connect, live two-account sync, full Missions/Community/Notifications/Connected Apps and complete platform parity remain open gaps or external blockers.
+
+### Next actions
+1. Inspect PR #126 run #45742219740 on its exact head. Require all 76 unit tests, both full UI tests including GURU → Activity → Profile → picker open/cancel, tracking safeguards, simulator build, unsigned Release build and IPA package checks.
+2. If the Activity transition still stalls, use the new exact test result and any available simulator diagnostics to isolate the root cause; do not accept a single passing navigation run or weaken the UI test.
+3. Inspect the live Supabase grant state again only after a staging migration test and migration-source reconciliation. Do not apply PR #125 to production.
+4. Add a deterministic UI-level Finish & Save → relaunch → same-session history read-back acceptance test. Keep actual HealthKit export and background GPS as physical-device gates.
+5. Continue Android/Web Hub feature audit and preserve PR #107, #112 and #114 untouched/unmerged.
