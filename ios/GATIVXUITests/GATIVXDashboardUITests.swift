@@ -289,7 +289,7 @@ final class GATIVXDashboardUITests: XCTestCase {
         )
         XCTAssertTrue(app.descendants(matching: .any)["gativx-community-gated"].waitForExistence(timeout: 5))
 
-        let profileTab = tabButton(app, label: "Profile")
+        let profileTab = app.descendants(matching: .any)["gativx-tab-profile"].firstMatch
         XCTAssertTrue(profileTab.waitForExistence(timeout: 5))
         profileTab.tap()
         XCTAssertTrue(profileTab.isSelected, "Selecting Profile should switch the active tab.")
@@ -337,6 +337,37 @@ final class GATIVXDashboardUITests: XCTestCase {
                       "The Activity screen must present the explicit start action.")
         XCTAssertFalse(app.buttons["Finish & save activity"].exists,
                        "Navigating from Home must not silently start GPS or pedometer recording.")
+    }
+
+    func testProfileTabRendersFromFreshDashboard() {
+        let app = XCUIApplication()
+        launchFreshGuestApp(app)
+
+        let guestEntry = app.buttons["gativx-continue-guest"]
+        XCTAssertTrue(guestEntry.waitForExistence(timeout: 10))
+        guestEntry.tap()
+
+        let dashboard = app.descendants(matching: .any)["gativx-home-dashboard"].firstMatch
+        XCTAssertTrue(dashboard.waitForExistence(timeout: 10),
+                      "The Home dashboard must render before testing direct Profile navigation.")
+
+        let profileTab = app.descendants(matching: .any)["gativx-tab-profile"].firstMatch
+        XCTAssertTrue(profileTab.waitForExistence(timeout: 5),
+                      "The Profile tab must expose its stable accessibility identifier.")
+        XCTAssertFalse(profileTab.isSelected, "Home must remain selected before Profile is tapped.")
+        profileTab.tap()
+        XCTAssertTrue(profileTab.isSelected, "A direct Profile tap must select the Profile tab.")
+
+        let profileScreen = app.descendants(matching: .any)["gativx-profile-screen"].firstMatch
+        XCTAssertTrue(profileScreen.waitForExistence(timeout: 10),
+                      "Profile must render when opened directly from a fresh dashboard.")
+        XCTAssertTrue(app.descendants(matching: .any)["gativx-member-login-id"].waitForExistence(timeout: 5),
+                      "Profile must identify the local-only member.")
+
+        let screenshot = XCTAttachment(screenshot: app.screenshot())
+        screenshot.name = "GATIVX-Profile-Direct-From-Home"
+        screenshot.lifetime = .keepAlways
+        add(screenshot)
     }
 
 }
