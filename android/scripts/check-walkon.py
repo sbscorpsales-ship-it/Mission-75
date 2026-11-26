@@ -6,6 +6,7 @@ service = (ROOT / "android/app/src/main/java/com/paramitsolutions/gativx/WalkOnL
 store = (ROOT / "android/app/src/main/java/com/paramitsolutions/gativx/WalkOnStore.kt").read_text()
 activity = (ROOT / "android/app/src/main/java/com/paramitsolutions/gativx/MainActivity.kt").read_text()
 policy_tests = (ROOT / "android/app/src/test/java/com/paramitsolutions/gativx/WalkOnStartPolicyTest.kt").read_text()
+decode_session = store.split("private fun decodeSession", 1)[1].split("private fun encodeSessions", 1)[0]
 
 checks = {
     "Android Health Connect preserves existing non-Health-Connect step values": (
@@ -122,6 +123,10 @@ checks = {
         "fun completedHistoryIsUnreadable(context: Context): Boolean" in store
         and "WalkOnStartPolicy.shouldBlockSyncSuccess(WalkOnStore.completedHistoryIsUnreadable(context))" in activity
         and activity.index("WalkOnStartPolicy.shouldBlockSyncSuccess") < activity.index("val pending = WalkOnStore.pendingFor(context, currentSession.userId)")
+    ),
+    "malformed encrypted GPS points fail closed instead of being silently dropped": (
+        "decodePoint(pointsJson.getJSONObject(index))" in decode_session
+        and "mapNotNull" not in decode_session
     ),
     "corrupt route history blocks destructive rewrites and preserves active drafts": (
         "readSessions(context, COMPLETED_KEY) ?: run" in store
