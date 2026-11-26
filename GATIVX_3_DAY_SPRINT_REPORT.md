@@ -1746,3 +1746,14 @@ The structured diagnostics artifact for run #45800363888 reports `totalTestCount
 The one failed UI test ran for **741.45 seconds (12m 21s)** and failed at the Community accessibility query after XCTest reported that the app event loop and app-animation completion notifications were not received within 60 seconds. The accessibility snapshot captured afterward showed Community selected and rendered. The diagnostics also record the SwiftUI runtime warning `Invalid frame dimension (negative or non-finite).` in the failing test and in the Guru keyboard test. This warning is not yet tied to a specific source line and is being treated as a separate layout defect to investigate, not ignored.
 
 The diagnostics identify the long cumulative navigation test as a duration outlier (61% of total run duration). PR #132 adds a focused Missions → Community test and horizontal-swipe acceptance without removing the cumulative test or any existing assertions.
+
+
+## 2026-11-26T11:33:13.056Z — guest-history ownership check
+
+The current iOS source confirms that guest activity history is not deleted on sign-in, but it becomes hidden from the signed-in account view:
+
+- `visibleActivityHistory` shows only records whose `ownerID` matches the authenticated account while signed in; guest records with `ownerID == nil` are shown only when no cloud account is active.
+- `syncSavedActivitySessions()` deliberately queues only records already assigned to the current authenticated `ownerID`. Its comment says legacy and guest records remain local until ownership is verified.
+- The current sign-in transition does not present an explicit guest-history adoption/transfer choice. Therefore guest records remain on the device but are not automatically attached to the new account.
+
+Gap classification: **implemented local retention; missing explicit account-adoption flow**. Do not silently transfer guest history to an account. A safe future implementation needs a member-confirmed transfer showing the number of local sessions and the destination account before changing ownership. No history or account data was modified in this audit.
