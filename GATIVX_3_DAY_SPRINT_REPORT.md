@@ -1,6 +1,6 @@
 # GATIVX 3-Day Engineering Sprint Report
 
-**Last updated:** 2026-11-26 05:42 IST (00:12 UTC)  
+**Last updated:** 2026-11-26 06:55 IST (01:25 UTC)  
 **Repository:** sbscorpsales-ship-it/Mission-75  
 **Audit branch:** audit/gativx-completion-gap-ledger-20261125  
 **Primary repair branch:** fix/gativx-ui-test-guest-reset  
@@ -12,8 +12,9 @@
 **Cumulative report PR:** [#118](https://github.com/sbscorpsales-ship-it/Mission-75/pull/118), open, draft, unmerged  
 **Finish & Save PR:** [#114](https://github.com/sbscorpsales-ship-it/Mission-75/pull/114), open, draft, unmerged.
 **Latest queue-failure correction:** [#121](https://github.com/sbscorpsales-ship-it/Mission-75/pull/121), head 4415daa439bd9446ef08842c9486cb0494a93613, CI #641 failed only at the UI suite; simulator/unsigned release/IPA packaging passed.
-**Profile navigation follow-up:** [#122](https://github.com/sbscorpsales-ship-it/Mission-75/pull/122), head 804a88b56051636104bb7c4c2ca264df3c725188; 76 unit + 2 UI tests passed, simulator/unsigned Release/IPA passed, but CI failed in a separate source-guard script with `NameError: ui_tests`.  
-**CI guard correction:** [#123](https://github.com/sbscorpsales-ship-it/Mission-75/pull/123), head 4343e92312a557918c3075657502d4a693700734, one-line fixture-load correction; run #643 pending.
+**Profile navigation follow-up:** [#122](https://github.com/sbscorpsales-ship-it/Mission-75/pull/122), head 804a88b56051636104bb7c4c2ca264df3c725188; run #642 passed 76 unit + 2 UI tests and simulator/unsigned Release/IPA gates, but this was not stable: the same app source on run #643 later stalled at Profile during the full UI workflow.  
+**CI guard correction:** [#123](https://github.com/sbscorpsales-ship-it/Mission-75/pull/123), head 4343e92312a557918c3075657502d4a693700734; run #643 removed the `NameError` and passed tracking safeguards, but the full UI step timed out after 40 minutes at Profile.  
+**Profile PhotosUI isolation candidate:** [#124](https://github.com/sbscorpsales-ship-it/Mission-75/pull/124), head bb571cfb9aab5b8d78dffa95d7f379a95b30a903; moves PhotosPicker into an on-demand sheet, adds open/cancel UI coverage and a CI source safeguard; run #644 is in progress.
 **Protected consolidation PR:** [#107](https://github.com/sbscorpsales-ship-it/Mission-75/pull/107), open, draft, untouched
 
 ## Release verdict
@@ -43,7 +44,7 @@ No pull request has been merged.
 | GATIVX Guru and 30/90/180/365-day journey | Implemented-but-unverified | Goal, purpose, emotion, next-action and journey logic exist; the 8 goal/journey unit tests passed in CI #628. iOS values are locally persisted; cross-device cloud persistence is not proven. |
 | Missions | Missing | iOS currently exposes one fixed “Today · Consistency” mission and a step-progress view, not a goal-linked mission engine with member-created missions, milestones and reviews. |
 | Community | Missing | iOS explicitly gates the feed/shared missions. No live community feed, groups, sharing, moderation, blocking or reporting. |
-| Profile | Verified (CI scope only) | PR #122 run #642 passed both UI tests (2/2), including the full navigation path through Profile after GURU, Activity, Missions and Community. The redundant Profile NavigationStack was removed. Settings/photo-picker behavior and account lifecycle remain unverified; photo is local-only. |
+| Profile | Implemented-but-unverified | PR #122 run #642 passed both UI tests (2/2), but PR #123 run #643 on the same app source later timed out at Profile after the tab tap: XCTest reported no app event-loop idle notification and accessibility snapshot queries stalled. The Profile tab is therefore intermittent, not accepted as fixed. PR #124 moves PhotosPicker out of the Profile Form into a separate on-demand sheet and adds UI coverage for opening/cancelling it; run #644 is pending. |
 | Notifications | Missing | iOS explicitly states notifications are inactive; no delivery pipeline or member notification controls are implemented. |
 | Apps hub | Missing | No Apps destination in the current five-tab iOS shell. |
 | Android authentication | Implemented-but-unverified | Supabase email/password auth, encrypted Android Keystore session storage and refresh-token handling exist. No phone OTP or physical-device auth acceptance. |
@@ -58,7 +59,7 @@ No pull request has been merged.
 | Nutrition, hydration, sleep and strength | Missing | Web has basic weight/water/protein journal fields. A complete food diary, nutrition analysis, measured sleep integration and strength-training programme are not present across platforms. |
 | Motion 3D route replay | Missing | No 3D route playback/flyover implementation. |
 | Referrals, subscriptions, learning rewards, admin and moderation | Missing | Product blueprint defines these modules; the audited repair branch does not contain the required end-to-end systems. |
-| iOS CI/release | Verified (CI scope only; latest workflow needs CI-script correction) | PR #120 run #640 passed 75 unit + 2 UI tests and all build/package gates. PR #121 run #641 passed 76 unit tests but failed 1/2 UI tests at Profile; simulator build, unsigned Release and IPA package/upload passed. PR #122 run #642 passed 76 unit + 2 UI tests, simulator build, unsigned Release build and IPA packaging/integrity, but the workflow failed in its tracking-safeguard Python step because `ui_tests` was not loaded in that separate heredoc. PR #123 adds the missing local source load; run #643 is pending. Unsigned IPA is not installable and does not prove device acceptance. |
+| iOS CI/release | Implemented-but-unverified | PR #120 run #640 passed 75 unit + 2 UI tests and all build/package gates. PR #121 run #641 passed 76 unit tests but failed 1/2 UI tests at Profile; simulator build, unsigned Release and IPA package/upload passed. PR #122 run #642 passed 76 unit + 2 UI tests and all build/package gates, but the workflow failed on a separate tracking-safeguard script (`NameError: ui_tests`). PR #123 run #643 fixed that script: tracking safeguards passed, all 76 unit tests passed, simulator build, privacy/entitlement checks, unsigned Release build and IPA packaging/upload passed. However, the full UI suite timed out after 40 minutes while the primary navigation test was opening Profile; the second UI test did not run. PR #124 adds an on-demand PhotosUI sheet and stronger Profile UI coverage; run #644 is in progress. Unsigned IPA is not installable and does not prove device acceptance. |
 | Android CI/build | Verified (CI scope only) | CI #171 passed 20 source-safeguard assertions, built the debug APK and uploaded it. This proves compilation/static safeguards, not installation, sensors, Health Connect or customer acceptance. |
 | Web CI | Verified (CI scope only) | PR #119 run #45686178223 passed 51 assertions total: 15 static/release checks, 7 mobile browser smoke checks and 29 Design C screen/navigation checks; 0 FAIL. Ten screens and Day/Night behavior were checked and screenshots uploaded. The Design C page is a separate visual review; Supabase is mocked and external network is blocked. This is not live-backend or production acceptance. |
 | Signed iOS installation/physical acceptance | Blocked | Requires a valid Apple Developer signing identity and provisioning profile with HealthKit capability, then owner iPhone testing. |
@@ -664,3 +665,40 @@ Source SHA: `804a88b56051636104bb7c4c2ca264df3c725188`.
 2. Keep PR #123 draft/unmerged. Do not merge #122 or #123 automatically.
 3. Add deterministic UI-level local Finish & Save coverage for finish → verified local history → app relaunch → same-session history; keep HealthKit physical-device acceptance separate.
 4. Continue the missing-feature audit and preserve PR #107, #112 and #114 unchanged.
+
+
+## Latest verified engineering pass — 26 November 2026, 06:55 IST
+
+### PR #123 run #643 — CI fixture fix verified; Profile UI still blocked
+- PR #123 head: `4343e92312a557918c3075657502d4a693700734`; base PR #122 head: `804a88b56051636104bb7c4c2ca264df3c725188`.
+- The tracking-safeguard script no longer fails with `NameError: ui_tests`; the source-level tracking safeguard step completed successfully.
+- Full unit suite: **76 passed, 0 failed**.
+- Full UI suite: **timed out at the 40-minute workflow cap**. The first UI test started but stalled immediately after tapping Profile. The log records “App event loop idle notification not received”; subsequent accessibility snapshots also stalled. The second UI test was not reached. No UI pass/fail total is claimed for this timed-out run.
+- Independent gates passed: HealthKit source entitlement check, simulator build, simulator privacy/entitlement checks, unsigned iPhone Release build, IPA packaging/integrity and artifact upload.
+- Overall workflow: **failed** because XCTest timed out. This is stronger evidence that Profile navigation remains intermittent; the single passing run #642 is not sufficient to accept it.
+- [Run #643 workflow and logs](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45727216578).
+
+### PR #124 — isolate PhotosUI until member explicitly requests it
+- Created branch `fix/gativx-profile-photo-picker-on-demand-20261126` from the exact PR #123 head.
+- Head commit: `bb571cfb9aab5b8d78dffa95d7f379a95b30a903`.
+- Files changed:
+  - `ios/GATIVX/ContentView.swift`: removed the PhotosPicker modifier from the Profile Form; the picker control is now constructed inside a separate sheet opened by the member-photo action. Existing local-only photo save/resize behavior is retained.
+  - `ios/GATIVXUITests/GATIVXDashboardUITests.swift`: the full navigation test now opens and cancels the member-photo sheet after Profile is displayed.
+  - `.github/workflows/gativx-ios.yml`: added a source safeguard that PhotosUI is absent from the Profile Form and only appears in the on-demand sheet; the test must cover open/cancel.
+- PR: [#124](https://github.com/sbscorpsales-ship-it/Mission-75/pull/124), draft and unmerged.
+- Run #644: [workflow](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45735428080), in progress at report time. Project generation completed; scheme validation was running. No test or build result is claimed yet.
+- The change is a reasoned candidate based on the Profile source comment and run #643 trace; it is not a confirmed fix until full CI passes on this exact head.
+
+### Repository safety and branch reconciliation
+- Main remains `143889db3e72540fb478b76c486082f45395e9bd`.
+- PR #107 remains open, draft, unmerged and untouched.
+- PR #112 remains open/draft/unmerged at `b6c04d41dc67bd191ed0cf8966331eb5661a9887`.
+- PR #114 remains open/draft/unmerged at `87318182360d4369ea2f7a773a27dd3fa3e7c558`; compare confirms PR #112 head is **7 commits ahead** of PR #114's base.
+- PR #121, #122, #123 and #124 remain open/draft/unmerged. No PR was merged or deployed.
+- Original Web Hub `app-v2.html` remains unchanged on main; Design C review stays isolated in PR #119.
+
+### Immediate next action
+1. Inspect run #644 logs on the exact PR #124 head. Require all 76 unit tests, both existing UI tests plus the new picker flow, tracking safeguards, simulator build, unsigned Release build and IPA packaging to pass.
+2. If the Profile tab still hangs, inspect the new result bundle and isolate the remaining synchronous Profile view work; do not weaken the full navigation test or claim a fix from a single pass.
+3. After Profile stabilises, add deterministic UI coverage for local Finish & Save → verified history → app relaunch → same-session read-back. The HealthKit export itself remains a separate device gate.
+4. Continue the full product gap ledger; do not treat the Design C preview or CI builds as complete product functionality.
