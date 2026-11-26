@@ -114,8 +114,14 @@ checks = {
         name in policy_tests for name in (
             "allowsStartWhenNoActiveDraftExists",
             "resumesReadableActiveDraftInsteadOfBlocking",
-            "blocksNewStartWhenExistingDraftIsUnreadable"
+            "blocksNewStartWhenExistingDraftIsUnreadable",
+            "unreadableCompletedHistoryNeverLooksFullyBackedUp"
         )
+    ),
+    "unreadable completed route history cannot be reported as fully backed up": (
+        "fun completedHistoryIsUnreadable(context: Context): Boolean" in store
+        and "WalkOnStartPolicy.shouldBlockSyncSuccess(WalkOnStore.completedHistoryIsUnreadable(context))" in activity
+        and activity.index("WalkOnStartPolicy.shouldBlockSyncSuccess") < activity.index("val pending = WalkOnStore.pendingFor(context, currentSession.userId)")
     ),
     "corrupt route history blocks destructive rewrites and preserves active drafts": (
         "readSessions(context, COMPLETED_KEY) ?: run" in store
