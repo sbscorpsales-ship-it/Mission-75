@@ -1,4 +1,4 @@
-# GATIVX Independent Activity Engine — v1.0.0
+# GATIVX Independent Activity Engine — v1.1.0
 
 ## Product rule
 GATIVX owns its calculations. Apple Health, Health Connect, Strava and wearables
@@ -6,9 +6,7 @@ are optional measured-data providers and comparison sources, never prerequisites
 Every metric carries provenance: measured, estimated, or unavailable.
 
 ## Inputs
-Required for calorie estimate: member weight (kg), moving duration (minutes),
-and average moving speed (km/h). Optional: average grade (decimal), cadence
-(steps/min), heart rate (bpm), age (years), activity type.
+Required for calorie estimate: member weight (kg), moving duration (minutes), and either average moving speed (km/h) or walking cadence (steps/min). Optional: average grade (decimal), heart rate (bpm), age (years), activity type. Cadence-only walking estimates are available without GPS.
 GPS distance is preferred for outdoor speed. Pedometer distance is fallback
 using a member-calibrated stride length. Do not add GPS and pedometer distances.
 Moving time excludes pauses/stops; keep elapsed time separately.
@@ -16,8 +14,7 @@ Moving time excludes pauses/stops; keep elapsed time separately.
 ## Calorie method
 For 3–6 km/h, use ACSM walking VO2 equation:
 VO2 (ml/kg/min) = 0.1 × speed(m/min) + 1.8 × speed(m/min) × grade + 3.5.
-Outside that band, interpolate level-walking MET anchors in the JS engine with
-a conservative grade correction. MET = VO2 / 3.5.
+Outside that band, interpolate level-walking MET anchors in the JS engine with a conservative grade correction. MET = VO2 / 3.5. When speed is unavailable but cadence is available for walking, use the simple cadence metabolic equation from Moore et al. (2021): VO2 = 1.811 + 0.02014 × cadence + 0.0007427 × cadence² (ml/kg/min); MET = VO2 / 3.5. Use only 40–140 steps/min; outside this study-supported operating range, return unavailable rather than extrapolate. Cadence-derived estimates assume level walking and cannot infer hills.
 Gross kcal = MET × 3.5 × weight(kg) × minutes / 200.
 Active kcal = max(0, gross kcal − resting kcal), where resting kcal uses 1 MET
 over the same duration. Retain full precision internally; round for display.
@@ -37,8 +34,7 @@ Benchmark the GATIVX-branded score to Google's published guidance:
 - If MET unavailable for walking: cadence 100–129 steps/min = moderate;
   ≥130 = vigorous.
 - Moderate minute = 1 point; vigorous minute = 2 points; light = 0.
-Do not label this as Google's official Heart Points. For final production,
-classify each recorded minute separately; average-session inputs are fallback.
+Do not label this as Google's official Heart Points. The engine supports interval-level classification so mixed-pace sessions do not receive one intensity score for the entire walk. Production tracking should store time-stamped intervals; session-average inputs remain a fallback.
 
 ## Rings
 Progress arc = clamp(value / goal, 0, 1); display actual value above goal.
@@ -52,7 +48,7 @@ source and timestamp. Never silently rewrite historical estimates. Preserve UTC
 timestamps and local-day boundaries.
 
 ## Validation gates
-1. Unit tests pass on web, Swift and Kotlin ports.
+1. Golden unit tests pass on web, Swift and Kotlin ports.
 2. Compare identical sessions against Apple, Google Fit/Health Connect and Strava.
 3. Report MAPE, signed bias and limits of agreement for calories, distance,
 moving time and activity points.
