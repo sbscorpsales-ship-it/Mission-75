@@ -162,12 +162,22 @@ final class GATIVXDashboardUITests: XCTestCase {
         XCTAssertTrue(guruEntry.isHittable, "The GATIVX Guru entry should remain reachable from Home.")
         guruEntry.tap()
         XCTAssertTrue(app.staticTexts["YOUR GOAL JOURNEY"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["NURUN GURU"].exists)
+        XCTAssertTrue(app.descendants(matching: .any)["gativx-guru-today-signals"].exists)
+        XCTAssertTrue(app.descendants(matching: .any)["gativx-guru-walking"].exists)
+        XCTAssertTrue(app.descendants(matching: .any)["gativx-guru-nutrition"].exists)
+        XCTAssertTrue(app.descendants(matching: .any)["gativx-guru-recovery"].exists)
+        XCTAssertTrue(app.descendants(matching: .any)["gativx-guru-learning"].exists)
         XCTAssertTrue(app.descendants(matching: .any)["gativx-journey-duration"].exists)
-        XCTAssertTrue(app.staticTexts["ONE PRACTICAL NEXT ACTION"].exists)
 
-        let guruScrollViews = app.scrollViews
-        XCTAssertGreaterThan(guruScrollViews.count, 0, "The Guru sheet should expose its scrollable form.")
-        let guruScrollView = guruScrollViews.element(boundBy: guruScrollViews.count - 1)
+        let guruScrollView = app.scrollViews["gativx-guru-fullscreen"]
+        XCTAssertTrue(guruScrollView.waitForExistence(timeout: 5),
+                      "Guru must open as a full-screen scrollable coaching experience.")
+        let window = app.windows.firstMatch
+        XCTAssertGreaterThan(guruScrollView.frame.width, window.frame.width * 0.95,
+                             "Guru must use the full iPhone width.")
+        XCTAssertGreaterThan(guruScrollView.frame.height, window.frame.height * 0.90,
+                             "Guru must occupy the full usable iPhone screen, not a half-height sheet.")
         let goalField = app.textFields["gativx-guru-goal"]
         XCTAssertTrue(goalField.waitForExistence(timeout: 5))
         // The intro card sits above the goal form on a phone-sized sheet. Scroll
@@ -225,9 +235,9 @@ final class GATIVXDashboardUITests: XCTestCase {
         XCTAssertEqual(
             XCTWaiter.wait(for: [guruSheetDismissed], timeout: 10),
             .completed,
-            "Closing Guru must finish dismissing its sheet before switching tabs."
+            "Closing Guru must finish dismissing its full-screen experience before switching tabs."
         )
-        XCTAssertFalse(guruCloseButton.exists, "The Guru sheet must be gone before Activity navigation.")
+        XCTAssertFalse(guruCloseButton.exists, "The Guru full-screen experience must be gone before Activity navigation.")
 
         let activityTab = app.descendants(matching: .any)["gativx-tab-activity"].firstMatch
         XCTAssertTrue(activityTab.waitForExistence(timeout: 5))
