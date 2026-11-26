@@ -83,7 +83,7 @@ reset role;
 
 set role authenticated;
 set request.jwt.claim.sub = '00000000-0000-4000-8000-000000000001';
-do $$
+do $block$
 declare
     v_visible_rows integer;
 begin
@@ -141,5 +141,5 @@ begin
         raise exception 'authenticated member could not delete their own row';
     end if;
 end;
-$;
+$block$;
 reset role;
