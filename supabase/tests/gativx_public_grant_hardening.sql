@@ -82,6 +82,21 @@ BEGIN
     JOIN pg_namespace n ON n.oid = c.relnamespace
     WHERE n.nspname = 'public'
       AND c.relkind IN ('r', 'p')
+      AND c.relname NOT IN (
+        'gativx_postgres_default_probe',
+        'gativx_supabase_admin_default_probe'
+      )
+      AND NOT c.relrowsecurity
+  ) THEN
+    RAISE EXCEPTION 'an existing GATIVX public table lost row-level security';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+    FROM pg_class c
+    JOIN pg_namespace n ON n.oid = c.relnamespace
+    WHERE n.nspname = 'public'
+      AND c.relkind IN ('r', 'p')
       AND (
         has_table_privilege('authenticated', c.oid, 'TRUNCATE')
         OR has_table_privilege('authenticated', c.oid, 'REFERENCES')
