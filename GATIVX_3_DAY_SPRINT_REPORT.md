@@ -1828,3 +1828,10 @@ This is a real repository-level navigation mismatch, but the repo evidence does 
 ## 2026-11-26T11:39:15.276Z — native iOS build-source boundary
 
 The generated `GATIVX` target in `ios/gativx-project.yml` compiles source path `ios/GATIVX`. The separate `ios/WALKON/DashboardView.swift` belongs to a different source tree/target and is not part of the GATIVX IPA. PR #132 correctly changes `ios/GATIVX/ContentView.swift`, the actual GATIVX app source. No WALKON files were edited.
+
+
+## 2026-11-26T11:40:44.065Z — independent activity engine integration audit
+
+PR #131 remains open/draft at `c3f17cd2066c229626eaf5397608ff6f565f3398`. Its workflow [#45791053245](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45791053245) completed successfully: JavaScript syntax validation and the Node regression-test step both succeeded. The checked-in `shared/gativx-activity-engine.test.js` contains **45 assertion calls** (45 counted directly from source); the workflow log itself reports only “GATIVX activity engine tests passed,” not an assertion count.
+
+PR #131 adds only the shared JavaScript engine, its test file, the specification and its workflow. A source scan of current `app-v2.html`, native iOS `ContentView.swift` and Android `MainActivity.kt` found no import or call to the engine. Therefore it is a **tested standalone calculation foundation, not an integrated product feature**. Swift/Kotlin ports, Web/iOS/Android wiring, shared golden fixtures and device/reference parity validation remain missing.
