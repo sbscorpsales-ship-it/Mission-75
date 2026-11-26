@@ -1745,12 +1745,10 @@ struct ContentView: View {
                 .tabItem { Label("Home", systemImage: "house.fill") }.tag(0)
             activityScreen
                 .tabItem { Label("Activity", systemImage: "figure.walk").accessibilityIdentifier("gativx-tab-activity") }.tag(1)
-            NavigationStack {
-                missionsScreen
-                    .navigationTitle("")
-                    .toolbar(.hidden, for: .navigationBar)
-            }
-                .tabItem { Label("Missions", systemImage: "target") }.tag(2)
+            // Missions is a single scroll screen with no navigation destinations.
+            // Keep it flat so tab changes do not carry an unnecessary nested stack.
+            missionsScreen
+                .tabItem { Label("Missions", systemImage: "target").accessibilityIdentifier("gativx-tab-missions") }.tag(2)
             // This screen is a static, gated placeholder with no navigation
             // destinations. Avoid an unnecessary NavigationStack here: the
             // nested stack was stalling XCTest's main-thread idle/accessibility

@@ -312,6 +312,33 @@ final class GATIVXDashboardUITests: XCTestCase {
                       "Cancelling the member-photo sheet should return to Profile.")
     }
 
+    func testCommunityTabAfterMissionsFromFreshDashboard() {
+        let app = XCUIApplication()
+        launchFreshGuestApp(app)
+
+        let guestEntry = app.buttons["gativx-continue-guest"]
+        XCTAssertTrue(guestEntry.waitForExistence(timeout: 10))
+        guestEntry.tap()
+
+        let tabBar = app.tabBars.firstMatch
+        XCTAssertTrue(tabBar.waitForExistence(timeout: 5))
+
+        let missionsTab = tabBar.buttons["Missions"]
+        XCTAssertTrue(missionsTab.waitForExistence(timeout: 5))
+        missionsTab.tap()
+        XCTAssertTrue(missionsTab.isSelected, "Missions must become the selected tab.")
+        XCTAssertTrue(app.scrollViews["gativx-missions-screen"].waitForExistence(timeout: 10))
+
+        let communityTab = tabBar.buttons["Community"]
+        XCTAssertTrue(communityTab.waitForExistence(timeout: 5))
+        communityTab.tap()
+        XCTAssertTrue(communityTab.isSelected, "Community must become the selected tab after Missions.")
+        let communityScreen = app.descendants(matching: .any)["gativx-community-screen"].firstMatch
+        XCTAssertTrue(communityScreen.waitForExistence(timeout: 10),
+                      "Community must render after leaving the Missions tab.")
+        XCTAssertTrue(app.descendants(matching: .any)["gativx-community-gated"].waitForExistence(timeout: 5))
+    }
+
     func testHomeStartWalkNavigatesWithoutStartingSession() {
         let app = XCUIApplication()
         launchFreshGuestApp(app)
@@ -510,6 +537,14 @@ final class GATIVXDashboardUITests: XCTestCase {
             XCTAssertGreaterThanOrEqual(tab.frame.minX, window.frame.minX - 1)
             XCTAssertLessThanOrEqual(tab.frame.maxX, window.frame.maxX + 1)
         }
+
+        // The dashboard is a vertical surface with fixed bottom tabs, not a horizontally
+        // paging carousel. A left/right swipe must not switch the selected destination.
+        let homeTab = tabBar.buttons["Home"]
+        dashboard.swipeLeft()
+        XCTAssertTrue(homeTab.isSelected, "A left swipe must not move the dashboard sideways to another tab.")
+        dashboard.swipeRight()
+        XCTAssertTrue(homeTab.isSelected, "A right swipe must not move the dashboard sideways to another tab.")
 
         let screenshot = XCTAttachment(screenshot: app.screenshot())
         screenshot.name = "GATIVX-Full-Viewport-Five-Tabs"
