@@ -805,3 +805,59 @@ The live privilege audit found `anon` has SELECT, INSERT, UPDATE, DELETE, TRUNCA
 3. Inspect the live Supabase grant state again only after a staging migration test and migration-source reconciliation. Do not apply PR #125 to production.
 4. Add a deterministic UI-level Finish & Save → relaunch → same-session history read-back acceptance test. Keep actual HealthKit export and background GPS as physical-device gates.
 5. Continue Android/Web Hub feature audit and preserve PR #107, #112 and #114 untouched/unmerged.
+
+
+---
+
+## 2026-11-26 08:42 IST — PR #645 Profile-tab hang reproduced; added isolated direct-navigation diagnostic
+
+### Protected repository state
+- Main remains `143889db3e72540fb478b76c486082f45395e9bd`.
+- PR #107 remains open/draft/unmerged at `c19bdbd307df7048cefd86bd3e6064ac4f4e3042`; no branch or file changes made to it.
+- PR #112 remains open/draft/unmerged at `b6c04d41dc67bd191ed0cf8966331eb5661a9887`.
+- PR #114 remains open/draft/unmerged at `87318182360d4369ea2f7a773a27dd3fa3e7c558`; its base is still seven commits behind PR #112 head.
+- PR #125 remains open/draft/unmerged at `3d988cde0658f4bb101abaa242fbcba3169a8dfb`.
+- PR #126 remains open/draft/unmerged at `068d0670169ae2850a373c73d713a7173edbb113`.
+- New PR #127 is open/draft/unmerged at `01f0f24f263dad70394d05e17a3baba635dfc0fc`.
+- No PR has been merged. Original Web Hub `app-v2.html` on main remains blob `8089f536017ffb3a60a8bb99291313a3f5413927`.
+
+### PR #126 run #645 — artifact-level evidence
+- Exact PR head: `068d0670169ae2850a373c73d713a7173edbb113`.
+- Unit XCTest: **76 passed, 0 failed, 0 cancelled**. This includes 18 Finish & Save regression tests, including `testLocalSessionSurvivesHealthKitQueueFailureAndExportRemainsRetryable` and `testSavedSessionIsRestoredByAFreshStoreAfterRelaunch`.
+- The full dashboard UI test reached Community, then tapped the Profile tab. The tap event was synthesized successfully. XCTest then logged `App event loop idle notification not received` after 60 seconds. Three subsequent remote accessibility queries for the Profile tab timed out at 02:48:32, 02:49:03 and 02:49:34 UTC.
+- The captured accessibility hierarchy still showed Community selected and the Profile tab present; the Profile screen and photo-picker assertions were not reached.
+- The uploaded XCTest artifact contains the primary navigation test start and failure diagnostics; it does not show the second UI test starting. Therefore **no complete UI-suite pass/fail/cancelled total is claimed** for this captured artifact.
+- Project generation, scheme validation, first-run/auth/layout/permission safeguards, HealthKit entitlement checks and tracking safeguards completed successfully.
+- At this observation, the workflow job was still in progress and simulator build, unsigned Release build and IPA packaging steps had not yet completed. Do not treat them as passed.
+- [Run #645](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45742219740) · [XCTest artifact 15083593835](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45742219740/artifacts/15083593835).
+
+### PR #127 — direct Profile navigation diagnostic
+- Branch: `test/gativx-profile-tab-isolation-20261126`.
+- Head: `01f0f24f263dad70394d05e17a3baba635dfc0fc`.
+- Changes:
+  - Add stable `gativx-tab-profile` accessibility identifier to the Profile tab.
+  - Update the existing full navigation test to target the stable identifier.
+  - Add `testProfileTabRendersFromFreshDashboard`, which enters local-only mode from a fresh launch, opens Profile directly from Home, verifies the Profile screen and member identity, and retains a screenshot.
+  - Add a CI source safeguard requiring both the identifier and direct-from-Home test.
+- The existing GURU → Activity → Missions → Community → Profile workflow remains intact and unmodified in scope. The new test is supplementary diagnostic coverage; no tests were removed, skipped or weakened.
+- [PR #127](https://github.com/sbscorpsales-ship-it/Mission-75/pull/127) is draft/unmerged.
+- [Run #646](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45747774883) was in progress at report time; no test/build result is claimed.
+
+### PR #125 — database security candidate
+- Push run #8 [45742071700](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45742071700): passed.
+- PR run #9 [45742076827](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45742076827): passed.
+- Both logs show PostgreSQL 17 ephemeral service setup, migration application, and successful least-privilege grant/RLS/member-isolation SQL test.
+- This verifies the migration and test semantics in ephemeral PostgreSQL only. No SQL was applied to live Supabase; staging migration history reconciliation remains required.
+
+### Gap ledger updates
+- Profile navigation: **implemented-but-unverified**. Run #642 passed once; runs #643–#645 show repeated intermittent Profile/Activity navigation stalls. PR #127 is a diagnostic candidate, not a fix claim.
+- Finish & Save: **implemented-but-unverified** for full UI/device acceptance. The unit suite confirms local save, queue-failure retention, retryable outbox and fresh-store same-session read-back; there is still no complete UI Finish → relaunch → history acceptance and no physical HealthKit export acceptance.
+- Daily action progress least-privilege migration: **verified in isolated PostgreSQL 17 CI**, **implemented-but-unverified** against live/staging Supabase.
+- Physical iPhone signing, HealthKit and background GPS; Android device/Health Connect; live two-account sync; fresh migration-chain reproducibility; full Community, Missions, Notifications, Connected Apps and cross-platform parity remain open gaps or external blockers.
+
+### Next actions
+1. Inspect PR #127 run #646 on exact head. Compare the new direct Home → Profile result with the full multi-tab navigation test.
+2. If direct Profile passes but the full flow still stalls, isolate the sequence-dependent transition without changing the locked Design C or narrowing the full test.
+3. If direct Profile also stalls, inspect the Profile view's on-appear/state work and simulator diagnostics before changing architecture.
+4. Wait for run #645's remaining simulator/Release/IPA steps to finish and record their actual results separately from the failed XCTest step.
+5. Continue the full product audit; preserve PR #107, #112 and #114 and do not merge any PR.
