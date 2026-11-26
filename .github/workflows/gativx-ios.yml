@@ -65,6 +65,7 @@ jobs:
           gps_tests = Path("ios/GATIVXTests/GPSRouteDraftPersistenceTests.swift").read_text()
           ui_tests = Path("ios/GATIVXUITests/GATIVXDashboardUITests.swift").read_text()
           spec = Path("ios/gativx-project.yml").read_text()
+          workflow = Path(".github/workflows/gativx-ios.yml").read_text()
           with Path("ios/GATIVX/Info.plist").open("rb") as stream:
               info = plistlib.load(stream)
 
@@ -136,12 +137,16 @@ jobs:
           assert info.get("UISupportedInterfaceOrientations") == ["UIInterfaceOrientationPortrait"], "GATIVX must stay in portrait on iPhone"
           assert "UIInterfaceOrientationPortrait" in spec, "XcodeGen spec must retain portrait-only orientation"
           assert "NSContactsUsageDescription" not in info and "CNContactStore" not in view, "Do not request Contacts for core fitness features"
+          assert "steps.simulator_build.outcome == 'success'" in workflow and "steps.simulator_privacy.outcome == 'success'" in workflow, "Simulator artifact upload must require a successful build and validation"
+          assert "steps.release_build.outcome == 'success'" in workflow and "steps.ipa_package.outcome == 'success'" in workflow, "IPA packaging and upload must be gated by successful upstream steps"
+          assert "CFBundleExecutable" in workflow and "test -x" in workflow, "Simulator and IPA artifacts must verify the real app executable"
 
           print("PASS: publishable Supabase configuration and both auth endpoints")
           print("PASS: member-first registration/sign-in with explicit local-only dashboard entry")
           print("PASS: opt-in Motion permission and portrait-only native layout")
           print("PASS: HealthKit, Motion and GPS usage descriptions")
           print("PASS: no unnecessary Contacts permission")
+          print("PASS: simulator and IPA artifacts require a real executable and successful upstream builds")
           PY
 
       - name: Run full GATIVX unit and UI test suites (serial simulator, 40-minute cap)
@@ -416,12 +421,19 @@ jobs:
           APP="build/GATIVX-Simulator/Build/Products/Debug-iphonesimulator/GATIVX.app"
           test -f "$APP/Info.plist"
           python3 - <<'PY'
+          import os
           import plistlib
           from pathlib import Path
 
           app = Path("build/GATIVX-Simulator/Build/Products/Debug-iphonesimulator/GATIVX.app")
           with (app / "Info.plist").open("rb") as stream:
               info = plistlib.load(stream)
+          executable = info.get("CFBundleExecutable")
+          if not isinstance(executable, str) or not executable.strip():
+              raise SystemExit("Simulator app CFBundleExecutable is missing")
+          executable_path = app / executable
+          if not executable_path.is_file() or executable_path.stat().st_size == 0 or not os.access(executable_path, os.X_OK):
+              raise SystemExit("Simulator app executable is missing, empty or not executable")
           if info.get("CFBundleIdentifier") != "com.paramitsolutions.gativx":
               raise SystemExit("GATIVX bundle identifier is missing or incorrect")
           if info.get("CFBundleVersion") != "1":
@@ -452,7 +464,7 @@ jobs:
 
       - name: Upload simulator build
         id: simulator_upload
-        if: always()
+        if: always() && steps.simulator_build.outcome == 'success' && steps.simulator_privacy.outcome == 'success'
         uses: actions/upload-artifact@v7.0.2
         with:
           name: GATIVX-iOS-Simulator
@@ -476,10 +488,14 @@ jobs:
 
       - name: Package unsigned iPhone Release IPA
         id: ipa_package
-        if: always()
+        if: always() && steps.release_build.outcome == 'success'
         run: |
           APP="build/GATIVX-Device/Build/Products/Release-iphoneos/GATIVX.app"
           test -d "$APP"
+          EXECUTABLE_NAME="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$APP/Info.plist")"
+          test -n "$EXECUTABLE_NAME"
+          test -s "$APP/$EXECUTABLE_NAME"
+          test -x "$APP/$EXECUTABLE_NAME"
           mkdir -p build/GATIVX-IPA/Payload
           cp -R "$APP" build/GATIVX-IPA/Payload/GATIVX.app
           cd build/GATIVX-IPA
@@ -490,7 +506,26 @@ jobs:
           import zipfile
 
           with zipfile.ZipFile("../GATIVX-unsigned.ipa") as archive:
-              info = plistlib.loads(archive.read("Payload/GATIVX.app/Info.plist"))
+              app_prefix = "Payload/GATIVX.app/"
+              info = plistlib.loads(archive.read(app_prefix + "Info.plist"))
+              executable = info.get("CFBundleExecutable")
+              if not isinstance(executable, str) or not executable.strip():
+                  raise SystemExit("Release IPA CFBundleExecutable is missing")
+              executable_path = app_prefix + executable
+              if executable_path not in archive.namelist():
+                  raise SystemExit(f"Release IPA is missing its executable: {executable_path}")
+              executable_info = archive.getinfo(executable_path)
+              if executable_info.file_size == 0:
+                  raise SystemExit("Release IPA executable is empty")
+              with archive.open(executable_path) as stream:
+                  magic = stream.read(4)
+              valid_mach_o_magic = {
+                  b"\\xcf\\xfa\\xed\\xfe", b"\\xfe\\xed\\xfa\\xcf",
+                  b"\\xca\\xfe\\xba\\xbe", b"\\xbe\\xba\\xfe\\xca",
+                  b"\\xca\\xfe\\xba\\xbf", b"\\xbf\\xba\\xfe\\xca",
+              }
+              if magic not in valid_mach_o_magic:
+                  raise SystemExit(f"Release IPA executable has invalid Mach-O magic: {magic!r}")
           expected = {
               "CFBundleIdentifier": "com.paramitsolutions.gativx",
               "CFBundleVersion": "1",
@@ -505,7 +540,7 @@ jobs:
 
       - name: Upload unsigned iPhone IPA
         id: ipa_upload
-        if: always()
+        if: always() && steps.ipa_package.outcome == 'success'
         uses: actions/upload-artifact@v7.0.2
         with:
           name: GATIVX-iPhone-unsigned-IPA
