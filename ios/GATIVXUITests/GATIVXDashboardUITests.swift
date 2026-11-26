@@ -443,6 +443,34 @@ final class GATIVXDashboardUITests: XCTestCase {
     }
 
 
+    func testAllFiveTabsSwitchScreensFromOneNavigationDock() {
+        let app = XCUIApplication()
+        launchFreshGuestApp(app)
+
+        let guestEntry = app.buttons["gativx-continue-guest"]
+        XCTAssertTrue(guestEntry.waitForExistence(timeout: 10))
+        guestEntry.tap()
+
+        let destinations: [(String, String)] = [
+            ("Home", "gativx-home-dashboard"),
+            ("Activity", "gativx-activity-screen"),
+            ("Missions", "gativx-missions-screen"),
+            ("Community", "gativx-community-screen"),
+            ("Profile", "gativx-profile-screen")
+        ]
+
+        for (label, screenIdentifier) in destinations {
+            let tab = tabButton(app, label: label)
+            XCTAssertTrue(tab.waitForExistence(timeout: 5), "The \(label) destination must be present.")
+            tab.tap()
+            XCTAssertTrue(tab.isSelected, "The \(label) destination must become selected.")
+            XCTAssertTrue(
+                app.descendants(matching: .any)[screenIdentifier].firstMatch.waitForExistence(timeout: 8),
+                "Selecting \(label) must render its own screen."
+            )
+        }
+    }
+
     func testNotificationsSheetDismissesFromFreshHome() {
         let app = XCUIApplication()
         launchFreshGuestApp(app)
