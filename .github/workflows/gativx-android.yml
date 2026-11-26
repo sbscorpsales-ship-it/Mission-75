@@ -46,6 +46,29 @@ jobs:
         run: python android/scripts/check-walkon.py
       - name: Run Android JVM unit tests
         run: gradle -p android :app:testDebugUnitTest
+      - name: Summarize Android JVM unit-test counts
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+
+          reports = sorted(Path("android/app/build/test-results/testDebugUnitTest").glob("TEST-*.xml"))
+          if not reports:
+              raise SystemExit("No Android JVM unit-test XML reports were produced.")
+          totals = {"tests": 0, "failures": 0, "errors": 0, "skipped": 0}
+          for report in reports:
+              root = ET.parse(report).getroot()
+              for key in totals:
+                  totals[key] += int(root.attrib.get(key, "0"))
+          passed = totals["tests"] - totals["failures"] - totals["errors"] - totals["skipped"]
+          print(
+              f"Android JVM unit tests: {passed} passed, "
+              f"{totals['failures'] + totals['errors']} failed, "
+              f"{totals['skipped']} skipped; {totals['tests']} total."
+          )
+          if totals["failures"] or totals["errors"] or totals["skipped"]:
+              raise SystemExit("Android JVM unit tests did not all pass.")
+          PY
       - name: Build debug APK
         run: gradle -p android :app:assembleDebug
       - name: Upload debug APK
