@@ -3121,3 +3121,10 @@ Run [#45891894462](https://github.com/sbscorpsales-ship-it/Mission-75/actions/ru
 2. If the key appears in both built plists but the window remains 320 x 480, inspect the simulator's launch-screen/scene compatibility diagnostics before the next code change.
 3. Keep all PRs unmerged. Preserve Design C and all approved product decisions.
 4. Keep real-device HealthKit, Finish & Save, background GPS, Android Health Connect, photo selection, signed installation and production deployment marked unverified until actual device/account evidence exists.
+
+
+### Screenshot artifact inspection addendum — 2026-11-27 02:48 IST
+- Extracted the PNG attachments directly from PR #145's XCTest result bundle artifact #15152297823. This runtime has no Xcode/xcresulttool, so I used the embedded PNG attachments rather than claiming an xcresulttool export.
+- Visually inspected the 1206 x 2622 full-device Welcome and Dashboard captures. Both show the same rounded 2:3 app window centered on a black screen: Welcome is letterboxed before guest entry; Dashboard is letterboxed after guest entry. The dashboard image shows the dock inside the reduced app window, not at the physical screen bottom.
+- The 960 x 1440 app-window captures also show Activity content within the reduced window. This is consistent with the UI metrics, not a separate Activity-only sizing defect.
+- PR #146 run #45897137804 has now started. Job 140173722472 is in progress at the full serial XCTest step; project generation, scheme validation and first-run source/permission checks passed. No PR #146 test result is available yet.
