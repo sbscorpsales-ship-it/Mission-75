@@ -2600,3 +2600,126 @@ PR #107 remains untouched at `c19bdbd307df7048cefd86bd3e6064ac4f4e3042`. PR #112
 ### Next action
 
 Inspect each of runs #674, #677 and #678 after completion, including full job logs, XCTest screenshots and actual artifact contents. Accept only the candidate that compiles and passes the unchanged full suite. The app window must fill the device display and the dock must measure <=76 pt; an uploaded ZIP is not accepted as an app unless its declared executable is present and valid.
+
+
+## Run 11 — verified dock correction, full-screen runtime investigation, and artifact validation
+
+**Snapshot timestamp:** 2026-11-26T18:21:00Z (23:51 IST)  
+**Default branch head:** `143889db3e72540fb478b76c486082f45395e9bd`  
+**Open PR search:** 44 open pull requests.  
+**No PR merged; no production deployment or database change.**
+
+### Exact branch / PR heads checked
+
+| PR | Current head | State | Notes |
+|---|---|---|---|
+| #136 | `31e5b70d85537113e74dd003d06b3ae95ba323f4` | open/draft | Original single five-destination navigation candidate; still not merged. |
+| #139 | `96f713704723c530718a5e26a2ea04664986c249` | open/draft | Full-device viewport measurement and Guru goal-field positioning follow-up. |
+| #140 | `0fa5a4f5298d91d10dd5660d5ddefb5103518c78` | open/draft | Dock safe-area background correction; verified below. |
+| #141 | `3e6db077c936088f3b9213bbec984b47bf8820c1` | open/draft | Strict simulator/IPA executable validation; verified below. |
+| #142 | `549a5e2004cc1fb63776d3ad10845edcf118f8c3` | open/draft | Principal scene-role experiment; compile failure on iOS. |
+| #143 | `ab82ce8040a8d73a4964a16b4c7b9ffd25a1faa8` | open/draft | New isolated stack: PR #140 dock base + PR #141 artifact gate + latest-runtime simulator selection. CI not yet reported for this head. |
+| #137 | `d5edab346eb9a00de7d02407fe501c8193a655c2` | open/draft | Android safeguards / unreadable draft protection. |
+| #138 | `45f7fd32f78aeb462ae56ac1202cdf7a5142f293` | open/draft | Web Hub history escaping. |
+| #118 | `2029b06860a68e883a6035c9b90da342fc1a4157` | open/draft | Sprint report and gap ledger. |
+
+Protected heads rechecked: PR #107 remains `c19bdbd307df7048cefd86bd3e6064ac4f4e3042`; PR #112 remains `b6c04d41dc67bd191ed0cf8966331eb5661a9887`; PR #114 remains `87318182360d4369ea2f7a773a27dd3fa3e7c558`. PR #107 was not modified. PR #112 and #114 remain open/unmerged.
+
+### PR #136 — exact diff review
+
+The current diff retains one explicit selected-screen switch for Home, Activity, Missions, Community and Profile; removes the duplicate native `TabView`; exposes exactly five stable dock identifiers; uses a 56 pt dock with 48 pt touch targets; retains the root-hosted Profile photo-picker sheet; and preserves Guru focus-state dismissal with its responder fallback. Source-level guards for the root-hosted photo picker and five destinations passed in the later stacked CI run. No PR was merged.
+
+### Run #674 — PR #140 dock correction
+
+[CI run #45867343777](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45867343777), job `140073462922`, exact head `0fa5a4f5298d91d10dd5660d5ddefb5103518c78`.
+
+- Unit tests: **76 passed, 0 failed**.
+- UI tests: **9 executed; 8 passed, 1 test failed with 2 assertions; 0 skipped/cancelled**.
+- The only failing test was `testDashboardFillsDeviceViewportAndExposesAllFiveTabs`. The measured app window was `402 × 603 pt`, starting at `y=135.5 pt`, against a `402 × 874 pt` device screenshot. The two failures were the app-window height and top-origin assertions.
+- The unchanged dock assertion passed: no `113.0625 > 76 pt` failure was reported on this exact PR #140 head. This verifies the safe-area background correction brought the measured dock within the <=76 pt requirement.
+- Passing UI tests included full-width Activity within the app window, all five tabs switching from one dock, Community navigation, dashboard sections, Guru goal entry/keyboard dismissal, Home walk navigation, notifications sheet and Profile navigation.
+- HealthKit source-entitlement validation passed.
+- **77 tracking source safeguards passed.**
+- Simulator build, simulator privacy/entitlement validation, unsigned Release build, IPA packaging and artifact upload steps passed.
+- Overall release validation remains failed because the physical-device viewport acceptance test failed.
+
+### Run #677 — PR #141 artifact-validation correction
+
+[CI run #45867641292](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45867641292), job `140074693332`, exact head `3e6db077c936088f3b9213bbec984b47bf8820c1`.
+
+- Unit tests: **76 passed, 0 failed**.
+- UI tests: **9 executed; 8 passed, 1 test failed with 3 assertions; 0 skipped/cancelled**.
+- The three failures were the two full-device app-window assertions and the dock assertion at 113.0625 pt. PR #141 is based on PR #139, not PR #140, so this run does not contain the PR #140 dock correction; it is not evidence against the PR #140 fix.
+- HealthKit source-entitlement validation and tracking safeguards passed.
+- Simulator build, privacy/entitlement validation, unsigned Release build, strict IPA packaging and artifact upload passed.
+- The new workflow checks the declared `CFBundleExecutable`, requires a non-empty executable, validates Mach-O magic in the packaged IPA, and gates packaging/upload on successful upstream builds.
+
+#### Manual inspection of run #677 IPA artifact
+
+Downloaded GitHub artifact ID `15143705127` and inspected both ZIP layers in the working container:
+
+- Outer artifact SHA-256: `b7a168282464c9372b61d19e59d7531d6386609c0e23b3eae7d3d0e74a0f22f6`, matching GitHub's artifact digest.
+- Outer ZIP contains `GATIVX-unsigned.ipa` (773,216 bytes).
+- Inner IPA ZIP integrity check passed; 5 entries.
+- `Info.plist` bundle ID: `com.paramitsolutions.gativx`.
+- Declared executable: `GATIVX`; present, 4,097,008 bytes, Mach-O magic `cf fa ed fe`.
+- No `embedded.mobileprovision` is present. This is a structurally valid **unsigned** IPA package, not a signed/provisioned iPhone installation artifact.
+
+### Run #678 — PR #142 principal-scene experiment rejected
+
+[CI run #45867926570](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45867926570), job `140075482382`, exact head `549a5e2004cc1fb63776d3ad10845edcf118f8c3`.
+
+- XCTest: **0 tests executed**; compilation failed before test execution.
+- Exact compiler diagnostic: `WindowManagerRole.principal` is unavailable in iOS at `ios/GATIVX/GATIVXApp.swift:52:29`.
+- Simulator build: failed. Unsigned Release build: failed.
+- The older packaging path still reported success and uploaded a 1,479-byte artifact despite the failed builds. This is not accepted as an app package; PR #142 does not include PR #141's artifact-gating correction.
+- The principal-role approach is rejected for this iOS target. Do not retry it as an iOS fix.
+
+### Full-screen investigation — test-runtime selection defect found
+
+Run #674's `xcodebuild -showdestinations` output listed iPhone 17 Pro simulators on iOS 26.2, 26.4.1 and 26.5. The workflow selected the first available iPhone, which was the iOS 26.2 runtime, rather than the newest installed runtime. The reduced 2:3 app window is therefore a confirmed simulator observation, but the root cause is not yet proven to be app code.
+
+PR #143 now:
+- Starts from the PR #140 head, so the verified dock correction is included in its base.
+- Adds PR #141's executable validation and artifact upload gating.
+- Changes simulator selection to prefer an iPhone 17 Pro on the newest installed iOS runtime and prints the selected simulator UUID. The selection parser was tested against 26.2, 26.4.1 and 26.5 runtime identifiers; it selected the 26.5 entry.
+- Current PR #143 head is `ab82ce8040a8d73a4964a16b4c7b9ffd25a1faa8`. No CI run/status was returned for this head at the time of this snapshot; no test result is claimed.
+
+Apple's [TN3192](https://developer.apple.com/documentation/technotes/tn3192-migrating-your-app-from-the-deprecated-uirequiresfullscreen-key) describes the newer scene-resizing behavior beginning in iOS 27. The current CI runtime is iOS 26.x and cannot establish behavior on the user's iOS 27.2.1 device. Next: run the unchanged UI suite on the newest available iOS 26.x simulator, inspect its full-device screenshot/window geometry, and obtain an iOS 27 SDK/runtime run when that toolchain is available. Do not add unsupported iOS-only scene-role APIs or change Design C to work around a test-environment issue.
+
+### Android and Web Hub — current heads and exact CI
+
+- Android PR #137 head `d5edab346eb9a00de7d02407fe501c8193a655c2`: [run #184](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45840866819) succeeded. Logs show **25 source safeguards passed**, **6 JVM tests passed, 0 failed, 0 skipped**, and Debug APK build succeeded. This is not physical Android device acceptance.
+- Web Hub PR #138 head `45f7fd32f78aeb462ae56ac1202cdf7a5142f293`: [run #437](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45839703732) succeeded. Logs show **15 structural checks**, inline JavaScript syntax validation and **7 browser smoke assertions** passed. This is CI/smoke evidence, not production deployment or complete browser/device acceptance.
+
+### Updated gap ledger
+
+| Area | Status | Evidence / remaining limit |
+|---|---|---|
+| Single five-destination navigation | verified in simulator CI | All five buttons visible/tappable and screen switching passed on run #674. |
+| Dock <=76 pt | verified in simulator CI on PR #140 | Dock assertion passed on exact PR #140 head in run #674; keep the 48 pt hit targets. |
+| Full-device app window | blocked | Still 402 × 603 pt at y=135.5 on 402 × 874 pt screenshot in run #674. Newest-runtime retest pending on PR #143. |
+| Activity viewport | implemented-but-unverified for full physical screen | Activity fills the reduced app window and its UI test passes; full-device coverage remains blocked by app-window geometry. |
+| Guru goal entry / keyboard dismissal | verified in simulator CI | Cumulative goal entry and dismissal passed run #674; physical-device behavior remains unverified. |
+| Root-hosted Profile photo picker | implemented-but-unverified | Source safeguard and Profile navigation passed; actual Photos library selection was not exercised. |
+| Tracking / HealthKit / outbox safeguards | verified at source/CI level | 77 iOS source safeguards and HealthKit entitlement check passed run #674; no physical-device HealthKit or background GPS claim. |
+| Simulator build / unsigned Release build | verified on PR #140 and #141 | Both build steps passed runs #674 and #677. |
+| IPA package integrity | verified for run #677 | Inner IPA ZIP, declared executable and Mach-O magic verified; no provisioning profile/signature. |
+| iOS signing / installation / physical iPhone acceptance | blocked | Requires valid signing/provisioning and a real-device acceptance path. |
+| Android source/JVM/build checks | verified in CI | 25 safeguards, 6 JVM tests and Debug APK build passed; physical Android behavior unverified. |
+| Web Hub source/browser smoke | verified in CI | 15 structural checks, JS syntax and 7 smoke assertions passed; production deployment/browser-device acceptance unverified. |
+| Auth / onboarding / goals / purpose / Missions | implemented-but-unverified across full product | Existing source and UI checks cover key flows; live account-provider and cross-platform acceptance still required. |
+| Community / shared missions | missing/gated | UI explicitly gates live shared feed until backend delivery exists. |
+| Notifications delivery | missing/gated | UI explicitly states notifications are not active; no delivery service acceptance. |
+| Shared backend / sync / security | implemented-but-unverified beyond source checks | Local queue isolation, idempotency, retry and secret-exposure safeguards have CI evidence; production RLS/account isolation and live service acceptance still require account/backend tests. |
+| Release pipeline | partially verified | PR #141's artifact guard passed on a successful build; PR #142 shows the old branch still allows false-positive packaging. PR #143 combines the guard with the verified dock correction and latest-runtime selection; CI pending. |
+
+### Next actions
+
+1. Inspect PR #143's actual CI run when GitHub reports it; verify the selected simulator is the newest available iPhone 17 Pro runtime.
+2. Re-run all 76 unit tests and all 9 UI tests unchanged. Confirm the dock remains <=76 pt, five tabs work, Guru keyboard passes, Profile navigation passes, and capture the full-device screenshot.
+3. If the newest runtime still reports a 2:3 window, inspect scene/window geometry and launch environment before changing product code. The iOS 27 runtime remains a separate compatibility gate.
+4. Keep PR #142 as a failed experiment; do not merge it. Do not accept any IPA unless the executable is present and valid and the upstream Release build succeeded.
+5. Continue Community/notifications implementation and live backend/security review separately from the UI release gate.
+
+**Protected work:** PR #107 remains untouched; PR #112 and #114 remain open/unmerged. PRs #136–#143 remain draft candidates. No PR was merged and no production database/deployment change occurred.
