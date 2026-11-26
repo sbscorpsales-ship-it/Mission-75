@@ -1420,6 +1420,7 @@ struct ContentView: View {
                     .frame(maxWidth: .infinity).padding(.vertical, 5)
             }
             .buttonStyle(.bordered)
+            .accessibilityIdentifier("gativx-guru-walking-checkin")
             .disabled(guruWalkingDoneToday)
             Button {
                 dismissGuruKeyboard()
@@ -1454,7 +1455,9 @@ struct ContentView: View {
                       systemImage: guruNutritionDoneToday ? "checkmark.circle.fill" : "circle")
                     .frame(maxWidth: .infinity).padding(.vertical, 5)
             }
-            .buttonStyle(.bordered).disabled(guruNutritionDoneToday)
+            .buttonStyle(.bordered)
+            .accessibilityIdentifier("gativx-guru-nutrition-checkin")
+            .disabled(guruNutritionDoneToday)
         }
         .padding(18).background(cardBackground, in: RoundedRectangle(cornerRadius: 22))
         .accessibilityIdentifier("gativx-guru-nutrition")
@@ -1481,7 +1484,9 @@ struct ContentView: View {
                       systemImage: guruRecoveryCheckedToday ? "checkmark.circle.fill" : "heart.text.square")
                     .frame(maxWidth: .infinity).padding(.vertical, 5)
             }
-            .buttonStyle(.bordered).disabled(guruRecoveryCheckedToday)
+            .buttonStyle(.bordered)
+            .accessibilityIdentifier("gativx-guru-recovery-save")
+            .disabled(guruRecoveryCheckedToday)
         }
         .padding(18).background(cardBackground, in: RoundedRectangle(cornerRadius: 22))
         .accessibilityIdentifier("gativx-guru-recovery")
