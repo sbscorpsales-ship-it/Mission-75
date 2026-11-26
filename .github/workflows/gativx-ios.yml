@@ -68,6 +68,8 @@ jobs:
           workflow = Path(".github/workflows/gativx-ios.yml").read_text()
           with Path("ios/GATIVX/Info.plist").open("rb") as stream:
               info = plistlib.load(stream)
+          assert isinstance(info.get("UILaunchScreen"), dict), "Source Info.plist must declare a dynamic launch screen"
+          assert "UILaunchScreen: {}" in spec, "XcodeGen must emit UILaunchScreen into the built app Info.plist"
 
           key_match = re.search(r'private let publishableKey = "([^"]+)"', cloud)
           assert key_match, "Supabase publishable key is missing"
@@ -430,6 +432,8 @@ jobs:
           app = Path("build/GATIVX-Simulator/Build/Products/Debug-iphonesimulator/GATIVX.app")
           with (app / "Info.plist").open("rb") as stream:
               info = plistlib.load(stream)
+          if not isinstance(info.get("UILaunchScreen"), dict):
+              raise SystemExit("Generated simulator Info.plist is missing UILaunchScreen; iOS may letterbox the app at legacy 320x480 size")
           executable = info.get("CFBundleExecutable")
           if not isinstance(executable, str) or not executable.strip():
               raise SystemExit("Simulator app CFBundleExecutable is missing")
@@ -510,6 +514,8 @@ jobs:
           with zipfile.ZipFile("../GATIVX-unsigned.ipa") as archive:
               app_prefix = "Payload/GATIVX.app/"
               info = plistlib.loads(archive.read(app_prefix + "Info.plist"))
+              if not isinstance(info.get("UILaunchScreen"), dict):
+                  raise SystemExit("Release IPA is missing UILaunchScreen and may be letterboxed on modern iPhones")
               executable = info.get("CFBundleExecutable")
               if not isinstance(executable, str) or not executable.strip():
                   raise SystemExit("Release IPA CFBundleExecutable is missing")
