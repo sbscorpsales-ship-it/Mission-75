@@ -505,8 +505,8 @@ final class GATIVXDashboardUITests: XCTestCase {
 
         for label in ["Home", "Activity", "Missions", "Community", "Profile"] {
             let tab = tabBar.buttons.matching(NSPredicate(format: "label == %@", label)).firstMatch
-            XCTAssertTrue(tab.waitForExistence(timeout: 5), "Missing bottom navigation tab: \\(label)")
-            XCTAssertTrue(tab.isHittable, "The \\(label) tab must be visible and tappable.")
+            XCTAssertTrue(tab.waitForExistence(timeout: 5), "Missing bottom navigation tab: \(label)")
+            XCTAssertTrue(tab.isHittable, "The \(label) tab must be visible and tappable.")
             XCTAssertGreaterThanOrEqual(tab.frame.minX, window.frame.minX - 1)
             XCTAssertLessThanOrEqual(tab.frame.maxX, window.frame.maxX + 1)
         }
