@@ -217,12 +217,22 @@ final class GATIVXDashboardUITests: XCTestCase {
 
         let goalField = app.textFields["gativx-guru-goal"]
         XCTAssertTrue(goalField.waitForExistence(timeout: 5))
-        // Goal setup appears above the walking, nutrition and recovery cards.
-        // After completing those lower cards, scroll back toward the top to edit it.
-        for _ in 0..<12 where !goalField.isHittable {
+        let guruCloseButton = app.buttons["gativx-guru-close"]
+        XCTAssertTrue(guruCloseButton.waitForExistence(timeout: 5),
+                      "Guru's navigation control must be present before checking goal-field hit testing.")
+        // Goal setup appears above the walking, nutrition and recovery cards. Scroll back
+        // until it is both hittable and below the fixed Guru navigation control; hittability
+        // alone can be true while a scrolled field is partly covered by the navigation bar.
+        for _ in 0..<12 where !goalField.isHittable || goalField.frame.minY < guruCloseButton.frame.maxY + 8 {
             scrollTowardTop(guruScrollView)
         }
         XCTAssertTrue(goalField.isHittable, "The Guru goal field must be scrolled into view before editing.")
+        XCTAssertGreaterThanOrEqual(goalField.frame.minY, guruCloseButton.frame.maxY + 8,
+                                    "The Guru goal field must be clear of the fixed navigation control before tapping.")
+        let goalFieldScreenshot = XCTAttachment(screenshot: app.screenshot())
+        goalFieldScreenshot.name = "GATIVX-Guru-Goal-Field-Before-Tap"
+        goalFieldScreenshot.lifetime = .keepAlways
+        add(goalFieldScreenshot)
         goalField.tap()
         let inputKeyboard = app.keyboards.firstMatch
         XCTAssertTrue(inputKeyboard.waitForExistence(timeout: 5),
@@ -264,7 +274,6 @@ final class GATIVXDashboardUITests: XCTestCase {
         // A tab bar button can remain queryable behind a sheet while its
         // dismissal animation is still running. Never tap through the modal:
         // wait until Guru has actually left the accessibility hierarchy first.
-        let guruCloseButton = app.buttons["gativx-guru-close"]
         let guruSheetDismissed = XCTNSPredicateExpectation(
             predicate: NSPredicate(format: "exists == false"),
             object: guruCloseButton
@@ -629,6 +638,24 @@ final class GATIVXDashboardUITests: XCTestCase {
         let window = app.windows.firstMatch
         XCTAssertTrue(window.waitForExistence(timeout: 5),
                       "The iPhone app window must be measurable for viewport acceptance.")
+
+        // Capture the physical simulator display, not only the app's accessibility window.
+        // This catches a reduced/letterboxed app window that could otherwise pass viewport
+        // assertions measured only against app.windows.firstMatch.
+        let deviceScreenScreenshot = XCUIScreen.main.screenshot()
+        let deviceScreenSize = deviceScreenScreenshot.image.size
+        let deviceScreenAttachment = XCTAttachment(screenshot: deviceScreenScreenshot)
+        deviceScreenAttachment.name = "GATIVX-Full-Device-Screen"
+        deviceScreenAttachment.lifetime = .keepAlways
+        add(deviceScreenAttachment)
+        XCTAssertGreaterThan(deviceScreenSize.height, deviceScreenSize.width * 1.8,
+                             "The device capture must be portrait and represent the full iPhone display.")
+        XCTAssertGreaterThanOrEqual(window.frame.width, deviceScreenSize.width * 0.98,
+                                     "The app window must span the physical device width.")
+        XCTAssertGreaterThanOrEqual(window.frame.height, deviceScreenSize.height * 0.95,
+                                     "The app window must fill the physical device height, not a reduced window.")
+        XCTAssertLessThanOrEqual(window.frame.minY, 8,
+                                  "The app window must begin at the top of the physical device display.")
         let dashboard = app.descendants(matching: .any)["gativx-home-dashboard"].firstMatch
         XCTAssertTrue(dashboard.waitForExistence(timeout: 10),
                       "Member entry must render the full Home dashboard.")
