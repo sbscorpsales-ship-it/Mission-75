@@ -72,6 +72,24 @@ assert((await staleShortcut.locator("#steps").textContent()).trim()==="—","Sta
 assert((await staleShortcut.locator("#stepNote").textContent()).includes("No iPhone sensor reading"),"Stale Shortcut source label was not cleared");
 await staleShortcut.close();
 
+// Member-controlled local history labels must remain text, never executable HTML.
+const xssProbe=await browser.newPage({viewport:{width:390,height:844}});
+await xssProbe.addInitScript(()=>{
+ const payload='<img src=x onerror=window.__gativxXss=1>';
+ localStorage.setItem("gativx.v2.fresh.state",JSON.stringify({
+  version:2,goal:null,
+  entries:{[payload]:{weight:payload,steps:100}},
+  walks:[{date:payload,startedAt:new Date().toISOString(),durationSeconds:600,distance:1.2,points:[]}]
+ }));
+});
+await xssProbe.route("https://**/*",r=>r.abort());
+await xssProbe.goto(pathToFileURL(path.resolve("app-v2.html")).href,{waitUntil:"domcontentloaded"});
+await xssProbe.waitForFunction(()=>document.querySelector("#gpsHistory")?.textContent.includes("<img"));
+assert(await xssProbe.locator("#gpsHistory img").count()===0,"Member-controlled walk dates must not create HTML elements");
+assert(await xssProbe.locator("#recent img").count()===0,"Member-controlled daily history keys and values must not create HTML elements");
+assert(await xssProbe.evaluate(()=>window.__gativxXss!==1),"Member-controlled history labels executed an injected handler");
+await xssProbe.close();
+
 // The real iPhone Shortcut opens the GitHub Pages root, not app-v2.html.
 // The landing redirect must preserve the Apple Health query until import runs.
 const shortcutLanding=await browser.newPage({viewport:{width:390,height:844}});
