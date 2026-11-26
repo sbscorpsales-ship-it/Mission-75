@@ -42,7 +42,7 @@ AS $function$
 $function$;
 RESET ROLE;
 
-DO $
+DO $$
 DECLARE
     v_table text;
     v_sequence text;
@@ -123,7 +123,7 @@ BEGIN
         RAISE EXCEPTION 'supabase_admin graphql-specific function defaults changed unexpectedly';
     END IF;
 END;
-$;
+$$;
 
 DROP FUNCTION public.gativx_default_privilege_probe_postgres_fn();
 DROP FUNCTION public.gativx_default_privilege_probe_supabase_admin_fn();
