@@ -2107,7 +2107,14 @@ struct ContentView: View {
             isProfilePhotoPickerPresented = false
             Task { await saveMemberProfilePhoto(item) }
         }
+        // Reserve space for the dock without including the home-indicator safe area
+        // in the dock's own accessibility frame. The root background paints that area.
         .safeAreaInset(edge: .bottom, spacing: 0) {
+            Color.clear
+                .frame(height: 56)
+                .accessibilityHidden(true)
+        }
+        .overlay(alignment: .bottom) {
             memberBottomNavigation
         }
         .tint(neon)
