@@ -1937,3 +1937,38 @@ The device-targeted IPA artifact #15114878629 was downloaded and inspected. Its 
 ### PR stack ancestry check
 
 GitHub commit comparison confirms PR #128 head is **41 commits ahead / 0 behind** PR #107 head; PR #133 head is **44 ahead / 0 behind** PR #107. The current iOS validation stack therefore includes the PR #107 baseline without changing PR #107 itself. PR #114 remains divergent from current PR #112 (3 commits ahead / 7 behind) and is not the current integration baseline.
+
+
+## 2026-11-26T12:55:23Z — owner-reported iPhone viewport defect and fixed-dock correction
+
+### Evidence reviewed
+- Re-opened the user's two uploaded iPhone screen recordings from 2026-11-26 and inspected representative frames at native 512 × 1106 resolution.
+- The visible Activity capture shows the iOS floating tab bar sitting over the scroll content rather than occupying a stable full-width bottom navigation region. The capture also shows large unused dark areas above and below the visible content. This confirms the owner's visual acceptance failure; it does not by itself identify the installed IPA's exact source SHA.
+- Re-read `docs/GATIVX-FINAL-DAY-NIGHT-DESIGN-LOCK.md`: the premium GATIVX layout, hierarchy, component language and brand remain locked. Responsive/safe-area adaptation is allowed; a competing redesign is not.
+
+### Source diagnosis
+- On the current PR #133 source, the member shell uses the platform `TabView` tab bar, which on the recorded iOS version is presented as a floating translucent dock.
+- Activity, Missions, Community and Profile each also reserved an additional fixed 76pt clear bottom inset, independent of the system tab bar. These redundant spacers can compound the apparent bottom gap.
+- The prior viewport UI test only checked loose bounds (Home height > 68% of window and native tab bar bounds). It did not prove that content occupies the usable viewport or that navigation is a fixed bottom dock. That acceptance test was insufficient.
+
+### Isolated correction opened for review
+- New draft PR [#134 — full-screen member shell and fixed bottom navigation](https://github.com/sbscorpsales-ship-it/Mission-75/pull/134).
+- Branch: `fix/gativx-fullscreen-bottom-navigation-20261126`.
+- Head commit: `aadf7f98d7982de2ef80a40fefd02298173f2801`.
+- Base: PR #133 head `53f62d3e74305fee8be3903a1f3c9e4b020f7030`.
+- Files changed:
+  - `ios/GATIVX/ContentView.swift`: hide the native floating tab bar, add a full-width fixed five-destination bottom dock with stable accessibility IDs, reserve actual safe-area layout for that dock, remove the four obsolete 76pt spacers, and explicitly expand Activity/Missions scroll surfaces to their available viewport.
+  - `ios/GATIVXUITests/GATIVXDashboardUITests.swift`: replace native-tab-bar queries with stable custom-navigation IDs; strengthen Home viewport checks to require >74% window height and near-top placement; add an Activity viewport/fixed-dock acceptance test with screenshot attachment.
+- Product scope and five existing destination names are preserved. Design C visual identity, module order and dashboard content are not intentionally redesigned.
+
+### Validation state
+- No Xcode toolchain is available in this execution environment; no local compile or XCTest result is claimed.
+- PR #134 was created at 2026-11-26T12:55:23Z as a draft. Its initial head commit is recorded above. CI had not yet appeared in the commit-associated workflow lookup at report time; inspect PR checks and actual job logs before claiming test status.
+- No IPA has been requested or supplied for this change. Do not ask the owner to install another build until the new full suite, simulator screenshots and package identity are verified.
+- PR #107 remains untouched. PR #112 and #114 were not modified. No PR was merged; no production database/deployment action was performed.
+
+### Next action
+1. Inspect PR #134 checks and run logs; correct compile/test issues without weakening assertions.
+2. Inspect the Home and Activity screenshot attachments and verify the content bounds and bottom dock geometry on the simulator.
+3. Only after the full iOS suite and simulator/package gates pass, issue one clearly identified QA IPA and request one focused physical-device visual acceptance check.
+4. Release remains **NOT READY** until signed device acceptance and the other release gates are satisfied.
