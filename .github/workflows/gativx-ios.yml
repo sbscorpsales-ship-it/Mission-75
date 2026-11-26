@@ -203,6 +203,7 @@ jobs:
 
           gps = Path("ios/GATIVX/GPSRouteRecorder.swift").read_text()
           gps_tests = Path("ios/GATIVXTests/GPSRouteDraftPersistenceTests.swift").read_text()
+          ui_tests = Path("ios/GATIVXUITests/GATIVXDashboardUITests.swift").read_text()
           activity_store = Path("ios/GATIVX/Storage/ActivitySessionStore.swift").read_text()
           activity_outbox_tests = Path("ios/GATIVXTests/GATIVXActivitySessionTests.swift").read_text()
           archive_store = Path("ios/GATIVX/Storage/RunJeetDailyStepsArchiveStore.swift").read_text()
