@@ -2366,3 +2366,106 @@ The earlier run [#45858929106](https://github.com/sbscorpsales-ship-it/Mission-7
 - PR #136 run #670 attempt 2, job `140042960358`, remains in the full serial unit/UI test step. No new pass/fail/cancelled count is available.
 
 **Next:** wait for run #672 to start and inspect its compiler/test output; continue checking run #670 attempt 2 without cancelling it.
+
+## Run 8 — PR #136/#139 final CI, screenshot evidence, and isolated correction PR #140
+
+**Snapshot timestamp:** 2026-11-26T17:23:00Z (22:53 IST)  
+**Default branch head:** `143889db3e72540fb478b76c486082f45395e9bd`  
+**Open PR search:** 41 open pull requests at this snapshot.
+
+### Exact branch and PR heads
+
+- PR #136 remains open/draft at `31e5b70d85537113e74dd003d06b3ae95ba323f4` (`fix/gativx-single-navigation-dock-20261126`), based on the existing navigation/Guru candidate.
+- PR #139 remains open/draft at `96f713704723c530718a5e26a2ea04664986c249` (`fix/gativx-device-viewport-dock-guru-20261126`), based on PR #136's tested head.
+- PR #140 is a new open/draft follow-up at `baf74d7abcff8222fec0101c0fabcc4b9ea12db1` (`fix/gativx-fullscreen-window-dock-20261126`), based on PR #139. It contains two commits:
+  - `0c18244612c9341cc4fa2a7a35ba17831e626bb6` — assign the primary SwiftUI scene the `.principal` window-manager role on iOS 18+.
+  - `baf74d7abcff8222fec0101c0fabcc4b9ea12db1` — prevent the dock background from extending into the home-indicator safe area.
+- PR #107 remains open/unmerged at head `c19bdbd307df7048cefd86bd3e6064ac4f4e3042`; no change was made to it.
+- PR #112 remains open/unmerged at head `b6c04d41dc67bd191ed0cf8966331eb5661a9887`.
+- PR #114 remains open/unmerged at head `87318182360d4369ea2f7a773a27dd3fa3e7c558`.
+- PR #118 remains the open engineering-report PR. No pull request was merged.
+
+### PR #136 — run #670
+
+[CI run #45847572105](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45847572105)  
+Job: `140042960358`  
+Exact tested head: `31e5b70d85537113e74dd003d06b3ae95ba323f4`  
+Conclusion: **failure**.
+
+- Unit tests: **76 passed, 0 failed**.
+- UI tests: **9 executed; 7 test cases passed, 2 test cases failed; 3 assertion failures; no test cancellation reported**.
+- Failed test cases:
+  - `testDashboardFillsDeviceViewportAndExposesAllFiveTabs`
+  - `testDashboardSectionsMetricsAndPrimaryNavigation`
+- Assertions exposed the 113.0625 pt dock (maximum 76 pt), Guru goal-field keyboard not appearing on tap, and typing not receiving keyboard focus.
+- Five-destination navigation test passed; Activity viewport relative to the app window passed; dedicated Guru keyboard-dismissal test passed; Community, Home start-walk navigation, Notifications and Profile navigation tests passed.
+- The separate simulator build, unsigned Release build and IPA packaging steps passed; overall release validation remained failed because XCTest failed.
+
+### PR #139 — run #672
+
+[CI run #45859629757](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45859629757)  
+Job: `140048206654`  
+Exact tested head: `96f713704723c530718a5e26a2ea04664986c249`  
+Conclusion: **failure**.
+
+- Unit tests: **76 passed, 0 failed**.
+- UI tests: **9 executed; 8 test cases passed, 1 test case failed; 3 assertion failures; no test cancellation reported**.
+- The only failed test case was `testDashboardFillsDeviceViewportAndExposesAllFiveTabs`.
+- Device screenshot/display measurement: **402 × 874 pt**. The app's main window was **402 × 603 pt**, with its top at **y = 135.5 pt**. The app therefore occupied a centered 2:3 window rather than the full device display.
+- The full-device viewport assertions failed because the app window height was below 830.3 pt and its top edge was below the required y <= 8 pt.
+- Dock measurement remained **113.0625 pt**, above the <=76 pt target.
+- The cumulative Guru goal-entry flow now passed: the field was reached, keyboard appeared, text was entered, and the keyboard was dismissed. The dedicated Guru keyboard test also passed.
+- The five-destination navigation test passed. Activity filled the available app window above the dock, but this is not full-device acceptance because the app window itself was reduced. Community, dashboard sections/metrics/navigation, Home start-walk, Notifications and Profile test cases passed.
+- **68 source-level safeguard checks passed**, including the root-hosted Profile photo picker check, PhotosUI deferral check, HealthKit queue/recovery safeguards and tracking/outbox protections. The HealthKit source-entitlement check passed. These are source/CI checks, not physical-device HealthKit or GPS evidence.
+- Simulator build, simulator privacy/entitlement validation, unsigned Release build, IPA packaging and uploads passed. Overall release validation remained failed because XCTest failed.
+
+### Screenshot and artifact inspection
+
+Downloaded the run #672 XCTest result bundle and diagnostics archive. Six PNG screenshot attachments were extracted from the result bundle and inspected. The full-device capture confirms the centered, rounded app window with black space above and below; the Activity capture shows Activity filling that reduced app window, not the whole device screen.
+
+Downloaded and locally SHA-256-verified all four run #672 artifacts against the digests reported by GitHub:
+
+- XCTest result bundle artifact [15139617089](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45859629757/artifacts/15139617089): `baf8ef748f79b4540a391438783585e1e4442512a964661a130db1332cdb13cf`.
+- Structured diagnostics artifact [15139592204](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45859629757/artifacts/15139592204): `6660d40fd2a3172b1de9bbcba9f979c1a3f211b0df96e5c6182e72b1a2e29e41`.
+- Simulator build artifact [15139537435](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45859629757/artifacts/15139537435): `fc466efd29ff82ebd50671d9d8c16dbe3a811fcc89bba4c17aa2c305ebd4e4f3`.
+- Unsigned IPA artifact [15139422793](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45859629757/artifacts/15139422793): `238fbff20ac41c705c36b504063cb62aa89eeb182440f8023ae797383a312ebd`.
+
+The outer artifact ZIPs and inner IPA ZIP passed integrity checks. The IPA contains bundle identifier `com.paramitsolutions.gativx`, version `1.0.0`, build `1`, minimum iOS `17.0`; it has no CodeSignature directory and no embedded provisioning profile. It is an unsigned package, not a normally installable iPhone build.
+
+### Root-cause findings and corrective candidate
+
+- `ios/GATIVX/GATIVXApp.swift` previously used a plain `WindowGroup { ContentView() }` without an explicit window-manager role. The iOS 26.4 simulator screenshot shows a managed, centered app window. PR #140 now assigns `.windowManagerRole(.principal)` on iOS 18+ while retaining the existing scene on earlier supported OS versions. Apple documents the principal role as the role for windows shown in full screen, when enabled, or Stage Manager: https://developer.apple.com/documentation/swiftui/windowmanagerrole
+- Do not add `UIRequiresFullScreen` as an attempted iPhone fix. Apple TN3192 states that before iOS 27 this key configures iPadOS apps only and is ignored for iOS apps: https://developer.apple.com/documentation/technotes/tn3192-migrating-your-app-from-the-deprecated-uirequiresfullscreen-key
+- `memberBottomNavigation` has an explicit 56 pt frame and 48 pt button targets, but its `.background(pageBackground)` used the default safe-area extension. PR #140 changes it to `.background(pageBackground, ignoresSafeAreaEdges: [])`; the root background already paints the home-indicator region. The existing dock-height assertion remains unchanged.
+- These PR #140 changes are **candidates only** until run #673 proves their effect.
+
+### PR #140 CI
+
+[Run #45866797556](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45866797556), run #673, is **in progress** on exact head `baf74d7abcff8222fec0101c0fabcc4b9ea12db1`, job `140071595602`. Checkout, Xcode selection, XcodeGen, project generation, scheme validation and initial auth/portrait/permission checks passed. The full serial unit/UI test step is running; no pass/fail count is available yet.
+
+### Gap ledger at this snapshot
+
+| Area | Status | Evidence / remaining limit |
+|---|---|---|
+| Single five-destination navigation | verified | All five navigation destinations passed simulator UI test on runs #670 and #672. |
+| Compact dock <=76 pt | blocked | Still measured 113.0625 pt on run #672; PR #140 candidate pending CI. |
+| Full-device app window | blocked | Full-device screenshot and frame measurement prove a centered 402 × 603 pt window on a 402 × 874 pt simulator display; PR #140 principal-role candidate pending CI. |
+| Activity viewport | implemented-but-unverified | Fills the app window; full physical-display coverage is blocked by the reduced app window. |
+| Guru goal entry and keyboard dismissal | verified | Cumulative goal entry, text input and dismissal passed run #672; physical-device behavior remains unverified. |
+| Root-hosted Profile photo picker | implemented-but-unverified | Source safeguard passed and Profile tab rendered; actual Photos library selection was not exercised. |
+| Tracking/HealthKit/outbox safeguards | verified (source/CI only) | 68 source-level checks and HealthKit entitlement configuration passed; no physical-device HealthKit/background GPS claim. |
+| iOS simulator and unsigned Release build | verified | Both build steps passed run #672. |
+| IPA package integrity | verified | Outer/inner ZIP checks and SHA-256 digest match passed; package remains unsigned and unprovisioned. |
+| iOS signing/installation and physical iPhone acceptance | blocked | Requires signing/provisioning and a real-device acceptance path; no device test claimed. |
+| Android and Web Hub CI | implemented-but-unverified | Prior CI results are recorded in earlier report sections; physical Android/browser production acceptance remains outstanding. |
+| Auth, onboarding, purpose/goals, Missions, Community, Profile, notifications, backend/sync/security | mixed; see prior ledger entries | Community and notification delivery remain gated/incomplete; continue full cross-platform audit. |
+
+### Next actions
+
+1. Inspect run #673's exact job logs, XCTest screenshots and artifacts when complete; verify dock <=76 pt and full-device scene geometry on the same exact head.
+2. If the principal role does not remove the 2:3 window, inspect the simulator's managed-window state and the app scene geometry before making further UI changes. Do not claim full screen based only on content filling the reduced window.
+3. If the safe-area background change does not reduce the dock frame, inspect the accessibility hierarchy and measured view/background frames; do not fake the frame or reduce the 48 pt touch targets.
+4. Preserve the passing Guru flow and all source safeguards while rerunning the complete suite.
+5. Continue physical iPhone HealthKit/background GPS, signing/installation and Android device acceptance as separate blocked gates.
+
+**No PR was merged. PR #107 remains untouched; PR #112 and #114 remain open and unmerged. No production deployment or database change occurred.**
