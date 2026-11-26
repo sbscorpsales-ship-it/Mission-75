@@ -153,8 +153,427 @@ jobs:
         id: xctest
         timeout-minutes: 40
         run: |
-          SIMULATOR_ID="$(xcrun simctl list devices available -j | python3 -c 'import json, sys; data = json.load(sys.stdin); print(next((device["udid"] for devices in data["devices"].values() for device in devices if device["isAvailable"] and device["name"].startswith("iPhone")), ""))')"
-          echo "Selected iPhone simulator: \${SIMULATOR_ID:-<none>}"
+          SIMULATOR_SELECTION="$(xcrun simctl list devices available -j | python3 -c 'import json, re, sys; data = json.load(sys.stdin); candidates = []; [(candidates.append((tuple(int(part) for part in match.groups() if part is not None) if match else (0,), runtime, device["name"], device["udid"]))) for runtime, devices in data["devices"].items() for match in [re.search(r"iOS-(\\d+)-(\\d+)(?:-(\\d+))?", runtime)] for device in devices if device.get("isAvailable") and device.get("name", "").startswith("iPhone")]; preferred = [candidate for candidate in candidates if candidate[2] == "iPhone 17 Pro"]; pool = preferred or candidates; selected = max(pool, key=lambda candidate: (candidate[0], candidate[2])) if pool else None; print("\\t".join((selected[3], selected[2], selected[1])) if selected else "")')"
+          IFS=
+          echo "Available simulator devices:"
+          xcrun simctl list devices available
+          if [ -z "$SIMULATOR_ID" ]; then
+            echo "No available iPhone simulator was found on this runner."
+            echo "Xcode destinations for the GATIVX scheme:"
+            xcodebuild -showdestinations -project ios/GATIVX.xcodeproj -scheme GATIVX || true
+            exit 1
+          fi
+                    xcodebuild \
+            -project ios/GATIVX.xcodeproj \
+            -scheme GATIVX \
+            -destination "platform=iOS Simulator,id=$SIMULATOR_ID" \
+            -derivedDataPath build/GATIVX-Tests \
+            -resultBundlePath build/GATIVX.xcresult \
+            -parallel-testing-enabled NO \
+            CODE_SIGNING_ALLOWED=NO \
+            test
+
+      - name: Upload XCTest result bundle and dashboard screenshot evidence
+        if: always()
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: GATIVX-xcresult
+          path: build/GATIVX.xcresult
+          if-no-files-found: warn
+          compression-level: 0
+          retention-days: 7
+
+      # Export structured summaries and failure attachments for faster diagnosis.
+      # This is best-effort only; the original XCTest outcome remains a hard release gate.
+      - name: Export structured XCTest diagnostics
+        if: always()
+        run: |
+          bash -n scripts/export-xctest-diagnostics.sh
+          bash scripts/export-xctest-diagnostics.sh build/GATIVX.xcresult build/GATIVX-XCTest-Diagnostics
+
+      - name: Upload structured XCTest diagnostics
+        if: always()
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: GATIVX-XCTest-Diagnostics
+          path: build/GATIVX-XCTest-Diagnostics
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Verify generated target references HealthKit source entitlements
+        id: healthkit
+        if: always()
+        run: |
+          SETTINGS="$(xcodebuild -showBuildSettings -project ios/GATIVX.xcodeproj -scheme GATIVX)"
+          echo "$SETTINGS" | grep -F 'CODE_SIGN_ENTITLEMENTS = GATIVX/GATIVX.entitlements'
+          python3 - <<'PY'
+          from pathlib import Path
+          import plistlib
+          spec = Path("ios/gativx-project.yml").read_text()
+          if "CODE_SIGN_ENTITLEMENTS: GATIVX/GATIVX.entitlements" not in spec:
+              raise SystemExit("Generated GATIVX target is not configured with HealthKit entitlements")
+          with Path("ios/GATIVX/GATIVX.entitlements").open("rb") as stream:
+              entitlements = plistlib.load(stream)
+          if entitlements.get("com.apple.developer.healthkit") is not True:
+              raise SystemExit("HealthKit entitlement missing")
+          if entitlements.get("com.apple.developer.healthkit.background-delivery") is not True:
+              raise SystemExit("HealthKit background-delivery entitlement missing")
+          print("HealthKit source entitlement configuration verified; device signing remains a separate gate.")
+          PY
+
+      - name: Verify real-time tracking safeguards
+        id: tracking
+        if: always()
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          gps = Path("ios/GATIVX/GPSRouteRecorder.swift").read_text()
+          gps_tests = Path("ios/GATIVXTests/GPSRouteDraftPersistenceTests.swift").read_text()
+          ui_tests = Path("ios/GATIVXUITests/GATIVXDashboardUITests.swift").read_text()
+          activity_store = Path("ios/GATIVX/Storage/ActivitySessionStore.swift").read_text()
+          activity_outbox_tests = Path("ios/GATIVXTests/GATIVXActivitySessionTests.swift").read_text()
+          archive_store = Path("ios/GATIVX/Storage/RunJeetDailyStepsArchiveStore.swift").read_text()
+          archive_tests = Path("ios/GATIVXTests/RunJeetBackupImporterTests.swift").read_text()
+          activity_model = Path("ios/GATIVX/Models/ActivitySessionRecord.swift").read_text()
+          view = Path("ios/GATIVX/ContentView.swift").read_text()
+          health = Path("ios/GATIVX/HealthKit/HealthKitManager.swift").read_text()
+          health_outbox = Path("ios/GATIVX/Storage/HealthKitWorkoutOutboxStore.swift").read_text()
+          health_outbox_tests = Path("ios/GATIVXTests/HealthKitWorkoutOutboxStoreTests.swift").read_text()
+          sensor_outbox = Path("ios/GATIVX/Storage/HealthSyncOutboxStore.swift").read_text()
+          sensor_outbox_tests = Path("ios/GATIVXTests/HealthSyncOutboxStoreTests.swift").read_text()
+          cloud = Path("ios/GATIVX/Cloud/SupabaseRESTClient.swift").read_text()
+          migration = Path("supabase/migrations/20261109113101_allow_gps_route_sync_without_step_count.sql").read_text()
+          outbox = cloud.split("enum PendingHealthSyncKind", 1)[1] if "enum PendingHealthSyncKind" in cloud else ""
+          activity_outbox = cloud.split("struct PendingActivitySession", 1)[1] if "struct PendingActivitySession" in cloud else ""
+          activity_retry = cloud.split("func retryPendingActivitySessions()", 1)[1].split("func signIn", 1)[0] if "func retryPendingActivitySessions()" in cloud else ""
+          step_sync = cloud.split("func syncSteps(date: Date, steps: Int, pendingItem:", 1)[1].split("func syncActiveEnergy", 1)[0]
+          energy_sync = cloud.split("func syncActiveEnergy", 1)[1].split("func syncMotionDailySteps", 1)[0]
+          motion_sync = cloud.split("func syncMotionDailySteps", 1)[1].split("private func performStepSync", 1)[0]
+          start_activity = view.split("private func startActivitySession()", 1)[1].split("private func finishActivitySession()", 1)[0]
+          daily_display = view.split("private var displayedDailySteps", 1)[1].split("private var displayedStepSource", 1)[0]
+          motion_monitor = view.split("private func startLiveMotionMonitor()", 1)[1].split("private func loadActivityHistory()", 1)[0]
+          finish_activity = view.split("private func finishActivitySession()", 1)[1].split("/// Prefer HealthKit", 1)[0]
+          auth_handler = gps.split("func locationManagerDidChangeAuthorization", 1)[1].split("func locationManager(", 1)[0]
+          profile_tab_body = view.split("private var selectedMemberScreen", 1)[1].split("private func tabNavigationItem", 1)[0]
+          profile_screen = view.split("private var profileScreen", 1)[1].split("private func progressMeterCard", 1)[0]
+          profile_photo_sheet = view.split("private var profilePhotoPickerSheet", 1)[1].split("private var profileScreen", 1)[0]
+          root_body = view.split("var body: some View", 1)[1].split("} else {\\n            welcomeScreen", 1)[0]
+          save_workout_method = health.split("func saveActivityWorkout(", 1)[1].split("private func performActivityWorkoutExport(", 1)[0]
+          workout_export = health.split("func saveActivityWorkout(", 1)[1].split("func disconnect()", 1)[0]
+          duplicate_check = workout_export.find("if samples?.isEmpty == false")
+          first_workout_ack = workout_export.find("self.acknowledgeWorkout(id)")
+          finish_workout = workout_export.find("builder.finishWorkout")
+          confirmed_save = workout_export.find("else if workout != nil")
+          second_workout_ack = workout_export.find("self.acknowledgeWorkout(id)", first_workout_ack + 1)
+          confirmed_save_completion = workout_export.find("completion(.success(()))", confirmed_save)
+
+          invalid_date_guard = "guard let date = HealthSyncOutboxStore.dateForLocalDay(item.localDay) else"
+          invalid_date_recovery = cloud.split(invalid_date_guard, 1)[1].split("}", 1)[0] if invalid_date_guard in cloud else ""
+
+          checks = {
+              "Native daily total falls back to the live iPhone pedometer": "health.todaySteps ?? liveMotionSteps" in daily_display,
+              "Starting a walk never fabricates a zero-step reading": "sessionSteps = 0" not in start_activity and "self.sessionSteps = data?.numberOfSteps.intValue" in start_activity,
+              "Core Motion authorization state is surfaced": "CMPedometer.authorizationStatus()" in motion_monitor and "Motion & Fitness access is denied" in motion_monitor,
+              "Core Motion sensor errors are not silently discarded": "iPhone pedometer error:" in motion_monitor,
+              "Core Motion live daily steps remain a separate sensor source": "self.liveMotionSteps = steps" in motion_monitor and "syncMotionDailySteps" in motion_monitor,
+              "GPS activity starts even without pedometer": "routeRecorder.start(activity: selectedActivity, ownerID: cloud.authenticatedUserID)" in start_activity and start_activity.index("routeRecorder.start(activity: selectedActivity, ownerID: cloud.authenticatedUserID)") < start_activity.index("guard CMPedometer.isStepCountingAvailable()"),
+              "GPS-only activity button remains enabled without pedometer": 'Button { startActivitySession() } label:' in view and ".disabled(!CMPedometer.isStepCountingAvailable())" not in view,
+              "GPS route is saved when pedometer is unavailable": "saveRecord(nil, nil)" in finish_activity or "saveRecord(nil,nil)" in finish_activity and "routePoints: routePoints" in finish_activity,
+              "Workout finish rejects duplicate in-flight taps": "guard !isFinishingSession, let start = sessionStarted else { return }" in finish_activity,
+              "Workout finish reconciles by stable session ID before clearing the recovered GPS draft": "let recordID = routeRecorder.activitySessionID ?? activeSessionID ?? UUID()" in finish_activity and "id: recordID" in finish_activity and "history = self.activityStore.upserting(record, into: history)" in finish_activity and "persistedHistory.contains(where: { $0.id == recordID })" in finish_activity and "func upserting(_ record: ActivitySessionRecord" in activity_store and "updated[index] = updated[index].mergingRecovery(record)" in activity_store,
+              "Workout finish button is disabled while saving": ".disabled(isFinishingSession)" in view and "Saving activity…" in view,
+              "Failed local save leaves the session retryable": "tap Finish & save activity to retry" in finish_activity and "self.sessionStarted = start" in finish_activity,
+              "Sensor-empty activity is retained for retry rather than discarded": "Your session remains available" in finish_activity and "self.sessionStarted = nil" not in finish_activity.split("guard finalSteps != nil || !routePoints.isEmpty else", 1)[1].split("}", 1)[0] and "self.routeRecorder.clearDraft()" not in finish_activity.split("guard finalSteps != nil || !routePoints.isEmpty else", 1)[1].split("}", 1)[0],
+              "Sensor-empty Finish & Save resumes the durable GPS draft for retry": "self.routeRecorder.resumeRecovered()" in finish_activity and "Your session remains available" in finish_activity,
+              "Cloud activity sync reports corrupt local history instead of treating it as empty": "Cloud sync paused: saved activity history could not be read" in view and "try activityStore.load()" in view,
+              "Completed activity is atomically stored and read back before GPS draft clearing": "try self.activityStore.save(history)" in finish_activity and "let persistedHistory = try self.activityStore.load()" in finish_activity and finish_activity.index("try self.activityStore.save(history)") < finish_activity.index("let persistedHistory = try self.activityStore.load()") < finish_activity.index("self.routeRecorder.clearDraft()"),
+              "Local activity is decoded and verified before GPS draft clearing": "let persistedHistory = try self.activityStore.load()" in finish_activity and "persistedHistory.contains(where: { $0.id == recordID })" in finish_activity and finish_activity.index("persistedHistory.contains") < finish_activity.index("self.routeRecorder.clearDraft()"),
+              "Activity history uses atomic Application Support file writes": "applicationSupportDirectory" in activity_store and "data.write(to: url, options: .atomic)" in activity_store,
+              "Activity history file is read back and decoded before success": "let savedData = try Data(contentsOf: url)" in activity_store and "JSONDecoder().decode([ActivitySessionRecord].self, from: savedData)" in activity_store and "savedRecords.map(\\.id) == records.map(\\.id)" in activity_store,
+              "Legacy history is removed only after verified file migration": "try write(records, to: url)" in activity_store and activity_store.index("try write(records, to: url)") < activity_store.index("userDefaults.removeObject(forKey: legacyKey)"),
+              "Corrupt activity history is never overwritten with an empty list": "Could not read existing activity history" in finish_activity and "try self.activityStore.load()" in finish_activity,
+              "Failed local activity save preserves GPS draft": "Your GPS draft remains preserved" in finish_activity and "catch {" in finish_activity,
+              "Always permission enables background GPS during an active walk": "else if isRecording" in auth_handler and "manager.allowsBackgroundLocationUpdates = true" in auth_handler and "manager.showsBackgroundLocationIndicator = true" in auth_handler,
+              "Active GPS updates resume after permission change": "manager.startUpdatingLocation()" in auth_handler,
+              "Location downgrade removes background GPS claim": "manager.allowsBackgroundLocationUpdates = false" in auth_handler and "Allow Always location for background recording" in auth_handler,
+              "GPS accuracy filter": "location.horizontalAccuracy <= 50" in gps,
+              "GPS long-gap segmentation": "elapsed > 30" in gps,
+              "GPS jump/speed rejection": "delta > 150 || speed > 8" in gps,
+              "Backward-compatible route draft decoding": "decodeIfPresent(Bool.self, forKey: .breakBefore) ?? false" in gps,
+              "iPhone GPS draft uses atomic Application Support file writes": "applicationSupportDirectory" in gps and "data.write(to: url, options: .atomic)" in gps,
+              "GPS draft writes are read-back verified": "GPSRouteDraftPersistence.write(draft, to: url)" in gps and "savedData == data" in gps and "testWriteAtomicallyReadsBackSessionOwnerAndRoute" in gps_tests and "testWriteFailureDoesNotReplaceExistingData" in gps_tests,
+              "GPS route persistence failure is not overwritten by recording success": "if persistDraft() {" in gps and gps.index("if persistDraft() {") < gps.index("Recording GPS route ·") and "GPS is recording, but the route draft is not safely stored" in gps,
+              "Legacy UserDefaults GPS drafts migrate only after file write succeeds": "if fileData == nil, let legacyData, let url" in gps and "userDefaults.removeObject(forKey: draftKey)" in gps,
+              "Unreadable iPhone GPS draft is preserved rather than silently discarded": "original data was preserved for recovery" in gps,
+              "Unreadable GPS draft blocks new walks and remains preserved": "hasUnreadableDraft = true" in gps and "guard !isRecording, activeStartedAt == nil, !hasUnreadableDraft" in gps and "routeRecorder.hasUnreadableDraft" in start_activity and "RECOVERY NEEDED" in view and "routeRecorder.hasUnreadableDraft ? routeRecorder.status" in view,
+              "Route distance skips segment breaks": "!pair.1.breakBefore" in gps,
+              "Cloud distance skips segment breaks": "if cloudPoints[index].breakBefore { continue }" in cloud,
+              "Dashboard constrains content to the actual iPhone width": "GeometryReader { geometry in" in view and "homeDashboardContent(width: geometry.size.width, height: geometry.size.height)" in view and "let horizontalInset = min(max(width * 0.035, 12), 18)" in view and ".frame(width: width, alignment: .leading)" in view,
+              "Dashboard header and mission card expose full container accessibility frames": "gativx-dashboard-header" in view and "gativx-todays-mission" in view and view.count(".accessibilityElement(children: .contain)") >= 2,
+              "Live GPS map uses a writable camera binding": "Map(position: $routeMapCameraPosition)" in view and ".constant(.region(routeMapRegion))" not in view,
+              "Live GPS map frames recovered and incoming route points": ".onAppear {" in view and ".onChange(of: routeRecorder.points.count)" in view and "routeMapCameraPosition = .region(routeMapRegion)" in view,
+              "Active walk keeps motion monitor in background": "sessionStarted == nil && !routeRecorder.isRecording" in view,
+              "Prompt HealthKit background update requested": "frequency: .immediate" in health,
+              "Disconnect disables background delivery for every observed HealthKit quantity": "for type in [stepType, energyType, distanceType, exerciseType, heartRateType]" in health and "disableBackgroundDelivery(for: type)" in health,
+              "HealthKit step background cadence disclosed as hourly": "at most hourly" in health,
+              "Apple Health imports daily step history, not only today's total": "HKStatisticsCollectionQuery" in health and "enumerateStatistics(from: start, to: end)" in health,
+              "Apple Health history window is bounded to a safe range": "max(1, min(days, 365))" in health,
+              "Missing HealthKit days are not fabricated as zero": "guard let quantity = statistics.sumQuantity() else { return }" in health,
+              "Apple Health workout export omits unavailable steps instead of inventing zero": '"com.paramitsolutions.gativx.measuredSteps"] = steps' in health and "steps ?? 0" not in health and "max(0, steps" not in health,
+              "Apple Health requests measured read types and workout/distance write access": "let shareTypes: Set<HKSampleType> = [workoutType, distanceType]" in health and "let readTypes: Set<HKObjectType> = [stepType, energyType, distanceType, exerciseType, heartRateType, workoutType]" in health and "store.requestAuthorization(toShare: shareTypes, read: readTypes)" in health,
+              "Apple Health workout export checks sync identifiers before duplicate writes": "HKMetadataKeySyncIdentifier" in health and "HKQuery.predicateForObjects(withMetadataKey: HKMetadataKeySyncIdentifier" in health,
+              "Member navigation uses one explicit five-destination switch, not a duplicate native TabView": "private var selectedMemberScreen" in view and "TabView(selection: $selectedTab)" not in view and all(f'identifier: "gativx-tab-{name}"' in view for name in ("home", "activity", "missions", "community", "profile")) and ".frame(height: 56)" in view,
+              "Profile tab avoids a redundant NavigationStack and retains its UI test target": "profileScreen" in profile_tab_body and "NavigationStack { profileScreen" not in profile_tab_body and '.accessibilityIdentifier("gativx-profile-screen")' in view and '"gativx-profile-screen"' in ui_tests,
+              "Profile tab has a stable identifier and a direct-from-Home UI test": 'identifier: "gativx-tab-profile"' in profile_tab_body and '"gativx-tab-profile"' in ui_tests and "func testProfileTabRendersFromFreshDashboard()" in ui_tests,
+              "Profile defers PhotosUI construction until an explicit member action": ".photosPicker(" not in profile_screen and "PhotosPicker(" not in profile_screen and "PhotosPicker(" in profile_photo_sheet and "gativx-profile-photo-picker-open" in profile_screen and "gativx-profile-photo-picker-cancel" in profile_photo_sheet and "gativx-profile-photo-picker-sheet" in ui_tests and "gativx-profile-photo-picker-cancel" in ui_tests,
+              "Profile photo picker sheet is hosted at the root, not nested in the Profile tab": ".sheet(isPresented: $isProfilePhotoPickerPresented)" in root_body and ".sheet(isPresented: $isProfilePhotoPickerPresented)" not in profile_screen and ".onChange(of: selectedProfilePhoto)" in root_body and ".onChange(of: selectedProfilePhoto)" not in profile_screen and root_body.index(".sheet(isPresented: $isProfilePhotoPickerPresented)") > root_body.index(".fullScreenCover(isPresented: $isGuruPresented)"),
+              "Apple Health workout export is durably queued before HealthKit work": "enqueueWorkout(pending)" in health and "workoutOutbox.enqueue(item)" in health and "workout-export-outbox.v1" in health_outbox,
+               "Finish & Save verifies local history before attempting HealthKit queue creation": all(term in finish_activity for term in ["try self.activityStore.save(history)", "let persistedHistory = try self.activityStore.load()", "let healthExportQueued = self.health.saveActivityWorkout("]) and finish_activity.index("try self.activityStore.save(history)") < finish_activity.index("let persistedHistory = try self.activityStore.load()") < finish_activity.index("let healthExportQueued = self.health.saveActivityWorkout(") and "testCrashAfterHistoryWriteBeforeDraftClearRecoversSameSessionOnDisk" in activity_outbox_tests,
+               "HealthKit queue acceptance is returned synchronously to Finish & Save": "-> Bool" in save_workout_method and "guard enqueueWorkout(pending) else" in save_workout_method and "return false" in save_workout_method and "return true" in save_workout_method,
+               "Finish & Save clears the GPS draft only after queue acceptance": "if healthExportQueued {" in finish_activity and finish_activity.index("if healthExportQueued {") < finish_activity.index("self.routeRecorder.clearDraft()"),
+               "HealthKit queue write failure keeps the same activity session retryable": "self.sessionStarted = start" in finish_activity and "self.activeSessionID = recordID" in finish_activity and "Your GPS draft remains preserved. Tap Finish & save activity to retry." in finish_activity,
+               "Coalesced HealthKit export failure is delivered to every caller": "testExportFailureIsDeliveredToEveryCoalescedCaller" in Path("ios/GATIVXTests/GATIVXFinishSaveRegressionTests.swift").read_text(),
+              "Apple Health export queue is read-back verified": "verified.map(\\.id) == items.map(\\.id)" in health_outbox,
+              "Apple Health outbox enqueue is idempotent by stable workout ID": "if !items.contains(where: { $0.id == item.id })" in health_outbox and "testEnqueueIsIdempotentByStableWorkoutID" in health_outbox_tests,
+              "Apple Health outbox acknowledgement removes only confirmed workout": "func acknowledge(_ id: UUID)" in health_outbox and "testAcknowledgeRemovesOnlyTheConfirmedWorkout" in health_outbox_tests,
+              "Apple Health acknowledgement read-back failure preserves pending workout": "testAcknowledgeReportsVerificationFailureAndRetainsPendingWorkoutWhenQueueWriteCannotBeReadBack" in health_outbox_tests,
+              "Apple Health export reports failure when queue acknowledgement cannot be verified": "Apple Health export acknowledgement could not be verified" in health and "Apple Health saved the workout, but the export queue could not be safely acknowledged" in workout_export and "completion(.failure(NSError(" in workout_export,
+              "Corrupt Apple Health outbox is preserved and enqueue is blocked": "Original data was preserved" in health_outbox and "testCorruptOutboxIsPreservedAndCannotBeReplacedByEnqueue" in health_outbox_tests,
+              "Apple Health export queue retains unreadable data": "Pending exports are unknown; original data was preserved" in health,
+              "Apple Health workout export is acknowledged only after duplicate check or confirmed save": duplicate_check >= 0 and duplicate_check < first_workout_ack < finish_workout < confirmed_save < second_workout_ack < confirmed_save_completion,
+              "Apple Health workout export retries are available on foreground": "retryPendingWorkoutExports()" in view,
+              "HealthKit refresh clears stale today's value before querying": "self.todaySteps = nil" in health,
+              "Daily distance, exercise and heart-rate refresh clears stale values before querying": "todayWalkingRunningDistanceKm = nil" in health and "todayExerciseMinutes = nil" in health and "todayAverageHeartRateBPM = nil" in health,
+              "Active-energy query requires explicit HealthKit connection": "guard UserDefaults.standard.bool(forKey: connectionRequestedKey), isAvailable else" in health,
+              "GPS route upload allows unknown steps without inventing zero": '"p_steps": steps.map { $0 as Any } ?? NSNull()' in cloud,
+              "Sensor retry outbox is persisted on device": "HealthSyncOutboxStore()" in cloud and "userDefaults.set(data, forKey: key)" in sensor_outbox,
+              "Sensor outbox writes are read-back verified": "saved == data" in sensor_outbox and "verified.count == items.count" in sensor_outbox and "verified.map(\\.revisionID)" in sensor_outbox,
+              "Sensor outbox replaces only the same member/kind/day": "items.removeAll { $0.id == item.id }" in sensor_outbox and "testEnqueueReplacesOnlyTheSameMemberKindAndLocalDay" in sensor_outbox_tests,
+              "Sensor acknowledgement cannot remove another member's same-day record": "testAcknowledgingMemberAReadingDoesNotRemoveMemberBReadingForSameDay" in sensor_outbox_tests and "ownerID + \":\" + kind.rawValue + \":\" + localDay" in cloud,
+              "Sensor outbox stale acknowledgement preserves newer revision": "item.revisionID" in sensor_outbox and "testAcknowledgingAnOlderRevisionCannotDeleteANewerReading" in sensor_outbox_tests,
+              "Sensor outbox corrupt data blocks enqueue and acknowledgement": "Original data was preserved" in sensor_outbox and "testCorruptOutboxIsPreservedAndBlocksEnqueueAndAcknowledgement" in sensor_outbox_tests,
+              "Sensor uploads require verified queue persistence": all("if pendingItem == nil && !enqueueHealthSync(item)" in section for section in [step_sync, energy_sync, motion_sync]),
+              "Sensor sync reports success only after queue acknowledgement is verified": "guard acknowledgeHealthSync(item) else" in step_sync and "guard acknowledgeHealthSync(item) else" in energy_sync and "guard acknowledgeHealthSync(item) else" in motion_sync,
+              "Sensor retry records are scoped to authenticated member ID": "authenticatedUserID" in cloud and "ownerID" in outbox and "for item in pending where item.ownerID == ownerID" in cloud,
+              "HealthKit step write is queued before network request and acknowledged after success": "enqueueHealthSync(item)" in step_sync and step_sync.index("enqueueHealthSync(item)") < step_sync.index("performStepSync") and step_sync.index("performStepSync") < step_sync.index("acknowledgeHealthSync(item)"),
+              "Active-energy write is queued before network request and acknowledged after success": "enqueueHealthSync(item)" in energy_sync and energy_sync.index("enqueueHealthSync(item)") < energy_sync.index("URLSession.shared.data") and energy_sync.index("URLSession.shared.data") < energy_sync.index("acknowledgeHealthSync(item)"),
+              "Core Motion write is queued and acknowledged only after server success": "enqueueHealthSync(item)" in motion_sync and motion_sync.index("enqueueHealthSync(item)") < motion_sync.index("URLSession.shared.data") and motion_sync.index("URLSession.shared.data") < motion_sync.index("acknowledgeHealthSync(item)"),
+              "Queued sensor writes retry after sign-in and on foreground": "await retryPendingHealthSyncs()" in cloud and "await cloud.retryPendingHealthSyncs()" in view,
+              "Concurrent sensor outbox retry drains are serialized": "guard !isRetryingHealthOutbox, isSignedIn, let ownerID = authenticatedUserID else { return }" in cloud and "defer { isRetryingHealthOutbox = false }" in cloud,
+              "Sensor outbox retry reuses the original idempotency revision": "pendingItem: item" in cloud and "if pendingItem == nil && !enqueueHealthSync(item)" in cloud,
+              "Unreadable sensor outbox is not treated as an empty queue": "private func loadHealthOutbox() -> [PendingHealthSync]?" in cloud and "original data was left untouched" in cloud,
+              "Unreadable sensor outbox exposes unknown count instead of false zero": "isHealthOutboxReadable = false" in cloud and "Pending count is unknown" in cloud and "if let items = loadHealthOutbox()" in cloud,
+              "Enqueue and acknowledgement never overwrite unreadable sensor outbox": "var items = try load()" in sensor_outbox and "let items = try load()" in sensor_outbox,
+              "Invalid sensor outbox dates are retained for recovery": invalid_date_guard in cloud and "static func dateForLocalDay" in sensor_outbox and "original queue item was retained for recovery" in cloud and "acknowledgeHealthSync(item)" not in invalid_date_recovery,
+              "Sensor outbox retry preserves original revision through token refresh": "retryAfterRefresh: false, pendingItem: item" in cloud,
+              "Member can see pending sensor-sync count": "pendingHealthSyncCount" in cloud and "pendingHealthSyncCount" in view,
+              "Pending sync count never exposes another account's queue": "items.filter { $0.ownerID == authenticatedUserID }.count" in cloud,
+              "Older sensor upload cannot acknowledge a newer queued value": "($0.id == item.id && $0.revisionID == item.revisionID)" in sensor_outbox,
+              "GPS cloud distance skips discontinuous segments": "if cloudPoints[index].breakBefore { continue }" in cloud,
+              "Completed walks have a dedicated durable cloud outbox": "activity-sync-outbox.v1" in cloud and "struct PendingActivitySession: Codable" in cloud,
+              "Activity outbox write is read back and verified": "UserDefaults.standard.set(data, forKey: activityOutboxKey)" in cloud and "JSONDecoder().decode([PendingActivitySession].self, from: saved)" in cloud,
+              "Activity outbox read-back verifies the complete queued payload": "verified == items" in cloud,
+              "Recovered activity refreshes the pending cloud payload with a new revision": "ActivitySessionOutboxQueue.upserting" in cloud and "merged != existing.record" in cloud and "testActivityOutboxMergesRecoveredRouteAndPreservesNewerRevision" in activity_outbox_tests,
+              "Stale activity acknowledgement cannot remove a newer recovered revision": "ActivitySessionOutboxQueue.acknowledging" in activity_retry and "testActivityOutboxMergesRecoveredRouteAndPreservesNewerRevision" in activity_outbox_tests,
+              "Activity outbox isolates matching session UUIDs by member": "updated.firstIndex(where: { $0.ownerID == ownerID && $0.record.id == record.id })" in cloud and "testActivityOutboxKeepsSameSessionUUIDIsolatedByOwner" in activity_outbox_tests,
+              "Activity outbox is isolated to the signed-in member": "for item in pending where item.ownerID == ownerID" in activity_retry and "items.filter { $0.ownerID == authenticatedUserID }.count" in cloud,
+              "Activity retries retain stable session and revision identifiers": "record.id.uuidString" in cloud and "($0.id == item.id && $0.revisionID == item.revisionID)" in cloud and "testActivityOutboxMergesRecoveredRouteAndPreservesNewerRevision" in activity_outbox_tests,
+              "Activity queue item is removed only after all available writes succeed": "guard allAcknowledged else { continue }" in activity_retry and "saveActivityOutbox(ActivitySessionOutboxQueue.acknowledging(item, from: current))" in activity_retry and activity_retry.index("syncActivitySessionRoute") < activity_retry.index("guard allAcknowledged else") < activity_retry.index("saveActivityOutbox(ActivitySessionOutboxQueue.acknowledging"),
+              "Activity step and route RPCs return explicit acknowledgements": "async -> Bool" in cloud and "return true" in cloud.split("func syncActivitySession(", 1)[1].split("func syncActivitySessionRoute(", 1)[0] and "return true" in cloud.split("func syncActivitySessionRoute(", 1)[1].split("private func refreshSession()", 1)[0],
+              "Existing local walks are backfilled into the activity outbox": "cloud.enqueueActivitySession(record)" in view,
+              "Metadata-only activity records are not queued for cloud sync": "var hasCloudSyncPayload" in activity_model and "for record in accountRecords where record.hasCloudSyncPayload" in view,
+              "Local activity backfill and cloud queue are scoped to the recording account": "let accountRecords = history.filter { $0.ownerID == ownerID }" in view and "guard record.ownerID == ownerID else" in cloud,
+              "Activity history display is filtered by the authenticated account": "private var visibleActivityHistory" in view and "activityHistory.filter { $0.ownerID == ownerID }" in view and "ForEach(visibleActivityHistory.prefix(20))" in view,
+              "Recovered GPS drafts retain a stable session ID and account owner": "activitySessionID = draft.sessionID ?? UUID()" in gps and "sessionID: sessionID" in gps and "ownerID: activityOwnerID" in gps and "ownerID: self.routeRecorder.activityOwnerID" in finish_activity,
+              "Activity outbox retries on sign-in and foreground": "await cloud.retryPendingActivitySessions()" in view,
+              "Unreadable activity outbox is preserved and not treated as empty": "Original data was preserved; pending count is unknown" in cloud and "return nil" in cloud.split("private func loadActivityOutbox()", 1)[1].split("private func saveActivityOutbox", 1)[0],
+              "RunJeet daily totals are archived separately from Apple Health": "runJeetDailyStepsArchiveStore.merge" in view and "not merged into Apple Health" in view,
+              "RunJeet daily archive writes are atomic and read-back verified": "data.write(to: url, options: .atomic)" in archive_store and "let verified = try load()" in archive_store and "guard verified == merged" in archive_store,
+              "RunJeet archive imports are idempotent and preserve existing dates": "for (day, steps) in incoming where merged[day] == nil" in archive_store and "testMergeIsIdempotentAndExistingDatesWin" in archive_tests,
+              "Corrupt RunJeet archives are preserved for recovery": "original file was preserved" in archive_store and "testCorruptArchiveIsPreservedAndNeverTreatedAsEmpty" in archive_tests,
+              "Database allows unknown route steps without writing zero": "alter column steps drop not null" in migration and "steps = coalesce(excluded.steps, public.walk_sessions.steps)" in migration,
+          }
+          for name, ok in checks.items():
+              print(("PASS: " if ok else "FAIL: ") + name)
+          if not all(checks.values()):
+              raise SystemExit("Real-time tracking safeguard verification failed")
+          PY
+
+      - name: Build GATIVX for iPhone Simulator
+        id: simulator_build
+        if: always()
+        run: |
+          xcodebuild \
+            -project ios/GATIVX.xcodeproj \
+            -scheme GATIVX \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            -configuration Debug \
+            -derivedDataPath build/GATIVX-Simulator \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+
+      - name: Verify simulator privacy strings and source entitlement declarations
+        id: simulator_privacy
+        if: always()
+        run: |
+          APP="build/GATIVX-Simulator/Build/Products/Debug-iphonesimulator/GATIVX.app"
+          test -f "$APP/Info.plist"
+          python3 - <<'PY'
+          import os
+          import plistlib
+          from pathlib import Path
+
+          app = Path("build/GATIVX-Simulator/Build/Products/Debug-iphonesimulator/GATIVX.app")
+          with (app / "Info.plist").open("rb") as stream:
+              info = plistlib.load(stream)
+          executable = info.get("CFBundleExecutable")
+          if not isinstance(executable, str) or not executable.strip():
+              raise SystemExit("Simulator app CFBundleExecutable is missing")
+          executable_path = app / executable
+          if not executable_path.is_file() or executable_path.stat().st_size == 0 or not os.access(executable_path, os.X_OK):
+              raise SystemExit("Simulator app executable is missing, empty or not executable")
+          if info.get("CFBundleIdentifier") != "com.paramitsolutions.gativx":
+              raise SystemExit("GATIVX bundle identifier is missing or incorrect")
+          if info.get("CFBundleVersion") != "1":
+              raise SystemExit("GATIVX CFBundleVersion must be 1 for this release")
+          if info.get("CFBundleShortVersionString") != "1.0.0":
+              raise SystemExit("GATIVX marketing version must be 1.0.0 for this release")
+          for key in (
+              "NSHealthShareUsageDescription",
+              "NSMotionUsageDescription",
+              "NSLocationWhenInUseUsageDescription",
+              "NSLocationAlwaysAndWhenInUseUsageDescription",
+          ):
+              if not info.get(key):
+                  raise SystemExit(f"Missing permission purpose string: {key}")
+          if "location" not in info.get("UIBackgroundModes", []):
+              raise SystemExit("Background location mode is missing")
+
+          entitlements_path = Path(__import__("os").environ["GITHUB_WORKSPACE"]) / "ios/GATIVX/GATIVX.entitlements"
+          with entitlements_path.open("rb") as stream:
+              entitlements = plistlib.load(stream)
+          print("GATIVX source entitlements:", entitlements)
+          if entitlements.get("com.apple.developer.healthkit") != True:
+              raise SystemExit("HealthKit entitlement is missing")
+          if entitlements.get("com.apple.developer.healthkit.background-delivery") != True:
+              raise SystemExit("HealthKit background-delivery entitlement is missing")
+          print("Simulator privacy strings and source entitlement declarations validated; signed device entitlements are not asserted.")
+          PY
+
+      - name: Upload simulator build
+        id: simulator_upload
+        if: always() && steps.simulator_build.outcome == 'success' && steps.simulator_privacy.outcome == 'success'
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: GATIVX-iOS-Simulator
+          path: build/GATIVX-Simulator/Build/Products/Debug-iphonesimulator/GATIVX.app
+          if-no-files-found: error
+      # This creates an optimized Release device build, but it remains unsigned.
+      # It is NOT installable until signed with a valid Apple provisioning profile.
+      - name: Build unsigned iPhone Release app
+        id: release_build
+        if: always()
+        run: |
+          xcodebuild \
+            -project ios/GATIVX.xcodeproj \
+            -scheme GATIVX \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -configuration Release \
+            -derivedDataPath build/GATIVX-Device \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+
+      - name: Package unsigned iPhone Release IPA
+        id: ipa_package
+        if: always() && steps.release_build.outcome == 'success'
+        run: |
+          APP="build/GATIVX-Device/Build/Products/Release-iphoneos/GATIVX.app"
+          test -d "$APP"
+          EXECUTABLE_NAME="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$APP/Info.plist")"
+          test -n "$EXECUTABLE_NAME"
+          test -s "$APP/$EXECUTABLE_NAME"
+          test -x "$APP/$EXECUTABLE_NAME"
+          mkdir -p build/GATIVX-IPA/Payload
+          cp -R "$APP" build/GATIVX-IPA/Payload/GATIVX.app
+          cd build/GATIVX-IPA
+          /usr/bin/zip -qry ../GATIVX-unsigned.ipa Payload
+          /usr/bin/unzip -t ../GATIVX-unsigned.ipa
+          python3 - <<'PY'
+          import plistlib
+          import zipfile
+
+          with zipfile.ZipFile("../GATIVX-unsigned.ipa") as archive:
+              app_prefix = "Payload/GATIVX.app/"
+              info = plistlib.loads(archive.read(app_prefix + "Info.plist"))
+              executable = info.get("CFBundleExecutable")
+              if not isinstance(executable, str) or not executable.strip():
+                  raise SystemExit("Release IPA CFBundleExecutable is missing")
+              executable_path = app_prefix + executable
+              if executable_path not in archive.namelist():
+                  raise SystemExit(f"Release IPA is missing its executable: {executable_path}")
+              executable_info = archive.getinfo(executable_path)
+              if executable_info.file_size == 0:
+                  raise SystemExit("Release IPA executable is empty")
+              with archive.open(executable_path) as stream:
+                  magic = stream.read(4)
+              valid_mach_o_magic = {
+                  b"\xcf\xfa\xed\xfe", b"\xfe\xed\xfa\xcf",
+                  b"\xca\xfe\xba\xbe", b"\xbe\xba\xfe\xca",
+                  b"\xca\xfe\xba\xbf", b"\xbf\xba\xfe\xca",
+              }
+              if magic not in valid_mach_o_magic:
+                  raise SystemExit(f"Release IPA executable has invalid Mach-O magic: {magic!r}")
+          expected = {
+              "CFBundleIdentifier": "com.paramitsolutions.gativx",
+              "CFBundleVersion": "1",
+              "CFBundleShortVersionString": "1.0.0",
+          }
+          for key, value in expected.items():
+              if info.get(key) != value:
+                  raise SystemExit(f"Release IPA has incorrect {key}: {info.get(key)!r}")
+          print("Release IPA bundle identity and version metadata verified.")
+          PY
+          test -s ../GATIVX-unsigned.ipa
+
+      - name: Upload unsigned iPhone IPA
+        id: ipa_upload
+        if: always() && steps.ipa_package.outcome == 'success'
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: GATIVX-iPhone-unsigned-IPA
+          path: build/GATIVX-unsigned.ipa
+          if-no-files-found: error
+
+      # Keep XCTest as a release gate, but evaluate it only after every independent
+      # entitlement, tracking, simulator and unsigned-IPA gate has been attempted.
+      - name: Enforce complete GATIVX release validation
+        if: always()
+        run: |
+          python3 - <<'PY'
+          import os
+          outcomes = {
+              "XCTest": "${{ steps.xctest.outcome }}",
+              "HealthKit source entitlements": "${{ steps.healthkit.outcome }}",
+              "Tracking safeguards": "${{ steps.tracking.outcome }}",
+              "iPhone Simulator build": "${{ steps.simulator_build.outcome }}",
+              "Simulator privacy and entitlement validation": "${{ steps.simulator_privacy.outcome }}",
+              "Simulator artifact upload": "${{ steps.simulator_upload.outcome }}",
+              "Unsigned iPhone Release build": "${{ steps.release_build.outcome }}",
+              "Unsigned IPA packaging": "${{ steps.ipa_package.outcome }}",
+              "Unsigned IPA artifact upload": "${{ steps.ipa_upload.outcome }}",
+          }
+          for name, outcome in outcomes.items():
+              print(f"{'PASS' if outcome == 'success' else 'FAIL'}: {name} — {outcome}")
+          failed = [name for name, outcome in outcomes.items() if outcome != "success"]
+          if failed:
+              raise SystemExit("Release validation incomplete or failed: " + ", ".join(failed))
+          print("All automated release gates passed. Physical-device signing, installation and HealthKit behavior remain separate manual gates.")
+          PY
+\\t' read -r SIMULATOR_ID SIMULATOR_NAME SIMULATOR_RUNTIME <<< "$SIMULATOR_SELECTION"
+          echo "Selected iPhone simulator: ${SIMULATOR_NAME:-<none>} (${SIMULATOR_ID:-<none>}), runtime ${SIMULATOR_RUNTIME:-<none>}"
           echo "Available simulator devices:"
           xcrun simctl list devices available
           if [ -z "$SIMULATOR_ID" ]; then
