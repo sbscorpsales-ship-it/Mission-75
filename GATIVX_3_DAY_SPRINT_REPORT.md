@@ -2723,3 +2723,8 @@ Apple's [TN3192](https://developer.apple.com/documentation/technotes/tn3192-migr
 5. Continue Community/notifications implementation and live backend/security review separately from the UI release gate.
 
 **Protected work:** PR #107 remains untouched; PR #112 and #114 remain open/unmerged. PRs #136–#143 remain draft candidates. No PR was merged and no production database/deployment change occurred.
+
+
+### Run #674 full-device screenshot inspection (additional evidence)
+
+Downloaded XCTest result-bundle artifact `15142559660` and inspected the embedded PNG attachments. The `XCUIScreen.main` capture is **1206 × 2622 px**. It visibly shows the GATIVX app in a centered 2:3 window with large black letterbox regions above and below; the app window occupies 402 × 603 pt while the physical simulator capture is 402 × 874 pt. Separate app-window screenshots are 960 × 1440 px. This confirms the full-device viewport failure visually, not only through XCTest frame values. The dashboard's Design C styling and five-destination dock are visible inside the reduced window; the styling was not changed.
