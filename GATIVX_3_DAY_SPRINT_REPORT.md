@@ -1692,3 +1692,29 @@ The same-commit retry of full iOS job `139875349179` is currently `in_progress` 
 ### Pipeline maintenance warnings
 
 The Android and Web workflow logs include GitHub Actions Node 20 deprecation notices and Node dependency deprecations (`punycode`, `url.parse()`). These did not fail the builds, but the workflows should migrate supported actions to current major versions in a separate maintenance change.
+
+
+## 2026-11-26T11:27:22.282Z — live Supabase security recheck
+
+Project `mission75-cloud` is currently `ACTIVE_HEALTHY`. Read-only queries were run; **no production data, grants, policies, migrations or settings were changed**.
+
+### Current live findings
+
+- `public.daily_action_progress` has RLS enabled but not forced. Its four member policies scope SELECT/INSERT/UPDATE/DELETE to `auth.uid() = user_id`.
+- Despite those policies, live table grants still give `anon` **SELECT, INSERT, UPDATE, DELETE, REFERENCES, TRIGGER and TRUNCATE** on `daily_action_progress`.
+- `authenticated` also has **TRUNCATE, TRIGGER and REFERENCES** on that table. RLS does not protect TRUNCATE; therefore the owner policies do not mitigate that table-level privilege.
+- `authenticated` has CRUD on six public tables: `activity_sessions`, `daily_action_progress`, `daily_logs`, `motion_daily_steps`, `profiles` and `walk_sessions`. No other public table was returned with `anon` grants.
+- Public-schema default privileges for both object owners `postgres` and `supabase_admin` still grant `anon` and `authenticated` broad table privileges (including MAINTAIN, TRUNCATE, TRIGGER and REFERENCES), sequence SELECT/UPDATE/USAGE, and function EXECUTE on future public objects.
+- Supabase Security Advisor still reports `auth_leaked_password_protection`: leaked-password protection is disabled.
+
+### Migration state and remediation
+
+The live migration list currently ends at `20261113200433_enable_daily_action_progress_realtime`. It does **not** contain:
+- `20261126012000_harden_daily_action_progress_privileges` (PR #125)
+- `20261126071600_harden_public_default_privileges` (PR #130)
+
+Both PRs remain open/draft. Their isolated PostgreSQL 17 CI jobs passed:
+- PR #125 run [#45742076827](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45742076827): migration apply and grant/member-isolation verification succeeded.
+- PR #130 run [#45775093000](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45775093000): migration apply, future-object default-privilege probes and grant/member-isolation verification all succeeded.
+
+These CI runs prove the migrations against a temporary local PostgreSQL 17 service, not against the live Supabase project. The production exposure remains until the two migrations are applied and grants are re-queried. I did not apply them because that is a live security change and no explicit production-change authorization was given. Required owner action: explicitly authorize applying these two tested migrations to `mission75-cloud`, then re-run the grant/default-privilege queries and enable leaked-password protection in Supabase Auth settings.
