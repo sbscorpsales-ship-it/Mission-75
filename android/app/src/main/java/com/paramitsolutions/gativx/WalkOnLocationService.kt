@@ -94,6 +94,16 @@ class WalkOnLocationService : Service(), LocationListener, SensorEventListener {
     }
 
     private fun beginOrResumeWalk() {
+        if (WalkOnStartPolicy.shouldBlockNewSession(WalkOnStore.activeDraftState(this))) {
+            WalkOnStore.setStatus(
+                this,
+                "An existing encrypted WalkOn draft is unreadable. Its original data was preserved; no new route was started."
+            )
+            broadcastUpdate()
+            stopForeground(STOP_FOREGROUND_REMOVE)
+            stopSelf()
+            return
+        }
         val existing = WalkOnStore.active(this)
         val isNewSession = existing == null
         if (existing == null) {
