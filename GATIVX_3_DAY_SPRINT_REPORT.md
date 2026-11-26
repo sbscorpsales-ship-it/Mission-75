@@ -2066,6 +2066,7 @@ The owner reported that Guru appeared blank and restated that Guru is the heart 
 - `public.daily_action_progress` has RLS enabled and four owner-scoped authenticated policies, but `anon` and `authenticated` still have broad table grants including `TRUNCATE`. RLS does not protect against `TRUNCATE`.
 - `pg_default_acl` still grants `anon` and `authenticated` broad privileges for future public tables, sequences and functions under both `postgres` and `supabase_admin` defaults.
 - Supabase Security Advisor still reports `auth_leaked_password_protection` as WARN/disabled. No live SQL, migration or Auth-setting mutation was performed.
+- Supabase Performance and Health Advisors returned no lints in this recheck.
 
 ### Product gap-ledger delta
 - **NURUN:** upgraded from missing/partial to implemented-but-unverified/partial. The current iOS draft has a full-screen coaching experience, measured signals, walking/nutrition/recovery modules, local check-ins, a purpose anchor, a deterministic next action, four journey durations and two curated learning links. Still missing adaptive adherence/missed-day recovery, account-scoped coaching history, conversational AI, expert/video curation and measured nutrition analysis.
