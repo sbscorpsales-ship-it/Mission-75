@@ -1932,3 +1932,8 @@ The device-targeted IPA artifact #15114878629 was downloaded and inspected. Its 
 2. If it fails, capture a simulator process main-thread sample during the Activity-tab stall rather than changing assertions or reducing test coverage.
 3. Continue the active-day journey and cross-platform product gaps independently; do not change the locked dashboard taxonomy without explicit approval.
 4. Keep release verdict **NOT RELEASE-READY** until signed device, backend/security and cross-platform acceptance evidence exists.
+
+
+### PR stack ancestry check
+
+GitHub commit comparison confirms PR #128 head is **41 commits ahead / 0 behind** PR #107 head; PR #133 head is **44 ahead / 0 behind** PR #107. The current iOS validation stack therefore includes the PR #107 baseline without changing PR #107 itself. PR #114 remains divergent from current PR #112 (3 commits ahead / 7 behind) and is not the current integration baseline.
