@@ -3195,3 +3195,15 @@ Run [#45891894462](https://github.com/sbscorpsales-ship-it/Mission-75/actions/ru
 - Re-checked PR #137 Android run [#45840866819](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45840866819): source safeguards, Android JVM unit tests and Debug APK build all completed successfully; logs explicitly report **6 passed, 0 failed, 0 skipped**. No physical Android device/Health Connect test was performed.
 - Re-checked PR #138 Web Hub run [#45839703732](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45839703732): web structural release gate and Chromium mobile browser smoke step succeeded. Browser output explicitly confirms the v2 app root opens and mission/metrics/five navigation tabs render without browser errors. No production deployment was performed.
 - Repository protection re-check: main remains `143889db3e72540fb478b76c486082f45395e9bd`; PR #107 remains open/unmerged at `c19bdbd307df7048cefd86bd3e6064ac4f4e3042`; PR #112 remains open/unmerged at `b6c04d41dc67bd191ed0cf8966331eb5661a9887`. PR #118 report branch now points to this report update; PR #147 remains open/draft. No PR merge or production mutation occurred.
+
+
+### Product-scope source inspection — 2026-11-27 03:46 IST
+
+Inspected the current PR #146 source (the parent of PR #147) beyond the viewport code:
+- **Community:** explicitly displays “NOT ACTIVE IN THIS BUILD”; source states that the feed and shared missions are unavailable and member activity is not shared. This is a confirmed missing product capability, not a merely unverified screen.
+- **Notifications:** the root-hosted sheet explicitly says notifications are not active in this build. Push registration, delivery and preferences remain missing.
+- **Missions:** current native tab contains one hard-coded “TODAY · CONSISTENCY” walking card, a daily-step progress view and a Guru link. It is a functional starter surface, not a verified mission catalogue, adaptive multi-mission lifecycle, shared mission system or complete goal-to-achievement journey. Keep full Missions scope marked partial/implemented-but-unverified; shared missions remain missing with Community.
+- **Profile:** current source supports local-only PhotosUI selection and local image persistence; the root hosts the picker sheet. It explicitly says the image is not uploaded. Source guards and Profile navigation pass, but actual photo-library selection, persistence across relaunch and account/device migration have not been accepted by UI/device evidence.
+- **Guru:** current full-screen flow includes purpose/goal setup, measured signals, walking, nutrition, recovery, journey, purpose/action and learning cards. This verifies source implementation only; generated coaching quality, account isolation, live data correctness and keyboard dismissal are not fully re-accepted on PR #146 because its UI suite stopped before the dedicated Guru keyboard test.
+
+No product code changed in this source-inspection pass. These scope distinctions are recorded so a visible tab or placeholder is not misreported as a completed service.
