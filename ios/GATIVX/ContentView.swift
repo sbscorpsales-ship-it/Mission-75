@@ -1589,14 +1589,6 @@ struct ContentView: View {
                 Text("Fitness guidance, not medical diagnosis or treatment.").font(.caption).foregroundStyle(.secondary)
             }
         }
-        .sheet(isPresented: $isProfilePhotoPickerPresented) {
-            profilePhotoPickerSheet
-        }
-        .onChange(of: selectedProfilePhoto) { _, item in
-            guard let item else { return }
-            isProfilePhotoPickerPresented = false
-            Task { await saveMemberProfilePhoto(item) }
-        }
         .onAppear { loadRunJeetDailyStepsArchive() }
         .safeAreaInset(edge: .bottom, spacing: 0) { Color.clear.frame(height: 76) }
         .accessibilityIdentifier("gativx-profile-screen")
@@ -1814,6 +1806,14 @@ struct ContentView: View {
                         }
                     }
             }
+        }
+        .sheet(isPresented: $isProfilePhotoPickerPresented) {
+            profilePhotoPickerSheet
+        }
+        .onChange(of: selectedProfilePhoto) { _, item in
+            guard let item else { return }
+            isProfilePhotoPickerPresented = false
+            Task { await saveMemberProfilePhoto(item) }
         }
         .tint(neon)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
