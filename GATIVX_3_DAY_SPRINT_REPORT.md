@@ -1,6 +1,6 @@
 # GATIVX 3-Day Engineering Sprint Report
 
-**Last updated:** 2026-11-26T16:31:14.486Z
+**Last updated:** 2026-11-26T16:32:37.354Z
 **Repository:** sbscorpsales-ship-it/Mission-75
 **Default branch:** `main` at `143889db3e72540fb478b76c486082f45395e9bd` (last commit 2026-11-17 04:38:35 UTC).
 **Report branch:** `docs/gativx-sprint-report-20261125` (PR #118); this update is a new documentation commit.
@@ -21,7 +21,7 @@ This snapshot supersedes the older "current" branch and run statements retained 
 - **PR #136** — [single-navigation iOS shell](https://github.com/sbscorpsales-ship-it/Mission-75/pull/136), latest CI-tested head `31e5b70d85537113e74dd003d06b3ae95ba323f4`, stacked on #135. Run [#45847572105](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45847572105) attempt 1 failed the UI suite; attempt 2 is currently running. See Run 7 below.
 - **PR #137** — [Android unreadable-route preservation](https://github.com/sbscorpsales-ship-it/Mission-75/pull/137), head `d5edab346eb9a00de7d02407fe501c8193a655c2`, stacked on #129. CI [#45840866819](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45840866819) passed 25 source safeguards, 6 JVM unit tests and debug APK build.
 - **PR #138** — [Web Hub history HTML escaping](https://github.com/sbscorpsales-ship-it/Mission-75/pull/138), head `45f7fd32f78aeb462ae56ac1202cdf7a5142f293`, based on main. CI [#45839703732](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45839703732) passed structural, syntax and browser smoke checks.
-- **PR #139** — [isolated dock, full-device viewport and Guru focus follow-up](https://github.com/sbscorpsales-ship-it/Mission-75/pull/139), draft head `58bf01c886e77ca054157fe3454293b25cbd0e8b`, stacked on PR #136. CI [#45858929106](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45858929106) test build failed before test execution due to a duplicate local variable; the simulator build step is still running.
+- **PR #139** — [isolated dock, full-device viewport and Guru focus follow-up](https://github.com/sbscorpsales-ship-it/Mission-75/pull/139), latest head `96f713704723c530718a5e26a2ea04664986c249`, stacked on PR #136. Run [#45859629757](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45859629757) is pending on the corrected head; earlier run #671 failed before test execution due to a duplicate local variable.
 
 ## Latest verified CI evidence
 
@@ -2344,3 +2344,14 @@ Artifact evidence:
 - [Structured diagnostics 15137541456](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45858929106/artifacts/15137541456), SHA-256 `08e9baafb309468dc7cd667077cf977e83ed7ec2b2892f62408c74d013470c8e`.
 
 **Next:** correct the duplicate declaration, retain the stronger Guru hit-target and full-device screenshot checks, then rerun CI on a new commit.
+
+## Run 7 correction note 2 — duplicate declaration fixed and CI re-queued
+
+**Snapshot timestamp:** 2026-11-26T16:32:37.354Z  
+**Corrective commit:** `96f713704723c530718a5e26a2ea04664986c249`
+
+Removed only the second declaration of `guruCloseButton` in the cumulative Guru UI test. The first declaration remains in scope and is reused for the post-dismissal assertion. The navigation-clearance assertion, pre-tap screenshot, full-device screenshot, and all existing UI assertions remain intact.
+
+New CI run [#45859629757](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45859629757), run number 672, is now pending on the corrected PR #139 head. No test result is available yet.
+
+The earlier run [#45858929106](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45858929106) still has its simulator/Release build steps running after the test target compile failure; it has not produced a valid test result. The new commit does not alter PR #136, PR #107, PR #112 or PR #114.
