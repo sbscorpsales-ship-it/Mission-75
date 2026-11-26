@@ -1,6 +1,6 @@
 # GATIVX 3-Day Engineering Sprint Report
 
-**Last updated:** 2026-11-26 13:01 IST (07:31 UTC)  
+**Last updated:** 2026-11-26 13:49 IST (08:19 UTC)  
 **Repository:** sbscorpsales-ship-it/Mission-75  
 **Default branch:** `main` at `143889db3e72540fb478b76c486082f45395e9bd`  
 **Report branch:** `docs/gativx-sprint-report-20261125` (PR #118); this refresh is committed separately.
@@ -8,7 +8,7 @@
 **Protected baseline:** PR #107 remains open/draft/unmerged at `c19bdbd307df7048cefd86bd3e6064ac4f4e3042`. No PR was merged and no live database migration or production deployment was performed.
 
 **Current repair / validation branches**
-- **Profile diagnostic branch:** PR [#128](https://github.com/sbscorpsales-ship-it/Mission-75/pull/128), head `9d25b1eb98a8da49aa1bfa7dbf4bdbdf82fc6f3b`, based on PR #127 head `01f0f24f263dad70394d05e17a3baba635dfc0fc`. App source is unchanged; the branch adds structured failure export, a prior-result replay workflow and isolated Notifications/Guru keyboard UI tests. The new full iOS run #45775608073 is pending.
+- **Profile diagnostic branch:** PR [#128](https://github.com/sbscorpsales-ship-it/Mission-75/pull/128), head `9d25b1eb98a8da49aa1bfa7dbf4bdbdf82fc6f3b`, based on PR #127 head `01f0f24f263dad70394d05e17a3baba635dfc0fc`. App source is unchanged in PR #128 itself; it adds structured failure export, a prior-result replay workflow and isolated Notifications/Guru keyboard UI tests. Full iOS run #45775608073 has now completed successfully: 76 unit + 5 UI tests passed, 0 failed/cancelled; simulator, unsigned Release and unsigned IPA packaging gates passed. The prior intermittent navigation failures remain in the history, so this is a successful latest run, not proof of a permanent root-cause fix.
 - **Android route acknowledgement:** PR [#129](https://github.com/sbscorpsales-ship-it/Mission-75/pull/129), head `a4ba5b9d18299f4d725ebb8e8af3c070d94a4940`; CI #45761705362 passed 20 source safeguards and Gradle debug build.
 - **Current table privilege fix:** PR [#125](https://github.com/sbscorpsales-ship-it/Mission-75/pull/125), head `3d988cde0658f4bb101abaa242fbcba3169a8dfb`; isolated PostgreSQL CI #45742076827 passed; not applied live.
 - **Future default-privilege fix:** PR [#130](https://github.com/sbscorpsales-ship-it/Mission-75/pull/130), head `780eda0681f571ea7d6a70bde29b3df956027ac0`, stacked on PR #125; PostgreSQL CI #45775093000 passed; not applied live.
@@ -21,12 +21,90 @@
 - PR #107 remains untouched. PR #112 remains unmerged. No PR is merged.
 
 **Latest completed CI evidence**
-- iOS [#45761245212](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45761245212): **76 unit + 3 UI = 79 passed, 0 failed, 0 cancelled**; Finish & Save regression suite **18/18 passed**; simulator build, unsigned Release build and unsigned IPA packaging passed. This run predates the two new isolated UI tests now pending in #45775608073.
+- iOS [#45775608073](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45775608073): **76 unit + 5 UI = 81 passed, 0 failed, 0 cancelled**; Finish & Save regression suite **18/18 passed**; simulator build, unsigned Release build and unsigned IPA packaging passed. The unchanged cumulative navigation test and the direct-from-Home Profile test both passed on this head. Earlier run [#45761245212](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45761245212) passed 76 unit + 3 UI = 79.
 - Android [#45761705362](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45761705362): **20 source safeguards passed, 0 failed**; Gradle debug build succeeded in 39 seconds. No Android unit test task, emulator or physical-device test was run.
 - Web [#45686178223](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45686178223): **51 checks passed, 0 failed** (14 structural checks, 1 JavaScript syntax check, 7 browser smoke checks, 29 Design C review checks). These are static/mocked browser checks, not production deployment evidence.
 - Database security [#45775093000](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45775093000): PostgreSQL 17.12 workflow passed the two security migrations and two SQL regression scripts. The earlier run #45774999463 failed on a malformed PL/pgSQL DO delimiter; the delimiter was corrected and the latest run passed.
 
 **Current verdict:** **NOT RELEASE-READY.** Simulator builds, unsigned IPA packaging, Android debug packaging, Web preview checks and isolated SQL tests have CI evidence. Physical-device HealthKit/Health Connect/background GPS, signed iOS installation, live database remediation and production deployment remain unverified or blocked. Design C and the original Web Hub files remain unchanged.
+
+
+## Run 4 verified refresh — 2026-11-26 13:49 IST (08:19 UTC)
+
+This section supersedes earlier **pending** wording for iOS run #45775608073. All branch and test observations below were re-read from GitHub during this run.
+
+### Current branch and PR state
+
+| Ref | Verified state |
+|---|---|
+| `main` | `143889db3e72540fb478b76c486082f45395e9bd`, last commit 2026-11-17 04:38:35 UTC; default branch remains unchanged. |
+| PR #107 | Open, unmerged; head `c19bdbd307df7048cefd86bd3e6064ac4f4e3042`. Compare to main: 338 commits ahead, 0 behind. This PR was not modified. |
+| PR #112 | Open, unmerged; head `b6c04d41dc67bd191ed0cf8966331eb5661a9887`, based on PR #107 head. No edits made to this branch. |
+| PR #114 | Open, unmerged; head `87318182360d4369ea2f7a773a27dd3fa3e7c558`, based on older PR #112 commit `fa92bb43a6b2064e0d412e4607c575057535ca1b`. It is diverged from current PR #112 by 3 commits ahead and 7 behind. No edits made to this branch. |
+| PR #128 | Open, unmerged; iOS diagnostics branch head `9d25b1eb98a8da49aa1bfa7dbf4bdbdf82fc6f3b`. |
+| PR #129 | Open, unmerged; Android sync-ack branch head `a4ba5b9d18299f4d725ebb8e8af3c070d94a4940`. |
+| PR #130 | Open, unmerged; database default-privilege branch head `780eda0681f571ea7d6a70bde29b3df956027ac0`. |
+| PR #118 | Open, unmerged; this report is maintained on `docs/gativx-sprint-report-20261125`, previously at `5b5a714c78f3b58a6adfb0e2c930f4e494771b32`. |
+
+No PR was merged. PR #107, #112 and #114 were left untouched.
+
+### Latest iOS validation — run #45775608073
+
+<https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45775608073>
+
+- Exact head: `9d25b1eb98a8da49aa1bfa7dbf4bdbdf82fc6f3b`.
+- Unit tests: **76 passed, 0 failed**.
+- UI tests: **5 passed, 0 failed**.
+- Combined XCTest: **81 passed, 0 failed, 0 cancelled**.
+- Finish & Save regression suite: **18 passed, 0 failed**. Coverage includes higher live step count reconciliation, nil/negative handling, recovered-session finish timestamps, duplicate finish idempotency, durable restore, queue-write failure retry and coalesced HealthKit export failure delivery.
+- UI coverage included the cumulative dashboard navigation journey, GURU keyboard/dismissal, Start Walk navigation, Notifications-sheet dismissal, and direct Profile rendering from a fresh Home dashboard. The cumulative journey also exercised opening/cancelling the deferred Profile photo picker.
+- Source safeguards passed for local activity history read-back, stable session identity, recoverable GPS draft retention, HealthKit queue acceptance before draft clearing, Profile sheet hosting, GPS filtering and account-scoped activity outbox behavior.
+- iPhone Simulator build: **passed**.
+- Unsigned iPhone Release build: **passed**.
+- Unsigned IPA: **packaged, ZIP integrity checked and bundle identifier/version verified**. Artifact [GATIVX-iPhone-unsigned-IPA #15098280503](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45775608073/artifacts/15098280503).
+- Other artifacts: [Simulator app #15096974181](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45775608073/artifacts/15096974181), [XCTest result bundle #15097611646](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45775608073/artifacts/15097611646), [structured XCTest diagnostics #15097322889](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45775608073/artifacts/15097322889).
+
+**Interpretation:** Profile navigation and the complete automated simulator suite passed on the latest head. Earlier runs failed intermittently during Activity/Profile navigation, so the correct status is “latest full suite passed; intermittent history remains,” not “root cause permanently fixed.” The unsigned IPA is not a signed or installable iPhone release.
+
+### PR #112 and #114 — latest inspected failures
+
+- PR #112 head `b6c04d41dc67bd191ed0cf8966331eb5661a9887`, run [#45652420651](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45652420651): **58 unit tests passed, 0 failed**; 2 UI tests executed, 1 passed and 1 failed. The cumulative dashboard navigation test timed out at `GATIVXDashboardUITests.swift:237`; the separate Start Walk navigation test passed. Simulator build and unsigned IPA packaging succeeded, but the overall iOS workflow failed.
+- PR #114 head `87318182360d4369ea2f7a773a27dd3fa3e7c558`, run [#45633166732](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45633166732): **71 unit tests passed, 0 failed**; 2 UI tests executed, 1 passed and 1 failed. The cumulative dashboard navigation test timed out at `GATIVXDashboardUITests.swift:237`; the Start Walk test passed. The XCTest step reached its 40-minute timeout; simulator build and unsigned IPA packaging succeeded, but the overall workflow failed.
+- PR #114 remains a separate, stale branch from current PR #112. Do not merge or treat it as the current integration baseline. The later PR #128 stack contains the synchronous HealthKit outbox-acceptance guard and its regression test.
+
+### Android, Web Hub and database CI
+
+- Android [run #45761705362](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45761705362), head `a4ba5b9d18299f4d725ebb8e8af3c070d94a4940`: **20 source safeguards passed, 0 failed**; Gradle debug build completed with `BUILD SUCCESSFUL` in 39 seconds; debug APK uploaded as [artifact #15090525185](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45761705362/artifacts/15090525185). No Android unit-test task, emulator or physical-device test ran.
+- Web Hub/preview [run #45675295670](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45675295670): 15 structural/syntax assertions, 7 mobile browser smoke assertions and 3 visual-preview assertions passed (25 total); 8 preview screens were captured. The preview screens are non-production visual states.
+- Design C review [run #45686178223](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45686178223): 15 structural/syntax assertions, 7 mobile browser smoke assertions and 29 Design C preview navigation/layout assertions passed (51 total). The Design C review uses disclosed sample content and preview-only interactions; it is not a live product backend test.
+- The original Web Hub `app-v2.html` and root `index.html` are byte-identical at blob level across main, PR #107, PR #116 and PR #128: app-v2 blob `8089f536017ffb3a60a8bb99291313a3f5413927`; index blob `59bfa88480bc14015e5b29375de666be1a2a2d1a`. No Web Hub file was changed in this run.
+- Database security [run #45775093000](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45775093000): isolated PostgreSQL 17.12 migration and SQL regression checks passed. PR #125/#130 remain unmerged and no live migration was applied.
+
+### New traceable gap: independent activity-metric calculation engine
+
+| Area | Status | Current source evidence and required work |
+|---|---|---|
+| iOS active calories | Missing (independent estimator) | `HealthKitManager.todayActiveEnergyKcal` is populated from HealthKit measured active energy. No MET/distance/weight estimator is wired into the ring. |
+| iOS Heart Points | Implemented-but-unverified / semantically partial | The ring reads Apple Exercise Time and awards one GATIVX point per Apple Exercise minute. Heart rate is read, but no intensity-weighted moderate/vigorous calculation is applied. This is not Google's intensity-weighted Heart Points algorithm. |
+| Android activity rings / points | Missing | Health Connect supplies measured steps and Active Calories only. Current status explicitly says no estimates have been added; no Android points ring/calculator is present. |
+| Web active calories | Missing (independent estimator) | The calorie ring only accepts a measured `activeEnergyKcal` from Apple Health/Shortcut/Health Connect source records. No formula is applied to GPS distance or time. |
+| Web third ring | Implemented-but-unverified / different metric | The third ring is honestly labelled completed GPS walk minutes, calculated from saved walk duration. It is not Heart Points and does not classify intensity. |
+| Web GPS step estimate | Implemented-but-unverified / coarse estimate | Estimated steps use GPS distance divided by a fixed 0.73 m stride. This is not a member-calibrated stride model and must remain labelled estimated. |
+| Cross-platform calculation contract | Missing | There is no shared tested contract for MET, active-vs-resting calories, intensity bands, moderate/vigorous points, weight provenance, paused time, elevation or duplicate-source reconciliation. |
+
+This is **not a reason to wait for Apple Health or Google Health Connect**. GATIVX can calculate estimates from its own activity data. The current blockers to safe integration are data-contract gaps: iOS/Android do not expose a shared member body-weight setting, active moving-time semantics differ between platforms, and pause/gap handling must be applied before intensity is scored. The Web journal accepts a weight entry, but that value is not used by a calorie estimator or exposed as a cross-platform profile measurement. Do not hard-code a generic or owner-specific weight. Missing/invalid weight must produce an unavailable calorie estimate, not a fabricated number. For activity points, use recorded cadence/speed and active duration where available, label them as GATIVX estimates, and keep measured HR as an optional higher-confidence input.
+
+### Run 4 files, changes and release status
+
+- Files changed by this run: `GATIVX_3_DAY_SPRINT_REPORT.md` only.
+- Audited source heads: iOS `9d25b1eb98a8da49aa1bfa7dbf4bdbdf82fc6f3b`; Android `a4ba5b9d18299f4d725ebb8e8af3c070d94a4940`; database `780eda0681f571ea7d6a70bde29b3df956027ac0`; Web Hub `app-v2.html` blob `8089f536017ffb3a60a8bb99291313a3f5413927`.
+- Report branch parent before this update: `5b5a714c78f3b58a6adfb0e2c930f4e494771b32`.
+- No application source, dashboard, Design C asset, migration, PR #107, PR #112 or PR #114 was modified.
+- No PR was merged; no signed iOS install, physical-device test, live database migration or production deployment was performed.
+
+### Next engineering action
+
+Implement the independent calculation layer on a new isolated branch, with deterministic cross-platform test vectors before wiring it to any ring. First define member weight/provenance, moving-time and pause semantics, GPS/cadence quality gates, MET bands, active-calorie subtraction, and 1x/2x moderate/vigorous point rules. Use HealthKit/Health Connect values as measured overrides/reconciliation inputs, not prerequisites. Keep the locked dashboard unchanged and do not emit a calorie estimate when member weight is unavailable.
 
 ## Release verdict
 
