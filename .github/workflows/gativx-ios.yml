@@ -87,7 +87,11 @@ jobs:
           assert "gativx-continue-guest" in view and "gativx-auth-submit" in view and "gativx-auth-mode-toggle" in view, "Registration, sign-in and explicit local-only entry controls must be available"
           assert "authenticatedUserEmail" in cloud and "gativx-dashboard-member-identity" in view and "gativx-member-login-id" in view, "Authenticated login ID must be visible in the dashboard and Profile"
           assert 'accessibilityIdentifier("gativx-home-dashboard")' in view, "Dashboard needs a stable test identifier"
-          assert "GATIVX GURU" in view and "GATIVX Guru" in view, "GATIVX Guru branding must remain available in dashboard and navigation"
+          assert "GATIVX GURU" in view and "GATIVX Guru" in view and "NURUN" in view, "GATIVX Guru / NURUN branding must remain available in dashboard and navigation"
+          assert '.fullScreenCover(isPresented: $isGuruPresented)' in view, "Guru must open as a full-screen experience, never a partial sheet"
+          assert 'accessibilityIdentifier("gativx-guru-fullscreen")' in view, "Guru needs a stable full-screen viewport identifier"
+          assert "gativx-guru-walking" in view and "gativx-guru-nutrition" in view and "gativx-guru-recovery" in view, "Guru must guide movement, food habits and recovery"
+          assert "gativx-guru-learning" in view, "Guru must provide curated learning resources"
           dashboard = view.split("private var homeDashboard: some View", 1)[1].split("private func wellnessSnapshotCard", 1)[0]
           assert 'Text("GATI GURU")' in dashboard, "Approved home dashboard must show the Gati Guru section"
           assert 'Image(systemName: "bell.badge")' in dashboard, "Approved dashboard header must include the notification bell"
