@@ -53,9 +53,9 @@ No pull request has been merged.
 | Android remaining product modules | Missing | Android feature hub labels Home/Activity/Profile as available for testing, Mission as testing, and Guru/Community/Motion 3D/Rewards/Referrals/Settings as coming soon. It is not the complete approved GATIVX app. |
 | Web Hub | Implemented-but-unverified | app-v2.html contains account auth, local journal, goals, browser GPS, Guru and Supabase sync. It has no complete Community/Profile/Notifications/Apps experience and browser GPS is not native background tracking. |
 | Cross-platform design parity | Missing | Current web navigation is Home/Journey/Record/Walk/Coach; Android is an early-access feature hub; iOS uses Home/Activity/Missions/Community/Profile. The approved design documents also conflict on tab naming. Do not redesign; reconcile the IA under owner-approved Design C before visual parity work. |
-| Shared Supabase backend and sync | Implemented-but-unverified | REST clients, owner-scoped RPCs, RLS migrations, daily logs, walk sessions and retry outboxes exist. The tracked repository has incremental migrations but no complete baseline schema/config/test harness proving a fresh environment can be reproduced. Live migration state and conflict behaviour are not verified. |
+| Shared Supabase backend and sync | Implemented-but-unverified | Read-only audit confirms the connected `mission75-cloud` project is active/healthy and matches the iOS/Web API URL. Live DB has 22 migrations through `20261113200433`, six public tables (all RLS enabled), 21 authenticated owner policies and seven security-invoker sync RPCs (authenticated execute; anon cannot). However, at least five recent live migration files are absent at the expected path on main and PR #107, no `supabase/config.toml`/baseline/test harness exists, and no two-account staging test has run. |
 | Universal Data Hub | Missing | The architecture document is a proposal. No complete provider/device registry, canonical raw-measurement store, reconciliation audit, BLE adapter suite or manufacturer API connector is present. |
-| Security and privacy | Implemented-but-unverified | Member-scoped RLS and encrypted local Android tokens/routes are present. No independent security assessment, live tenant-isolation test, complete data-export/account-deletion workflow or operational audit review. |
+| Security and privacy | Implemented-but-unverified | RLS is enabled on all six public tables and inspected owner policies restrict authenticated rows. Live audit found excessive `anon` and `authenticated` grants on `daily_action_progress` including TRUNCATE (not protected by RLS); no anon policy or anon-executable public RPC was found. Supabase Security Advisor also reports leaked-password protection disabled. PR #125 proposes least-privilege grants and isolated PostgreSQL/RLS tests; it is not applied to production. |
 | Nutrition, hydration, sleep and strength | Missing | Web has basic weight/water/protein journal fields. A complete food diary, nutrition analysis, measured sleep integration and strength-training programme are not present across platforms. |
 | Motion 3D route replay | Missing | No 3D route playback/flyover implementation. |
 | Referrals, subscriptions, learning rewards, admin and moderation | Missing | Product blueprint defines these modules; the audited repair branch does not contain the required end-to-end systems. |
@@ -174,9 +174,9 @@ No pull request has been merged.
 - The GitHub Pages workflow is configured only for pushes to `main` or manual dispatch. No Pages/deploy run appeared in the latest 100 repository workflow runs at this audit time. No production Pages URL or live deployment evidence is claimed.
 
 ### Shared backend and reproducibility
-- The tracked `supabase/` tree contains ten incremental SQL migrations (daily Health sync, GPS sessions, owner RLS/RPC hardening and member goal/purpose fields). It does not contain a Supabase CLI `config.toml`, checked-in baseline schema, deterministic seed fixture or backend test suite. A clean Supabase environment cannot be proven reproducible from the repository alone.
-- The owner-scoped RLS migration revokes public/anon execution of trigger helpers and limits the GPS route RPC to authenticated callers; policies use `(select auth.uid())` for member ownership. Source inspection is positive, but there is no live two-account RLS isolation test or verified production migration state.
-- The web and Android workflows do not run a shared contract/integration suite against a controlled Supabase staging project. This remains implemented-but-unverified/blocked, not verified.
+- The live `mission75-cloud` project has 22 applied migrations through `20261113200433`; the project URL matches both the iOS and Web clients. At least five recent migration files from the live history are not present at their expected path on main or PR #107 (including `20261113200433_enable_daily_action_progress_realtime.sql`, `20261113200314_add_daily_action_progress.sql`, `20261112081338_add_member_goal_purpose.sql`, `20261111061101_tighten_gativx_core_table_access.sql` and `20261107140341_harden_rpc_grants_and_optimize_owner_rls.sql`). `supabase/config.toml`, a complete baseline schema and deterministic integration fixtures are also absent. A clean environment cannot be reproduced from Git alone.
+- Live `pg_policies` inspection returned 21 policies across six public tables; all are assigned to `authenticated` and use `auth.uid()` owner checks. Seven public sync RPCs are security-invoker, use `search_path=public`, and are executable by `authenticated` but not `anon`. Two internal security-definer helpers have restricted execution and hardened search paths. This is positive metadata evidence, but it is not a two-account isolation test.
+- The web and Android workflows do not run a shared contract/integration suite against a controlled Supabase staging project. The live project has not been used for cross-account mutation tests; do not use production member records for that purpose. This remains implemented-but-unverified/blocked.
 
 ### Engineering priority
 1. Keep PR #115 as the passing Activity-navigation baseline; do not merge automatically.
@@ -702,3 +702,42 @@ Source SHA: `804a88b56051636104bb7c4c2ca264df3c725188`.
 2. If the Profile tab still hangs, inspect the new result bundle and isolate the remaining synchronous Profile view work; do not weaken the full navigation test or claim a fix from a single pass.
 3. After Profile stabilises, add deterministic UI coverage for local Finish & Save → verified history → app relaunch → same-session read-back. The HealthKit export itself remains a separate device gate.
 4. Continue the full product gap ledger; do not treat the Design C preview or CI builds as complete product functionality.
+
+
+## Live Supabase audit and least-privilege candidate — 26 November 2026
+
+### Connected project identity and database state
+- Supabase project: `mission75-cloud`, ref `crarbbsvcczwmtvxyrxo`, region `eu-north-1`, status `ACTIVE_HEALTHY`, PostgreSQL `17.11.0.011`.
+- The project API URL `https://crarbbsvcczwmtvxyrxo.supabase.co` matches the base URL in both `ios/GATIVX/Cloud/SupabaseRESTClient.swift` and the unchanged main `app-v2.html`.
+- Live migration history contains **22 applied migrations**, latest `20261113200433`.
+- Public tables inspected: `profiles`, `daily_logs`, `walk_sessions`, `activity_sessions`, `motion_daily_steps`, `daily_action_progress`. All six report RLS enabled.
+- Live policy inventory: **21 policies**, all assigned to `authenticated` and scoped to `auth.uid() = owner` (profile uses `id`; the other tables use `user_id`).
+- Function inventory: seven sync RPCs are security-invoker, use `search_path=public`, allow authenticated execution and deny anon execution. Two internal security-definer helpers have restricted execution; their search paths are hardened (`pg_catalog` or empty).
+- No Supabase Edge Functions are deployed.
+- Supabase Security Advisor: **one security warning** — leaked-password protection is disabled. Performance and health advisors returned no lints.
+
+### Security defect: excess grants on daily_action_progress
+The live privilege audit found `anon` has SELECT, INSERT, UPDATE, DELETE, TRUNCATE, TRIGGER and REFERENCES on `public.daily_action_progress`. `authenticated` also has TRUNCATE, TRIGGER and REFERENCES in addition to CRUD. The table has RLS enabled and only authenticated owner policies, so there is no inspected anon row policy; however, PostgreSQL RLS does not protect TRUNCATE. The grants should be reduced to authenticated CRUD only and no anon/PUBLIC table privileges.
+
+### PR #125 — isolated migration and database regression test
+- Branch: `fix/gativx-daily-action-progress-grants-20261126`.
+- Latest head: `3c1e4c5876a5b95d414db9b10d84d80bc255c918`.
+- [PR #125](https://github.com/sbscorpsales-ship-it/Mission-75/pull/125) is draft and unmerged.
+- Files added:
+  - `supabase/migrations/20261126012000_harden_daily_action_progress_privileges.sql`: idempotently creates the table if absent, enables RLS, recreates four owner policies, revokes all privileges from PUBLIC/anon and grants authenticated CRUD only.
+  - `supabase/tests/daily_action_progress_security.sql`: checks RLS, exact grant surface, anonymous denial and two-member row isolation.
+  - `.github/workflows/gativx-database-security.yml`: runs the migration and SQL test against an ephemeral PostgreSQL 17 database with a minimal Supabase auth schema.
+- No SQL was applied to the live Supabase project. The candidate requires CI and then a staging project test before any production application. The new workflow's push run is not exposed through the currently available PR-run listing, so no CI pass is claimed yet.
+
+### Migration-source drift and owner-controlled action
+- At least five recent migration files present in the live migration history return 404 at their expected path on both main and PR #107; the live DB therefore cannot currently be reconstructed from the checked-in migration chain.
+- Before production schema changes or fresh-environment acceptance, reconcile/export the complete migration history into Git, add the Supabase CLI config/baseline, and run a clean staging reset/apply.
+- Owner-controlled Supabase Auth action: enable **Leaked Password Protection** in Authentication → Password Security. I did not change project Auth settings.
+- Owner-controlled release action: run the new grant migration against a non-production database first, then re-run the security test and advisors. Do not use live member data as a cross-account test fixture.
+
+### Revised backend/security status
+- Backend code and live RLS metadata: **implemented-but-unverified**.
+- Fresh-environment migration reproducibility: **blocked** by migration-source drift and missing baseline/config.
+- Least-privilege grants on `daily_action_progress`: **implemented in PR #125, not yet verified/applied**.
+- Leaked-password protection: **blocked on owner-controlled Auth setting**.
+- Live two-account isolation, outbox retry/idempotency and delete/export acceptance: **not yet verified**.
