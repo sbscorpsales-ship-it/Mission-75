@@ -51,6 +51,10 @@ BEGIN
     JOIN pg_namespace n ON n.oid = c.relnamespace
     WHERE n.nspname = 'public'
       AND c.relkind IN ('r', 'p')
+      AND c.relname NOT IN (
+        'gativx_postgres_default_probe',
+        'gativx_supabase_admin_default_probe'
+      )
       AND (
         NOT has_table_privilege('authenticated', c.oid, 'SELECT')
         OR NOT has_table_privilege('authenticated', c.oid, 'INSERT')
@@ -59,6 +63,17 @@ BEGIN
       )
   ) THEN
     RAISE EXCEPTION 'authenticated lost required CRUD access to a GATIVX table';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_class c
+    JOIN pg_namespace n ON n.oid = c.relnamespace
+    WHERE n.nspname = 'public'
+      AND c.relname = 'daily_action_progress'
+      AND c.relrowsecurity
+  ) THEN
+    RAISE EXCEPTION 'daily_action_progress must retain row-level security';
   END IF;
 
   IF EXISTS (
