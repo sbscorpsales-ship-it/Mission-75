@@ -1,6 +1,6 @@
 # GATIVX 3-Day Engineering Sprint Report
 
-**Last updated:** 2026-11-26T16:17:56Z
+**Last updated:** 2026-11-26T16:28:41.963Z
 **Repository:** sbscorpsales-ship-it/Mission-75
 **Default branch:** `main` at `143889db3e72540fb478b76c486082f45395e9bd` (last commit 2026-11-17 04:38:35 UTC).
 **Report branch:** `docs/gativx-sprint-report-20261125` (PR #118); this update is a new documentation commit.
@@ -21,7 +21,7 @@ This snapshot supersedes the older "current" branch and run statements retained 
 - **PR #136** — [single-navigation iOS shell](https://github.com/sbscorpsales-ship-it/Mission-75/pull/136), latest CI-tested head `31e5b70d85537113e74dd003d06b3ae95ba323f4`, stacked on #135. Run [#45847572105](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45847572105) attempt 1 failed the UI suite; attempt 2 is currently running. See Run 7 below.
 - **PR #137** — [Android unreadable-route preservation](https://github.com/sbscorpsales-ship-it/Mission-75/pull/137), head `d5edab346eb9a00de7d02407fe501c8193a655c2`, stacked on #129. CI [#45840866819](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45840866819) passed 25 source safeguards, 6 JVM unit tests and debug APK build.
 - **PR #138** — [Web Hub history HTML escaping](https://github.com/sbscorpsales-ship-it/Mission-75/pull/138), head `45f7fd32f78aeb462ae56ac1202cdf7a5142f293`, based on main. CI [#45839703732](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45839703732) passed structural, syntax and browser smoke checks.
-- **PR #139** — [isolated dock, full-device viewport and Guru focus follow-up](https://github.com/sbscorpsales-ship-it/Mission-75/pull/139), draft head `58bf01c886e77ca054157fe3454293b25cbd0e8b`, stacked on PR #136. No CI run was visible at this snapshot.
+- **PR #139** — [isolated dock, full-device viewport and Guru focus follow-up](https://github.com/sbscorpsales-ship-it/Mission-75/pull/139), draft head `58bf01c886e77ca054157fe3454293b25cbd0e8b`, stacked on PR #136. CI [#45858929106](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45858929106) has started; full unit/UI suite is in progress.
 
 ## Latest verified CI evidence
 
@@ -2312,3 +2312,16 @@ Created a separate stacked draft PR so the active PR #136 run is not cancelled b
 - Then inspect PR #139 CI and its full-device screenshot. Confirm whether the reduced window is a simulator/runtime configuration issue or a product configuration defect; do not claim full-screen until the device capture and app window agree.
 - Verify dock <=76 pt, five visible/tappable destinations, Activity full-device viewport, Guru goal focus/dismissal, Profile photo picker, all tracking safeguards, complete unit/UI suites, simulator/Release builds and IPA integrity on the same exact head.
 - Continue physical-device HealthKit, background GPS, signed installation and Android device validation as separate gates. Signing/provisioning and access to physical devices remain required for those checks.
+
+
+## Run 7 follow-up — CI dispatch on isolated PR #139
+
+**Snapshot timestamp:** 2026-11-26T16:28:41.963Z
+
+- **PR #136 / run #670:** latest attempt job `140042960358` remains `in_progress`. The full serial unit/UI test step is running; no attempt-2 pass/fail counts are available yet. Attempt 1's failure evidence and artifact review remain recorded above.
+- **PR #139 / run #671:** [workflow run 45858929106](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45858929106), job `140044528399`. Checkout, Xcode selection, XcodeGen, project generation, scheme validation and initial first-run/auth/portrait/permission checks passed. The full serial unit/UI test step is in progress; no test result is claimed.
+- PR #139's head remains `58bf01c886e77ca054157fe3454293b25cbd0e8b`; its base is PR #136's tested head `31e5b70d85537113e74dd003d06b3ae95ba323f4`. The stacked branch keeps the active PR #136 run from being cancelled by a new commit.
+- Default branch `main` still reports latest commit `143889db3e72540fb478b76c486082f45395e9bd` in the repository commit listing.
+- Open-PR search still returns PRs #107, #112 and #114. None was modified or merged. PR #136, #139 and report PR #118 are also open; no merge was performed.
+
+**Next action:** obtain final XCTest results from runs #670 and #671, then inspect the new full-device screenshot and dock/Guru diagnostics before any further source changes.
