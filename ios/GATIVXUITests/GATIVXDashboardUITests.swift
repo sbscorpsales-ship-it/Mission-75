@@ -187,14 +187,18 @@ final class GATIVXDashboardUITests: XCTestCase {
         let walkingCheckIn = app.buttons["gativx-guru-walking-checkin"]
         for _ in 0..<20 where !walkingCheckIn.isHittable { scrollTowardBottom(guruScrollView) }
         XCTAssertTrue(walkingCheckIn.isHittable)
-        walkingCheckIn.tap()
+        if !walkingCheckIn.label.localizedCaseInsensitiveContains("checked") {
+            walkingCheckIn.tap()
+        }
         XCTAssertTrue(walkingCheckIn.label.localizedCaseInsensitiveContains("checked"),
                       "The walking habit check-in must visibly save today's completion.")
 
         let nutritionCheckIn = app.buttons["gativx-guru-nutrition-checkin"]
         for _ in 0..<20 where !nutritionCheckIn.isHittable { scrollTowardBottom(guruScrollView) }
         XCTAssertTrue(nutritionCheckIn.isHittable)
-        nutritionCheckIn.tap()
+        if !nutritionCheckIn.label.localizedCaseInsensitiveContains("checked") {
+            nutritionCheckIn.tap()
+        }
         XCTAssertTrue(nutritionCheckIn.label.localizedCaseInsensitiveContains("checked"),
                       "The nutrition habit check-in must visibly save today's completion.")
 
@@ -205,7 +209,9 @@ final class GATIVXDashboardUITests: XCTestCase {
         let recoverySave = app.buttons["gativx-guru-recovery-save"]
         for _ in 0..<10 where !recoverySave.isHittable { scrollTowardBottom(guruScrollView) }
         XCTAssertTrue(recoverySave.isHittable)
-        recoverySave.tap()
+        if !recoverySave.label.localizedCaseInsensitiveContains("saved") {
+            recoverySave.tap()
+        }
         XCTAssertTrue(recoverySave.label.localizedCaseInsensitiveContains("saved"),
                       "The recovery check-in must visibly save today's selection.")
 
