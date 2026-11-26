@@ -64,6 +64,22 @@ run_json_export profile-navigation-test-activities profile-navigation-test-activ
   xcrun xcresulttool get test-results activities --path "$RESULT_PATH" \
   --test-id "GATIVXDashboardUITests/testDashboardSectionsMetricsAndPrimaryNavigation()" --format json
 
+run_json_export notifications-sheet-test-details notifications-sheet-test-details.json \
+  xcrun xcresulttool get test-results test-details --path "$RESULT_PATH" \
+  --test-id "GATIVXDashboardUITests/testNotificationsSheetDismissesFromFreshHome()" --format json
+
+run_json_export notifications-sheet-test-activities notifications-sheet-test-activities.json \
+  xcrun xcresulttool get test-results activities --path "$RESULT_PATH" \
+  --test-id "GATIVXDashboardUITests/testNotificationsSheetDismissesFromFreshHome()" --format json
+
+run_json_export guru-keyboard-test-details guru-keyboard-test-details.json \
+  xcrun xcresulttool get test-results test-details --path "$RESULT_PATH" \
+  --test-id "GATIVXDashboardUITests/testGuruKeyboardAndDismissalFromFreshHome()" --format json
+
+run_json_export guru-keyboard-test-activities guru-keyboard-test-activities.json \
+  xcrun xcresulttool get test-results activities --path "$RESULT_PATH" \
+  --test-id "GATIVXDashboardUITests/testGuruKeyboardAndDismissalFromFreshHome()" --format json
+
 run_directory_export failure-attachments \
   xcrun xcresulttool export attachments --path "$RESULT_PATH" \
   --output-path "$OUTPUT_DIR/attachments" --only-failures
