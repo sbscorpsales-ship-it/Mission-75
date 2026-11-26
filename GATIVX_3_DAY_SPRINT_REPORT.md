@@ -2989,3 +2989,46 @@ Run [#45883789402](https://github.com/sbscorpsales-ship-it/Mission-75/actions/ru
 - iOS auth code review: the app uses a Supabase publishable client key (no service-role key in the client) and stores the AuthSession in Keychain using `kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly`. Token payload claims are decoded locally for display/ownership hints, with the code explicitly stating that server-side authorization remains authoritative. Sign-in, sign-up, refresh, and password-reset paths exist; live provider/account behavior is still not accepted.
 - Guru goal/purpose code review: the deterministic coach uses the member-entered goal, purpose and desired emotion, does not infer emotions, and caps journey progress at 100%. The eight `GATIVXGoalJourneyTests` passed in the latest PR #143 run.
 - Scope confirmation: the current Community screen explicitly gates the shared feed as unavailable, and the Notifications sheet explicitly says delivery is inactive. Missions currently expose a basic walk-start action, not a verified end-to-end community mission service. These remain missing or implemented-but-unverified as recorded above.
+
+
+---
+
+## Live Supabase security audit correction — 2026-11-27 02:04 IST (2026-11-26T20:34Z)
+
+The Supabase connector recovered after an earlier transient error. The active `mission75-cloud` project is ACTIVE_HEALTHY on PostgreSQL 17.11.0.011. The following checks were read-only; no production SQL was executed.
+
+### Current public-schema permissions
+- All six current public tables are owned by `postgres`, and all six have RLS enabled with owner-scoped policies.
+- `daily_action_progress`: `anon` and `authenticated` both have effective SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER and MAINTAIN privileges. This is confirmed by `has_table_privilege`; the RLS policy is not a guard for TRUNCATE or MAINTAIN.
+- The other five tables have authenticated CRUD plus MAINTAIN. They have no anon table privileges.
+- Both `postgres` and `supabase_admin` default ACLs grant anon/authenticated broad privileges on future public tables (including MAINTAIN/TRUNCATE), sequences (USAGE/SELECT/UPDATE) and functions (EXECUTE).
+- There are currently no public sequences.
+- No current public function is executable by anon. Authenticated has explicit EXECUTE on the GATIVX sync RPCs only; internal functions are not exposed to either API role.
+- Supabase Edge Functions list is empty.
+- Security Advisor confirms Leaked Password Protection is disabled.
+
+### Migration source-of-truth reconciliation
+- The live migration history contains **22 applied versions**.
+- Main currently contains **10 migration files**.
+- Only **4** filenames exactly match an applied version. **6** source files have similar migration names but timestamp drift. **12** applied migration names have no corresponding source file in the current tree.
+- Treat the 6 timestamp-drifted files as unresolved until their contents are compared with the live migration history; do not rename them blindly. Restore the 12 unmatched source migrations before using the normal migration pipeline.
+
+### PR #144 hardening and test result
+- PR #144 now revokes anon access from all existing public tables, removes MAINTAIN/TRUNCATE/REFERENCES/TRIGGER from authenticated across existing tables, resets daily_action_progress to authenticated CRUD, removes existing sequence grants, and hardens postgres defaults. The separate authorized-admin script hardens supabase_admin defaults.
+- The expanded SQL regression checks all existing public tables, authenticated CRUD retention, no anon table privileges, no authenticated table-wide/admin privileges, RLS preservation, sequences, default ACLs and new probe objects created under both owners.
+- [Run #45891818219](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45891818219) on head `fb69d461dc67bd191ed0cf8966331eb5661a9887`: web checks and PostgreSQL 17 grant regression both passed. Logs show fixture creation, migration application, admin default-ACL script, regression DO block and probe cleanup all completed successfully.
+- Final head `edd9f211c3029c38d8ad6255c341ca8e235b3b46` repeat run [#45891894462](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45891894462) is in progress; the final head remains pending until this run completes.
+- No production DDL was applied. The production admin script still requires an authorized session, migration history must be reconciled, and Leaked Password Protection must be enabled by an authorized project administrator.
+
+### Updated security gap status
+| Item | Status | Evidence / next action |
+|---|---|---|
+| Existing RLS policies | verified | All six tables have RLS enabled and owner-scoped policies |
+| Existing API-role grants | blocked | Confirmed excessive grants; PR #144 contains a migration and PostgreSQL 17 regression |
+| Future postgres/supabase_admin defaults | blocked pending production action | Isolated regression passed on head fb69; final-head rerun pending |
+| Public RPC exposure | verified | No current public function is executable by anon |
+| Edge Functions | missing | Supabase Edge Functions list is empty |
+| Leaked Password Protection | missing | Security Advisor warning; enable in Authentication settings |
+| Migration source history | blocked | 4 exact matches, 6 timestamp-drifted source files, 12 applied names without source files |
+
+This correction supersedes the earlier note that the Supabase connector was unavailable and clarifies the prior strict count of 18 exact-version filename mismatches.
