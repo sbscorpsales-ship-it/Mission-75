@@ -1760,7 +1760,7 @@ struct ContentView: View {
             // Profile is a settings form with no navigation destinations. Keep it flat like
             // Activity and Community to avoid a nested stack during tab activation.
             profileScreen
-                .tabItem { Label("Profile", systemImage: "person.crop.circle") }.tag(4)
+                .tabItem { Label("Profile", systemImage: "person.crop.circle").accessibilityIdentifier("gativx-tab-profile") }.tag(4)
         }
         .sheet(isPresented: $isNotificationsPresented) {
             NavigationStack {
