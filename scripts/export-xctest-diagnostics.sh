@@ -36,7 +36,7 @@ run_directory_export() {
   local directory="$2"
   shift 2
 
-  mkdir -p "$OUTPUT_DIR/$directory"
+  mkdir -p "$OUTPUT_DIR"
   if "$@" > "$OUTPUT_DIR/\${label}.log" 2>&1; then
     printf 'PASS: %s\n' "$label" | tee -a "$STATUS_FILE"
   else
@@ -54,6 +54,16 @@ run_json_export test-summary summary.json \
 
 run_json_export test-tree tests.json \
   xcrun xcresulttool get test-results tests --path "$RESULT_PATH" --format json
+
+# The cumulative navigation test is the known Profile-idle failure candidate.
+# If it did not execute in a particular run, these exports are recorded as warnings.
+run_json_export profile-navigation-test-details profile-navigation-test-details.json \
+  xcrun xcresulttool get test-results test-details --path "$RESULT_PATH" \
+  --test-id "GATIVXDashboardUITests/testDashboardSectionsMetricsAndPrimaryNavigation()" --format json
+
+run_json_export profile-navigation-test-activities profile-navigation-test-activities.json \
+  xcrun xcresulttool get test-results activities --path "$RESULT_PATH" \
+  --test-id "GATIVXDashboardUITests/testDashboardSectionsMetricsAndPrimaryNavigation()" --format json
 
 run_directory_export failure-attachments attachments \
   xcrun xcresulttool export attachments --path "$RESULT_PATH" \
