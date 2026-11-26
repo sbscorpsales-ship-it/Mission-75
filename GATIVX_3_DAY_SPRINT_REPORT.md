@@ -2561,3 +2561,42 @@ PR #107 remains untouched at `c19bdbd307df7048cefd86bd3e6064ac4f4e3042`. PR #112
 2. Inspect run #677. Confirm that a failed build now skips packaging/upload and that a successful build produces a Mach-O executable in both simulator and IPA artifacts.
 3. Diagnose the centered 2:3 app window separately; do not ship an uncompiled SceneBuilder workaround or claim full-screen acceptance.
 4. Preserve all existing UI assertions, Guru behavior, five destinations and tracking safeguards.
+
+
+## Run 10 — current isolated candidates and cross-platform CI checkpoint
+
+**Snapshot timestamp:** 2026-11-26T17:34:00Z (23:04 IST)  
+**Default branch head:** `143889db3e72540fb478b76c486082f45395e9bd`  
+**Open PR search:** 43 open pull requests.
+
+### Active iOS correction candidates
+
+- **PR #140** — [dock safe-area correction](https://github.com/sbscorpsales-ship-it/Mission-75/pull/140), current head `0fa5a4f5298d91d10dd5660d5ddefb5103518c78`, draft/open, one net source file changed. [Run #674](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45867343777), job `140073462922`, is in progress. Checkout, Xcode selection, XcodeGen, project generation, scheme validation and initial auth/portrait/permission checks passed; full serial unit/UI suite is running.
+- **PR #141** — [simulator/IPA executable validation](https://github.com/sbscorpsales-ship-it/Mission-75/pull/141), current head `3e6db077c936088f3b9213bbec984b47bf8820c1`, draft/open, workflow file only. [Run #677](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45867641292), job `140074693332`, is in progress. Checkout, Xcode selection, XcodeGen, project generation, scheme validation and initial auth/portrait/permission checks passed; full serial unit/UI suite is running.
+- **PR #142** — [principal-scene launcher experiment](https://github.com/sbscorpsales-ship-it/Mission-75/pull/142), current head `549a5e2004cc1fb63776d3ad10845edcf118f8c3`, draft/open. It moves the iOS 18+ availability check outside the SceneBuilder closure by dispatching from a custom `@main` launcher to an iOS 18+ principal-role SwiftUI App or the legacy iOS 17 App. This is an experiment only; compile and lifecycle behavior are not yet verified. [Run #678](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45867926570), job `140075482382`, is in progress; checkout passed and Xcode selection is running.
+
+### Other platform CI checked
+
+- Android PR #137 remains open/draft at `d5edab346eb9a00de7d02407fe501c8193a655c2`. [Android CI run #184](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45840866819) completed successfully. This is CI/source/JVM evidence only, not physical Android device acceptance.
+- Web Hub PR #138 remains open/draft at `45f7fd32f78aeb462ae56ac1202cdf7a5142f293`. [Web release checks run #437](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45839703732) completed successfully. This is CI/smoke evidence only, not production deployment or full browser/device acceptance.
+
+### Protected PRs and safety
+
+- PR #107 remains open/unmerged and untouched at `c19bdbd307df7048cefd86bd3e6064ac4f4e3042`.
+- PR #112 remains open/unmerged at `b6c04d41dc67bd191ed0cf8966331eb5661a9887`.
+- PR #114 remains open/unmerged at `87318182360d4369ea2f7a773a27dd3fa3e7c558`.
+- PR #118 remains open with the engineering report updated through this checkpoint.
+- PRs #140, #141 and #142 are draft candidates. No PR was merged. No production database or deployment change occurred.
+
+### Current engineering status
+
+- No new passing iOS UI result is available yet after run #672. The last completed iOS suite remains 76/76 unit tests passing and 9 UI tests with 3 failed assertions on run #672.
+- Run #673 on the first PR #140 head failed compilation before tests; the scene-builder change was reverted. Its apparently successful IPA/simulator artifact steps produced incomplete bundles without the declared executable.
+- Run #674 tests the dock-only correction. Run #677 tests the new executable validation pipeline. Run #678 tests the alternate principal-scene launcher.
+- The full-device 2:3 app window and dock <=76 pt remain release blockers until a completed run supplies passing measurements.
+- Guru goal entry and keyboard dismissal passed simulator tests on run #672. Profile photo picker source guard and 68 source-level tracking safeguards passed; real Photos selection, HealthKit and background GPS remain device-unverified.
+- Signing/provisioning and physical iPhone installation remain blocked; no installable signed IPA is claimed.
+
+### Next action
+
+Inspect each of runs #674, #677 and #678 after completion, including full job logs, XCTest screenshots and actual artifact contents. Accept only the candidate that compiles and passes the unchanged full suite. The app window must fill the device display and the dock must measure <=76 pt; an uploaded ZIP is not accepted as an app unless its declared executable is present and valid.
