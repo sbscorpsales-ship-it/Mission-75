@@ -539,7 +539,8 @@ struct ContentView: View {
     @State private var profilePhotoData: Data?
     @State private var profilePhotoStatus = "No member photo selected."
     @State private var isGuruPresented = false
-    @FocusState private var isGuruFieldFocused: Bool
+    private enum GuruField: Hashable { case goal, purpose, emotion, nextAction, mealNote }
+    @FocusState private var focusedGuruField: GuruField?
     @State private var isNotificationsPresented = false
     @AppStorage("gativx.guru.goal") private var guruGoal = ""
     @AppStorage("gativx.guru.purpose") private var guruPurpose = ""
@@ -582,7 +583,7 @@ struct ContentView: View {
     /// Every Guru text field shares this binding, so the keyboard toolbar and
     /// sheet dismissal do not need a second UIKit responder-resign path.
     private func dismissGuruKeyboard() {
-        isGuruFieldFocused = false
+        focusedGuruField = nil
     }
 
     private var guruTodayKey: String {
@@ -1382,21 +1383,21 @@ struct ContentView: View {
                 .font(.subheadline).foregroundStyle(.secondary)
             Text("YOUR GOAL").font(.caption.weight(.bold)).foregroundStyle(.secondary)
             TextField("What do you want to achieve?", text: $guruGoal)
-                .focused($isGuruFieldFocused).submitLabel(.done)
+                .focused($focusedGuruField, equals: .goal).submitLabel(.done)
                 .onSubmit { dismissGuruKeyboard() }
                 .textFieldStyle(.roundedBorder)
                 .accessibilityIdentifier("gativx-guru-goal")
             Text("YOUR PURPOSE").font(.caption.weight(.bold)).foregroundStyle(.secondary)
             TextField("Why does this matter to you?", text: $guruPurpose, axis: .vertical)
-                .focused($isGuruFieldFocused).lineLimit(2...4).textFieldStyle(.roundedBorder)
+                .focused($focusedGuruField, equals: .purpose).lineLimit(2...4).textFieldStyle(.roundedBorder)
                 .accessibilityIdentifier("gativx-guru-purpose")
             Text("THE EMOTION YOU WANT TO FEEL").font(.caption.weight(.bold)).foregroundStyle(.secondary)
             TextField("How will achieving it make you feel?", text: $guruEmotion, axis: .vertical)
-                .focused($isGuruFieldFocused).lineLimit(2...3).textFieldStyle(.roundedBorder)
+                .focused($focusedGuruField, equals: .emotion).lineLimit(2...3).textFieldStyle(.roundedBorder)
                 .accessibilityIdentifier("gativx-guru-emotion")
             Text("ONE SMALL NEXT ACTION").font(.caption.weight(.bold)).foregroundStyle(.secondary)
             TextField("What is one action you can do today?", text: $guruNextAction, axis: .vertical)
-                .focused($isGuruFieldFocused).lineLimit(2...3).textFieldStyle(.roundedBorder)
+                .focused($focusedGuruField, equals: .nextAction).lineLimit(2...3).textFieldStyle(.roundedBorder)
                 .accessibilityIdentifier("gativx-guru-next-action")
             Text("Saved on this iPhone. Cloud sync is not implied.")
                 .font(.caption2).foregroundStyle(.secondary)
@@ -1444,6 +1445,7 @@ struct ContentView: View {
             Text(guruNutritionGuidance).font(.subheadline)
             Text("A QUICK MEAL NOTE").font(.caption.weight(.bold)).foregroundStyle(.secondary)
             TextField("What did you eat, or what is your next meal plan?", text: $guruMealNote, axis: .vertical)
+                .focused($focusedGuruField, equals: .mealNote)
                 .lineLimit(2...4).textFieldStyle(.roundedBorder)
                 .accessibilityIdentifier("gativx-guru-meal-note")
             Text("This is your own note, not an analysed food diary or calorie estimate.")
