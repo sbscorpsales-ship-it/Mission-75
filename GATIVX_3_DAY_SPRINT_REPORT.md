@@ -1,35 +1,41 @@
 # GATIVX 3-Day Engineering Sprint Report
 
-**Last updated:** 2026-11-26T11:41:30.682Z
+**Last updated:** 2026-11-26T14:41:16.495Z
 **Repository:** sbscorpsales-ship-it/Mission-75
 **Default branch:** `main` at `143889db3e72540fb478b76c486082f45395e9bd` (last commit 2026-11-17 04:38:35 UTC).
 **Report branch:** `docs/gativx-sprint-report-20261125` (PR #118); this update is a new documentation commit.
 
 **Protected baseline:** PR #107 remains open/draft/unmerged at `c19bdbd307df7048cefd86bd3e6064ac4f4e3042`. PR #107 was not modified. No PR was merged. No production deployment or live database mutation was performed.
 
-## Current engineering branches
+## Current engineering branches and CI snapshot
 
-- **PR #132** — [Missions tab flat / horizontal navigation regression](https://github.com/sbscorpsales-ship-it/Mission-75/pull/132), head `3232654ee65f8c512de47b0f52a609d9d6c45592`, based on PR #128. Removes only the unnecessary Missions `NavigationStack`; adds a direct Missions→Community test and left/right swipe assertions. Full iOS CI #45811263546 is running.
-- **PR #128** — [structured XCTest diagnostics](https://github.com/sbscorpsales-ship-it/Mission-75/pull/128), head `1885b9631b2f15468445e943ccc2e1fe5aec7de7`, based on PR #127. Full iOS first attempt #45800363888 failed one cumulative navigation UI query; same full job retry is running.
-- **PR #127** — [Profile tab isolation](https://github.com/sbscorpsales-ship-it/Mission-75/pull/127), head `01f0f24f263dad70394d05e17a3baba635dfc0fc`.
-- **PR #112** — open/draft, head `b6c04d41dc67bd191ed0cf8966331eb5661a9887`, base PR #107. Not modified.
-- **PR #114** — open/draft, head `87318182360d4369ea2f7a773a27dd3fa3e7c558`, base older PR #112 commit `fa92bb43a6b2064e0d412e4607c575057535ca1b`. Not modified.
-- **PR #129** — Android route-sync acknowledgement fix, head `a4ba5b9d18299f4d725ebb8e8af3c070d94a4940`.
-- **PR #125 / #130** — existing-table and future-default privilege hardening; both remain open/draft and are not applied to the live project.
-- **PR #118** — this cumulative report; open/draft/unmerged.
+This snapshot supersedes the older "current" branch and run statements retained in the historical sections below. All listed PRs remain open/draft; no PR was merged.
+
+- **PR #107** — protected baseline, head `c19bdbd307df7048cefd86bd3e6064ac4f4e3042`. Untouched.
+- **PR #112** — open/draft, head `b6c04d41dc67bd191ed0cf8966331eb5661a9887`; not modified.
+- **PR #114** — open/draft, head `87318182360d4369ea2f7a773a27dd3fa3e7c558`; not modified.
+- **PR #118** — this report, open/draft.
+- **PR #125 / #130** — open/draft Supabase privilege-hardening stack; neither migration is applied to the live project.
+- **PR #129** — Android base stack, head `a4ba5b9d18299f4d725ebb8e8af3c070d94a4940`.
+- **PR #134 / #135** — iOS full-screen and Guru base stack, heads `a76e62835e068dd8690043826936386f89043a76` / `78a759c188644bed6f5ec893daea431031be15c9`.
+- **PR #136** — [single-navigation iOS shell](https://github.com/sbscorpsales-ship-it/Mission-75/pull/136), head `4c686c06abbb41cf40c5388896f9403d74037b2a`, stacked on #135. Full iOS run [#45839928310](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45839928310) has passed source safeguards and is still running the full unit/UI suite.
+- **PR #137** — [Android unreadable-route preservation](https://github.com/sbscorpsales-ship-it/Mission-75/pull/137), head `d5edab346eb9a00de7d02407fe501c8193a655c2`, stacked on #129. CI [#45840866819](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45840866819) passed 25 source safeguards, 6 JVM unit tests and debug APK build.
+- **PR #138** — [Web Hub history HTML escaping](https://github.com/sbscorpsales-ship-it/Mission-75/pull/138), head `45f7fd32f78aeb462ae56ac1202cdf7a5142f293`, based on main. CI [#45839703732](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45839703732) passed structural, syntax and browser smoke checks.
 
 ## Latest verified CI evidence
 
-- **iOS run [#45800363888](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45800363888), first attempt:** 76 unit tests passed, including 18/18 Finish & Save regression cases; UI suite 5 passed / 1 failed / 0 cancelled; combined XCTest 81 passed / 1 failed / 0 skipped. Full-viewport/five-tab test passed. Direct-from-Home Profile test passed. The cumulative Home→Activity→Missions→Community test failed at line 285 on an XCTest accessibility snapshot timeout after the app did not report idle for 60 seconds; the captured hierarchy nevertheless showed Community rendered and selected. Simulator build, unsigned Release build and IPA packaging passed; aggregate release gate failed on the UI suite.
-- **iOS retry [#45800363888](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45800363888), job 139875349179:** full unit/UI/build/package job still in progress at this report timestamp.
-- **PR #132 CI [#45811263546](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45811263546), job 139879436963:** full unit/UI/build/package job still in progress at this report timestamp.
-- **Android [#45761705362](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45761705362):** 20/20 source safeguards passed; Gradle `:app:assembleDebug` succeeded. No Android unit suite, emulator or physical-device test ran.
-- **Web [#45686178223](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45686178223):** 51/51 checks passed (15 structural, 7 browser smoke, 29 Design C review). The 29 Design C checks exercise a separate visual-only, sample-data prototype, not the production Web Hub.
-- **Security CI [#45742076827](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45742076827) and [#45775093000](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45775093000):** both isolated PostgreSQL migration jobs passed. Live Supabase recheck still shows broad `anon`/`authenticated` grants and leaked-password protection disabled; no live changes were made.
+- **iOS full-stack run [#45828869227](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45828869227), PR #135 head:** 76 unit tests passed, including **18/18 Finish & Save regression tests**. Eight UI tests ran: 3 passed, 5 failed, 0 cancelled (9 failed assertions). The direct-from-Home Profile navigation test passed. Failures exposed duplicate native/custom tab controls (9 tab identifiers instead of 5; dock measured 120.6 pt), Activity/Missions viewport selectors, a Guru walking check-in accessibility query and Guru keyboard dismissal. Simulator build, unsigned Release build and unsigned IPA packaging passed; the overall release gate failed on UI/tracking checks.
+- **iOS corrective run [#45839928310](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45839928310), PR #136 head:** source guards passed after correcting the CI parser for the new single-navigation shell and root Profile sheet. The full unit/UI test step is still in progress at this snapshot; no pass/fail count is claimed yet. Intermediate runs #45838605208 (stale TabView source assertion) and #45839780237 (workflow indentation error, no jobs) were corrected before this run.
+- **Earlier Finish & Save validation:** PR #114 run [#45633053186](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45633053186) passed 71 unit tests and 2 targeted UI tests, plus simulator build, unsigned Release build and IPA packaging. Its later retry [#45633166732](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45633166732) failed one UI query and a Core Motion source safeguard. PR #112 run [#45652420651](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45652420651) passed 58 unit tests but failed one of 2 UI tests; simulator and unsigned package steps passed.
+- **Android corrective run [#45840866819](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45840866819), PR #137 head:** 25/25 source safeguards passed; 6/6 JVM unit tests passed (0 failed, 0 skipped); Gradle debug APK build and artifact upload succeeded. Artifact: [debug APK](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45840866819/artifacts/15128630240). No emulator or physical-device test ran.
+- **Web Hub [#45839703732](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45839703732), PR #138 head:** 15 structural checks, inline JavaScript syntax validation and 7 Chromium browser smoke assertions passed. The smoke run includes a malicious history-label fixture; no injected element/handler was observed. This is not live Supabase, real GPS, HealthKit or production-deployment evidence.
+- **Supabase security migrations:** isolated PostgreSQL CI [#45742076827](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45742076827) and [#45775093000](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45775093000) passed. The production project was read-only inspected; no migration or setting was changed.
 
 ## Current release verdict
 
-**NOT RELEASE-READY.** A device-targeted unsigned QA IPA was recovered from run #45800363888 (artifact 15109317589); it requires owner signing and does not include PR #132. No signed iPhone installation, physical HealthKit workout export, background GPS, Android device acceptance, live migration, or production deployment has been verified.
+**NOT RELEASE-READY.** The current iOS full-suite run is still pending. The last completed full iOS suite failed UI assertions even though its simulator build and unsigned IPA packaging succeeded. The resulting IPA is unsigned and is not installable as delivered. Android has a debug APK only; Web Hub CI is green but no production deployment was made. No signed iPhone installation, physical HealthKit workout export, background GPS, Android device acceptance, live migration, or production deployment has been verified.
+
+> **Historical note:** The numbered gaps below are retained for traceability. The latest platform-by-platform status ledger in the final section of this report is authoritative for the 2026-11-26 snapshot.
 
 ## Highest-priority unresolved product gaps
 
@@ -2083,3 +2089,74 @@ The owner reported that Guru appeared blank and restated that Guru is the heart 
 4. After Guru UI stability, add a separately tested adaptive adherence engine: missed-day restart, tired-day adjustment, measured progress, weekly reflection and purpose reconnection.
 5. Review and apply backend hardening only through the owner-approved migration path, and enable leaked-password protection in Supabase Auth settings.
 6. Continue to keep PR #107 untouched and all PRs unmerged. Physical-device acceptance remains blocked on a signed installable build and access to the relevant iPhone/Android devices.
+
+## Run 5 — full-product audit, verified changes and current gap ledger
+
+**Snapshot timestamp:** 2026-11-26T14:41:16.495Z  
+**Default branch head:** `143889db3e72540fb478b76c486082f45395e9bd`  
+**Protected PRs:** #107, #112 and #114 remain open/draft and unmodified. No PR was merged. No production deployment or live database mutation was performed. All engineering changes are committed on isolated branches.
+
+### Changes made this run
+
+1. **iOS navigation — PR #136.** Removed the native `TabView` plus custom-dock duplication and replaced it with one selected-screen switch. The custom dock is explicitly 56 pt with 48 pt minimum button targets and five fixed accessibility identifiers. Added a five-destination UI test, corrected the root-sheet source parser, exposed Guru card child controls to accessibility, and added one deferred UIKit responder-resign fallback after SwiftUI focus alone failed the keyboard test. The source safeguards pass; the full suite is still running.
+2. **Android route integrity — PR #137.** An unreadable encrypted active route previously collapsed to `null`, allowing a new route to overwrite the original. New ABSENT / READABLE / UNREADABLE state blocks that path in both the UI and foreground service. Unreadable completed history can no longer be reported as "already backed up". Malformed GPS points now fail closed instead of being silently dropped and re-saved. Added six JVM tests and source safeguards; the latest CI run passed.
+3. **Web Hub history rendering — PR #138.** Member-controlled daily-history keys, walk dates and values are HTML-escaped before template insertion. Added a Chromium injection regression fixture; Web CI passed.
+
+### Traceable product gap ledger
+
+Status meanings: **verified** = the stated source/test/live-read check passed; **implemented-but-unverified** = source exists but required runtime/device/account evidence is absent; **missing** = no functional implementation was found; **blocked** = a failing gate, unavailable credential/infrastructure or unresolved safety dependency prevents acceptance.
+
+| Platform / area | Status | Evidence and remaining gap |
+|---|---|---|
+| iOS — authentication and guest entry | implemented-but-unverified | Auth/guest paths and source guards exist; no live email verification, password recovery round-trip or production account test was performed. |
+| iOS — onboarding, goals and purpose | implemented-but-unverified | Goal duration, purpose and emotion are represented in the local journey/Guru flow; a single cross-platform onboarding contract and cloud persistence are absent. |
+| iOS — full-screen dashboard and five-tab shell | blocked | The last completed full suite found duplicate navigation and 120.6 pt dock height. PR #136 removes the second tab layer; run #45839928310 is still pending. |
+| iOS — Finish & Save local history/retry | verified | 18/18 Finish & Save regression tests passed in run #45828869227; earlier targeted suite also passed. Physical HealthKit export remains unverified. |
+| iOS — GPS, background operation and HealthKit | implemented-but-unverified | Core Motion, Core Location, local persistence, outbox and HealthKit paths exist; no physical iPhone/background/HealthKit evidence. |
+| iOS — Guru | implemented-but-unverified | Purpose-aware local coaching and full-screen UI exist; keyboard dismissal and check-in accessibility were failing in #665 and are under revalidation in #136. No conversational AI service is connected. |
+| iOS — Missions | implemented-but-unverified | A local consistency/journey surface exists; no complete shared mission lifecycle or cross-device progress contract. |
+| iOS — Community | missing | The destination is a gated/placeholder screen, not a working member feed. |
+| iOS — Profile navigation | verified | Direct-from-Home Profile UI test passed in #665; root photo-picker hosting source safeguard passed in #669. Cloud profile/photo sync remains unverified. |
+| iOS — notifications | missing | The notification destination is gated; no end-to-end delivery service is present. |
+| Android — authentication/profile | implemented-but-unverified | Supabase auth and account surface exist; no live account, password-reset or physical-device acceptance. |
+| Android — dashboard/design parity | implemented-but-unverified | Current UI is an early-access feature grid, not the approved full Design C five-tab dashboard. |
+| Android — GPS, local save and cloud route sync | implemented-but-unverified | Foreground location service, encrypted local route storage and acknowledgement/retry logic have CI source coverage; no physical device/background acceptance. |
+| Android — unreadable route safety | verified | PR #137 run #45840866819 passed 25 source safeguards and 6 JVM tests, including unreadable active drafts, completed-history fail-closed handling and strict route-point decoding. |
+| Android — Health Connect | implemented-but-unverified | Aggregate step/active-calorie reads and permission flow exist; no physical Health Connect run or background health sync. |
+| Android — Missions, Guru, Community and notifications | missing | Mission is marked testing; Guru/Community and other modules remain coming-soon/placeholder rather than functional product flows. |
+| Web Hub — authentication | implemented-but-unverified | Sign-up/sign-in/sign-out are present; password-reset flow and live auth round-trip were not found/tested. |
+| Web Hub — dashboard/navigation | implemented-but-unverified | Browser smoke passes, but current navigation is Home / Journey / Record / Walk / GURU and does not match the approved native destination set or Design C. |
+| Web Hub — GPS | implemented-but-unverified | Foreground `watchPosition` route recording exists; no reliable background PWA GPS lifecycle. |
+| Web Hub — Health | implemented-but-unverified | Apple Health Shortcut import path exists; no native Web HealthKit or direct Health Connect bridge. |
+| Web Hub — Guru | implemented-but-unverified | Deterministic local coaching exists; no connected conversational service. |
+| Web Hub — Missions, Community, Profile and notifications | missing | No complete shared modules/delivery flow found in the production Web Hub source. |
+| Shared backend — member/activity sync | implemented-but-unverified | Six public tables and authenticated RPCs exist; platform clients sync different subsets, and purpose/Guru/daily-action progress is not consistently shared across all clients. |
+| Supabase — existing table grants/default privileges | blocked | Live `daily_action_progress` grants include TRUNCATE/REFERENCES/TRIGGER for anon and authenticated; future public table/sequence/function defaults are too broad. PR #125/#130 fixes are tested but not applied. |
+| Supabase — migration source of truth | blocked | Live history contains 22 applied versions; the repository branch contains 10 baseline SQL files plus 2 pending security migrations. Twelve live migration versions have no matching source file; six tracked files also have timestamp drift against live versions. Reconcile before any deployment. |
+| Supabase — password security | blocked | Live Auth advisor reports leaked-password protection disabled. Requires an authorized dashboard setting change. |
+| Release — iOS | blocked | Simulator build and unsigned IPA packaging passed, but the current full UI gate is not green and no signing identity/provisioning profile or physical-device acceptance exists. |
+| Release — Android | implemented-but-unverified | Debug APK build and JVM/source checks pass; no emulator/device installation, Health Connect or background GPS acceptance. |
+| Release — Web | implemented-but-unverified | Static/Chromium CI passes; no production deployment was performed. |
+
+### Live backend/security audit (read-only)
+
+- One active Supabase project was available; no separate staging project was found.
+- All six public application tables have RLS enabled. Seven public RPCs are executable by `authenticated`; no anon-executable public RPC was found.
+- `daily_action_progress` currently grants broad table privileges to both `anon` and `authenticated`, including `TRUNCATE`, which RLS does not protect.
+- Default privileges for future public tables, sequences and functions are broader than required for both `anon` and `authenticated`.
+- Leaked-password protection is disabled in Auth.
+- The 22 live migration records do not match a complete checked-in migration history. No production SQL or Auth setting was changed.
+
+### Exact blockers / required owner actions
+
+1. **iOS install/HealthKit acceptance:** provide a valid Apple signing identity and provisioning profile, or explicitly accept a temporary free-signing route with its expiry/entitlement limits. An unsigned IPA is not installable as delivered.
+2. **Device acceptance:** run on a physical iPhone and Android device to verify HealthKit/Health Connect, background GPS, permissions, route save/recovery and battery behaviour.
+3. **Backend security:** reconcile the missing live migration source files first; then an authorized maintainer must review and approve PR #125/#130 and apply them through a controlled migration process. Enable leaked-password protection in the Supabase Auth settings.
+4. **Product completion:** implement real Community, notifications and shared Missions/Profile/Guru state across iOS, Android and Web; align Android/Web navigation with the approved design without changing the locked iOS design.
+
+### Next engineering actions
+
+- Complete and inspect the full iOS run #45839928310, including UI failures, simulator build, unsigned IPA packaging and screenshots/result bundle.
+- Complete Android PR #137 run #45840866819 artifact review; do not claim device acceptance from CI.
+- Keep PRs #107, #112 and #114 untouched and unmerged. Keep all new PRs draft until their gates and owner acceptance pass.
+- Do not apply live Supabase migrations or deploy production until migration history and security review are resolved.
