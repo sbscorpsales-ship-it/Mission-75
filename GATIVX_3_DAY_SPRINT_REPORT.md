@@ -1835,3 +1835,100 @@ The generated `GATIVX` target in `ios/gativx-project.yml` compiles source path `
 PR #131 remains open/draft at `c3f17cd2066c229626eaf5397608ff6f565f3398`. Its workflow [#45791053245](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45791053245) completed successfully: JavaScript syntax validation and the Node regression-test step both succeeded. The checked-in `shared/gativx-activity-engine.test.js` contains **45 assertion calls** (45 counted directly from source); the workflow log itself reports only “GATIVX activity engine tests passed,” not an assertion count.
 
 PR #131 adds only the shared JavaScript engine, its test file, the specification and its workflow. A source scan of current `app-v2.html`, native iOS `ContentView.swift` and Android `MainActivity.kt` found no import or call to the engine. Therefore it is a **tested standalone calculation foundation, not an integrated product feature**. Swift/Kotlin ports, Web/iOS/Android wiring, shared golden fixtures and device/reference parity validation remain missing.
+
+
+## Run 5 verified refresh — 2026-11-26T12:25:12.246Z (Asia/Kolkata 2026-11-26)
+
+### Branch / PR state re-read from GitHub
+
+| Ref | State at this refresh |
+|---|---|
+| `main` | `143889db3e72540fb478b76c486082f45395e9bd` (2026-11-17 commit; unchanged). |
+| PR #107 | Open/draft/unmerged; head `c19bdbd307df7048cefd86bd3e6064ac4f4e3042`. No changes made. |
+| PR #112 | Open/draft/unmerged; head `b6c04d41dc67bd191ed0cf8966331eb5661a9887`. No changes made. |
+| PR #114 | Open/draft/unmerged; head `87318182360d4369ea2f7a773a27dd3fa3e7c558`; its base is the older PR #112 commit `fa92bb43a6b2064e0d412e4607c575057535ca1b`, not current PR #112 head. No changes made. |
+| PR #128 | Open/draft; head `1885b9631b2f15468445e943ccc2e1fe5aec7de7`. |
+| PR #132 | Open/draft; head `3232654ee65f8c512de47b0f52a609d9d6c45592`. |
+| PR #133 | New open/draft; head `53f62d3e74305fee8be3903a1f3c9e4b020f7030`, stacked on PR #132. |
+| PR #129 / #131 | Open/draft; heads `a4ba5b9d18299f4d725ebb8e8af3c070d94a4940` and `c3f17cd2066c229626eaf5397608ff6f565f3398`; their latest recorded CI jobs remain successful. |
+| PR #125 / #130 | Open/draft; security migrations remain unmerged and unapplied to production. |
+
+No PR was merged. No live database or production deployment action was performed.
+
+### Exact iOS results — source revision matters
+
+**PR #128, head `1885b9631b2f15468445e943ccc2e1fe5aec7de7`, full run [#45800363888](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45800363888):**
+
+- XCTest result bundle: **82 passed, 0 failed, 0 skipped, 0 cancelled** (82 total).
+- Unit suites: 76 passed, including **18/18 Finish & Save regression tests** and **24/24 ActivitySession tests**.
+- UI suite: **6/6 passed**, including full viewport/five-tab layout, cumulative dashboard navigation, direct Profile rendering, Guru keyboard dismissal, Start Walk navigation and Notifications dismissal.
+- iPhone 17 Pro simulator build: passed.
+- Unsigned iPhone Release build and IPA packaging: passed.
+- Result summary and test tree were downloaded and inspected from diagnostics artifact #15114745038; this is a successful run on PR #128's exact source head, not a pass for PR #132 or PR #133.
+
+**PR #132, head `3232654ee65f8c512de47b0f52a609d9d6c45592`, full run [#45811263546](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45811263546), job `139879436963`:**
+
+- XCTest result bundle: **82 passed, 1 failed, 0 skipped, 0 cancelled** (83 total).
+- Unit suites: **76/76 passed**; Finish & Save **18/18 passed**; ActivitySession **24/24 passed**.
+- UI suite: **6 passed, 1 failed**. The new Community-after-Missions test passed; viewport/five-tab layout passed; direct Profile test passed; Guru keyboard, Start Walk and Notifications tests passed.
+- The one failure is `testDashboardSectionsMetricsAndPrimaryNavigation`, at `GATIVXDashboardUITests.swift:237`, after tapping Activity. It ran 813.8 seconds before XCTest timed out evaluating the accessibility snapshot.
+- The actual app log records `Unable to perform work on main run loop, process main thread busy for 30.0s` during the post-tap query. The app had accepted the tap and initially responded to accessibility requests; subsequent main-loop idle notification did not arrive.
+- Earlier in the same cumulative test, the simulator recorded `UIKeyboardTaskQueue ... _lockWhenReadyForMainThread ... timeout detected` and SwiftUI `Invalid frame dimension (negative or non-finite)` while Guru keyboard input was active. The same keyboard/layout warnings also occur in the successful PR #128 run, so they are not by themselves proof of the later Activity-tab stall.
+- Simulator build, unsigned Release build and IPA packaging all passed. The overall workflow correctly failed because the full UI suite had one failure.
+- The new flat-Missions source change and its focused Missions→Community test are not implicated by the recorded failing assertion; the Community test passed.
+
+**PR #112 and #114 historical confirmation:** their inspected full runs #45652420651 and #45633166732 each passed their respective unit suites (58/58 and 71/71) but failed the same cumulative Activity-tab navigation test at line 237; PR #114's test step also hit its 40-minute cap. This establishes a recurring/intermittent failure across those branches. PR #115's separate Activity-tab flattening run #45663157699 passed once; PR #128 also passed once. The result is not a deterministic green baseline.
+
+### PR #133 — targeted focus ownership change (CI pending)
+
+A new isolated branch `fix/gativx-guru-focusstate-dismissal-20261126` was created from PR #132 head `3232654ee65f8c512de47b0f52a609d9d6c45592`.
+
+- PR: [#133 — use SwiftUI focus state for Guru keyboard dismissal](https://github.com/sbscorpsales-ship-it/Mission-75/pull/133).
+- Head commit: `53f62d3e74305fee8be3903a1f3c9e4b020f7030` (two reviewable commits).
+- Files changed:
+  - `ios/GATIVX/ContentView.swift`: all four Guru text fields now share the same `@FocusState`; keyboard dismissal now clears that focus state instead of invoking `UIApplication.shared.sendAction(resignFirstResponder)` synchronously and again on the next main-loop turn.
+  - `ios/GATIVXUITests/GATIVXDashboardUITests.swift`: the dedicated Guru keyboard test now closes the sheet and verifies that Activity can be selected and its screen rendered afterward.
+- Rationale: the simulator log shows a keyboard-task timeout during Guru text entry and a main-thread busy condition after Activity is tapped. The duplicate UIKit responder-resign path is a plausible interaction point, but the exported logs do not contain a Swift call-stack proving it is the root cause. This is a testable hypothesis, not a claimed fix.
+- Full iOS CI [#45819222644](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45819222644), job `139906811508`, is in progress. No result is claimed yet. The workflow retains the complete unit/UI suite, simulator build, unsigned Release build and IPA packaging gates.
+
+### QA IPA from PR #132
+
+The device-targeted IPA artifact #15114878629 was downloaded and inspected. Its embedded Info.plist reports bundle `com.paramitsolutions.gativx`, version `1.0.0`, build `1`, minimum iOS `17.0`, and iPhone device family. The IPA contains no `_CodeSignature` directory and no `embedded.mobileprovision`; it is **unsigned and not directly installable**. This is packaging evidence only, not a signed device build or HealthKit acceptance.
+
+### Traceable product gap ledger — no status upgrades from source presence alone
+
+| Product area | Current classification | Evidence / acceptance still missing |
+|---|---|---|
+| iOS first-run/auth | Implemented-but-unverified | Sign-up/sign-in/local-only path exists; live account, recovery email delivery and session expiry/refresh are not verified. |
+| iOS onboarding and purpose | Missing | No complete first-run flow tying goal, personal purpose, emotion, permissions and mission setup together. |
+| iOS dashboard / viewport | Verified (simulator only) | Five tabs and full viewport test passed on PR #128 and PR #132; physical-device fit and final approved IA parity remain unverified. |
+| iOS activity save/recovery | Verified (logic tests only) | 18/18 Finish & Save regression tests and 24/24 activity-session tests passed; actual iPhone save, relaunch recovery and HealthKit export remain blocked on device. |
+| iOS HealthKit / background GPS | Implemented-but-unverified / blocked | APIs and permission paths exist; requires a signed HealthKit-capable build and physical iPhone permissions/sensor testing. |
+| iOS Guru | Implemented-but-unverified | Local purpose-aware guidance exists; no account/cloud sync or conversational service. PR #133 keyboard focus correction awaits CI. |
+| iOS Missions | Missing (full lifecycle) | One fixed local consistency card; no enrollment, qualifying-activity completion ledger or reminder lifecycle. |
+| iOS Community | Missing | Gated privacy placeholder, not a member feed. |
+| iOS Profile | Implemented-but-unverified | Direct navigation passed simulator UI test; photo remains local-only and profile settings are not fully account-synced. |
+| Notifications | Missing | Explicitly inactive placeholder; no permission, scheduling or delivery test. |
+| Android app / Health Connect | Implemented-but-unverified / partial | PR #129 head `a4ba5b9d...`; last verified CI #45761705362 passed 20/20 source safeguards and Gradle debug build. No Android unit suite, emulator or device acceptance; product shell still labels several modules Coming soon. |
+| Web Hub | Implemented-but-unverified / partial | Last recorded CI #45686178223 passed 51/51 static/mock-backed checks; live Supabase browser flows and native IA parity are not proven. Original `app-v2.html` and `index.html` remain untouched. |
+| Shared activity calculation | Implemented-but-unverified foundation | PR #131 standalone engine tests and CI pass, but no iOS/Android/Web integration or shared golden-vector parity. |
+| Goal active-day rule | Missing | Native uses calendar elapsed days; Web accepts any non-empty journal entry as a check-in. No shared qualifying-activity-day 100-of-180 acceptance rule. |
+| Guest history adoption | Missing | Local guest records are retained but hidden after sign-in; no explicit member-confirmed transfer flow. |
+| Backend sync / security | Blocked | Last direct live Supabase read in report section 11:27:22Z found broad table/default grants and leaked-password protection disabled. No new live query in this run; PR #125/#130 migrations remain unapplied. |
+| Release / signing | Blocked | Simulator and unsigned IPA packaging pass; signing, HealthKit entitlement provisioning, physical install and device acceptance require owner Apple account/device action. |
+
+### Run 5 files, changes and safeguards
+
+- Application files changed on PR #133: `ios/GATIVX/ContentView.swift`, `ios/GATIVXUITests/GATIVXDashboardUITests.swift`.
+- Source head: `53f62d3e74305fee8be3903a1f3c9e4b020f7030`; parent PR #132 head: `3232654ee65f8c512de47b0f52a609d9d6c45592`.
+- Report branch parent before this update: `42ba1952d103ef9c4872a3eef9d4d89f5036c5de`.
+- No local Xcode tests were run in this environment; CI is the test executor. PR #133's full workflow is pending.
+- No Android, Web Hub or live Supabase changes were made in this run. No live migration, signed iPhone install, physical HealthKit/background GPS test, Android device test or production deployment is claimed.
+- PR #107, #112 and #114 were not modified; no PR was merged. Original Web Hub files and Design C assets were not changed.
+
+### Next action
+
+1. Inspect PR #133 full-suite result and logs. If it passes, still treat the result as one green simulator run; repeat the cumulative test before closing the intermittent navigation defect.
+2. If it fails, capture a simulator process main-thread sample during the Activity-tab stall rather than changing assertions or reducing test coverage.
+3. Continue the active-day journey and cross-platform product gaps independently; do not change the locked dashboard taxonomy without explicit approval.
+4. Keep release verdict **NOT RELEASE-READY** until signed device, backend/security and cross-platform acceptance evidence exists.
