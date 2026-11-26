@@ -2109,7 +2109,6 @@ struct ContentView: View {
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {
             memberBottomNavigation
-                .background(pageBackground.ignoresSafeArea(edges: .bottom))
         }
         .tint(neon)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
