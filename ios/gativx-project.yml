@@ -13,6 +13,7 @@ targets:
     info:
       path: GATIVX/Info.plist
       properties:
+        UILaunchScreen: {}
         CFBundleVersion: "1"
         CFBundleShortVersionString: "1.0.0"
         NSHealthUpdateUsageDescription: "GATIVX saves a walking, running or hiking workout to Apple Health when you choose to finish an activity."
