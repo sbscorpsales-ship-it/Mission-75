@@ -1,6 +1,6 @@
 # GATIVX 3-Day Engineering Sprint Report
 
-**Last updated:** 2026-11-26 06:55 IST (01:25 UTC)  
+**Last updated:** 2026-11-26 07:00 IST (01:30 UTC)  
 **Repository:** sbscorpsales-ship-it/Mission-75  
 **Audit branch:** audit/gativx-completion-gap-ledger-20261125  
 **Primary repair branch:** fix/gativx-ui-test-guest-reset  
@@ -694,14 +694,15 @@ Source SHA: `804a88b56051636104bb7c4c2ca264df3c725188`.
 - PR #107 remains open, draft, unmerged and untouched.
 - PR #112 remains open/draft/unmerged at `b6c04d41dc67bd191ed0cf8966331eb5661a9887`.
 - PR #114 remains open/draft/unmerged at `87318182360d4369ea2f7a773a27dd3fa3e7c558`; compare confirms PR #112 head is **7 commits ahead** of PR #114's base.
-- PR #121, #122, #123 and #124 remain open/draft/unmerged. No PR was merged or deployed.
+- PR #121, #122, #123, #124 and #125 remain open/draft/unmerged. No PR was merged or deployed.
 - Original Web Hub `app-v2.html` remains unchanged on main; Design C review stays isolated in PR #119.
 
 ### Immediate next action
 1. Inspect run #644 logs on the exact PR #124 head. Require all 76 unit tests, both existing UI tests plus the new picker flow, tracking safeguards, simulator build, unsigned Release build and IPA packaging to pass.
 2. If the Profile tab still hangs, inspect the new result bundle and isolate the remaining synchronous Profile view work; do not weaken the full navigation test or claim a fix from a single pass.
 3. After Profile stabilises, add deterministic UI coverage for local Finish & Save → verified history → app relaunch → same-session read-back. The HealthKit export itself remains a separate device gate.
-4. Continue the full product gap ledger; do not treat the Design C preview or CI builds as complete product functionality.
+4. Inspect the PostgreSQL 17 security workflow for PR #125; no live Supabase changes are authorized by this candidate.
+5. Continue the full product gap ledger; do not treat the Design C preview or CI builds as complete product functionality.
 
 
 ## Live Supabase audit and least-privilege candidate — 26 November 2026
