@@ -1776,3 +1776,13 @@ The current `GATIVXGoalJourney` model is calendar-day based:
 This conflicts with the approved resilience behavior that a member who plans a 180-active-day journey but completes only 100 activity days because of unavoidable interruptions should retain 100 completed days and continue with 80 remaining, rather than being marked complete or failed solely because calendar time passed.
 
 Gap classification: **MISSING — active-day journey accounting and upfront no-penalty explanation**. The current implementation can display a calendar-based day count unrelated to actual activity. No model or UI change was made in this run; this requires an isolated implementation deriving unique qualifying activity dates from verified saved sessions, with duplicate sessions on one date counted once and missed days never erasing progress.
+
+
+## 2026-11-26T11:35:13.206Z — GURU, Missions and profile persistence boundary
+
+- GURU goal, purpose, emotion, next action and journey start/duration are stored in device-local `@AppStorage` keys. The current native cloud client has no corresponding account-scoped GURU/journey sync. The coaching output is deterministic local logic, not a remote conversational AI service.
+- Missions currently renders one fixed “TODAY · CONSISTENCY” card. “Begin walking mission” only navigates to Activity; there is no mission enrollment, per-member completion ledger, reminders or mission lifecycle.
+- Profile photo is stored locally on the device; it is not uploaded to the member profile in Supabase.
+- Community remains a static privacy notice/gated placeholder; Notifications explicitly state they are inactive.
+
+Classification: **implemented locally but not cross-device/account-synced** for GURU and profile photo; **missing** for a persistent member-specific mission lifecycle, community feed and notifications. No production or profile data was changed.
