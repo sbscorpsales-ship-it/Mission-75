@@ -153,8 +153,10 @@ jobs:
         id: xctest
         timeout-minutes: 40
         run: |
-          SIMULATOR_ID="$(xcrun simctl list devices available -j | python3 -c 'import json, re, sys; data = json.load(sys.stdin); candidates = []; [(candidates.append((tuple(int(part) for part in match.groups() if part is not None) if match else (0,), device["name"], device["udid"]))) for runtime, devices in data["devices"].items() for match in [re.search(r"iOS-(\d+)-(\d+)(?:-(\d+))?", runtime)] for device in devices if device.get("isAvailable") and device.get("name", "").startswith("iPhone")]; preferred = [candidate for candidate in candidates if candidate[1] == "iPhone 17 Pro"]; pool = preferred or candidates; print(max(pool, key=lambda candidate: (candidate[0], candidate[1]))[2] if pool else "")')"
-          echo "Selected iPhone simulator ID: ${SIMULATOR_ID:-none} (newest installed runtime; prefer iPhone 17 Pro)"
+          python3 scripts/test_gativx_simulator.py
+          SIMULATOR_SELECTION="$(python3 scripts/gativx_simulator.py)"
+          IFS='|' read -r SELECTED_RUNTIME SELECTED_NAME SIMULATOR_ID <<< "$SIMULATOR_SELECTION"
+          echo "Selected iPhone simulator: ${SELECTED_NAME:-none} (${SIMULATOR_ID:-none}) on ${SELECTED_RUNTIME:-unknown}"
           echo "Available simulator devices:"
           xcrun simctl list devices available
           if [ -z "$SIMULATOR_ID" ]; then
