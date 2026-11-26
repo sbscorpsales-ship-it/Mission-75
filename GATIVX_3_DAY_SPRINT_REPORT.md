@@ -1132,3 +1132,83 @@ The patch is limited to local sync-acknowledgement reliability; it does not alte
 | Android product completeness | Missing / partial | Feature hub continues to label several major modules Coming soon; no complete approved app parity. |
 
 No PR was merged and no live backend change was made.
+
+
+---
+
+## 2026-11-26T06:19:48.938Z — verification refresh: iOS full suite, Android acknowledgement, Web Hub and live security
+
+**Source refs rechecked:** `main` = `143889db3e72540fb478b76c486082f45395e9bd`; PR #107 = `c19bdbd307df7048cefd86bd3e6064ac4f4e3042`; PR #112 = `b6c04d41dc67bd191ed0cf8966331eb5661a9887`; PR #114 = `87318182360d4369ea2f7a773a27dd3fa3e7c558`. PR #112 and #114 remain open/draft/unmerged and are diverged (PR #114 is 3 commits ahead and 7 behind PR #112). PR #107 remains untouched. No PR was merged.
+
+### Completed iOS run — exact result bundle inspected
+
+[PR #128 CI run #45761245212](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45761245212), source commit `c49c7442201fee6782e42596d2a313f294a2a85a`, completed successfully:
+
+- Unit tests: **76 passed, 0 failed, 0 cancelled**.
+- UI tests: **3 passed, 0 failed, 0 cancelled**.
+- Total: **79 passed, 0 failed, 0 cancelled**.
+- Finish & Save regression suite: **18 passed, 0 failed** (included in the 76 unit tests).
+- The cumulative navigation test passed in 679.63 seconds on iPhone 17 Pro Simulator / iOS Simulator 26.4.1. The activity trace shows Home → Guru (goal/purpose entry and keyboard dismissal) → Activity → Guru → Start Walk → Activity → Missions → Community → Profile, followed by opening and cancelling the on-demand photo picker.
+- Fresh Home → Profile and Home → Activity UI tests also passed.
+- Simulator Debug build: **passed**. Unsigned iPhone Release build: **passed**. Unsigned IPA archive integrity, bundle identity and version metadata checks: **passed**.
+- Artifacts: [XCTest result bundle](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45761245212/artifacts/15091126429) (103,150,223 bytes); [structured XCTest diagnostics](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45761245212/artifacts/15091336367) (98,619,517 bytes); [simulator build](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45761245212/artifacts/15091192626) (2,504,253 bytes); [unsigned IPA](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45761245212/artifacts/15091481221) (699,240 bytes).
+
+The diagnostics exporter completed on Xcode 26.3 and uploaded 413 files. I downloaded and inspected the diagnostics archive: the cumulative test passed, but its trace contains two non-fatal “App event loop idle notification not received” messages and one SwiftUI runtime warning, “Invalid frame dimension (negative or non-finite).” The warning appeared during the Guru interaction. No main-thread backtrace was captured because this run passed.
+
+**Important: this does not prove the Profile issue is fixed.** PR #128 changes only the workflow diagnostics script and workflow; the app source is unchanged from PR #127. On that same app source, [PR #127 run #646](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45747774883) failed at `GATIVXDashboardUITests.swift:295` after tapping Profile: XCTest timed out evaluating the `profileTab.isSelected` UI query. That run had 76 unit tests pass and 2 of 3 UI tests pass. PR #112 run #45652420651 and PR #114 run #45633166732 also had cumulative UI failures. The latest pass plus earlier failures establish an intermittent/sequence-dependent test failure, not a proven root-cause correction.
+
+Additional source review on the exact PR #127 app code:
+- Profile's RunJeet archive read is dispatched to a utility queue; its appearance handler does not synchronously decode the archive.
+- The root view initializes HealthKit refresh/retry and optional Core Motion monitoring; HealthKit observer registration is guarded against duplicate registration, and disconnect stops all five observers and disables their background delivery.
+- In `ContentView.swift`, I found no `Timer.publish`, `TimelineView`, `repeatForever`, or `NotificationCenter` use. This does not rule out framework work or asynchronous contention elsewhere.
+- No speculative UI or product-code change was made.
+
+### Android — current-stack correction verified
+
+[PR #129 CI run #45761705362](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45761705362), commit `a4ba5b9d18299f4d725ebb8e8af3c070d94a4940`:
+
+- Android source safeguards: **20 passed, 0 failed**.
+- Gradle `assembleDebug`: **BUILD SUCCESSFUL**, 39 seconds.
+- [Debug APK artifact](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45761705362/artifacts/15090525185): 10,305,462 bytes.
+
+The new acknowledgement check proves the route ID exists and the encrypted `synced=true` state is written and read back before “route backup complete” can be reported. This is a CI source/build result only; no emulator or physical Android device test ran.
+
+### Web Hub — readiness and scope boundary
+
+[Latest Web CI run #45686178223](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45686178223) passed **51 checks, 0 failed**: 14 structural checks, inline JavaScript syntax validation, 7 v2 browser smoke checks and 29 Design C review navigation/layout checks.
+
+The exact `app-v2.html` blob SHA (`8089f536017ffb3a60a8bb99291313a3f5413927`) and `index.html` blob SHA (`59bfa88480bc14015e5b29375de666be1a2a2d1a`) match `main`; both remain unchanged. The browser smoke suite runs locally in Chromium with external requests blocked and mocked cloud state. Design C review screens explicitly label sample/preview data. These checks do not prove live Supabase behavior or production deployment. No recent Pages/deployment workflow run was found in the inspected run list, and the public Pages URL could not be independently fetched in this environment. Production deployment therefore remains **unverified**.
+
+### Live Supabase — privilege defect reconfirmed
+
+Read-only checks against active project `mission75-cloud` (`crarbbsvcczwmtvxyrxo`) confirm:
+
+- Six public tables have RLS enabled; the authenticated owner-scoped policies are present.
+- Seven sync RPCs are executable by `authenticated`; none is executable by `anon`.
+- The other five public tables grant authenticated CRUD only. **`daily_action_progress` still grants anon and authenticated DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE and UPDATE.** The broad `TRUNCATE` grant is not protected by RLS.
+- Supabase Security Advisor still reports leaked-password protection disabled; performance advisor returned no findings.
+- Live migration history remains at 22 versions through `20261113200433`.
+
+[PR #125](https://github.com/sbscorpsales-ship-it/Mission-75/pull/125) contains the least-privilege migration and SQL regression test. [CI run #45742076827](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45742076827) successfully applied it and ran the checks in an ephemeral PostgreSQL 17 database. The migration has **not** been applied to the live project; no production DDL or Auth setting was changed.
+
+### Current gap ledger delta
+
+| Area | Current status | Verified evidence / blocker |
+|---|---|---|
+| iOS Finish & Save | Implemented-but-unverified on device | 18/18 regression tests pass; local persistence/outbox logic is not physical HealthKit export acceptance. |
+| iOS Profile navigation | Implemented-but-unverified | Full journey passed once and failed on the same app source in earlier runs; intermittent UI-idle/query timeout remains. |
+| iOS simulator and unsigned IPA | Verified in CI | Simulator build and unsigned Release/IPA packaging passed; signing and installation are not verified. |
+| Android route-sync acknowledgement | Verified in CI; device behavior unverified | 20 safeguards and Gradle debug build pass; no emulator/device test. |
+| Web Hub | Implemented-but-unverified; modules missing | 51 browser/static checks pass; community/profile/notifications and other preview screens are not production features. Live deployment not verified. |
+| Shared backend | Implemented-but-unverified | Live RLS and authenticated RPC grants confirmed; cross-platform two-account end-to-end sync not tested. |
+| Database security | Open defect / corrective PR available | Live `daily_action_progress` grants remain excessive; PR #125 passes isolated PostgreSQL test but is not deployed. Leaked-password protection remains disabled. |
+
+### Files changed and next actions
+
+**Files changed by this report refresh:** `GATIVX_3_DAY_SPRINT_REPORT.md` only. PR #128 and PR #129 code commits were already present; this run did not modify their application code. `index.html`, `app-v2.html`, Design C, PR #107, PR #112 and PR #114 were not changed.
+
+1. Repeat the full serial iOS suite on the same app source, keeping every UI assertion. If it fails, use PR #128's exporter to inspect the failing activity, attachments and any available diagnostics; compare with the passing trace.
+2. Investigate the Guru keyboard/layout runtime warning and the Profile-tab idle/query stall before changing app code.
+3. Review PR #125 and obtain explicit owner approval before applying its migration to the live database; separately enable leaked-password protection through the owner-controlled Supabase Auth settings.
+4. Obtain physical iPhone and Android device evidence for HealthKit, background GPS, Health Connect and save/recovery. Do not label unsigned IPA as installable.
+5. Keep PR #107 untouched, PR #112 unmerged, and all PRs unmerged. Preserve Design C and the original Web Hub files.
