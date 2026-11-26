@@ -3032,3 +3032,92 @@ The Supabase connector recovered after an earlier transient error. The active `m
 | Migration source history | blocked | 4 exact matches, 6 timestamp-drifted source files, 12 applied names without source files |
 
 This correction supersedes the earlier note that the Supabase connector was unavailable and clarifies the prior strict count of 18 exact-version filename mismatches.
+
+---
+## Automation checkpoint — 2026-11-27 02:45 IST (2026-11-26T21:15Z)
+
+### Repository and PR state refreshed
+- PR #136 remains open/draft at exact head 31e5b70d85537113e74dd003d06b3ae95ba323f4; latest inspected run [#45847572105](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45847572105).
+- PR #143 remains open/draft at exact head 56641e79cd76743724f3f62bdddfb1f62e6d556a; run [#45883789402](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45883789402) completed.
+- PR #145 remains open/draft at exact head 3a76b32c912760cf2b83a7850170ff7bcd2bb1c9; run [#45890647250](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45890647250) completed.
+- New draft PR #146 is open at exact head e03b4ffc359fcc5cf1a31236ba53f6b0007f082d, based on PR #145's branch. Exact-head iOS run [#45897137804](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45897137804) is queued; no result is claimed.
+- PR #144 remains open/draft at edd9f211c3029c38d8ad6255c341ca8e235b3b46; repeat run [#45891894462](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45891894462) completed successfully.
+- PR #107 remains open at unchanged head c19bdbd307df7048cefd86bd3e6064ac4f4e3042; PR #112 remains open/unmerged at unchanged head b6c04d41dc67bd191ed0cf8966331eb5661a9887. Neither branch was modified. No PR was merged. Main remains at 143889db3e72540fb478b76c486082f45395e9bd.
+
+### PR #136 — exact head and full validation
+Run [#45847572105](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45847572105), exact head 31e5b70d85537113e74dd003d06b3ae95ba323f4:
+- Unit tests: 76 passed, 0 failed, 0 cancelled.
+- UI tests: 9 test cases executed; 8 passed, 1 failed; 0 cancelled. The single failing test has one failing assertion: dock height 113.0625 pt, required <=76 pt.
+- Passed UI coverage: Activity fills its app window above the dock; all five destinations switch from one navigation dock; Community navigation; dashboard content; Guru keyboard dismissal; Home walk-entry behavior; notifications sheet dismissal; Profile tab navigation.
+- Static Profile guard confirms the photo picker is hosted at the root, outside the Profile tab. This UI run contains no dedicated photo-picker interaction test; actual picker selection/storage remains unverified.
+- Tracking safeguard checks: 121/121 passed. HealthKit source entitlement validation, simulator build, simulator privacy checks, unsigned Release build, IPA packaging and uploads passed.
+- The failed dock assertion is a real release blocker on this exact PR #136 head.
+
+### PR #143 — compact dock did not resolve the scene size
+Run [#45883789402](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45883789402), exact head 56641e79cd76743724f3f62bdddfb1f62e6d556a:
+- Unit tests: 76 passed, 0 failed, 0 cancelled.
+- UI tests: 9 test cases executed; 8 passed, 1 failed; 0 cancelled. The single failed test has two full-device assertions: app-window height 603.0 pt versus 830.3 pt minimum, and app-window top origin 135.5 pt versus <=8 pt.
+- Dock assertion passed at <=76 pt. Five-destination navigation, Activity layout within the app window, Guru keyboard dismissal and Profile tab navigation passed.
+- The selected simulator was iPhone 17 Pro on iOS 26.5. This is not explained by the earlier older-runtime selection.
+
+### PR #145 — Welcome root expansion did not change the legacy window
+Run [#45890647250](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45890647250), exact head 3a76b32c912760cf2b83a7850170ff7bcd2bb1c9:
+- Unit tests: 76 passed, 0 failed, 0 cancelled.
+- UI tests: 10 test cases executed; 8 passed, 2 failed; 0 cancelled. There are 4 failing assertions across the two failed cases:
+  - Dashboard viewport: 603.0 pt high versus 830.3 pt minimum; top origin 135.5 pt versus <=8 pt.
+  - Welcome viewport before guest entry: same 603.0 pt height and 135.5 pt top origin.
+- Activity fills the app window; five-destination navigation, Community navigation, dashboard content, Guru keyboard dismissal, Home walk-entry, notifications sheet and Profile tab navigation passed.
+- Tracking safeguards: 121/121 passed. Simulator build, unsigned Release build, IPA packaging and artifact upload passed. Release validation failed only because XCTest failed.
+- This proves the Welcome frame change alone is insufficient. The UI suite was not narrowed or weakened.
+
+### Root cause isolated from the exact PR #145 IPA and diagnostics
+- The diagnostics artifact identifies iPhone 17 Pro / iOS 26.5.
+- XCTest accessibility diagnostics report the app's UIWindow as 320 x 480 pt. The device screen is 402 x 874 pt. The system scales the legacy 320 x 480 content to 402 x 603 pt and centers it at y=135.5 pt, matching the black letterboxing and viewport failures.
+- I downloaded the exact Release IPA artifact from run #45890647250, extracted the nested IPA, and parsed Payload/GATIVX.app/Info.plist. The built plist is missing UILaunchScreen, UILaunchStoryboardName and UILaunchStoryboards. The repository source ios/GATIVX/Info.plist contains an empty UILaunchScreen dictionary, but the XcodeGen spec uses generated Info.plist properties and did not declare that key. The built app therefore did not receive the source key.
+- This is the first concrete cause consistent with the 320 x 480 legacy compatibility window. Apple's [Info.plist key reference](https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/iPhoneOSKeys.html) documents launch-screen metadata; Apple's [developer forum explanation](https://developer.apple.com/forums/thread/5572) describes the 320 x 480 fallback when an app has no launch image or launch storyboard. The proposed fix remains subject to exact-head CI proof.
+
+### New isolated fix — PR #146
+- Branch: fix/gativx-launch-screen-fullscreen-20261127, created from PR #145's exact head.
+- Commits: 4a3b6a7ea1900fc42286d15970126fd42d9b5f87 and final e03b4ffc359fcc5cf1a31236ba53f6b0007f082d.
+- Files changed: ios/gativx-project.yml; .github/workflows/gativx-ios.yml.
+- Adds UILaunchScreen: {} to the XcodeGen-generated app Info.plist properties.
+- Adds CI assertions for the source plist, generated simulator app Info.plist and packaged Release IPA Info.plist. A missing key now fails with a diagnostic identifying the possible legacy 320 x 480 letterbox.
+- Full unit/UI suite remains intact, including both dashboard and Welcome full-device geometry assertions. No design, navigation or product layout change was made.
+- Draft PR [#146](https://github.com/sbscorpsales-ship-it/Mission-75/pull/146). Exact-head run [#45897137804](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45897137804) is queued. No CI validation is yet available for this fix.
+
+### PR #144 security hardening CI result
+Run [#45891894462](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45891894462), exact head edd9f211c3029c38d8ad6255c341ca8e235b3b46:
+- Web release job passed: 16 structural/source checks + 7 browser smoke assertions = 23 passed, 0 failed.
+- PostgreSQL 17 grant regression job passed. Logs confirm fixture creation, postgres-owned hardening migration, supabase_admin default-privilege script, regression SQL execution and probe cleanup completed successfully.
+- This is isolated PostgreSQL fixture evidence, not a production database change. No live DDL was applied.
+- Live project actions remain: restore/reconcile migration source history (22 applied versions, 10 source files, 4 exact filename matches, 6 timestamp-drifted names, 12 applied names with no source file); run the admin script from an authorized supabase_admin session after staging review; enable Leaked Password Protection in Supabase Authentication settings. Do not rename drifted migration files without comparing contents.
+
+### Consolidated gap ledger — latest evidence
+| Product area | Status | Evidence / remaining gate |
+|---|---|---|
+| Five-destination single navigation | verified in simulator | All five destinations switch in UI tests on PR #136/#143/#145 |
+| Dock <=76 pt | verified on PR #143/#145; failed on PR #136 | Compact dock assertion passes on follow-ups; exact PR #136 head remains over limit |
+| Full-device app viewport | blocked | iPhone 17 Pro app window remains legacy 320 x 480 pt; PR #146 tests missing launch-screen metadata fix |
+| Activity fills viewport | verified within app window only | Activity UI test passes, but enclosing app window is reduced |
+| Root-hosted Profile picker | implemented, source-verified | Root modifier guard passes; no dedicated photo-picker UI interaction test in the inspected suite |
+| Guru keyboard dismissal | verified in simulator | Fresh-Home keyboard dismissal test passes |
+| Tracking safeguards | verified as CI source checks | 121/121 pass; physical sensor/background behavior remains device-unverified |
+| Finish & Save / crash recovery | implemented-but-unverified | Durable local persistence and retry guards exist; reported real-iPhone Apple Health save failure still needs device evidence |
+| HealthKit / background GPS | implemented-but-unverified | Source entitlements and static safeguards pass; no physical iPhone HealthKit/background GPS acceptance |
+| Auth / onboarding / goals / purpose | implemented-but-unverified | First-run source checks and 8 goal-journey unit tests pass; live auth/session/account sync not accepted |
+| Missions | implemented-but-unverified | Basic mission UI and walk-start path exist; complete member mission journey not accepted |
+| Community feed | missing | Gated UI only; no verified shared feed backend |
+| Notifications delivery | missing | Informational sheet only; no verified push/delivery backend |
+| Android / Health Connect | verified in CI only | 25 source safeguards, 6 JVM tests and Debug APK integrity pass; device/Health Connect behavior unverified |
+| Web Hub | verified in CI only | 23 structural/browser checks pass; production deployment not verified |
+| Existing RLS / public grants | implemented in isolated test, production blocked | PR #144 PostgreSQL 17 regression passes; no production DDL applied |
+| Migration source-of-truth | blocked | 4 exact matches, 6 timestamp-drifted files, 12 applied migration names without matching source |
+| iOS Release / IPA | verified as unsigned package only | Build and IPA structure/executable validation pass; no signing, installation or device acceptance |
+
+### Files changed and next actions
+- This checkpoint changes only GATIVX_3_DAY_SPRINT_REPORT.md on the documentation branch. Report update commit is recorded after this append.
+- Engineering changes in this interval are isolated to PR #146's two files listed above; no changes to main, PR #107 or PR #112.
+1. Poll PR #146 run #45897137804. Inspect the generated simulator Info.plist and Release IPA Info.plist first; then inspect full XCTest counts and screenshots. The decisive UI acceptance is full device height and top origin on iPhone 17 Pro, plus dock <=76 pt.
+2. If the key appears in both built plists but the window remains 320 x 480, inspect the simulator's launch-screen/scene compatibility diagnostics before the next code change.
+3. Keep all PRs unmerged. Preserve Design C and all approved product decisions.
+4. Keep real-device HealthKit, Finish & Save, background GPS, Android Health Connect, photo selection, signed installation and production deployment marked unverified until actual device/account evidence exists.
