@@ -66,6 +66,9 @@ internal object WalkOnStore {
     fun completed(context: Context): List<WalkOnSession> =
         readSessions(context, COMPLETED_KEY) ?: emptyList()
 
+    fun completedHistoryIsUnreadable(context: Context): Boolean =
+        readSessions(context, COMPLETED_KEY) == null
+
     fun pending(context: Context): List<WalkOnSession> =
         completed(context).filter { !it.synced }
 
