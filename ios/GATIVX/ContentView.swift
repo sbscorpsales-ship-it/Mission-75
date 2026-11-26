@@ -1320,8 +1320,8 @@ struct ContentView: View {
             HStack(alignment: .center) {
                 Image(systemName: "sparkles").font(.system(size: 27, weight: .black)).foregroundStyle(neon)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("NURUN GURU").font(.caption.weight(.black)).tracking(1.3).foregroundStyle(neon)
-                    Text("YOUR PERSONAL GUIDE").font(.caption2.weight(.bold)).tracking(1).foregroundStyle(.secondary)
+                    Text("GATIVX GURU").font(.caption.weight(.black)).tracking(1.3).foregroundStyle(neon)
+                    Text("NURUN · YOUR PERSONAL GUIDE").font(.caption2.weight(.bold)).tracking(1).foregroundStyle(.secondary)
                 }
                 Spacer()
                 Text("GATIVX").font(.caption.weight(.heavy)).tracking(1)
@@ -2051,7 +2051,7 @@ struct ContentView: View {
         .fullScreenCover(isPresented: $isGuruPresented) {
             NavigationStack {
                 guruScreen
-                    .navigationTitle("NURUN Guru")
+                    .navigationTitle("GATIVX Guru · NURUN")
                     .navigationBarTitleDisplayMode(.inline)
                     .toolbarBackground(pageBackground, for: .navigationBar)
                     .toolbar {
