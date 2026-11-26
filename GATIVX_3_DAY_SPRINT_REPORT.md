@@ -1,32 +1,49 @@
 # GATIVX 3-Day Engineering Sprint Report
 
-**Last updated:** 2026-11-26 13:49 IST (08:19 UTC)  
-**Repository:** sbscorpsales-ship-it/Mission-75  
-**Default branch:** `main` at `143889db3e72540fb478b76c486082f45395e9bd`  
-**Report branch:** `docs/gativx-sprint-report-20261125` (PR #118); this refresh is committed separately.
+**Last updated:** 2026-11-26T11:36:03.859Z
+**Repository:** sbscorpsales-ship-it/Mission-75
+**Default branch:** `main` at `143889db3e72540fb478b76c486082f45395e9bd` (last commit 2026-11-17 04:38:35 UTC).
+**Report branch:** `docs/gativx-sprint-report-20261125` (PR #118); this update is a new documentation commit.
 
-**Protected baseline:** PR #107 remains open/draft/unmerged at `c19bdbd307df7048cefd86bd3e6064ac4f4e3042`. No PR was merged and no live database migration or production deployment was performed.
+**Protected baseline:** PR #107 remains open/draft/unmerged at `c19bdbd307df7048cefd86bd3e6064ac4f4e3042`. PR #107 was not modified. No PR was merged. No production deployment or live database mutation was performed.
 
-**Current repair / validation branches**
-- **Profile diagnostic branch:** PR [#128](https://github.com/sbscorpsales-ship-it/Mission-75/pull/128), head `9d25b1eb98a8da49aa1bfa7dbf4bdbdf82fc6f3b`, based on PR #127 head `01f0f24f263dad70394d05e17a3baba635dfc0fc`. App source is unchanged in PR #128 itself; it adds structured failure export, a prior-result replay workflow and isolated Notifications/Guru keyboard UI tests. Full iOS run #45775608073 has now completed successfully: 76 unit + 5 UI tests passed, 0 failed/cancelled; simulator, unsigned Release and unsigned IPA packaging gates passed. The prior intermittent navigation failures remain in the history, so this is a successful latest run, not proof of a permanent root-cause fix.
-- **Android route acknowledgement:** PR [#129](https://github.com/sbscorpsales-ship-it/Mission-75/pull/129), head `a4ba5b9d18299f4d725ebb8e8af3c070d94a4940`; CI #45761705362 passed 20 source safeguards and Gradle debug build.
-- **Current table privilege fix:** PR [#125](https://github.com/sbscorpsales-ship-it/Mission-75/pull/125), head `3d988cde0658f4bb101abaa242fbcba3169a8dfb`; isolated PostgreSQL CI #45742076827 passed; not applied live.
-- **Future default-privilege fix:** PR [#130](https://github.com/sbscorpsales-ship-it/Mission-75/pull/130), head `780eda0681f571ea7d6a70bde29b3df956027ac0`, stacked on PR #125; PostgreSQL CI #45775093000 passed; not applied live.
-- **Cumulative report:** PR [#118](https://github.com/sbscorpsales-ship-it/Mission-75/pull/118), open/draft/unmerged.
-- **Primary app candidate:** PR [#127](https://github.com/sbscorpsales-ship-it/Mission-75/pull/127), open/draft/unmerged. The same app source failed the cumulative Profile test in run #45747774883 and passed in #45761245212; this is intermittent, not a proven app fix.
+## Current engineering branches
 
-**PR #112 / #114 status — verified from live GitHub state**
-- PR [#112](https://github.com/sbscorpsales-ship-it/Mission-75/pull/112): open/draft/unmerged, head `b6c04d41dc67bd191ed0cf8966331eb5661a9887`, base PR #107 head `c19bdbd307df7048cefd86bd3e6064ac4f4e3042`. Latest inspected run #45652420651: 58 unit tests passed; 2 UI tests executed, 1 failed.
-- PR [#114](https://github.com/sbscorpsales-ship-it/Mission-75/pull/114): open/draft/unmerged, head `87318182360d4369ea2f7a773a27dd3fa3e7c558`, base `fa92bb43a6b2064e0d412e4607c575057535ca1b`. It is diverged from current PR #112 by 3 commits ahead / 7 behind. Run #45633053186 passed 71 unit + 2 UI tests; run #45633166732 passed 71 unit tests but failed during the cumulative UI test. Its standalone Finish & Save code still clears the GPS draft after an asynchronous callback without checking queue acceptance. Do not treat PR #114 alone as the current queue-failure fix; the newer PR #128 stack includes the synchronous queue-acceptance guard.
-- PR #107 remains untouched. PR #112 remains unmerged. No PR is merged.
+- **PR #132** — [Missions tab flat / horizontal navigation regression](https://github.com/sbscorpsales-ship-it/Mission-75/pull/132), head `3232654ee65f8c512de47b0f52a609d9d6c45592`, based on PR #128. Removes only the unnecessary Missions `NavigationStack`; adds a direct Missions→Community test and left/right swipe assertions. Full iOS CI #45811263546 is running.
+- **PR #128** — [structured XCTest diagnostics](https://github.com/sbscorpsales-ship-it/Mission-75/pull/128), head `1885b9631b2f15468445e943ccc2e1fe5aec7de7`, based on PR #127. Full iOS first attempt #45800363888 failed one cumulative navigation UI query; same full job retry is running.
+- **PR #127** — [Profile tab isolation](https://github.com/sbscorpsales-ship-it/Mission-75/pull/127), head `01f0f24f263dad70394d05e17a3baba635dfc0fc`.
+- **PR #112** — open/draft, head `b6c04d41dc67bd191ed0cf8966331eb5661a9887`, base PR #107. Not modified.
+- **PR #114** — open/draft, head `87318182360d4369ea2f7a773a27dd3fa3e7c558`, base older PR #112 commit `fa92bb43a6b2064e0d412e4607c575057535ca1b`. Not modified.
+- **PR #129** — Android route-sync acknowledgement fix, head `a4ba5b9d18299f4d725ebb8e8af3c070d94a4940`.
+- **PR #125 / #130** — existing-table and future-default privilege hardening; both remain open/draft and are not applied to the live project.
+- **PR #118** — this cumulative report; open/draft/unmerged.
 
-**Latest completed CI evidence**
-- iOS [#45775608073](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45775608073): **76 unit + 5 UI = 81 passed, 0 failed, 0 cancelled**; Finish & Save regression suite **18/18 passed**; simulator build, unsigned Release build and unsigned IPA packaging passed. The unchanged cumulative navigation test and the direct-from-Home Profile test both passed on this head. Earlier run [#45761245212](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45761245212) passed 76 unit + 3 UI = 79.
-- Android [#45761705362](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45761705362): **20 source safeguards passed, 0 failed**; Gradle debug build succeeded in 39 seconds. No Android unit test task, emulator or physical-device test was run.
-- Web [#45686178223](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45686178223): **51 checks passed, 0 failed** (14 structural checks, 1 JavaScript syntax check, 7 browser smoke checks, 29 Design C review checks). These are static/mocked browser checks, not production deployment evidence.
-- Database security [#45775093000](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45775093000): PostgreSQL 17.12 workflow passed the two security migrations and two SQL regression scripts. The earlier run #45774999463 failed on a malformed PL/pgSQL DO delimiter; the delimiter was corrected and the latest run passed.
+## Latest verified CI evidence
 
-**Current verdict:** **NOT RELEASE-READY.** Simulator builds, unsigned IPA packaging, Android debug packaging, Web preview checks and isolated SQL tests have CI evidence. Physical-device HealthKit/Health Connect/background GPS, signed iOS installation, live database remediation and production deployment remain unverified or blocked. Design C and the original Web Hub files remain unchanged.
+- **iOS run [#45800363888](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45800363888), first attempt:** 76 unit tests passed, including 18/18 Finish & Save regression cases; UI suite 5 passed / 1 failed / 0 cancelled; combined XCTest 81 passed / 1 failed / 0 skipped. Full-viewport/five-tab test passed. Direct-from-Home Profile test passed. The cumulative Home→Activity→Missions→Community test failed at line 285 on an XCTest accessibility snapshot timeout after the app did not report idle for 60 seconds; the captured hierarchy nevertheless showed Community rendered and selected. Simulator build, unsigned Release build and IPA packaging passed; aggregate release gate failed on the UI suite.
+- **iOS retry [#45800363888](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45800363888), job 139875349179:** full unit/UI/build/package job still in progress at this report timestamp.
+- **PR #132 CI [#45811263546](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45811263546), job 139879436963:** full unit/UI/build/package job still in progress at this report timestamp.
+- **Android [#45761705362](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45761705362):** 20/20 source safeguards passed; Gradle `:app:assembleDebug` succeeded. No Android unit suite, emulator or physical-device test ran.
+- **Web [#45686178223](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45686178223):** 51/51 checks passed (15 structural, 7 browser smoke, 29 Design C review). The 29 Design C checks exercise a separate visual-only, sample-data prototype, not the production Web Hub.
+- **Security CI [#45742076827](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45742076827) and [#45775093000](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45775093000):** both isolated PostgreSQL migration jobs passed. Live Supabase recheck still shows broad `anon`/`authenticated` grants and leaked-password protection disabled; no live changes were made.
+
+## Current release verdict
+
+**NOT RELEASE-READY.** A device-targeted unsigned QA IPA was recovered from run #45800363888 (artifact 15109317589); it requires owner signing and does not include PR #132. No signed iPhone installation, physical HealthKit workout export, background GPS, Android device acceptance, live migration, or production deployment has been verified.
+
+## Highest-priority unresolved product gaps
+
+1. **Cross-platform navigation parity is missing.** Locked Design C primary destinations are Home / Activity / Workouts / Health-Progress / Community. Native iOS currently exposes Home / Activity / Missions / Community / Profile; Android is an early-access feature grid; original Web Hub exposes Home / Journey / Record / Walk / GURU. The separate Design C review prototype is visual-only and is not integrated into any production app. Original `app-v2.html` and `index.html` remain unchanged.
+2. **Goal journeys are calendar-based, not active-day based.** The model marks progress/completion from elapsed calendar days, not unique completed activity dates. It does not yet support the approved no-penalty 100-of-180-active-days behavior.
+3. **Guest history adoption is missing.** Guest sessions remain stored locally but are hidden from the signed-in account view; no explicit member-confirmed transfer flow exists.
+4. **GURU and profile data are local-only.** Goal/purpose/emotion/journey state and profile photo are not synced across devices/accounts. GURU is deterministic local guidance, not a conversational AI service.
+5. **Missions, Community and Notifications are incomplete.** Missions is one fixed local consistency card with no member-specific lifecycle; Community is a gated placeholder; notifications are inactive.
+6. **Authentication parity is incomplete.** Native iOS has a password-recovery request endpoint, but live email delivery was not tested. Original Web Hub has sign-up/sign-in/session restoration but no password-recovery flow.
+7. **HealthKit/Health Connect and tracking remain device-unverified.** Source and simulator checks do not prove physical iPhone permissions, workout export, background GPS, Health Connect behavior or wearable sync.
+8. **Production database security is blocked.** Live `daily_action_progress` grants `anon` and `authenticated` TRUNCATE and other broad privileges; future public-schema defaults are also broad. The tested PR #125/#130 migrations are not applied. Leaked-password protection remains disabled.
+9. **Release signing is blocked on owner provisioning.** CI creates an unsigned device IPA. Free Apple ID signing may expire after seven days and may not provision HealthKit entitlements.
+
+**Next actions:** inspect the full iOS rerun and PR #132 logs; keep every test enabled; fix only evidence-backed failures; continue platform parity and active-day journey work on isolated branches; request explicit owner authorization before applying live security migrations. Preserve PR #107 and do not merge any PR.
 
 
 ## Run 4 verified refresh — 2026-11-26 13:49 IST (08:19 UTC)
