@@ -41,6 +41,11 @@ assert.equal(e.estimateMET({speedKmh:0,grade:0}),null);
 assert.equal(e.estimateMET({speedKmh:-1,grade:0}),null);
 near(e.estimateMET({speedKmh:2,grade:0}),2,0.001,"slow walking anchor");
 near(e.estimateMET({speedKmh:5,grade:0}),3.38,0.02,"ACSM level walking");
+const acsmBoundary=e.estimateMET({speedKmh:6,grade:0});
+near(acsmBoundary,13.5/3.5,0.001,"ACSM 6 km/h boundary");
+near(e.estimateMET({speedKmh:5.9999,grade:0}),acsmBoundary,0.001,"just below 6 km/h remains continuous");
+near(e.estimateMET({speedKmh:6.0001,grade:0}),acsmBoundary,0.002,"just above 6 km/h remains continuous");
+assert.equal(e.VERSION,"1.1.1");
 near(e.estimateMET({speedKmh:5,grade:0.20}),e.estimateMET({speedKmh:5,grade:0.15}),1e-9,"uphill grade clamp");
 near(e.estimateMET({speedKmh:5,grade:-0.20}),e.estimateMET({speedKmh:5,grade:-0.10}),1e-9,"downhill grade clamp");
 
