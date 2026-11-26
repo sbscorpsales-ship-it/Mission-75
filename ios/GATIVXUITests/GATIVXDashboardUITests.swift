@@ -293,9 +293,23 @@ final class GATIVXDashboardUITests: XCTestCase {
         XCTAssertTrue(profileTab.waitForExistence(timeout: 5))
         profileTab.tap()
         XCTAssertTrue(profileTab.isSelected, "Selecting Profile should switch the active tab.")
-        XCTAssertTrue(app.descendants(matching: .any)["gativx-profile-screen"].waitForExistence(timeout: 5), "The Profile form should be visible after selecting its tab.")
+        let profileScreen = app.descendants(matching: .any)["gativx-profile-screen"].firstMatch
+        XCTAssertTrue(profileScreen.waitForExistence(timeout: 5), "The Profile form should be visible after selecting its tab.")
         XCTAssertTrue(app.descendants(matching: .any)["gativx-member-login-id"].exists,
                       "Profile must show the current member identity or explicit local-only status.")
+
+        // PhotosUI is intentionally created only after the member asks to change
+        // their photo; simply opening Profile must not initialize the picker.
+        let openPhotoPicker = app.buttons["gativx-profile-photo-picker-open"]
+        XCTAssertTrue(openPhotoPicker.waitForExistence(timeout: 5))
+        openPhotoPicker.tap()
+        XCTAssertTrue(app.staticTexts["gativx-profile-photo-picker-sheet"].waitForExistence(timeout: 5),
+                      "The on-demand member-photo sheet should appear.")
+        let cancelPhotoPicker = app.buttons["gativx-profile-photo-picker-cancel"]
+        XCTAssertTrue(cancelPhotoPicker.waitForExistence(timeout: 5))
+        cancelPhotoPicker.tap()
+        XCTAssertTrue(profileScreen.waitForExistence(timeout: 5),
+                      "Cancelling the member-photo sheet should return to Profile.")
     }
 
     func testHomeStartWalkNavigatesWithoutStartingSession() {

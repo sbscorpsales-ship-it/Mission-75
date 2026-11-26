@@ -1409,6 +1409,38 @@ struct ContentView: View {
         .background(pageBackground.ignoresSafeArea())
     }
 
+    private var profilePhotoPickerSheet: some View {
+        NavigationStack {
+            VStack(spacing: 16) {
+                Text("Choose a member photo")
+                    .font(.headline)
+                    .accessibilityIdentifier("gativx-profile-photo-picker-sheet")
+                PhotosPicker(
+                    selection: $selectedProfilePhoto,
+                    matching: .images,
+                    photoLibrary: .shared()
+                ) {
+                    Label("Open photo library", systemImage: "photo")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .accessibilityIdentifier("gativx-profile-photo-picker")
+                Text("Your selected photo stays on this iPhone and is not uploaded.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Button("Cancel") {
+                    isProfilePhotoPickerPresented = false
+                }
+                .accessibilityIdentifier("gativx-profile-photo-picker-cancel")
+            }
+            .padding(24)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .navigationTitle("Member photo")
+            .navigationBarTitleDisplayMode(.inline)
+        }
+        .presentationDetents([.medium])
+    }
+
     private var profileScreen: some View {
         Form {
             Section("Member account") {
@@ -1450,24 +1482,12 @@ struct ContentView: View {
                             .font(.caption).foregroundStyle(.secondary)
                     }
                 }
-                // Keep the PhotosUI picker dormant while Profile is rendered.
-                // The previous inline PhotosPicker caused the simulator's main
-                // run loop to become unresponsive when the Profile tab was opened.
                 Button {
                     isProfilePhotoPickerPresented = true
                 } label: {
                     Label(profilePhotoData == nil ? "Choose member photo" : "Change member photo", systemImage: "photo")
                 }
-                .photosPicker(
-                    isPresented: $isProfilePhotoPickerPresented,
-                    selection: $selectedProfilePhoto,
-                    matching: .images,
-                    photoLibrary: .shared()
-                )
-                .onChange(of: selectedProfilePhoto) { _, item in
-                    guard let item else { return }
-                    Task { await saveMemberProfilePhoto(item) }
-                }
+                .accessibilityIdentifier("gativx-profile-photo-picker-open")
                 if profilePhotoData != nil {
                     Button("Remove member photo", role: .destructive) {
                         removeMemberProfilePhoto()
@@ -1568,6 +1588,14 @@ struct ContentView: View {
                 Text("From Goals to Xcellence")
                 Text("Fitness guidance, not medical diagnosis or treatment.").font(.caption).foregroundStyle(.secondary)
             }
+        }
+        .sheet(isPresented: $isProfilePhotoPickerPresented) {
+            profilePhotoPickerSheet
+        }
+        .onChange(of: selectedProfilePhoto) { _, item in
+            guard let item else { return }
+            isProfilePhotoPickerPresented = false
+            Task { await saveMemberProfilePhoto(item) }
         }
         .onAppear { loadRunJeetDailyStepsArchive() }
         .safeAreaInset(edge: .bottom, spacing: 0) { Color.clear.frame(height: 76) }
