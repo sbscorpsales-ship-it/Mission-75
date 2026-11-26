@@ -176,6 +176,10 @@ private fun GativxAndroidScreen() {
             walkStatus = "Sign in to back up saved WalkOn routes."
             return
         }
+        if (WalkOnStartPolicy.shouldBlockSyncSuccess(WalkOnStore.completedHistoryIsUnreadable(context))) {
+            walkStatus = WalkOnStore.status(context)
+            return
+        }
         val pending = WalkOnStore.pendingFor(context, currentSession.userId)
         if (pending.isEmpty()) {
             walkStatus = if (WalkOnStore.unassigned(context).isNotEmpty()) {
