@@ -217,10 +217,10 @@ final class GATIVXDashboardUITests: XCTestCase {
 
         let goalField = app.textFields["gativx-guru-goal"]
         XCTAssertTrue(goalField.waitForExistence(timeout: 5))
-        // The intro card sits above the goal form on a phone-sized sheet. Scroll
-        // the Guru form itself until the first input is inside the visible viewport.
+        // Goal setup appears above the walking, nutrition and recovery cards.
+        // After completing those lower cards, scroll back toward the top to edit it.
         for _ in 0..<12 where !goalField.isHittable {
-            scrollTowardBottom(guruScrollView)
+            scrollTowardTop(guruScrollView)
         }
         XCTAssertTrue(goalField.isHittable, "The Guru goal field must be scrolled into view before editing.")
         goalField.tap()
