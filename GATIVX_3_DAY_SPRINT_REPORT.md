@@ -1404,3 +1404,97 @@ The migration:
 2. If the cumulative test still stalls, add a focused Activity Map → Profile isolation test before changing Profile or removing UI behavior. Capture a main-thread sample from the macOS runner if the failure recurs.
 3. Review PR #130's global function-default scope and the missing migration history with the database owner; do not apply either security migration live without approval.
 4. Keep Design C and the original Web Hub untouched. Keep PR #107 untouched, PR #112 unmerged and all PRs unmerged.
+
+
+---
+
+## Run 5 — complete product scope audit and activity-engine CI
+**Timestamp:** 2026-11-26 14:47 IST (09:17 UTC)  
+**Repository:** `sbscorpsales-ship-it/Mission-75`
+
+### Repository and PR state re-verified
+
+| Ref | Current verified state |
+|---|---|
+| `main` | `143889db3e72540fb478b76c486082f45395e9bd`; default branch is still the 2026-11-17 baseline. |
+| PR #107 | Open/draft/unmerged at `c19bdbd307df7048cefd86bd3e6064ac4f4e3042`; untouched. |
+| PR #112 | Open/draft/unmerged at `b6c04d41dc67bd191ed0cf8966331eb5661a9887`; no edits made. |
+| PR #114 | Open/draft/unmerged at `87318182360d4369ea2f7a773a27dd3fa3e7c558`; diverged from current #112 by 3 commits ahead / 7 behind; no edits made. |
+| PR #118 | This report branch; documentation-only update in this run. |
+| PR #128 | Open/draft/unmerged at `9d25b1eb98a8da49aa1bfa7dbf4bdbdf82fc6f3b`. |
+| PR #129 | Open/draft/unmerged at `a4ba5b9d18299f4d725ebb8e8af3c070d94a4940`. |
+| PR #130 | Open/draft/unmerged at `780eda0681f571ea7d6a70bde29b3df956027ac0`. |
+| PR #131 | Open/draft/unmerged; updated this run to `c3f17cd2066c229626eaf5397608ff6f565f3398`. |
+
+No PR was merged. PR #107, #112 and #114 were left untouched.
+
+### Exact CI and log results
+
+- **iOS full suite — [run #45775608073](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45775608073), head #128:** 76 unit + 5 UI = **81 passed, 0 failed, 0 cancelled**. The log records **18/18 Finish & Save regression tests passed**. Both the cumulative dashboard navigation test and the direct-from-Home Profile test passed. iOS Simulator build, unsigned Release build, IPA packaging, bundle identity/version verification and artifact upload all succeeded. Artifact: [unsigned IPA #15098280503](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45775608073/artifacts/15098280503). This is an unsigned artifact, not an installable signed release.
+- **PR #112 — [run #45652420651](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45652420651):** 58 unit tests passed, 0 failed; 2 UI tests ran, 1 passed and 1 failed. The cumulative dashboard navigation test timed out at the Profile accessibility query; Start Walk navigation passed.
+- **PR #114 — [run #45633166732](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45633166732):** 71 unit tests passed, 0 failed; 2 UI tests ran, 1 passed and 1 failed on the cumulative navigation test. Earlier [run #45633053186](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45633053186) on the **same commit SHA** passed 71 unit + 2 UI tests. This confirms the XCTest navigation failure is intermittent on that branch, not a stable pass. PR #114 is a stale, diverged line; do not treat it as the integration baseline.
+- **Android — [run #45761705362](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45761705362), head #129:** 20 source safeguards passed, 0 failed; Gradle `assembleDebug` completed with `BUILD SUCCESSFUL`. No Android unit tests, emulator or physical-device tests were run. [Debug APK artifact #15090525185](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45761705362/artifacts/15090525185).
+- **Web / Design C preview — [run #45686178223](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45686178223), PR #119:** 51 checks passed, 0 failed (14 structural, 1 JavaScript syntax, 7 mobile browser smoke, 29 preview navigation/layout). The Design C screens explicitly disclose sample/preview data; they do not connect live sensors, account data or the production backend.
+- **Database security — [run #45775093000](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45775093000), PR #130:** isolated PostgreSQL 17.12 migration and SQL regression workflow passed. No live Supabase migration was applied.
+- **Independent activity engine — [run #45791053245](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45791053245), PR #131 head `c3f17cd2066c229626eaf5397608ff6f565f3398`:** new Node 22 CI workflow passed; engine and test JavaScript syntax checks passed; **51 assertions passed, 0 failed**. This validates the standalone JavaScript engine only. It is not yet integrated into Web, iOS or Android.
+
+### Full product gap ledger — current source audit
+
+Status meanings: **Verified** = direct automated evidence for the stated scope; **Implemented-but-unverified** = code exists but end-to-end/live/device acceptance is absent; **Missing** = required capability is absent or explicitly gated; **Blocked** = acceptance requires external device, credential, live account or owner-controlled release access.
+
+| Product area | Status | Evidence and remaining gap |
+|---|---|---|
+| iOS account sign-up/sign-in, guest access and password recovery | Implemented-but-unverified | Supabase Auth sign-up, sign-in, recovery-email request and local-only entry exist. No live account/email verification acceptance was performed in this run. |
+| Guided first-run onboarding | Missing | Welcome/auth exists, but no complete guided flow connects goal, purpose, desired emotion, baseline, preferences, permissions and first mission. |
+| iOS Design C dashboard | Implemented-but-unverified | Native Home contains the approved dashboard hierarchy and day/night preference. Simulator UI checks pass; no physical iPhone visual/accessibility acceptance. |
+| iOS activity lifecycle and local Finish & Save | Implemented-but-unverified | Core Motion, Core Location, pause/resume, recovered-session handling, stable IDs, atomic local history and verified HealthKit outbox acceptance exist. 18 regression tests pass, but they test pure policies/stores/coalescing rather than driving the complete SwiftUI + HealthKit orchestration on a phone. |
+| iOS HealthKit daily metrics and workout export | Implemented-but-unverified | Aggregated steps, active energy, distance, exercise minutes, heart rate, observer/background-delivery registration and retryable workout export exist. A signed iPhone with actual HealthKit permissions is still required. |
+| iOS background GPS | Blocked | Source supports optional Always authorization and background location updates. Actual screen-locked/background recording requires a correctly signed entitlement-bearing app and physical iPhone evidence. |
+| Goals, purpose, emotion and 30/90/180/365-day journey | Implemented-but-unverified | Local journey model and deterministic purpose-aware next-action logic exist with unit tests. Cloud/cross-device persistence and complete onboarding linkage are not proven. |
+| GURU conversational coach and expert learning library | Missing / partial | Deterministic purpose anchor and next-action prompts exist. No verified conversational AI service, expert-channel curation, video library or coach-quality workflow is integrated in the native app. |
+| Missions | Missing / partial | iOS has a fixed consistency/step mission and progress view; Android labels Mission as testing. No complete member-created mission, milestones, adaptive plan and review engine. |
+| Community | Missing | iOS explicitly gates feed/shared missions; Android marks Community coming soon. Design C preview is sample-only. No live feed, groups, moderation, blocking or reporting. |
+| iOS Profile | Implemented-but-unverified | Account, local photo, appearance, motion/location permissions, Health status and imported archive controls exist. Latest fresh and cumulative navigation tests pass; photo is device-local and cross-device profile parity is absent. |
+| Notifications/reminders | Missing | Native Notifications screen explicitly says inactive. Android's WalkOn foreground notification is a tracking control, not product push/reminder delivery. No verified push or scheduled reminders. |
+| Android Health Connect | Implemented-but-unverified | Aggregated Steps and Active Calories reads and explicit permission states exist. No background Health Connect reads/WorkManager sync or device-provider acceptance. |
+| Android WalkOn GPS/save/sync | Implemented-but-unverified | Foreground location service, encrypted local draft/history, read-back save verification, account-scoped route sync and verified sync acknowledgement exist. CI passes; no emulator/physical-device validation. |
+| Android product parity | Missing | Current Compose app is an early-access shell: Home/Activity/Profile are marked available, Mission testing, and Wellness/Strength/GURU/Community/Motion 3D/Rewards/Referrals/Settings are coming soon. No full Design C parity. |
+| Web Hub account, journal and cloud sync | Implemented-but-unverified | Supabase sign-up/sign-in, namespaced local storage, account isolation, sync retry and Apple Health Shortcut import exist. No live account/two-account acceptance. |
+| Web Hub GPS and recovery | Implemented-but-unverified | Start/pause/finish, route filtering, local recovery journal and read-back verification exist. UI explicitly requires the page to remain open; browser background/locked-screen tracking is not supported or claimed. GPS step estimate uses fixed 0.73 m stride. |
+| Web Hub health/calorie rings | Implemented-but-unverified / partial | Measured active energy is imported from Apple Health Shortcut/Health Connect; no independent calorie estimator is wired. Third ring is completed walk minutes, not intensity-weighted Heart Points. |
+| Web Hub navigation and Design C parity | Missing / partial | Current `app-v2.html` uses Home/Journey/Record/Walk/GURU navigation. It is not the locked native Home/Activity/Missions/Community/Profile information architecture. PR #119 is a sample-only Design C preview, not a live replacement. Original `app-v2.html` and `index.html` remain unchanged. |
+| Shared backend/data hub | Implemented-but-unverified | Supabase RPCs cover HealthKit steps/energy, motion steps and GPS route sessions; client outboxes are account-scoped. No complete iOS/Android/Web two-account end-to-end parity, universal provider registry or full reconciliation audit has been accepted. |
+| Backend missions/community/notifications | Missing | Repository migrations do not provide a complete production schema/service for community feed, groups, push notifications and full mission workflows. |
+| Security and privacy | Implemented-but-unverified / blocked | Native credentials use Keychain/Android Keystore; Android WalkOn data is encrypted; SQL security CI passes. Previous live-project audit in this report identified excessive `daily_action_progress` grants, broad future defaults and disabled leaked-password protection. PRs #125/#130 remain unmerged; live state was not re-read in this run. Web health/journal data is stored in browser localStorage and needs explicit privacy/security review. |
+| Independent activity calculation | Implemented-but-unverified | PR #131 has a tested JS v1.1.0 engine and 51-assertion CI. It is not wired into product rings; no Swift/Kotlin ports or controlled reference-set accuracy results. MET anchors outside the ACSM walking band are approximate and require source/validation review. |
+| Release and deployment | Verified in CI scope; release blocked | iOS simulator/unsigned IPA, Android debug APK, Web preview checks and isolated SQL tests pass. No signed iOS installation, Android release signing, live migration or production deployment has been evidenced. |
+
+### Engineering work performed in this run
+
+1. Audited current source for iOS auth/onboarding, dashboard, activity/save/recovery, HealthKit, GPS, Guru/journey, missions, Community, Profile and notification gates.
+2. Audited Android MainActivity, Health Connect, WalkOn service/store, encrypted session storage, manifest, build configuration and CI. Confirmed that the app is an early-access shell and that Android CI is source checks plus debug build, not a unit/device suite.
+3. Audited the Web Hub source, PWA entry, auth/sync, Apple Health Shortcut bridge, local journal, GPS save/recovery and web CI. Confirmed that Design C is a separate preview with sample content and no live sensors/backend.
+4. Added a dedicated Node 22 workflow and expanded standalone activity-engine boundary/invalid-input coverage on PR #131. The workflow ran and passed on the new head.
+5. Updated this cumulative report on PR #118 only.
+
+**Files changed in this run**
+- PR #131: `shared/gativx-activity-engine.test.js` (expanded to 51 assertions).
+- PR #131: `.github/workflows/gativx-activity-engine.yml` (new syntax + regression-test CI).
+- PR #118: `GATIVX_3_DAY_SPRINT_REPORT.md` (this cumulative audit update).
+
+**Commits**
+- PR #131 test commit: `eb96b234710d7972ee00373b5ab5d43dc0fa95e8`.
+- PR #131 workflow commit/head: `c3f17cd2066c229626eaf5397608ff6f565f3398`.
+- PR #118 report commit: recorded by the update operation for this run.
+
+No app dashboard, iOS/Android application source, Web Hub source, Design C asset, Supabase migration or release file was changed. PR #107, #112 and #114 remain untouched. No PR was merged.
+
+### Blockers and next engineering action
+
+- **iPhone/HealthKit/background GPS:** simulator evidence is not device evidence. A signed test app with the HealthKit entitlement and a physical iPhone are required to verify permission, workout export and screen-locked GPS. The generated IPA is unsigned.
+- **Android:** a physical Android device with Health Connect and location permissions is required to verify provider data, OEM background limits and locked-screen WalkOn.
+- **Live backend:** PR #125/#130 migrations require owner review and staged approval. The prior live Security Advisor finding and migration-history mismatch must be rechecked before any production DDL. Leaked-password protection remains an owner-controlled Auth setting.
+- **Production:** no verified deployment run or production environment acceptance was available.
+- **Calculation engine:** next safe engineering task is to define canonical member-weight provenance, active moving-time/pause semantics and shared golden fixtures, then implement Swift/Kotlin equivalents and wire only after parity tests. Keep the original Web Hub untouched; any Web integration must be a separate copy.
+
+**Release verdict remains: NOT RELEASE-READY.** Automated CI has verified several isolated builds/tests. Full product scope, cross-platform integration, device acceptance, live-backend remediation, signing and deployment remain outstanding.
