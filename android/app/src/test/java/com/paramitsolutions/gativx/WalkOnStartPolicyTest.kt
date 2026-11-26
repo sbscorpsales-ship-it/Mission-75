@@ -19,4 +19,10 @@ class WalkOnStartPolicyTest {
     fun blocksNewStartWhenExistingDraftIsUnreadable() {
         assertTrue(WalkOnStartPolicy.shouldBlockNewSession(ActiveWalkDraftState.UNREADABLE))
     }
+
+    @Test
+    fun unreadableCompletedHistoryNeverLooksFullyBackedUp() {
+        assertTrue(WalkOnStartPolicy.shouldBlockSyncSuccess(completedHistoryUnreadable = true))
+        assertFalse(WalkOnStartPolicy.shouldBlockSyncSuccess(completedHistoryUnreadable = false))
+    }
 }
