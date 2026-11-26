@@ -2761,3 +2761,18 @@ Poll the five active iOS jobs, inspect their latest-attempt step summaries and r
 - PR #141 / run 45867641292: unit suite **76 passed, 0 failed**; UI suite **9 executed, 3 failed assertions** in the viewport test: window height 603.0 pt, top origin 135.5 pt, and dock height 113.0625 pt. This run's head predates the final isolated dock correction; the new rerun is pending.
 - PR #142 / run 45867926570: compile failed at `ios/GATIVX/GATIVXApp.swift:52:29` because `principal` is unavailable in iOS. The simulator and Release build steps failed; no XCTest suite completed, so test count is **not run / 0 executed**, not a pass.
 - Rerun status after GitHub accepted the retry: run 45859629757 job 140104932214 **in_progress**; run 45867343777 job 140105302538 **in_progress**; run 45867641292 job 140105317593 **in_progress**; run 45867926570 job 140105333230 **queued**. Run 45847572105 job 140102514612 remains **in_progress** and was not restarted.
+
+
+## Early report — 2026-11-26T18:36:11Z (requested immediate checkpoint)
+
+- Triggered the existing hourly GATIVX 3-Day Engineering Sprint automation for an immediate run; existing schedule was not changed.
+- Re-polled latest workflow jobs for PR #136/#139/#140/#141/#142:
+  - #136 run 45847572105, job 140102514612: in_progress.
+  - #139 run 45859629757, job 140104932214: in_progress (failed-job rerun accepted).
+  - #140 run 45867343777, job 140105302538: in_progress (failed-job rerun accepted).
+  - #141 run 45867641292, job 140105317593: in_progress (failed-job rerun accepted).
+  - #142 run 45867926570, job 140105333230: queued (failed-job rerun accepted).
+- No latest-attempt pass/fail/cancelled totals can yet be stated because none of these latest attempts has completed. The previous-attempt counts and defects remain as documented above; do not promote them to current rerun results.
+- No verified code or CI completion progress this checkpoint. No commits or source changes were made.
+- PR #107 remains open/unmerged and untouched; PR #112 remains open/unmerged. No PR merged.
+- Next: poll the same jobs, inspect complete test logs and XCTest result artifacts after completion, and update this report with exact counts and artifact evidence. Keep all failed/unverified gates open.
