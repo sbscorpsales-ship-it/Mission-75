@@ -1764,3 +1764,15 @@ Gap classification: **implemented local retention; missing explicit account-adop
 - Native iOS exposes a Forgot Password action and `SupabaseRESTClient.sendPasswordReset(email:)` posts to Supabase Auth `/auth/v1/recover`. The current UI test only checks that the button exists; no real recovery email was requested or verified.
 - Original Web Hub `app-v2.html` contains Supabase sign-up, password sign-in, session restoration and auth-state change handling. A source scan found no `resetPasswordForEmail`, `resetPassword`, `forgot password` or recovery action in that file.
 - Gap classification: **Web Hub password recovery missing; native recovery implemented-but-unverified**. The original Web Hub remains untouched. A future Web Hub copy should add recovery without modifying the protected original.
+
+
+## 2026-11-26T11:34:56.056Z — goal-journey acceptance gap
+
+The current `GATIVXGoalJourney` model is calendar-day based:
+- `elapsedDays` is the calendar difference between `startedAt` and `now`.
+- `daysRemaining`, `progress`, `isComplete` and checkpoint messages all derive from calendar days.
+- Its eight unit tests validate calendar elapsed time and completion; none models completed activity days.
+
+This conflicts with the approved resilience behavior that a member who plans a 180-active-day journey but completes only 100 activity days because of unavoidable interruptions should retain 100 completed days and continue with 80 remaining, rather than being marked complete or failed solely because calendar time passed.
+
+Gap classification: **MISSING — active-day journey accounting and upfront no-penalty explanation**. The current implementation can display a calendar-based day count unrelated to actual activity. No model or UI change was made in this run; this requires an isolated implementation deriving unique qualifying activity dates from verified saved sessions, with duplicate sessions on one date counted once and missed days never erasing progress.
