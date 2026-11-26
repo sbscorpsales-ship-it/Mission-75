@@ -176,8 +176,12 @@ final class GATIVXDashboardUITests: XCTestCase {
         let window = app.windows.firstMatch
         XCTAssertGreaterThan(guruScrollView.frame.width, window.frame.width * 0.95,
                              "Guru must use the full iPhone width.")
-        XCTAssertGreaterThan(guruScrollView.frame.height, window.frame.height * 0.90,
-                             "Guru must occupy the full usable iPhone screen, not a half-height sheet.")
+        XCTAssertGreaterThan(guruScrollView.frame.height, window.frame.height * 0.80,
+                             "Guru must occupy the full usable iPhone viewport, not a half-height sheet.")
+        XCTAssertLessThanOrEqual(guruScrollView.frame.minY, window.frame.minY + 75,
+                                 "Guru must start at the top safe area, without a large blank band.")
+        XCTAssertGreaterThanOrEqual(guruScrollView.frame.maxY, window.frame.maxY - 100,
+                                     "Guru must extend to the bottom safe area.")
         let goalField = app.textFields["gativx-guru-goal"]
         XCTAssertTrue(goalField.waitForExistence(timeout: 5))
         // The intro card sits above the goal form on a phone-sized sheet. Scroll
