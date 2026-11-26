@@ -129,13 +129,17 @@ internal object WalkOnStore {
     }
 
     fun markSynced(context: Context, id: String) {
-        val history = readSessions(context, COMPLETED_KEY) ?: run {
-            setStatus(context, "Saved route history could not be read. The encrypted original is preserved; sync status was not changed.")
-            return
+        val history = readSessions(context, COMPLETED_KEY) ?: throw IllegalStateException(
+            "Saved route history could not be read. The encrypted original is preserved; sync acknowledgement was not changed."
+        )
+        if (history.none { it.id == id }) {
+            throw IllegalStateException("The uploaded route was not found in local history. Its sync acknowledgement was not changed.")
         }
-        writeEncrypted(context, COMPLETED_KEY, encodeSessions(history.map { if (it.id == id) it.copy(synced = true) else it }))
+        val updated = history.map { if (it.id == id) it.copy(synced = true) else it }
+        if (!writeEncrypted(context, COMPLETED_KEY, encodeSessions(updated))) {
+            throw IllegalStateException("Route upload succeeded, but the local sync acknowledgement could not be verified. The encrypted route remains queued for a safe retry.")
+        }
     }
-
     private fun readSession(context: Context, key: String): WalkOnSession? {
         val raw = readEncrypted(context, key) ?: return null
         return try { decodeSession(JSONObject(raw)) } catch (_: Exception) {
