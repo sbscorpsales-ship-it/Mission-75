@@ -1,6 +1,6 @@
 # GATIVX 3-Day Engineering Sprint Report
 
-**Last updated:** 2026-11-26 04:52 IST (23:22 UTC)  
+**Last updated:** 2026-11-26 05:42 IST (00:12 UTC)  
 **Repository:** sbscorpsales-ship-it/Mission-75  
 **Audit branch:** audit/gativx-completion-gap-ledger-20261125  
 **Primary repair branch:** fix/gativx-ui-test-guest-reset  
@@ -12,7 +12,8 @@
 **Cumulative report PR:** [#118](https://github.com/sbscorpsales-ship-it/Mission-75/pull/118), open, draft, unmerged  
 **Finish & Save PR:** [#114](https://github.com/sbscorpsales-ship-it/Mission-75/pull/114), open, draft, unmerged.
 **Latest queue-failure correction:** [#121](https://github.com/sbscorpsales-ship-it/Mission-75/pull/121), head 4415daa439bd9446ef08842c9486cb0494a93613, CI #641 failed only at the UI suite; simulator/unsigned release/IPA packaging passed.
-**Profile navigation follow-up:** [#122](https://github.com/sbscorpsales-ship-it/Mission-75/pull/122), head 804a88b56051636104bb7c4c2ca264df3c725188, CI #642 in progress.  
+**Profile navigation follow-up:** [#122](https://github.com/sbscorpsales-ship-it/Mission-75/pull/122), head 804a88b56051636104bb7c4c2ca264df3c725188; 76 unit + 2 UI tests passed, simulator/unsigned Release/IPA passed, but CI failed in a separate source-guard script with `NameError: ui_tests`.  
+**CI guard correction:** [#123](https://github.com/sbscorpsales-ship-it/Mission-75/pull/123), head 4343e92312a557918c3075657502d4a693700734, one-line fixture-load correction; run #643 pending.
 **Protected consolidation PR:** [#107](https://github.com/sbscorpsales-ship-it/Mission-75/pull/107), open, draft, untouched
 
 ## Release verdict
@@ -42,7 +43,7 @@ No pull request has been merged.
 | GATIVX Guru and 30/90/180/365-day journey | Implemented-but-unverified | Goal, purpose, emotion, next-action and journey logic exist; the 8 goal/journey unit tests passed in CI #628. iOS values are locally persisted; cross-device cloud persistence is not proven. |
 | Missions | Missing | iOS currently exposes one fixed “Today · Consistency” mission and a step-progress view, not a goal-linked mission engine with member-created missions, milestones and reviews. |
 | Community | Missing | iOS explicitly gates the feed/shared missions. No live community feed, groups, sharing, moderation, blocking or reporting. |
-| Profile | Implemented-but-unverified | Account identity, local photo, appearance, motion/location and Health settings exist. PR #120 run #640 passed Profile navigation, but PR #121 run #641 reproduced a main-run-loop/query timeout after tapping Profile. PR #122 removes the redundant Profile NavigationStack and is under full CI validation; settings/photo-picker behavior and account lifecycle remain unverified. Photo is local-only. |
+| Profile | Verified (CI scope only) | PR #122 run #642 passed both UI tests (2/2), including the full navigation path through Profile after GURU, Activity, Missions and Community. The redundant Profile NavigationStack was removed. Settings/photo-picker behavior and account lifecycle remain unverified; photo is local-only. |
 | Notifications | Missing | iOS explicitly states notifications are inactive; no delivery pipeline or member notification controls are implemented. |
 | Apps hub | Missing | No Apps destination in the current five-tab iOS shell. |
 | Android authentication | Implemented-but-unverified | Supabase email/password auth, encrypted Android Keystore session storage and refresh-token handling exist. No phone OTP or physical-device auth acceptance. |
@@ -57,7 +58,7 @@ No pull request has been merged.
 | Nutrition, hydration, sleep and strength | Missing | Web has basic weight/water/protein journal fields. A complete food diary, nutrition analysis, measured sleep integration and strength-training programme are not present across platforms. |
 | Motion 3D route replay | Missing | No 3D route playback/flyover implementation. |
 | Referrals, subscriptions, learning rewards, admin and moderation | Missing | Product blueprint defines these modules; the audited repair branch does not contain the required end-to-end systems. |
-| iOS CI/release | Verified (CI scope only) | PR #120 run #640 passed 75 unit tests and 2 UI tests, simulator build, unsigned Release build and IPA packaging. PR #121 run #641 passed 76 unit tests, but 1/2 UI tests failed at Profile navigation; simulator build, unsigned Release build and IPA packaging/upload passed. PR #122 run #642 is rerunning the full suite with the Profile tab stack removed. Unsigned IPA is not installable and does not prove device acceptance. |
+| iOS CI/release | Verified (CI scope only; latest workflow needs CI-script correction) | PR #120 run #640 passed 75 unit + 2 UI tests and all build/package gates. PR #121 run #641 passed 76 unit tests but failed 1/2 UI tests at Profile; simulator build, unsigned Release and IPA package/upload passed. PR #122 run #642 passed 76 unit + 2 UI tests, simulator build, unsigned Release build and IPA packaging/integrity, but the workflow failed in its tracking-safeguard Python step because `ui_tests` was not loaded in that separate heredoc. PR #123 adds the missing local source load; run #643 is pending. Unsigned IPA is not installable and does not prove device acceptance. |
 | Android CI/build | Verified (CI scope only) | CI #171 passed 20 source-safeguard assertions, built the debug APK and uploaded it. This proves compilation/static safeguards, not installation, sensors, Health Connect or customer acceptance. |
 | Web CI | Verified (CI scope only) | PR #119 run #45686178223 passed 51 assertions total: 15 static/release checks, 7 mobile browser smoke checks and 29 Design C screen/navigation checks; 0 FAIL. Ten screens and Day/Night behavior were checked and screenshots uploaded. The Design C page is a separate visual review; Supabase is mocked and external network is blocked. This is not live-backend or production acceptance. |
 | Signed iOS installation/physical acceptance | Blocked | Requires a valid Apple Developer signing identity and provisioning profile with HealthKit capability, then owner iPhone testing. |
@@ -75,7 +76,8 @@ No pull request has been merged.
 | PR #114 base freshness | Current PR #112 head is 7 commits ahead of the recorded PR #114 base. Keep both open; refresh only after the combined validation stabilises. |
 | PR #120 | Head 66635d847964b90ab9b8a3d5b74dbb64257c09dd; run #640 full iOS suite passed 75 unit + 2 UI tests; open/draft/unmerged |
 | PR #121 | Head 4415daa439bd9446ef08842c9486cb0494a93613; run #641 failed at Profile UI query after 76/76 unit tests passed; build and unsigned IPA packaging passed; open/draft/unmerged |
-| PR #122 | Head 804a88b56051636104bb7c4c2ca264df3c725188; stacked on #121; run #642 in progress; open/draft/unmerged |
+| PR #122 | Head 804a88b56051636104bb7c4c2ca264df3c725188; stacked on #121; run #642 full XCTest/build/package passed, tracking guard failed due workflow NameError; open/draft/unmerged |
+| PR #123 | Head 4343e92312a557918c3075657502d4a693700734; stacked on #122; run #643 in progress; open/draft/unmerged |
 | PR #119 | Head b75a0639b34e5c7329db801c3ff423f406f9ce7e; Design C visual review, run #436 passed 51/51 assertions; open/draft/unmerged |
 | PR #107 | Open/draft at c19bdbd307df7048cefd86bd3e6064ac4f4e3042; untouched and unmerged |
 | Other work | PRs #110 (Android build validation), #108 (approved dashboard), #100 (auth recovery), #97 (target progression), #90 (sleep), #102 (family/device identity) and #1 (data hub) remain open. Review each diff before deciding what belongs in the consolidated product; do not assume every open PR is integrated. |
@@ -589,3 +591,76 @@ These historical results are recorded to preserve the distinction between unit-s
 2. If #642 passes, retain PR #122 draft/unmerged and rerun the combined Finish & Save queue-failure path with a deterministic persistence-failure test seam; do not claim physical HealthKit.
 3. Add an honest local Finish & Save UI acceptance path covering finish, app relaunch and history read-back.
 4. Continue the missing-feature audit and keep PR #112, PR #114 and PR #107 untouched/unmerged.
+
+
+---
+
+## 2026-11-26 05:42 IST — PR #122 navigation passes; CI safeguard script defect isolated and corrected in PR #123
+
+### Latest repository state verified directly from GitHub
+- Default branch `main`: `143889db3e72540fb478b76c486082f45395e9bd`.
+- PR #107: open/draft/unmerged, head `c19bdbd307df7048cefd86bd3e6064ac4f4e3042`. No file, ref, metadata, or branch mutation was made to #107.
+- PR #112: open/draft/unmerged, head `b6c04d41dc67bd191ed0cf8966331eb5661a9887`.
+- PR #114: open/draft/unmerged, head `87318182360d4369ea2f7a773a27dd3fa3e7c558`; base remains `fa92bb43a6b2064e0d412e4607c575057535ca1b`. GitHub compare confirms PR #112 head is 7 commits ahead of the #114 base. No rebase/retarget was performed.
+- PR #119 Design C review: open/draft/unmerged, head `b75a0639b34e5c7329db801c3ff423f406f9ce7e`.
+- PR #121 Finish & Save queue-failure correction: open/draft/unmerged, head `4415daa439bd9446ef08842c9486cb0494a93613`.
+- PR #122 Profile navigation correction: open/draft/unmerged, head `804a88b56051636104bb7c4c2ca264df3c725188`.
+- New PR #123 CI safeguard fixture correction: open/draft/unmerged, head `4343e92312a557918c3075657502d4a693700734`, based on #122.
+- PR #118 remains open/draft/unmerged. No PR has been merged.
+
+### PR #122 — run #642 exact result
+Source SHA: `804a88b56051636104bb7c4c2ca264df3c725188`.
+
+- Unit XCTest: **76 passed, 0 failed, 0 cancelled**.
+- UI XCTest: **2 passed, 0 failed, 0 cancelled**. The main navigation test passed in 257.298 seconds, including the Profile tab after GURU, Activity, Missions and Community. The Home-to-Walk navigation test passed in 19.452 seconds.
+- Total XCTest: **78 passed, 0 failed, 0 cancelled**.
+- XcodeGen project generation/scheme validation and first-run/auth/layout/permission safeguards passed.
+- iPhone Simulator build: passed.
+- Unsigned iPhone Release build: passed.
+- IPA packaging, ZIP integrity, bundle identity/version checks and artifact upload: passed. Artifact: [unsigned iPhone IPA](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45720247757/artifacts/15072263649).
+- Overall workflow: **failed**, but not due to XCTest or compilation. The separate “Verify real-time tracking safeguards” Python heredoc raised `NameError: name 'ui_tests' is not defined` at line 94. The first heredoc loads `ui_tests`, but shell heredocs run as separate Python processes; the tracking heredoc referenced the variable without loading it. The failure is reproducible from the actual log and is a CI script defect.
+- [Run #642 full job log](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45720247757).
+
+### CI script correction — PR #123
+- Created isolated branch `fix/gativx-ios-ci-load-ui-test-fixture-20261126` from the exact PR #122 head.
+- Changed only `.github/workflows/gativx-ios.yml`: the tracking safeguard heredoc now loads `ios/GATIVXUITests/GATIVXDashboardUITests.swift` into its own `ui_tests` variable before assertions use it.
+- Commit: `4343e92312a557918c3075657502d4a693700734`.
+- PR: [#123](https://github.com/sbscorpsales-ship-it/Mission-75/pull/123).
+- Run #643: [workflow](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45727216578), **in progress at report time**. No pass is claimed until its tracking checks, full unit/UI suites, simulator build and IPA packaging are all complete and logs are inspected.
+- No application source or product behavior changed in #123. No tests were skipped, narrowed or weakened.
+
+### Historical iOS PRs independently reconciled from workflow logs
+- PR #112 run #45652420651: **58 unit tests passed, 0 failed**; UI navigation test failed at `GATIVXDashboardUITests.swift:237` with a matching-snapshot timeout on Activity after Guru dismissal. The second UI test passed. Workflow failed.
+- PR #114 run #45633053186: **71 unit + 2 UI tests passed**; simulator, unsigned Release and IPA packaging gates passed.
+- PR #114 later run #45633166732: **71 unit tests passed, 0 failed**; 1/2 UI tests failed at `GATIVXDashboardUITests.swift:295` on Profile query timeout. Simulator, unsigned Release and IPA packaging passed; aggregate workflow failed.
+- PR #114 base is 7 commits behind PR #112 head. It remains isolated and unmerged.
+- PR #115 run #45663157699: **58 unit + 2 UI tests passed**, simulator and unsigned Release/IPA packaging gates passed.
+- PR #120 run #45694454367: **75 unit + 2 UI tests passed**, simulator and unsigned Release/IPA packaging gates passed.
+- PR #121 run #45713205787: **76 unit tests passed, 0 failed**; UI suite **1 passed, 1 failed, 0 cancelled**, with the primary navigation test timing out at Profile. Simulator build, unsigned Release build and IPA packaging/upload passed. The queue-failure unit test itself passed; physical HealthKit remains untested.
+
+### Android and Web Hub source/build readiness
+- Android branch `feat/gativx/android-sync-ack-20261125` head: `19c679a7f2ef675176c0009148865563fca2fd00`.
+- Android CI run #171: **20/20 source safeguards passed**, Gradle debug APK build reported `BUILD SUCCESSFUL` (35 actionable tasks), APK uploaded. [Run #171](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45652707476).
+- Android source includes email/password Supabase auth, Health Connect aggregate reads for steps/active calories, and a foreground location service with encrypted route storage, recovery and cloud acknowledgement checks. The feature hub explicitly labels Community, GURU, Motion 3D, Rewards, Referrals and other modules as coming soon/under development. The Android CI run did not execute instrumentation tests or a device/emulator test; Android Health Connect and screen-locked route behavior remain implemented-but-unverified.
+- Web Hub `app-v2.html` on main has blob SHA `8089f536017ffb3a60a8bb99291313a3f5413927`. The exact same blob SHA is present on the PR #119 Design C review branch, confirming the original working page was not modified by that review PR.
+- PR #119 run #45686178223: **51 PASS, 0 FAIL** across 15 web static/release checks, 7 mobile browser smoke checks and 29 Design C review checks. Ten screens and Day/Night behavior were captured. [Run #436](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45686178223) · [screenshot artifact](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45686178223/artifacts/15056846592).
+- The Design C review is a separate static/sample-data prototype, not a connected product or production deployment. Start Walk and GURU show preview-only disclosures; no GPS, sensors, HealthKit, Health Connect, Supabase or push notifications are invoked by this review page.
+- The prototype's five primary destinations (Home, Activity, Workouts, Health/Progress, Community) follow the locked design document. The native iOS tab shell currently exposes Home, Activity, Missions, Community and Profile; this cross-platform IA mismatch remains an explicit product gap to reconcile without redesigning the locked Design C.
+
+### Gap ledger — current interpretation
+- **Verified (CI scope only):** PR #122 Profile navigation through the full simulator UI flow; 76 unit tests + 2 UI tests; simulator build and unsigned IPA packaging; PR #120 earlier full suite; Android source safeguards/debug build; Web Hub static/browser and Design C review checks.
+- **Implemented-but-unverified:** Finish & Save local persistence and recovery, HealthKit outbox queue-failure retention, real HealthKit export, iOS background GPS, Android Health Connect and WalkOn runtime, live Supabase auth/sync and account lifecycle. PR #121's queue-failure test passes at unit level, but the UI flow does not yet exercise queue-write failure and retry through a full saved-walk/relaunch path.
+- **Missing:** complete guided onboarding; goal-linked multi-mission engine; live Community/groups/moderation; notification delivery; Connected Apps integrations hub; complete Android/Web parity; Universal Data Hub provider adapters and canonical reconciliation; full nutrition/hydration/sleep/strength programmes; data export/account deletion; 3D route replay; subscriptions/referrals/rewards/admin systems.
+- **Blocked:** physical iPhone acceptance and signed HealthKit-capable build require owner-controlled Apple signing identity/provisioning profile and a real iPhone. Android device acceptance requires a device/emulator with Health Connect. Live Supabase/RLS tenant isolation requires a non-production project with known migrations and two test accounts. Production web release requires owner-approved deployment access and live-backend verification.
+
+### Exact external actions needed for release acceptance
+1. **iPhone:** provide a valid owner-controlled Apple signing setup (Apple Developer identity and provisioning profile with HealthKit capability) through secure CI secrets, then install on the physical iPhone and run registration, permission, background-walk, Finish & Save, app-relaunch and Apple Health read-back acceptance. Do not paste signing secrets into chat.
+2. **Android:** install the CI debug APK on an Android device/emulator with Health Connect; grant measured data and location permissions; test foreground/background WalkOn, app process recovery, local save, cloud retry and Health Connect read-back.
+3. **Supabase:** provide a staging project whose migration state can be inspected plus two test accounts; then run RLS cross-member isolation, token refresh, idempotency, outbox retry and conflict-reconciliation tests without production data.
+4. **Web release:** authorize a controlled Pages deployment and supply a non-production backend/test account for live sign-in, persistence and mobile Safari acceptance.
+
+### Next action
+1. Inspect run #643 on PR #123. Accept only if the missing-fixture error is gone, all tracking safeguards pass, the full unit/UI suites pass, and simulator/unsigned Release/IPA packaging all pass on the exact #123 SHA.
+2. Keep PR #123 draft/unmerged. Do not merge #122 or #123 automatically.
+3. Add deterministic UI-level local Finish & Save coverage for finish → verified local history → app relaunch → same-session history; keep HealthKit physical-device acceptance separate.
+4. Continue the missing-feature audit and preserve PR #107, #112 and #114 unchanged.
