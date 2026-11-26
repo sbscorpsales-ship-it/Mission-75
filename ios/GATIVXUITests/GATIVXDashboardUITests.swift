@@ -492,6 +492,17 @@ final class GATIVXDashboardUITests: XCTestCase {
             "Closing Guru must remove the sheet before returning to Home."
         )
         XCTAssertTrue(dashboard.waitForExistence(timeout: 10))
+
+        // The same focus state used to dismiss the Guru keyboard must leave
+        // the dashboard responsive when the member switches tabs afterwards.
+        let activityTab = app.descendants(matching: .any)["gativx-tab-activity"].firstMatch
+        XCTAssertTrue(activityTab.waitForExistence(timeout: 5))
+        activityTab.tap()
+        XCTAssertTrue(activityTab.isSelected, "Activity must remain selectable after dismissing the Guru keyboard and sheet.")
+        XCTAssertTrue(
+            app.scrollViews["gativx-activity-screen"].waitForExistence(timeout: 10),
+            "Activity must render after Guru has relinquished text-field focus."
+        )
     }
 
 
