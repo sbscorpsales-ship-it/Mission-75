@@ -1977,7 +1977,11 @@ struct ContentView: View {
                     Spacer(minLength: 24)
                 }.padding(.horizontal, 22)
             }
-        }.preferredColorScheme(dashboardColorScheme)
+        }
+        // Match the authenticated member shell's expanding root contract. The first-run
+        // ScrollView must not size the scene to its content before member entry.
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .preferredColorScheme(dashboardColorScheme)
     }
 
 
