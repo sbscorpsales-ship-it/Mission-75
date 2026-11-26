@@ -1,6 +1,6 @@
 # GATIVX 3-Day Engineering Sprint Report
 
-**Last updated:** 2026-11-26 10:54 IST (05:24 UTC)  
+**Last updated:** 2026-11-26 10:57 IST (05:27 UTC)  
 **Repository:** sbscorpsales-ship-it/Mission-75  
 **Audit branch:** audit/gativx-xcresult-diagnostics-20261126 (PR #128)  
 **Primary repair branch:** test/gativx-profile-tab-isolation-20261126  
@@ -11,6 +11,7 @@
 **Latest Design C visual review:** [#119](https://github.com/sbscorpsales-ship-it/Mission-75/pull/119), head b75a0639b34e5c7329db801c3ff423f406f9ce7e; earlier isolated visual-completeness preview remains in [#116](https://github.com/sbscorpsales-ship-it/Mission-75/pull/116).  
 **Cumulative report PR:** [#118](https://github.com/sbscorpsales-ship-it/Mission-75/pull/118), open, draft, unmerged  
 **XCTest diagnostics PR:** [#128](https://github.com/sbscorpsales-ship-it/Mission-75/pull/128), open, draft, unmerged; CI run #45761245212 in progress  
+**Android sync-acknowledgement PR:** [#129](https://github.com/sbscorpsales-ship-it/Mission-75/pull/129), open, draft, unmerged; CI run #45761705362 in progress  
 **Finish & Save PR:** [#114](https://github.com/sbscorpsales-ship-it/Mission-75/pull/114), open, draft, unmerged.
 **Latest queue-failure correction:** [#121](https://github.com/sbscorpsales-ship-it/Mission-75/pull/121), head 4415daa439bd9446ef08842c9486cb0494a93613, CI #641 failed only at the UI suite; simulator/unsigned release/IPA packaging passed.
 **Profile navigation follow-up:** [#122](https://github.com/sbscorpsales-ship-it/Mission-75/pull/122), head 804a88b56051636104bb7c4c2ca264df3c725188; run #642 passed 76 unit + 2 UI tests and simulator/unsigned Release/IPA gates, but this was not stable: the same app source on run #643 later stalled at Profile during the full UI workflow.  
@@ -1090,3 +1091,44 @@ No live DDL, grant change, auth setting or migration was executed.
 4. Enable Supabase leaked-password protection through the owner-controlled Auth settings and re-run the security advisor.
 5. Continue cross-platform feature implementation only after preserving Design C and reconciling the documented navigation naming conflict. Do not represent preview screens, source assertions or unsigned packages as released product features.
 6. Keep PR #107 untouched; keep PR #112 and #114 unmerged; do not merge any PR.
+
+
+---
+
+## 2026-11-26 10:57 IST — Android route-sync acknowledgement defect ported to the current source stack
+
+**Current Android source audited:** PR #127 head \`01f0f24f263dad70394d05e17a3baba635dfc0fc\`.  
+**Android fix branch:** \`fix/gativx-android-sync-ack-current-stack-20261126\`, head \`a4ba5b9d18299f4d725ebb8e8af3c070d94a4940\`.  
+**PR:** [#129](https://github.com/sbscorpsales-ship-it/Mission-75/pull/129), open/draft/unmerged; based on PR #127.  
+**Validation:** [Android CI run #45761705362](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45761705362) is in progress. No pass/fail result is claimed yet.
+
+### Exact issue and source-level correction
+
+A fresh tree comparison found that the earlier [Android CI run #171](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45652707476) was executed on branch \`feat/gativx/android-sync-ack-20261125\`, commit \`19c679a7f2ef675176c0009148865563fca2fd00\`. That branch is 3 commits ahead and 16 behind PR #127. The Android application source is otherwise shared, but \`WalkOnStore.kt\` and \`android/scripts/check-walkon.py\` differ. Therefore run #171's 20/20 safeguards do **not** prove the exact PR #127 Android route-sync acknowledgement path.
+
+In PR #127's \`WalkOnStore.markSynced()\`, a failed local history read returned normally, and the result of the encrypted history write was ignored. \`MainActivity.syncWalkOnRoutes()\` then continued to the “route backup complete” status. This could report backup completion even when the local acknowledgement was not verified.
+
+PR #129 ports the already-tested correction onto the current PR #127 stack:
+
+- Throw if encrypted local history cannot be read.
+- Throw if the uploaded route ID is absent from local history.
+- Throw if the encrypted \`synced=true\` write cannot be verified.
+- Let the existing \`MainActivity\` catch path retain a visible error/retry state; the success status is reached only if \`markSynced()\` returns normally.
+- Add a 20th static source safeguard requiring this acknowledgement invariant.
+
+**Files changed in PR #129:**
+- \`android/app/src/main/java/com/paramitsolutions/gativx/WalkOnStore.kt\`
+- \`android/scripts/check-walkon.py\`
+
+The patch is limited to local sync-acknowledgement reliability; it does not alter the dashboard, Design C, iOS, Web Hub, PR #107, PR #112 or PR #114. The prior run #171 validates the source patch on its earlier branch; run #45761705362 must now validate it against the current PR #127 stack. No Android emulator or physical-device behavior is claimed.
+
+### Updated Android gap interpretation
+
+| Area | Status | Evidence / next proof |
+|---|---|---|
+| Android local GPS route persistence | Implemented-but-unverified | Encrypted draft/history and synchronous write/read-back safeguards exist; no device acceptance. |
+| Android cloud route sync acknowledgement | Implemented-but-unverified; correction pending current-stack CI | PR #127 could report backup complete after a failed local acknowledgement. PR #129 adds fail-closed behavior and a source safeguard; run #45761705362 is pending. |
+| Android Health Connect | Implemented-but-unverified | On-demand Steps/Active Calories reads; no emulator/phone provider acceptance. |
+| Android product completeness | Missing / partial | Feature hub continues to label several major modules Coming soon; no complete approved app parity. |
+
+No PR was merged and no live backend change was made.
