@@ -520,9 +520,9 @@ jobs:
               with archive.open(executable_path) as stream:
                   magic = stream.read(4)
               valid_mach_o_magic = {
-                  b"\\xcf\\xfa\\xed\\xfe", b"\\xfe\\xed\\xfa\\xcf",
-                  b"\\xca\\xfe\\xba\\xbe", b"\\xbe\\xba\\xfe\\xca",
-                  b"\\xca\\xfe\\xba\\xbf", b"\\xbf\\xba\\xfe\\xca",
+                  b"\xcf\xfa\xed\xfe", b"\xfe\xed\xfa\xcf",
+                  b"\xca\xfe\xba\xbe", b"\xbe\xba\xfe\xca",
+                  b"\xca\xfe\xba\\xbf", b"\xbf\xba\\xfe\\xca",
               }
               if magic not in valid_mach_o_magic:
                   raise SystemExit(f"Release IPA executable has invalid Mach-O magic: {magic!r}")
