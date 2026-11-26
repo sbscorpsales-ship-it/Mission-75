@@ -579,9 +579,9 @@ struct ContentView: View {
         GATIVXGuruCoach.purposeAnchor(goal: guruGoal, purpose: guruPurpose, emotion: guruEmotion)
     }
 
-    /// Use SwiftUI's focus binding as the single source of truth for Guru input.
-    /// Every Guru text field shares this binding, so the keyboard toolbar and
-    /// sheet dismissal do not need a second UIKit responder-resign path.
+    /// Use a field-specific SwiftUI focus binding as the single source of truth.
+    /// Clearing the active field releases the editor before the keyboard toolbar
+    /// or full-screen Guru experience is dismissed; no UIKit responder path is needed.
     private func dismissGuruKeyboard() {
         focusedGuruField = nil
     }
