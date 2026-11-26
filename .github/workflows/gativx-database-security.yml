@@ -1,6 +1,9 @@
 name: GATIVX database security checks
 
 on:
+  push:
+    branches:
+      - "fix/gativx-daily-action-progress-grants-20261126"
   pull_request:
     paths:
       - "supabase/migrations/**"
