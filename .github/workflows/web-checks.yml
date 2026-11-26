@@ -1,4 +1,5 @@
 name: GATIVX web release checks
+# Keep the isolated PostgreSQL grant regression on the existing PR-triggered workflow.
 
 on:
   push:
@@ -17,6 +18,7 @@ on:
       - "app-v2.html"
       - "scripts/check-web.mjs"
       - "scripts/browser-smoke.mjs"
+      - "supabase/**"
       - ".github/workflows/web-checks.yml"
   workflow_dispatch:
 
@@ -41,3 +43,52 @@ jobs:
         run: npx playwright install chromium
       - name: Run mobile browser smoke test
         run: node scripts/browser-smoke.mjs
+
+  supabase-grant-regression:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      PGHOST: localhost
+      PGPORT: 5432
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      PGDATABASE: postgres
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+      - name: Verify PostgreSQL 17 service
+        run: |
+          for attempt in {1..30}; do
+            if pg_isready; then
+              psql --no-psqlrc -v ON_ERROR_STOP=1 -c "SHOW server_version;"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "PostgreSQL service did not become ready" >&2
+          exit 1
+      - name: Create Supabase grant fixture
+        run: psql --no-psqlrc -v ON_ERROR_STOP=1 -f supabase/tests/fixtures/gativx_public_grant_hardening_setup.sql
+      - name: Apply postgres-owned hardening migration
+        run: psql --no-psqlrc -v ON_ERROR_STOP=1 -f supabase/migrations/20261127010149_harden_gativx_postgres_default_privileges.sql
+      - name: Apply supabase_admin default-privilege hardening
+        run: psql --no-psqlrc -v ON_ERROR_STOP=1 -f supabase/manual/harden_gativx_supabase_admin_default_privileges.sql
+      - name: Run public-schema privilege regression tests
+        run: psql --no-psqlrc -v ON_ERROR_STOP=1 -f supabase/tests/gativx_public_grant_hardening.sql
+
