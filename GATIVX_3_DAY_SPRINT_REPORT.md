@@ -1823,3 +1823,8 @@ Required shared acceptance rule: count unique dates containing a qualifying comp
 PR #108 (`feat/gativx-approved-screen-designs`) was checked and its iOS source still uses Home / Activity / Missions / Community / Profile, matching the current PR #128 candidate. PR #119's separate Design C review prototype uses Home / Activity / Workouts / Health-Progress / Community and its README calls that a locked cross-platform IA, but PR #119 is still draft and the prototype is explicitly visual-only.
 
 This is a real repository-level navigation mismatch, but the repo evidence does not establish that PR #119's revised tab taxonomy has been approved by the product owner over the earlier PR #108 native baseline. The current PR #132 therefore preserves the existing tab names and only removes the unnecessary Missions navigation wrapper. Do not silently rename tabs or change Design C visuals; reconcile the approved tab taxonomy before implementing cross-platform navigation changes.
+
+
+## 2026-11-26T11:39:15.276Z — native iOS build-source boundary
+
+The generated `GATIVX` target in `ios/gativx-project.yml` compiles source path `ios/GATIVX`. The separate `ios/WALKON/DashboardView.swift` belongs to a different source tree/target and is not part of the GATIVX IPA. PR #132 correctly changes `ios/GATIVX/ContentView.swift`, the actual GATIVX app source. No WALKON files were edited.
