@@ -173,6 +173,23 @@ jobs:
           compression-level: 0
           retention-days: 7
 
+      # Export structured summaries and failure attachments for faster diagnosis.
+      # This is best-effort only; the original XCTest outcome remains a hard release gate.
+      - name: Export structured XCTest diagnostics
+        if: always()
+        run: |
+          bash -n scripts/export-xctest-diagnostics.sh
+          bash scripts/export-xctest-diagnostics.sh build/GATIVX.xcresult build/GATIVX-XCTest-Diagnostics
+
+      - name: Upload structured XCTest diagnostics
+        if: always()
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: GATIVX-XCTest-Diagnostics
+          path: build/GATIVX-XCTest-Diagnostics
+          if-no-files-found: warn
+          retention-days: 7
+
       - name: Verify generated target references HealthKit source entitlements
         id: healthkit
         if: always()
