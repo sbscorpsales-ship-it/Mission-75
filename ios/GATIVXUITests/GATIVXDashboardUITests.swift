@@ -370,4 +370,101 @@ final class GATIVXDashboardUITests: XCTestCase {
         add(screenshot)
     }
 
+
+    func testNotificationsSheetDismissesFromFreshHome() {
+        let app = XCUIApplication()
+        launchFreshGuestApp(app)
+
+        let guestEntry = app.buttons["gativx-continue-guest"]
+        XCTAssertTrue(guestEntry.waitForExistence(timeout: 10))
+        guestEntry.tap()
+
+        let dashboard = app.descendants(matching: .any)["gativx-home-dashboard"].firstMatch
+        XCTAssertTrue(dashboard.waitForExistence(timeout: 10))
+        let notifications = app.buttons["gativx-header-notifications"]
+        XCTAssertTrue(notifications.waitForExistence(timeout: 5))
+        notifications.tap()
+
+        let message = app.staticTexts["Notifications aren't active yet"]
+        XCTAssertTrue(message.waitForExistence(timeout: 10))
+        XCTAssertTrue(app.descendants(matching: .any)["gativx-notifications-gated"].exists)
+        app.buttons["Done"].tap()
+
+        let dismissed = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "exists == false"),
+            object: message
+        )
+        XCTAssertEqual(
+            XCTWaiter.wait(for: [dismissed], timeout: 10),
+            .completed,
+            "The Notifications sheet must fully dismiss before the Home dashboard is reused."
+        )
+        XCTAssertTrue(dashboard.exists, "Dismissing Notifications must return to the same Home dashboard.")
+    }
+
+    func testGuruKeyboardAndDismissalFromFreshHome() {
+        let app = XCUIApplication()
+        launchFreshGuestApp(app)
+
+        let guestEntry = app.buttons["gativx-continue-guest"]
+        XCTAssertTrue(guestEntry.waitForExistence(timeout: 10))
+        guestEntry.tap()
+
+        let dashboard = app.descendants(matching: .any)["gativx-home-dashboard"].firstMatch
+        XCTAssertTrue(dashboard.waitForExistence(timeout: 10))
+        let homeScroll = app.scrollViews["gativx-home-dashboard"]
+        XCTAssertTrue(homeScroll.waitForExistence(timeout: 5))
+
+        let guruEntry = app.buttons["gativx-guru-entry"]
+        XCTAssertTrue(guruEntry.waitForExistence(timeout: 5))
+        for _ in 0..<20 where !guruEntry.isHittable {
+            scrollTowardBottom(homeScroll)
+        }
+        XCTAssertTrue(guruEntry.isHittable, "Guru must be reachable from a fresh Home dashboard.")
+        guruEntry.tap()
+
+        let guruScrollViews = app.scrollViews
+        XCTAssertGreaterThan(guruScrollViews.count, 0)
+        let guruScroll = guruScrollViews.element(boundBy: guruScrollViews.count - 1)
+        let goalField = app.textFields["gativx-guru-goal"]
+        XCTAssertTrue(goalField.waitForExistence(timeout: 10))
+        for _ in 0..<12 where !goalField.isHittable {
+            scrollTowardBottom(guruScroll)
+        }
+        XCTAssertTrue(goalField.isHittable, "The Guru goal field must be visible before keyboard interaction.")
+        goalField.tap()
+
+        let keyboard = app.keyboards.firstMatch
+        XCTAssertTrue(keyboard.waitForExistence(timeout: 10),
+                      "Tapping the Guru goal field must present the keyboard.")
+        goalField.typeText("Walk consistently")
+
+        let keyboardDone = app.buttons["gativx-guru-keyboard-done"]
+        XCTAssertTrue(keyboardDone.waitForExistence(timeout: 10))
+        keyboardDone.tap()
+        let keyboardDismissed = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "exists == false"),
+            object: keyboard
+        )
+        XCTAssertEqual(
+            XCTWaiter.wait(for: [keyboardDismissed], timeout: 10),
+            .completed,
+            "Guru's keyboard toolbar action must dismiss the keyboard."
+        )
+
+        let close = app.buttons["gativx-guru-close"]
+        XCTAssertTrue(close.waitForExistence(timeout: 5))
+        close.tap()
+        let sheetDismissed = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "exists == false"),
+            object: close
+        )
+        XCTAssertEqual(
+            XCTWaiter.wait(for: [sheetDismissed], timeout: 10),
+            .completed,
+            "Closing Guru must remove the sheet before returning to Home."
+        )
+        XCTAssertTrue(dashboard.waitForExistence(timeout: 10))
+    }
+
 }
