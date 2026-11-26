@@ -2905,3 +2905,81 @@ Draft PR #144: https://github.com/sbscorpsales-ship-it/Mission-75/pull/144
 4. Restore the 18 missing Supabase migration files before any normal migration deployment. Then execute the least-privilege fix with the required admin role and run its SQL assertions.
 5. Enable leaked-password protection. Keep Community and notification delivery marked missing until real backend and delivery evidence exists.
 6. Obtain real-device evidence for Activity Finish & Save, HealthKit writes, background GPS, photo picker interaction, and Android Health Connect before changing those items to verified.
+
+
+---
+
+## Automation checkpoint — 2026-11-27 01:54 IST (2026-11-26T20:24Z)
+
+### Repository and protected-PR state
+- `main` remains at `143889db3e72540fb478b76c486082f45395e9bd`.
+- PR #136 remains open/draft at exact head `31e5b70d85537113e74dd003d06b3ae95ba323f4`; latest inspected workflow run #45847572105, attempt 3.
+- PR #143 remains open/draft at exact head `56641e79cd76743724f3f62bdddfb1f62e6d556a`; run #45883789402, attempt 1.
+- PR #145 was opened as a draft follow-up to #143 at head `3a76b32c912760cf2b83a7850170ff7bcd2bb1c9`. Its run #45890647250 is in progress; project generation, scheme validation and first-run source/permission checks passed, while the full serial XCTest step is still running. No XCTest result is claimed yet.
+- PR #144 remains draft at `cd1088855aaf84ea397372343ef8333e8b83ade8`; no CI run was created for its SQL-only change.
+- PR #107 remains open at its unchanged head `c19bdbd307df7048cefd86bd3e6064ac4f4e3042`; PR #112 remains open/unmerged at `b6c04d41dc67bd191ed0cf8966331eb5661a9887`. No PR was merged or modified on their branches.
+
+### Exact PR #136 result
+Run [#45847572105](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45847572105), attempt 3, exact head `31e5b70d85537113e74dd003d06b3ae95ba323f4`:
+- Unit tests: **76 passed, 0 failed**.
+- UI tests: **9 executed, 1 failed, 8 passed, 0 cancelled**. The failure is the dock assertion: measured **113.0625 pt**, required **<=76 pt**.
+- The five-destination navigation, Activity screen layout inside the app window, Guru keyboard dismissal, Profile navigation, and Profile photo-picker open/cancel interaction all passed in the other UI tests. The root-hosting source guard also passed.
+- Tracking safeguard source checks: **121/121 passed**. HealthKit source entitlements, simulator build, privacy/entitlement checks, unsigned Release build, IPA packaging and artifact uploads all passed.
+- Downloaded PR #136 IPA artifact #15146711639. Outer artifact ZIP and inner IPA both pass archive integrity. The app executable is a 4,030,192-byte Mach-O; bundle ID/version are correct. No embedded provisioning profile or code signature is present, as expected for an unsigned build.
+- PR #136 did not capture the physical device screen, so its app-window-relative layout assertions do not establish full-device geometry.
+
+### Exact PR #143 result and screenshot evidence
+Run [#45883789402](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45883789402), attempt 1, exact head `56641e79cd76743724f3f62bdddfb1f62e6d556a`:
+- Unit tests: **76 passed, 0 failed**.
+- UI tests: **9 executed, 2 failed, 7 passed, 0 cancelled**. The two failures are the full-device app-window assertions: measured height **603.0 pt** versus **830.3 pt** minimum, and top origin **135.5 pt** versus **<=8 pt**. The dock assertion now passes at <=76 pt.
+- Activity fills the available app window; that does not mean the app window fills the device.
+- The run selected **iPhone 17 Pro / iOS 26.5**, so the reduced window is not explained by the earlier iOS 26.2 simulator selection.
+- Downloaded XCTest artifact #15149461430 and inspected the full-device capture (1206 x 2622 pixels). It visibly shows the GATIVX app centered in a reduced rounded window with black letterboxing above and below. The screenshot matches the 402 x 603 pt window and 135.5 pt top-origin failure.
+- Downloaded IPA artifact #15149366929. Outer artifact ZIP and inner IPA both pass integrity. `Payload/GATIVX.app/GATIVX` is a 4,097,128-byte Mach-O executable; bundle ID is `com.paramitsolutions.gativx`, version 1.0.0/build 1. No embedded provisioning profile or `_CodeSignature` exists. This is a structurally valid **unsigned** IPA, not an installable signed app.
+- The only failed automated release gate on this run is XCTest; tracking safeguards (121/121), HealthKit source entitlements, simulator build, simulator privacy checks, unsigned Release build, IPA packaging and uploads passed.
+
+### New isolated full-device investigation — PR #145
+- Branch: `fix/gativx-fill-root-window-20261127`.
+- Commits: `66744cae76dc99564e63a94b83a4539f0fd50104` (Welcome root sizing) and `3a76b32c912760cf2b83a7850170ff7bcd2bb1c9` (first-run viewport regression test).
+- Files changed: `ios/GATIVX/ContentView.swift`; `ios/GATIVXUITests/GATIVXDashboardUITests.swift`.
+- Source review found that the first-run `welcomeScreen` branch had no expanding root frame, while the authenticated member shell did. PR #145 adds that frame and a new test that measures the physical device before the guest button is tapped, capturing a Welcome screenshot. This is a testable root-sizing hypothesis, not a claimed fix.
+- Run [#45890647250](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45890647250) is in progress on the exact PR #145 head. The full unit/UI suite has not reported results yet. No tests were weakened, skipped or removed.
+- Do not use `UIRequiresFullScreen` as an iPhone workaround: Apple's [TN3192](https://developer.apple.com/documentation/technotes/tn3192-migrating-your-app-from-the-deprecated-uirequiresfullscreen-key) states that before iOS 27 the key configures iPadOS apps only and is ignored for iOS apps; it is also deprecated.
+
+### Cross-platform CI refresh
+- Android run [#45840866819](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45840866819): **25/25** source safeguards passed; **6 JVM tests passed, 0 failed, 0 skipped**; Debug APK build succeeded. Downloaded artifact #15128630240; artifact ZIP and APK ZIP both pass integrity, manifest exists, 5 DEX files and 4 native-library entries are present. Physical Android and Health Connect acceptance remain unverified.
+- Web Hub run [#45839703732](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45839703732): **23/23** checks passed (16 structural/source checks plus 7 browser smoke assertions). The published root entry opened the tested GATIVX v2 app. This workflow did not perform a production deployment; deployment acceptance remains unverified.
+
+### Security / backend follow-up
+- PR #144 adds a proposed migration for the postgres-owned `daily_action_progress` grants and postgres default privileges, a separate `supabase_admin` manual script, and SQL assertions. It has no CI result and no live DDL was executed.
+- Review item before treating the SQL test as complete: it checks direct default-ACL grants to `anon` and `authenticated`, but does not explicitly test effective `PUBLIC` function EXECUTE privileges. Confirm the live default ACLs before changing this behavior or relying on the assertion.
+- The Supabase connector returned an internal error during this run, so the live project, migration history and Security Advisor could not be refreshed. Prior read-only audit findings remain: 18 of 22 applied migration versions lack matching source files on `main`; the leaked-password-protection setting still needs confirmation/enabling; the PR #144 SQL test has not run against a disposable database.
+- Required admin action remains: restore the missing migration sources before using the normal migration pipeline; enable Leaked Password Protection in Supabase Dashboard → Authentication → Settings → Password Security; run the manual default-privilege script only from an authorized `supabase_admin` session, then run the SQL assertions in staging before any production change.
+
+### Consolidated gap ledger — latest status
+| Product area | Status | Latest evidence / remaining gate |
+|---|---|---|
+| Single five-destination navigation | verified | PR #136/#143 UI test passes; exactly five tab controls |
+| Dock <=76 pt | verified | PR #143 UI assertion passes |
+| Activity layout | verified within app window | Activity viewport UI test passes; full-device app window still blocked |
+| Full-device iPhone viewport | blocked | PR #143 iOS 26.5 screenshot confirms 402 x 603 pt centered window; PR #145 tests first-run root sizing |
+| Root-hosted Profile photo picker | verified in simulator for open/cancel | Source guard and UI interaction pass; actual photo selection/storage still unverified |
+| Guru keyboard dismissal | verified in simulator | Fresh-Home keyboard-dismissal UI test passes |
+| Tracking safeguards | verified as source checks | 121/121 static assertions pass; real sensor/background behavior remains device-unverified |
+| Finish & Save / crash recovery | implemented-but-unverified | Durable local write/read-back and queue safeguards exist; the reported real-iPhone Apple Health save failure still needs device acceptance |
+| HealthKit / background GPS | implemented-but-unverified | Source entitlements and safeguards pass; no physical iPhone HealthKit/background GPS evidence |
+| Auth, onboarding, goals and purpose | implemented-but-unverified | First-run source checks and 8 goal-journey unit tests pass; live sign-in, recovery and cross-account sync not accepted |
+| Missions | implemented-but-unverified | Navigation/UI coverage exists; complete live member journey not accepted |
+| Community feed | missing | Gated UI only; no verified shared feed backend |
+| Notifications delivery | missing | Informational sheet only; no verified push/notification backend |
+| Android / Health Connect | verified in CI only | 25 safeguards, 6 JVM tests, Debug APK integrity pass; device behavior unverified |
+| Web Hub | verified in CI only | 23 checks pass; production deployment not verified |
+| Supabase RLS / default grants | blocked pending fresh live audit and hardening | Prior RLS read-only evidence; excessive grants/defaults require authorized DB execution |
+| Supabase migration source-of-truth | blocked | 18 of 22 applied versions lack source files on main |
+| iOS Release / IPA | verified as unsigned package only | Valid Mach-O IPA; signing, installation and device acceptance blocked |
+
+### Next actions
+1. Poll PR #145 run #45890647250 to completion; inspect full XCTest counts, the new Welcome screenshot, existing post-guest full-device assertions, simulator build, Release build and IPA integrity.
+2. If Welcome now fills the display but the post-guest dashboard does not, trace the member-shell/scene transition. If both remain reduced, investigate the SwiftUI scene/window host and simulator configuration; do not weaken the physical-screen assertions.
+3. Keep PR #136, #143, #144 and #145 as drafts; do not merge any PR. Preserve Design C. PR #107 remains untouched and PR #112 remains unmerged.
+4. Continue treating HealthKit, background GPS, Android Health Connect, actual photo selection, signed installation and production deployment as unverified until device/account evidence exists.
