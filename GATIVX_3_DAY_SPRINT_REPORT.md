@@ -1737,3 +1737,12 @@ These CI runs prove the migrations against a temporary local PostgreSQL 17 servi
 ### Rerun of original diagnostics commit
 
 - Full same-commit retry [#45800363888](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45800363888), job `139875349179`, remains in the full unit/UI test step at this timestamp. The first attempt's 81 passed / 1 failed result remains the only completed result until this retry finishes.
+
+
+## 2026-11-26T11:32:09.249Z — XCTest diagnostic detail
+
+The structured diagnostics artifact for run #45800363888 reports `totalTestCount: 82`, `passedTests: 81`, `failedTests: 1`, `skippedTests: 0`. The 76-unit-test suite passed, and all **18/18** cases in `GATIVXFinishSaveRegressionTests` passed on this branch. Those 18 cover finish-date recovery bounds, retaining the higher live/final step count, coalesced HealthKit export success/failure, idempotent local history, retry after outbox write failure, and relaunch restoration.
+
+The one failed UI test ran for **741.45 seconds (12m 21s)** and failed at the Community accessibility query after XCTest reported that the app event loop and app-animation completion notifications were not received within 60 seconds. The accessibility snapshot captured afterward showed Community selected and rendered. The diagnostics also record the SwiftUI runtime warning `Invalid frame dimension (negative or non-finite).` in the failing test and in the Guru keyboard test. This warning is not yet tied to a specific source line and is being treated as a separate layout defect to investigate, not ignored.
+
+The diagnostics identify the long cumulative navigation test as a duration outlier (61% of total run duration). PR #132 adds a focused Missions → Community test and horizontal-swipe acceptance without removing the cumulative test or any existing assertions.
