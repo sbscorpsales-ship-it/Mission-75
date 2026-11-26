@@ -2776,3 +2776,132 @@ Poll the five active iOS jobs, inspect their latest-attempt step summaries and r
 - No verified code or CI completion progress this checkpoint. No commits or source changes were made.
 - PR #107 remains open/unmerged and untouched; PR #112 remains open/unmerged. No PR merged.
 - Next: poll the same jobs, inspect complete test logs and XCTest result artifacts after completion, and update this report with exact counts and artifact evidence. Keep all failed/unverified gates open.
+
+
+## 2026-11-27 01:01 IST / 2026-11-26T19:31Z — latest repository, CI and backend-security checkpoint
+
+This section supersedes the earlier pending-status notes below. It records completed reruns and the new exact-head PR #143 run. Design C and approved product decisions were not changed. No PR was merged.
+
+### Repository and protected PR state
+
+- Default branch `main` head at this checkpoint: `143889db3e72540fb478b76c486082f45395e9bd`.
+- PR #107 remains open/unmerged at `c19bdbd307df7048cefd86bd3e6064ac4f4e3042`; its `updated_at` remains 2026-11-25T10:11:40Z. It was not modified.
+- PR #112 remains open/unmerged at `b6c04d41dc67bd191ed0cf8966331eb5661a9887`; it was not modified.
+- PR #136 exact head: `31e5b70d85537113e74dd003d06b3ae95ba323f4`.
+- PR #143 latest head: `56641e79cd76743724f3f62bdddfb1f62e6d556a`, open/unmerged. Its exact-head run 45883789402 is now in progress (job 140129345426).
+- New draft PR #144: `cd1088855aaf84ea397372343ef8333e8b83ade8`, open/unmerged. No CI run was returned for this SQL-only PR.
+- All PRs remain unmerged.
+
+### PR #136 — exact head, full test results, screenshots and IPA inspection
+
+Run: https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45847572105
+
+- Unit suite: **76 executed, 76 passed, 0 failed, 0 cancelled**.
+- UI suite: **9 executed, 8 passed, 1 failed, 0 cancelled**.
+- The single failure is the dock-height assertion: **113.0625 pt measured vs 76 pt maximum**.
+- The other eight UI cases passed: Activity screen layout inside its app window; all five destinations on one navigation dock; Community navigation after Missions; dashboard sections/metrics; Guru keyboard dismissal; Home-to-walk navigation; Notifications sheet dismissal; and Profile screen navigation.
+- The Activity test passing is not proof of physical-device full-screen geometry: PR #136's UI case measured content inside the app window. The later full-device test on PR #139/#140 measured the actual window and failed.
+- Tracking/source safeguard step: **121 PASS, 0 FAIL**.
+- iPhone Simulator build: **passed**. Unsigned iPhone Release build: **passed**. IPA packaging and upload: **passed**.
+- Downloaded the actual unsigned IPA artifact and inspected it: outer ZIP integrity passed; inner IPA ZIP integrity passed; `Info.plist` identifies bundle `com.paramitsolutions.gativx`; `CFBundleExecutable` points to a present Mach-O executable; executable size was 4,030,192 bytes. No embedded provisioning profile is present, as expected for an unsigned artifact. This verifies package structure, not signing or installation.
+- The available PR #136 screenshot attachments are app-window captures at **960 × 1440 px (2:3)**, not full-device captures. The separate PR #140 full-device screenshot evidence already recorded above shows the 402 × 603 pt app window centered on a 402 × 874 pt device capture.
+
+### Latest completed iOS reruns
+
+All three reruns below completed; the raw logs were inspected. Each unit suite had **76 executed, 76 passed, 0 failed, 0 cancelled**. Each UI suite had **9 executed, 0 cancelled**:
+
+- PR #139 / run https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45859629757: **6 UI cases passed, 3 failed**. Assertions: window height 603.0 pt vs minimum 830.3 pt; top origin 135.5 pt vs maximum 8 pt; dock 113.0625 pt vs maximum 76 pt.
+- PR #140 / run https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45867343777: **7 UI cases passed, 2 failed**. Window height 603.0 pt and top origin 135.5 pt still fail. The dock assertion passed on this head, verifying the compact dock correction independently of the full-screen failure.
+- PR #141 / run https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45867641292: **6 UI cases passed, 3 failed**. The same window-height, top-origin and dock-height assertions failed on this branch's older dock implementation.
+- PR #142 / run https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45867926570: compilation failed at `ios/GATIVX/GATIVXApp.swift:52:29` because `principal` is unavailable in iOS. **0 XCTest cases executed; no suite completed**. Simulator build and unsigned Release build failed. The old packaging steps nevertheless reported success and uploaded a 1,479-byte outer artifact. I downloaded it: its inner IPA contains only `Payload/GATIVX.app/Info.plist` and `PkgInfo`; it has **no executable** and is not a valid installable app. This is a confirmed false-positive packaging result on PR #142, not a release artifact.
+- PR #143 carries the strict executable/Release validation gate intended to prevent that false positive. It is not yet verified until its current run completes.
+
+### PR #143 — safe engineering changes and current run
+
+Latest head: `56641e79cd76743724f3f62bdddfb1f62e6d556a`.
+
+Files changed:
+- `.github/workflows/gativx-ios.yml`
+- `scripts/gativx_simulator.py`
+- `scripts/test_gativx_simulator.py`
+
+The previous inline simulator selector preferred the iPhone 17 Pro model before comparing runtimes, which could select an older runtime if that model were absent from the newest installed runtime. It now selects the **newest installed iOS runtime first**, then prefers iPhone 17 Pro among devices on that runtime. Five fixture tests passed locally: newest runtime precedence, model preference within that runtime, numeric patch-version comparison, unavailable/non-iPhone filtering, and non-iOS runtime filtering (**5 passed, 0 failed, 0 skipped**).
+
+I also removed a duplicated trailing workflow block that had expanded the file from 576 to 996 lines. The retained workflow has one test/build/release pipeline and keeps the strict artifact gate. No product UI or Design C code was changed by this work.
+
+Exact-head CI: https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45883789402
+- Job 140129345426 is **in progress**.
+- Setup, checkout, Xcode selection, XcodeGen, scheme validation and first-run/auth/portrait static checks completed successfully.
+- The full serial unit/UI suite is currently running. The log artifact is not yet available while the job is in progress; **no XCTest count, simulator selection, screenshot or build result is claimed yet**.
+
+### Android and Web Hub evidence
+
+- PR #137 Android run https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45840866819: **25 safeguard checks passed, 0 failed**; JVM suite **6 passed, 0 failed, 0 skipped**; Debug build completed successfully. The downloaded APK archive passed ZIP integrity checks and contains an Android manifest and DEX bytecode. Physical Android installation and Health Connect behavior remain unverified.
+- PR #138 Web Hub run https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45839703732: **16 structural checks + 7 browser smoke assertions = 23 passed, 0 failed**. This is CI/browser-smoke evidence only; production deployment and live production auth remain unverified.
+
+### Live Supabase security and migration audit
+
+Read-only audit of the active `mission75-cloud` project:
+
+- Six current public tables have RLS enabled and owner-scoped policies. The seven inspected GATIVX sync RPCs are security-invoker functions. No public function was found executable by `anon`. No Edge Functions are deployed. Supabase performance and health advisors returned no lints.
+- **High-priority least-privilege defect:** `public.daily_action_progress` grants both `anon` and `authenticated` table privileges including PostgreSQL 17 `TRUNCATE` and `MAINTAIN`. Direct `has_table_privilege` checks returned true for both roles' TRUNCATE privilege. RLS does not constrain table-wide TRUNCATE/MAINTAIN privileges. No currently anon-executable public RPC was found, so this is a confirmed excessive-grant configuration, not a demonstrated remote exploit.
+- Public-schema default ACLs for both `postgres` and `supabase_admin` also grant broad table/sequence privileges and function EXECUTE to `anon` and `authenticated`, so future objects can inherit excessive grants.
+- The SQL connector is running as `postgres`; that role is not a member of `supabase_admin`. I did not attempt to assume the admin role or change live database permissions.
+- Supabase Security Advisor reports **Leaked Password Protection Disabled**. Performance and health advisors returned no findings.
+- Supabase reports **22 applied migration versions**. Only **4 matching migration source files** were found on `main`; **18 are missing**:
+  - `20261106053936_add_daily_step_sync_metadata`
+  - `20261106054358_healthkit_step_sync_rpc`
+  - `20261106090900_activity_session_step_sync`
+  - `20261106090921_restrict_activity_session_rpc_to_authenticated`
+  - `20261106095244_sync_core_motion_daily_steps`
+  - `20261106103424_activity_session_gps_route_sync`
+  - `20261107021753_sync_native_gps_walk_sessions`
+  - `20261107080437_remove_legacy_motion_steps_daily_log_writer`
+  - `20261107140341_harden_rpc_grants_and_optimize_owner_rls`
+  - `20261107140614_use_invoker_for_gps_route_sync`
+  - `20261107183639_restrict_step_sync_rpcs_to_authenticated`
+  - `20261107184813_add_steps_to_walk_session_sync`
+  - `20261111061101_tighten_gativx_core_table_access`
+  - `20261112081338_add_member_goal_purpose`
+  - `20261113150913_sync_android_device_daily_steps`
+  - `20261113172744_add_member_goal_text_to_profiles`
+  - `20261113200314_add_daily_action_progress`
+  - `20261113200433_enable_daily_action_progress_realtime`
+- The four matching source files found on `main` are `20261107080246_separate_core_motion_daily_steps_from_healthkit_totals`, `20261109054134_sync_healthkit_daily_active_energy`, `20261109113101_allow_gps_route_sync_without_step_count`, and `20261110102013_preserve_legacy_steps_during_healthkit_sync`.
+
+Draft PR #144: https://github.com/sbscorpsales-ship-it/Mission-75/pull/144
+- Adds `supabase/migrations/20261127010149_harden_gativx_postgres_default_privileges.sql`, `supabase/manual/harden_gativx_supabase_admin_default_privileges.sql`, and `supabase/tests/gativx_public_grant_hardening.sql`.
+- The versioned migration narrows the current postgres-owned table to authenticated CRUD and hardens postgres-owned defaults. The separate manual script hardens supabase_admin defaults.
+- **Do not apply yet:** restore the 18 missing migration source files before using the normal migration pipeline, and run the admin script from a session authorized as `supabase_admin`. No live DDL was executed; the SQL test has not been run against a disposable database. PR #144 remains draft/unmerged.
+- User action: enable Leaked Password Protection in Supabase Dashboard → Authentication → Settings → Password Security, following https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection.
+
+### Consolidated gap ledger
+
+| Product area | Status | Current evidence / remaining gate |
+|---|---|---|
+| Five-destination navigation | verified | PR #136 UI test passed |
+| Guru keyboard dismissal | verified | PR #136 UI test passed |
+| Activity screen layout inside its window | verified | PR #136 UI test passed; this does not prove full-device geometry |
+| Compact dock <=76 pt | verified on PR #140 head | PR #140 UI assertion passed; PR #143 combined head pending |
+| Full-device iOS viewport | blocked | PR #139/#140 measure 603 pt height and 135.5 pt top origin; PR #143 newest-runtime run pending |
+| Profile photo picker | implemented-but-unverified | Root-hosted source guard passes; live photo selection/cancel not demonstrated |
+| Finish & Save / recovery / HealthKit write | implemented-but-unverified | Source/unit safeguards pass; original real-iPhone Apple Health save failure still needs device validation |
+| Background GPS and HealthKit/Health Connect | implemented-but-unverified | Source/CI safeguards pass; physical iPhone/Android behavior not tested |
+| Auth, onboarding, goals and purpose sync | implemented-but-unverified | Schema and source paths exist; live multi-account/provider flow not demonstrated; migration history incomplete |
+| Missions | implemented-but-unverified | Dashboard/navigation tests pass; complete real-user journey not independently accepted |
+| Community feed/backend | missing | No community data table or Edge Function; current UI navigation is not a live shared feed |
+| Notifications delivery/push | missing | UI sheet exists; no notification backend table or Edge Function |
+| Shared backend RLS | verified with caveat | Six tables have owner-scoped RLS; excessive table/default grants require hardening |
+| Supabase migration source-of-truth | blocked | 18 of 22 applied versions lack matching files on `main` |
+| iOS Release/IPA | implemented-but-unverified | PR #136 unsigned package structurally valid; signing/install and device acceptance absent; PR #142 produced an invalid IPA |
+| Android build | verified in CI | Debug APK package integrity checked; device/Health Connect acceptance absent |
+| Web Hub | verified in CI only | 23 structural/browser checks pass; production deployment absent |
+
+### Next actions
+
+1. Poll PR #143 run 45883789402 until completion; inspect exact simulator/runtime selection, full unit/UI counts, screenshots, simulator build, unsigned Release build, and IPA executable validation.
+2. If the newest runtime still produces a 2:3 app window, investigate scene/window configuration and the simulator launch environment before making speculative UI changes. Keep Design C unchanged.
+3. Keep PR #107 untouched and PR #112 unmerged. Do not merge PR #143 or #144.
+4. Restore the 18 missing Supabase migration files before any normal migration deployment. Then execute the least-privilege fix with the required admin role and run its SQL assertions.
+5. Enable leaked-password protection. Keep Community and notification delivery marked missing until real backend and delivery evidence exists.
+6. Obtain real-device evidence for Activity Finish & Save, HealthKit writes, background GPS, photo picker interaction, and Android Health Connect before changing those items to verified.
