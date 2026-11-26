@@ -87,7 +87,12 @@ final class GATIVXDashboardUITests: XCTestCase {
                       "Home must render the Heart Points progress ring.")
         XCTAssertEqual(heartPointsRing.label, "Heart Points progress")
 
-        // Catch the compressed/overlapping mission-card defect from the member screenshot.
+        // A scroll view's child accessibility frame may extend below the fold.
+        // Verify the actual viewport stops above the fixed dock, then prove the
+        // mission card can be scrolled fully into that unobstructed viewport.
+        let scrollView = app.scrollViews["gativx-home-dashboard"]
+        XCTAssertTrue(scrollView.waitForExistence(timeout: 5),
+                      "Home must expose its scrollable dashboard viewport.")
         let missionCard = app.descendants(matching: .any)["gativx-todays-mission"].firstMatch
         XCTAssertTrue(missionCard.waitForExistence(timeout: 5), "Today's mission must render as a real dashboard card.")
         XCTAssertGreaterThan(missionCard.frame.width, appWindow.frame.width * 0.82,
@@ -95,11 +100,17 @@ final class GATIVXDashboardUITests: XCTestCase {
         XCTAssertGreaterThan(missionCard.frame.height, 90,
                              "Today's mission card must retain enough height for readable content.")
         let bottomNavigation = app.descendants(matching: .any)["gativx-bottom-navigation"].firstMatch
-        XCTAssertTrue(bottomNavigation.waitForExistence(timeout: 5))
-        if missionCard.isHittable {
-            XCTAssertLessThanOrEqual(missionCard.frame.maxY, bottomNavigation.frame.minY + 1,
-                                     "The visible mission card must not be covered by bottom navigation.")
+        XCTAssertTrue(bottomNavigation.waitForExistence(timeout: 10))
+        XCTAssertTrue(bottomNavigation.isHittable, "The fixed dock must remain reachable while Home is selected.")
+        XCTAssertLessThanOrEqual(scrollView.frame.maxY, bottomNavigation.frame.minY + 1,
+                                 "The visible dashboard viewport must end above the dock; off-screen scroll content may continue below the fold.")
+        XCTAssertTrue(missionCard.isHittable, "Today's mission card must remain reachable from the dashboard.")
+        for _ in 0..<12 where missionCard.frame.maxY > bottomNavigation.frame.minY + 1 {
+            scrollTowardBottom(scrollView)
         }
+        XCTAssertTrue(missionCard.isHittable, "The mission card must remain reachable after scrolling.")
+        XCTAssertLessThanOrEqual(missionCard.frame.maxY, bottomNavigation.frame.minY + 1,
+                                 "The mission card must be fully scrollable above the persistent dock.")
 
         let approvedLabels = [
             "TODAY'S STEPS",
@@ -120,8 +131,7 @@ final class GATIVXDashboardUITests: XCTestCase {
         screenshot.lifetime = .keepAlways
         add(screenshot)
 
-        let scrollView = app.scrollViews["gativx-home-dashboard"]
-        XCTAssertTrue(scrollView.waitForExistence(timeout: 5))
+        // The dashboard scroll view was validated above before scrolling to lower sections.
 
         // The metrics are in a LazyVGrid. Advance in short increments and query
         // after every drag, rather than allowing a full-screen swipe to skip a row.
@@ -599,8 +609,17 @@ final class GATIVXDashboardUITests: XCTestCase {
 
         let window = app.windows.firstMatch
         XCTAssertTrue(window.waitForExistence(timeout: 5))
+        let homeDashboard = app.descendants(matching: .any)["gativx-home-dashboard"].firstMatch
+        XCTAssertTrue(
+            homeDashboard.waitForExistence(timeout: 10),
+            "Guest entry must finish presenting the member dashboard before dock geometry is inspected."
+        )
+        let homeTab = tabButton(app, label: "Home")
+        XCTAssertTrue(homeTab.waitForExistence(timeout: 10))
+        XCTAssertTrue(homeTab.isSelected, "Home must be selected before switching to Activity.")
         let bottomNavigation = app.descendants(matching: .any)["gativx-bottom-navigation"].firstMatch
-        XCTAssertTrue(bottomNavigation.waitForExistence(timeout: 5))
+        XCTAssertTrue(bottomNavigation.waitForExistence(timeout: 10))
+        XCTAssertTrue(bottomNavigation.isHittable, "The persistent dock must be reachable after guest entry.")
 
         let activityTab = tabButton(app, label: "Activity")
         XCTAssertTrue(activityTab.waitForExistence(timeout: 5))
