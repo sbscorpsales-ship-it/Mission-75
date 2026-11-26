@@ -1,6 +1,6 @@
 # GATIVX 3-Day Engineering Sprint Report
 
-**Last updated:** 2026-11-26T16:32:37.354Z
+**Last updated:** 2026-11-26T16:33:18.488Z
 **Repository:** sbscorpsales-ship-it/Mission-75
 **Default branch:** `main` at `143889db3e72540fb478b76c486082f45395e9bd` (last commit 2026-11-17 04:38:35 UTC).
 **Report branch:** `docs/gativx-sprint-report-20261125` (PR #118); this update is a new documentation commit.
@@ -21,7 +21,7 @@ This snapshot supersedes the older "current" branch and run statements retained 
 - **PR #136** — [single-navigation iOS shell](https://github.com/sbscorpsales-ship-it/Mission-75/pull/136), latest CI-tested head `31e5b70d85537113e74dd003d06b3ae95ba323f4`, stacked on #135. Run [#45847572105](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45847572105) attempt 1 failed the UI suite; attempt 2 is currently running. See Run 7 below.
 - **PR #137** — [Android unreadable-route preservation](https://github.com/sbscorpsales-ship-it/Mission-75/pull/137), head `d5edab346eb9a00de7d02407fe501c8193a655c2`, stacked on #129. CI [#45840866819](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45840866819) passed 25 source safeguards, 6 JVM unit tests and debug APK build.
 - **PR #138** — [Web Hub history HTML escaping](https://github.com/sbscorpsales-ship-it/Mission-75/pull/138), head `45f7fd32f78aeb462ae56ac1202cdf7a5142f293`, based on main. CI [#45839703732](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45839703732) passed structural, syntax and browser smoke checks.
-- **PR #139** — [isolated dock, full-device viewport and Guru focus follow-up](https://github.com/sbscorpsales-ship-it/Mission-75/pull/139), latest head `96f713704723c530718a5e26a2ea04664986c249`, stacked on PR #136. Run [#45859629757](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45859629757) is pending on the corrected head; earlier run #671 failed before test execution due to a duplicate local variable.
+- **PR #139** — [isolated dock, full-device viewport and Guru focus follow-up](https://github.com/sbscorpsales-ship-it/Mission-75/pull/139), latest head `96f713704723c530718a5e26a2ea04664986c249`, stacked on PR #136. Run [#45859629757](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45859629757) is pending on the corrected head. Earlier run #671 failed before tests due to a duplicate local variable; its simulator build and privacy/entitlement checks passed, with unsigned Release build still running.
 
 ## Latest verified CI evidence
 
@@ -2355,3 +2355,14 @@ Removed only the second declaration of `guruCloseButton` in the cumulative Guru 
 New CI run [#45859629757](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45859629757), run number 672, is now pending on the corrected PR #139 head. No test result is available yet.
 
 The earlier run [#45858929106](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45858929106) still has its simulator/Release build steps running after the test target compile failure; it has not produced a valid test result. The new commit does not alter PR #136, PR #107, PR #112 or PR #114.
+
+## Run 7 follow-up 3 — PR #139 simulator build verified; corrected run queued
+
+**Snapshot timestamp:** 2026-11-26T16:33:18.488Z
+
+- PR #139 run [#45858929106](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45858929106), attempt on head `58bf01c886e77ca054157fe3454293b25cbd0e8b`: the XCTest target failed to compile because of the duplicate `guruCloseButton` declaration, so **0 tests executed**. After that failure, the separate GATIVX iPhone Simulator build succeeded, simulator privacy/entitlement validation succeeded, and the simulator artifact uploaded successfully. The unsigned Release build is still in progress; no IPA result is claimed from this run.
+- The duplicate declaration was removed in commit `96f713704723c530718a5e26a2ea04664986c249`, reusing the existing Guru close-button query without weakening assertions.
+- Corrected-head CI [#45859629757](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45859629757), run #672, is pending and has no job result yet.
+- PR #136 run #670 attempt 2, job `140042960358`, remains in the full serial unit/UI test step. No new pass/fail/cancelled count is available.
+
+**Next:** wait for run #672 to start and inspect its compiler/test output; continue checking run #670 attempt 2 without cancelling it.
