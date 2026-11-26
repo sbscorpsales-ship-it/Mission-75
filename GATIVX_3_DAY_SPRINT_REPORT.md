@@ -1972,3 +1972,51 @@ GitHub commit comparison confirms PR #128 head is **41 commits ahead / 0 behind*
 2. Inspect the Home and Activity screenshot attachments and verify the content bounds and bottom dock geometry on the simulator.
 3. Only after the full iOS suite and simulator/package gates pass, issue one clearly identified QA IPA and request one focused physical-device visual acceptance check.
 4. Release remains **NOT READY** until signed device acceptance and the other release gates are satisfied.
+
+
+## 2026-11-26T13:00:00Z — NURUN Guru full-screen coaching implementation
+
+### Owner requirement
+The owner reported that Guru appeared blank and restated that Guru is the heart of GATIVX: a high-quality full-screen guide connecting each member's goal and achievement levels with walking, diet, recovery, motivation and useful learning resources. The owner explicitly rejected a blank/placeholder experience and any compromise in visual quality.
+
+### Source diagnosis
+- The prior Guru content was presented with SwiftUI `.sheet(isPresented: $isGuruPresented)`, which can default to a partial-height iPhone sheet.
+- Its actual content was only a goal/purpose/emotion form, journey duration/progress, a purpose reminder and a Start Walk button.
+- It had no dedicated walking/nutrition/recovery guidance modules, daily measured-data panel or learning-resource section. The UI tests only asserted the journey and next-action form; they did not enforce a full-screen Guru experience.
+
+### Product decisions carried forward
+- NURUN remains the Guru identity (no hyphen), within GATIVX.
+- Preserve the established Guru principle: understand the member's WHY and emotion, reconnect them when motivation dips, and guide them to one small achievable next action.
+- Preserve GATIVX locked Design C / Day-Night design system and the existing five-tab navigation. Guru opens as a full-screen experience from the existing Gati Guru entry points; no sixth navigation tab was introduced.
+
+### Implementation opened for review
+- Draft PR [#135 — full-screen NURUN Guru coaching experience](https://github.com/sbscorpsales-ship-it/Mission-75/pull/135).
+- Branch: `feat/gativx-nurun-guru-fullscreen-20261126`.
+- Head commit at report time: `f8657d89a92e3a329aab2fc35aab87ad9475ee4b` (newer commits may follow as CI feedback is addressed).
+- Stacked on PR #134 branch `fix/gativx-fullscreen-bottom-navigation-20261126`; base commit `aadf7f98d7982de2ef80a40fefd02298173f2801`.
+- Changed:
+  - `ios/GATIVX/ContentView.swift`: Guru now opens via `.fullScreenCover`; full-height scroll view; GATIVX Guru + NURUN personal-guide branding; daily measured signals (steps, distance, active energy, exercise minutes); step-goal-aware walking prompts and Activity tracker action; everyday food/hydration education and member meal note; Rested/Okay/Tired recovery check-in with proportionate non-medical guidance; existing 30/90/180/365-day journey and WHY/next-action logic; curated WHO physical-activity and Harvard Healthy Eating Plate links; daily local completion markers for movement, nutrition habit and recovery.
+  - `ios/GATIVXUITests/GATIVXDashboardUITests.swift`: asserts full-width/full-height Guru viewport and top/bottom safe-area placement, all coaching modules, learning links, goal entry, journey creation, keyboard dismissal and Start Walk navigation.
+  - `.github/workflows/gativx-ios.yml`: adds CI guards that require full-screen Guru presentation, stable viewport ID, walking/nutrition/recovery and learning modules while preserving required GATIVX/NURUN branding.
+
+### Data integrity and scope boundaries
+- Displayed health metrics bind only to existing HealthKit/Core Motion measurements. Unavailable data remains a dash or explicit unavailable state; no invented scores are introduced.
+- Nutrition is currently educational guidance plus a member-entered note, not an analysed food diary, macro/calorie engine or meal-recognition system.
+- Recovery is a user check-in, not an inferred sleep/readiness/medical score.
+- The new check-ins and meal note use local AppStorage on this iPhone; account-scoped cloud persistence has not been implemented or claimed in this PR.
+- Two curated trusted educational links are included. A hosted video lesson library is not embedded yet; video content requires review/licensing and an actual learning flow before being represented as available.
+- Guru remains deterministic coaching logic, not a live generative AI service or medical adviser.
+
+### Validation state
+- PR #135 opened as a draft, not merged.
+- GitHub Actions run #656 (ID `45824642059`) started for PR #135. At 2026-11-26T12:59:09Z, Xcode selection and XcodeGen installation/project generation had succeeded; project/scheme validation was still running. The full XCTest, simulator screenshot, simulator build and unsigned IPA stages had not yet completed.
+- A subsequent workflow run #657 (ID `45824723527`) was queued after the CI guard changes.
+- PR #134 run #655 was still in progress at the same check. Do not claim Guru or the full-screen shell has passed tests until the final run and screenshot evidence are inspected.
+- No IPA should be sent for owner testing until the latest PR #135 CI and simulator visual evidence pass.
+
+### Next actions
+1. Monitor PR #135 run #656/#657 and inspect compiler/test failures and result-bundle screenshots.
+2. Fix defects without weakening full-screen geometry or Guru module assertions.
+3. Verify that all Guru controls work, daily markers persist across app relaunch, and the Start Walk action transitions cleanly into Activity.
+4. Add a separately scoped follow-up for per-member cloud persistence, measured nutrition logging, richer recovery inputs, and reviewed video lessons.
+5. Keep release status **NOT READY** until full CI, simulator visual review, IPA package verification and physical-device acceptance are complete.
