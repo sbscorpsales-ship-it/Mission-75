@@ -2753,3 +2753,11 @@ GitHub accepted failed-job reruns for runs 45859629757, 45867343777, 45867641292
 
 ### Next action
 Poll the five active iOS jobs, inspect their latest-attempt step summaries and raw logs, retrieve XCTest result bundles/screenshots and inspect the actual IPA executable before updating any status to verified. Do not merge any PR. Keep PR #107 untouched and PR #112 unmerged.
+
+
+### Additional raw-log counts from the failed pre-rerun attempts
+
+- PR #140 / run 45867343777: unit suite **76 passed, 0 failed**; UI suite **9 executed, 2 failed test cases**. The two recorded assertion failures were the app-window height (603.0 pt vs required >=830.3 pt) and top origin (135.5 pt vs required <=8.0 pt). The dock assertion did not fail on this attempt. This supports the dock correction only; full-device window geometry remains failed.
+- PR #141 / run 45867641292: unit suite **76 passed, 0 failed**; UI suite **9 executed, 3 failed assertions** in the viewport test: window height 603.0 pt, top origin 135.5 pt, and dock height 113.0625 pt. This run's head predates the final isolated dock correction; the new rerun is pending.
+- PR #142 / run 45867926570: compile failed at `ios/GATIVX/GATIVXApp.swift:52:29` because `principal` is unavailable in iOS. The simulator and Release build steps failed; no XCTest suite completed, so test count is **not run / 0 executed**, not a pass.
+- Rerun status after GitHub accepted the retry: run 45859629757 job 140104932214 **in_progress**; run 45867343777 job 140105302538 **in_progress**; run 45867641292 job 140105317593 **in_progress**; run 45867926570 job 140105333230 **queued**. Run 45847572105 job 140102514612 remains **in_progress** and was not restarted.
