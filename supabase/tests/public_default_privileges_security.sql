@@ -24,7 +24,25 @@ AS $function$
 $function$;
 RESET ROLE;
 
-DO $$
+CREATE FUNCTION storage.gativx_default_privilege_probe_storage_fn()
+RETURNS integer
+LANGUAGE sql
+IMMUTABLE
+AS $function$
+    SELECT 1;
+$function$;
+
+SET ROLE supabase_admin;
+CREATE FUNCTION graphql.gativx_default_privilege_probe_graphql_fn()
+RETURNS integer
+LANGUAGE sql
+IMMUTABLE
+AS $function$
+    SELECT 1;
+$function$;
+RESET ROLE;
+
+DO $
 DECLARE
     v_table text;
     v_sequence text;
@@ -88,11 +106,29 @@ BEGIN
             RAISE EXCEPTION 'service_role default function privilege was unexpectedly removed from %', v_function;
         END IF;
     END LOOP;
+
+    -- Global PUBLIC EXECUTE is removed, but existing schema-specific defaults
+    -- outside public remain for the Supabase roles that already had them.
+    IF NOT has_function_privilege('anon', 'storage.gativx_default_privilege_probe_storage_fn()', 'EXECUTE')
+       OR NOT has_function_privilege('authenticated', 'storage.gativx_default_privilege_probe_storage_fn()', 'EXECUTE')
+       OR NOT has_function_privilege('service_role', 'storage.gativx_default_privilege_probe_storage_fn()', 'EXECUTE')
+       OR has_function_privilege('untrusted_client', 'storage.gativx_default_privilege_probe_storage_fn()', 'EXECUTE') THEN
+        RAISE EXCEPTION 'postgres storage-specific function defaults changed unexpectedly';
+    END IF;
+
+    IF NOT has_function_privilege('anon', 'graphql.gativx_default_privilege_probe_graphql_fn()', 'EXECUTE')
+       OR NOT has_function_privilege('authenticated', 'graphql.gativx_default_privilege_probe_graphql_fn()', 'EXECUTE')
+       OR NOT has_function_privilege('service_role', 'graphql.gativx_default_privilege_probe_graphql_fn()', 'EXECUTE')
+       OR has_function_privilege('untrusted_client', 'graphql.gativx_default_privilege_probe_graphql_fn()', 'EXECUTE') THEN
+        RAISE EXCEPTION 'supabase_admin graphql-specific function defaults changed unexpectedly';
+    END IF;
 END;
-$$;
+$;
 
 DROP FUNCTION public.gativx_default_privilege_probe_postgres_fn();
 DROP FUNCTION public.gativx_default_privilege_probe_supabase_admin_fn();
+DROP FUNCTION storage.gativx_default_privilege_probe_storage_fn();
+DROP FUNCTION graphql.gativx_default_privilege_probe_graphql_fn();
 DROP SEQUENCE public.gativx_default_privilege_probe_postgres_seq;
 DROP SEQUENCE public.gativx_default_privilege_probe_supabase_admin_seq;
 DROP TABLE public.gativx_default_privilege_probe_postgres;
