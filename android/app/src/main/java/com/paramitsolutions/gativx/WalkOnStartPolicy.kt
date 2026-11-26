@@ -13,4 +13,7 @@ internal enum class ActiveWalkDraftState {
 internal object WalkOnStartPolicy {
     fun shouldBlockNewSession(state: ActiveWalkDraftState): Boolean =
         state == ActiveWalkDraftState.UNREADABLE
+
+    fun shouldBlockSyncSuccess(completedHistoryUnreadable: Boolean): Boolean =
+        completedHistoryUnreadable
 }
