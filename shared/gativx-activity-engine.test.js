@@ -15,5 +15,19 @@ assert.equal(e.ringProgress(25,100),0.25);
 const missing=e.estimateActivity({weightKg:70,movingMinutes:30,speedKmh:null});
 assert.equal(missing.status,"insufficient_data");
 assert.equal(missing.activeCaloriesKcal,null);
+const cadenceOnly=e.estimateActivity({weightKg:70,movingMinutes:30,speedKmh:null,cadenceSpm:100,activityType:"walking"});
+assert.equal(cadenceOnly.status,"estimated");
+assert.equal(cadenceOnly.calculationMethod,"cadence_met");
+near(cadenceOnly.met,3.21,0.02,"cadence-only walking MET");
+assert.ok(cadenceOnly.activeCaloriesKcal>0);
+assert.equal(e.estimateWalkingMETFromCadence(0),null);
+const mixed=e.calculateActivityPointsForIntervals({intervals:[
+  {durationSeconds:300,met:2.5},
+  {durationSeconds:600,met:3.5},
+  {durationSeconds:300,met:6.5}
+]});
+assert.equal(mixed.moderateMinutes,10);
+assert.equal(mixed.vigorousMinutes,5);
+assert.equal(mixed.points,20);
 assert.throws(()=>e.estimateActivity({weightKg:0,movingMinutes:30,speedKmh:5}),RangeError);
 console.log("GATIVX activity engine tests passed");
