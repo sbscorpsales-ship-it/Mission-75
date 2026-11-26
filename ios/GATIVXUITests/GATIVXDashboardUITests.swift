@@ -705,4 +705,30 @@ final class GATIVXDashboardUITests: XCTestCase {
         screenshot.lifetime = .keepAlways
         add(screenshot)
     }
+    func testWelcomeScreenFillsDeviceViewportBeforeGuestEntry() {
+        let app = XCUIApplication()
+        launchFreshGuestApp(app)
+
+        let guestEntry = app.buttons["gativx-continue-guest"]
+        XCTAssertTrue(guestEntry.waitForExistence(timeout: 10),
+                      "The first-run Welcome screen must render before measuring the device viewport.")
+
+        let window = app.windows.firstMatch
+        XCTAssertTrue(window.waitForExistence(timeout: 5),
+                      "The Welcome screen must be hosted in a measurable iPhone window.")
+        let deviceScreenScreenshot = XCUIScreen.main.screenshot()
+        let deviceScreenSize = deviceScreenScreenshot.image.size
+        let attachment = XCTAttachment(screenshot: deviceScreenScreenshot)
+        attachment.name = "GATIVX-Welcome-Full-Device-Screen"
+        attachment.lifetime = .keepAlways
+        add(attachment)
+
+        XCTAssertGreaterThanOrEqual(window.frame.width, deviceScreenSize.width * 0.98,
+                                    "The first-run Welcome screen must span the physical iPhone width.")
+        XCTAssertGreaterThanOrEqual(window.frame.height, deviceScreenSize.height * 0.95,
+                                    "The first-run Welcome screen must fill the physical iPhone height.")
+        XCTAssertLessThanOrEqual(window.frame.minY, 8,
+                                 "The first-run Welcome screen must begin at the top of the device display.")
+    }
+
 }
