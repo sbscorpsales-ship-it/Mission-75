@@ -1,11 +1,13 @@
 -- Run after the versioned migration and the supabase_admin default-ACL
 -- action. This test intentionally fails while either excessive grant remains.
 
-DO $$
+DO $gativx$
 DECLARE
-  anon_oid oid := (SELECT oid FROM pg_roles WHERE rolname = 'anon');
-  authenticated_oid oid := (SELECT oid FROM pg_roles WHERE rolname = 'authenticated');
+  anon_oid oid;
+  authenticated_oid oid;
 BEGIN
+  SELECT oid INTO anon_oid FROM pg_roles WHERE rolname = 'anon';
+  SELECT oid INTO authenticated_oid FROM pg_roles WHERE rolname = 'authenticated';
   IF anon_oid IS NULL OR authenticated_oid IS NULL THEN
     RAISE EXCEPTION 'Expected Supabase API roles are missing';
   END IF;
@@ -47,4 +49,4 @@ BEGIN
     RAISE EXCEPTION 'anon or authenticated still has broad public-schema default privileges';
   END IF;
 END;
-$;
+$gativx$;
