@@ -274,7 +274,6 @@ final class GATIVXDashboardUITests: XCTestCase {
         // A tab bar button can remain queryable behind a sheet while its
         // dismissal animation is still running. Never tap through the modal:
         // wait until Guru has actually left the accessibility hierarchy first.
-        let guruCloseButton = app.buttons["gativx-guru-close"]
         let guruSheetDismissed = XCTNSPredicateExpectation(
             predicate: NSPredicate(format: "exists == false"),
             object: guruCloseButton
