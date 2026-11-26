@@ -46,6 +46,23 @@ internal object WalkOnStore {
     fun active(context: Context): WalkOnSession? =
         readSession(context, ACTIVE_KEY)
 
+    /**
+     * Read the active-key state without collapsing a corrupt/encrypted draft
+     * into "no walk". A new session must never replace an unreadable draft.
+     */
+    fun activeDraftState(context: Context): ActiveWalkDraftState {
+        val preferences = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        if (!preferences.contains(ACTIVE_KEY)) return ActiveWalkDraftState.ABSENT
+        val raw = readEncrypted(context, ACTIVE_KEY) ?: return ActiveWalkDraftState.UNREADABLE
+        return try {
+            decodeSession(JSONObject(raw))
+            ActiveWalkDraftState.READABLE
+        } catch (_: Exception) {
+            setStatus(context, "An active WalkOn route draft could not be decoded. The encrypted original was preserved; no new route was started.")
+            ActiveWalkDraftState.UNREADABLE
+        }
+    }
+
     fun completed(context: Context): List<WalkOnSession> =
         readSessions(context, COMPLETED_KEY) ?: emptyList()
 
