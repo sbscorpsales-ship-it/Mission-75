@@ -2728,3 +2728,28 @@ Apple's [TN3192](https://developer.apple.com/documentation/technotes/tn3192-migr
 ### Run #674 full-device screenshot inspection (additional evidence)
 
 Downloaded XCTest result-bundle artifact `15142559660` and inspected the embedded PNG attachments. The `XCUIScreen.main` capture is **1206 × 2622 px**. It visibly shows the GATIVX app in a centered 2:3 window with large black letterbox regions above and below; the app window occupies 402 × 603 pt while the physical simulator capture is 402 × 874 pt. Separate app-window screenshots are 960 × 1440 px. This confirms the full-device viewport failure visually, not only through XCTest frame values. The dashboard's Design C styling and five-destination dock are visible inside the reduced window; the styling was not changed.
+
+
+## 2026-11-26T18:30:39Z — rerun request checkpoint
+
+### Repository and PR state rechecked
+- PR #136 head `31e5b70d85537113e74dd003d06b3ae95ba323f4`, branch `fix/gativx-single-navigation-dock-20261126`; workflow run 45847572105 remains in progress (job 140102514612). No rerun was started because the job was already running.
+- PR #139 head `96f713704723c530718a5e26a2ea04664986c249`, branch `fix/gativx-device-viewport-dock-guru-20261126`; workflow run 45859629757 was failed on prior attempt. Failed-job rerun was accepted by GitHub; latest job 140104932214 is in progress.
+- PR #140 head `0fa5a4f5298d91d10dd5660d5ddefb5103518c78`; run 45867343777 failed in the full XCTest/release-validation gates. Failed-job rerun accepted; latest job 140105302538 is in progress.
+- PR #141 head `3e6db077c936088f3b9213bbec984b47bf8820c1`; run 45867641292 failed in the full XCTest/release-validation gates. Failed-job rerun accepted; latest job 140105317593 is in progress.
+- PR #142 head `549a5e2004cc1fb63776d3ad10845edcf118f8c3`; run 45867926570 failed in XCTest, simulator build and unsigned Release build. Failed-job rerun accepted; latest job 140105333230 is queued.
+- PR #143 head `ab82ce8040a8d73a4964a16b4c7b9ffd25a1faa8`, branch `fix/gativx-dock-and-ipa-guard-20261126`; open draft. No PR-triggered workflow run was returned for this exact head at this checkpoint; do not treat its tests as run.
+- PR #137 Android and PR #138 Web Hub latest PR-triggered CI runs remain completed/successful (45840866819 and 45839703732 respectively). No physical-device or production acceptance is implied.
+- PR #107 remains open and unmerged; its updated_at remains 2026-11-25T10:11:40Z. PR #112 remains open and unmerged. No PR was merged.
+
+### Rerun actions
+GitHub accepted failed-job reruns for runs 45859629757, 45867343777, 45867641292 and 45867926570. Each rerun re-executes the failed job, including its full serial XCTest suite and downstream release gates; no test was skipped or narrowed. Latest job states are recorded above. Run 45847572105 was already in progress and was left undisturbed. No rerun result/count is claimed until the jobs complete and logs are inspected.
+
+### Exact evidence still pending
+- Rerun pass/fail/cancelled counts: pending for all five active iOS jobs.
+- PR #143 exact-head CI: not observed at this checkpoint.
+- Physical iPhone HealthKit, background GPS, signing/install and live Photos-picker acceptance remain blocked by lack of device/signing evidence.
+- Community feed and notification delivery remain missing/gated per the gap ledger.
+
+### Next action
+Poll the five active iOS jobs, inspect their latest-attempt step summaries and raw logs, retrieve XCTest result bundles/screenshots and inspect the actual IPA executable before updating any status to verified. Do not merge any PR. Keep PR #107 untouched and PR #112 unmerged.
