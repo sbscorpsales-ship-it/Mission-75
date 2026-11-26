@@ -33,7 +33,7 @@
 
 ## Highest-priority unresolved product gaps
 
-1. **Cross-platform navigation parity is missing.** Locked Design C primary destinations are Home / Activity / Workouts / Health-Progress / Community. Native iOS currently exposes Home / Activity / Missions / Community / Profile; Android is an early-access feature grid; original Web Hub exposes Home / Journey / Record / Walk / GURU. The separate Design C review prototype is visual-only and is not integrated into any production app. Original `app-v2.html` and `index.html` remain unchanged.
+1. **Cross-platform navigation parity is unresolved.** The Design C review branch/document proposes Home / Activity / Workouts / Health-Progress / Community, while the approved-dashboard/native candidate (PR #108 and PR #128) currently exposes Home / Activity / Missions / Community / Profile; Android is an early-access feature grid; original Web Hub exposes Home / Journey / Record / Walk / GURU. The separate Design C review prototype is visual-only and is not integrated into any production app. The repo alone does not prove that the review prototype's revised tab taxonomy has superseded the earlier approved native navigation, so no tab renaming or design change was made. Original `app-v2.html` and `index.html` remain unchanged.
 2. **Goal-day logic is inconsistent across platforms.** Native iOS counts calendar elapsed days. Web Hub counts unique dates with any non-empty journal entry or GPS walk; because it checks any entry value, non-activity logs can count as a check-in. No shared qualifying-activity-day rule exists. Neither platform has a tested 100-of-180 active-day acceptance case or upfront no-penalty explanation.
 3. **Guest history adoption is missing.** Guest sessions remain stored locally but are hidden from the signed-in account view; no explicit member-confirmed transfer flow exists.
 4. **GURU and profile data are local-only.** Goal/purpose/emotion/journey state and profile photo are not synced across devices/accounts. GURU is deterministic local guidance, not a conversational AI service.
@@ -1816,3 +1816,10 @@ It reports `checkInDays / durationDays` and caps progress at 100%. This correctl
 Native iOS `GATIVXGoalJourney` still derives progress from calendar elapsed days. The Design C visual prototype uses sample data and does not implement this logic.
 
 Required shared acceptance rule: count unique dates containing a qualifying completed activity (e.g. a saved walk/workout or an agreed measured exercise criterion); count multiple sessions on one date once; do not count journal-only entries; never erase progress for missed days; a member with 100 qualifying active dates on a 180-active-day goal must see 100 completed and 80 remaining even when more than 180 calendar days have passed. The onboarding must explain this before the member starts. This remains **MISSING** in native iOS and **PARTIAL / overly broad** in the Web Hub. No code was changed in this audit.
+
+
+## 2026-11-26T11:38:29.185Z — Design C navigation approval boundary
+
+PR #108 (`feat/gativx-approved-screen-designs`) was checked and its iOS source still uses Home / Activity / Missions / Community / Profile, matching the current PR #128 candidate. PR #119's separate Design C review prototype uses Home / Activity / Workouts / Health-Progress / Community and its README calls that a locked cross-platform IA, but PR #119 is still draft and the prototype is explicitly visual-only.
+
+This is a real repository-level navigation mismatch, but the repo evidence does not establish that PR #119's revised tab taxonomy has been approved by the product owner over the earlier PR #108 native baseline. The current PR #132 therefore preserves the existing tab names and only removes the unnecessary Missions navigation wrapper. Do not silently rename tabs or change Design C visuals; reconcile the approved tab taxonomy before implementing cross-platform navigation changes.
