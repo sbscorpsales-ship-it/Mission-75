@@ -1598,3 +1598,62 @@ Active project `mission75-cloud` was re-read. No SQL write or migration was exec
 4. Reconcile live migration history and obtain owner approval before applying PR #125/#130. Enable leaked-password protection in Supabase Auth settings and rerun Security Advisor.
 
 **Release verdict remains: NOT RELEASE-READY.**
+
+
+---
+
+## 2026-11-26 11:19 UTC (16:49 IST) — fresh CI and branch-state update
+
+### Verified branch and PR state
+
+- Default branch `main`: `143889db3e72540fb478b76c486082f45395e9bd` (commit dated 2026-11-17 04:38:35Z). This is older than the active November 26 work; the newer iOS navigation and QA changes remain on PR branches, not in `main`.
+- PR #107: `feat/consolidated-gativx-runjeet` at `c19bdbd307df7048cefd86bd3e6064ac4f4e3042`; open/draft. No branch or PR #107 file was changed.
+- PR #112: `fix/gativx-ui-test-guest-reset` at `b6c04d41dc67bd191ed0cf8966331eb5661a9887`; open/draft.
+- PR #114: `fix/gativx-finish-save-validate` at `87318182360d4369ea2f7a773a27dd3fa3e7c558`; open/draft.
+- PR #128: `audit/gativx-xcresult-diagnostics-20261126` at `1885b9631b2f15468445e943ccc2e1fe5aec7de7`; open/draft.
+- PR #118 (this report): `docs/gativx-sprint-report-20261125`; open/draft. No PR was merged.
+
+### Full iOS run #45800363888 — completed first attempt
+
+The raw GitHub Actions job log and uploaded XCTest diagnostics were inspected. First attempt result:
+
+- Unit suite: **76 passed, 0 failed**.
+- UI suite: **5 passed, 1 failed, 0 cancelled** (6 UI cases observed).
+- Combined XCTest result: **81 passed, 1 failed, 0 cancelled**.
+- Passed UI cases included `testDashboardFillsDeviceViewportAndExposesAllFiveTabs`, `testProfileTabRendersFromFreshDashboard`, Guru keyboard/dismissal, Start Walk navigation and Notifications dismissal.
+- Failed case: `testDashboardSectionsMetricsAndPrimaryNavigation`, at `GATIVXDashboardUITests.swift:285`, the `communityTab.isSelected` accessibility query. XCTest reported: `Failed to get matching snapshot: Timed out while evaluating UI query`.
+- The app log reports that the app did not quiesce within 60 seconds after the Community tap. The later accessibility hierarchy captured by XCTest shows the Community screen present and the Community tab marked Selected. This is evidence of an XCTest/app-idle-query timeout, not proof that Community selection itself failed. Root cause remains unresolved.
+- The new full-viewport/five-tab test passed and attached screenshot evidence.
+- Project generation, source safeguards, simulator build, unsigned iPhone Release build, IPA packaging and artifact upload all succeeded. The aggregate release gate failed because the UI suite failed.
+- Artifacts: XCTest diagnostics `15110065464`; XCTest result bundle `15109570734`; simulator build `15109446552`; unsigned iPhone IPA `15109317589`.
+- A same-commit full-job retry was started after inspecting the failure. It is a full-suite rerun, not a narrowed or skipped test run. Result pending.
+
+### PR #112 / #114 latest run logs
+
+- PR #112 run [#45652420651](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45652420651): **58 unit tests passed**; two UI tests were observed, one passed and one failed at line 237 during the cumulative dashboard navigation accessibility query. The simulator and unsigned IPA packaging steps succeeded; aggregate release gate failed.
+- PR #114 run [#45633166732](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45633166732): **71 unit tests passed**, including **13/13 Finish & Save regression tests**. The cumulative dashboard UI test failed at line 295 on the Profile navigation accessibility query and the test step later hit its 40-minute cap. Simulator build and unsigned IPA packaging succeeded; aggregate release gate failed.
+- PR #114's 13 regression tests verify pure finish-date, durable local-save/recovery and HealthKit outbox/coalescing rules. They do not prove a physical iPhone HealthKit workout export or background GPS session.
+
+### Current gap-ledger status changes
+
+| Area | Status after this run | Evidence / limit |
+|---|---|---|
+| iOS viewport and five tabs | **Verified in simulator for the tested local-entry path** | The new viewport/five-tab UI test passed. The default `main` branch still does not contain this newer tab shell. Physical iPhone display remains unverified. |
+| Profile direct navigation | **Verified in simulator for direct-from-Home path** | `testProfileTabRendersFromFreshDashboard` passed, including opening/cancelling the on-demand photo picker. The cumulative all-tabs journey remains unverified because the Community query timed out first. |
+| Community tab | **Implemented-but-unverified** | The Community screen and selected tab appear in the captured accessibility hierarchy, but the full cumulative XCTest query timed out. Product functionality remains a gated placeholder, not a community feed. |
+| Finish & Save | **Implemented-but-unverified** | 13/13 pure regression tests passed on PR #114. No physical iPhone workout-export or background GPS acceptance evidence. |
+| Auth / first-run guest entry | **Implemented-but-unverified** | Full suite reached the five-tab dashboard via explicit local-only entry. Live account registration/sign-in with owner credentials was not exercised. |
+| HealthKit / GPS | **Implemented-but-unverified / device-blocked** | Source, simulator build and safeguards pass; unsigned IPA cannot establish HealthKit entitlement provisioning, real sensor data, background GPS or Apple Health write behavior. |
+| Android | **Partial / implemented-but-unverified** | PR #129 CI previously recorded 20/20 source safeguards and successful Gradle debug build. No Android unit suite, emulator or physical device acceptance. |
+| Web Hub | **Partial / implemented-but-unverified** | 51/51 static/mock-backed checks passed in the recorded run. Live Supabase browser acceptance and cross-platform parity remain outstanding. |
+| Guru / Missions / Community / Notifications | **Partial or missing** | Guru is local deterministic coaching; Missions is one fixed local consistency mission; Community is gated; notifications are inactive. |
+| Shared backend / security | **Blocked** | Live anon TRUNCATE/default grants and leaked-password protection findings remain unresolved. PR #125/#130 CI checks do not apply migrations to the live project. |
+| Release | **Blocked** | Simulator and unsigned iPhone IPA packaging pass; signed installation, HealthKit-capable provisioning and device acceptance remain outstanding. |
+
+### Next action
+
+1. Inspect the same-commit full-suite rerun and compare whether the Community query failure reproduces.
+2. If it reproduces, preserve the full cumulative test and inspect the failing accessibility event/sequence before changing app code. Do not remove the `isSelected` assertion or shorten the suite.
+3. Keep PR #112 and #114 open/unmerged; do not alter PR #107.
+4. Continue the Android/Web/backend gap work independently of the iOS UI retry.
+5. Release verdict remains **NOT RELEASE-READY**.
