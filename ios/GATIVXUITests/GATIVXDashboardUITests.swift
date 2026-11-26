@@ -504,6 +504,44 @@ final class GATIVXDashboardUITests: XCTestCase {
     }
 
 
+
+    func testActivityScreenFillsViewportAboveFixedBottomNavigation() {
+        let app = XCUIApplication()
+        launchFreshGuestApp(app)
+
+        let guestEntry = app.buttons["gativx-continue-guest"]
+        XCTAssertTrue(guestEntry.waitForExistence(timeout: 10))
+        guestEntry.tap()
+
+        let window = app.windows.firstMatch
+        XCTAssertTrue(window.waitForExistence(timeout: 5))
+        let bottomNavigation = app.descendants(matching: .any)["gativx-bottom-navigation"].firstMatch
+        XCTAssertTrue(bottomNavigation.waitForExistence(timeout: 5))
+
+        let activityTab = tabButton(app, label: "Activity")
+        XCTAssertTrue(activityTab.waitForExistence(timeout: 5))
+        activityTab.tap()
+        XCTAssertTrue(activityTab.isSelected)
+
+        let activityScreen = app.scrollViews["gativx-activity-screen"]
+        XCTAssertTrue(activityScreen.waitForExistence(timeout: 10))
+        XCTAssertGreaterThan(activityScreen.frame.width, window.frame.width * 0.95,
+                             "Activity must use the full device width.")
+        XCTAssertGreaterThan(activityScreen.frame.height, window.frame.height * 0.70,
+                             "Activity must fill the usable viewport instead of appearing as a middle strip.")
+        XCTAssertLessThanOrEqual(activityScreen.frame.minY, window.frame.minY + 70,
+                                 "Activity must begin near the top safe area.")
+        XCTAssertGreaterThanOrEqual(activityScreen.frame.maxY, bottomNavigation.frame.minY - 1,
+                                     "Activity content must extend to the fixed bottom dock.")
+        XCTAssertTrue(bottomNavigation.isHittable,
+                      "The fixed bottom navigation must remain available over the full Activity screen.")
+
+        let screenshot = XCTAttachment(screenshot: app.screenshot())
+        screenshot.name = "GATIVX-Activity-Full-Viewport-Fixed-Navigation"
+        screenshot.lifetime = .keepAlways
+        add(screenshot)
+    }
+
     func testDashboardFillsDeviceViewportAndExposesAllFiveTabs() {
         let app = XCUIApplication()
         launchFreshGuestApp(app)
