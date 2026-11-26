@@ -24,9 +24,7 @@ final class GATIVXDashboardUITests: XCTestCase {
     }
 
     private func tabButton(_ app: XCUIApplication, label: String) -> XCUIElement {
-        // SwiftUI exposes tab items as Buttons whose identifiers can be SF
-        // Symbols (for example "figure.walk"), not the visible tab title.
-        app.buttons.matching(NSPredicate(format: "label == %@", label)).firstMatch
+        app.buttons["gativx-tab-\\(label.lowercased())"]
     }
 
     func testDashboardSectionsMetricsAndPrimaryNavigation() {
@@ -96,10 +94,10 @@ final class GATIVXDashboardUITests: XCTestCase {
                              "Today's mission card must use the available dashboard width.")
         XCTAssertGreaterThan(missionCard.frame.height, 90,
                              "Today's mission card must retain enough height for readable content.")
-        let tabBar = app.tabBars.firstMatch
-        XCTAssertTrue(tabBar.waitForExistence(timeout: 5))
+        let bottomNavigation = app.descendants(matching: .any)["gativx-bottom-navigation"].firstMatch
+        XCTAssertTrue(bottomNavigation.waitForExistence(timeout: 5))
         if missionCard.isHittable {
-            XCTAssertLessThanOrEqual(missionCard.frame.maxY, tabBar.frame.minY + 1,
+            XCTAssertLessThanOrEqual(missionCard.frame.maxY, bottomNavigation.frame.minY + 1,
                                      "The visible mission card must not be covered by bottom navigation.")
         }
 
@@ -320,16 +318,16 @@ final class GATIVXDashboardUITests: XCTestCase {
         XCTAssertTrue(guestEntry.waitForExistence(timeout: 10))
         guestEntry.tap()
 
-        let tabBar = app.tabBars.firstMatch
-        XCTAssertTrue(tabBar.waitForExistence(timeout: 5))
+        let bottomNavigation = app.descendants(matching: .any)["gativx-bottom-navigation"].firstMatch
+        XCTAssertTrue(bottomNavigation.waitForExistence(timeout: 5))
 
-        let missionsTab = tabBar.buttons["Missions"]
+        let missionsTab = tabButton(app, label: "Missions")
         XCTAssertTrue(missionsTab.waitForExistence(timeout: 5))
         missionsTab.tap()
         XCTAssertTrue(missionsTab.isSelected, "Missions must become the selected tab.")
         XCTAssertTrue(app.scrollViews["gativx-missions-screen"].waitForExistence(timeout: 10))
 
-        let communityTab = tabBar.buttons["Community"]
+        let communityTab = tabButton(app, label: "Community")
         XCTAssertTrue(communityTab.waitForExistence(timeout: 5))
         communityTab.tap()
         XCTAssertTrue(communityTab.isSelected, "Community must become the selected tab after Missions.")
@@ -522,36 +520,41 @@ final class GATIVXDashboardUITests: XCTestCase {
         XCTAssertTrue(dashboard.waitForExistence(timeout: 10),
                       "Member entry must render the full Home dashboard.")
 
-        let tabBar = app.tabBars.firstMatch
-        XCTAssertTrue(tabBar.waitForExistence(timeout: 5),
-                      "The persistent five-tab navigation must be visible after member entry.")
+        let bottomNavigation = app.descendants(matching: .any)["gativx-bottom-navigation"].firstMatch
+        XCTAssertTrue(bottomNavigation.waitForExistence(timeout: 5),
+                      "The fixed full-width five-tab navigation must be visible after member entry.")
 
         XCTAssertGreaterThan(dashboard.frame.width, window.frame.width * 0.95,
                              "Home must occupy nearly the full available iPhone width.")
-        XCTAssertGreaterThan(dashboard.frame.height, window.frame.height * 0.68,
-                             "Home must occupy the available screen height, not a narrow middle strip.")
+        XCTAssertGreaterThan(dashboard.frame.height, window.frame.height * 0.74,
+                             "Home must fill the usable viewport; a narrow middle strip is not acceptable.")
+        XCTAssertLessThanOrEqual(dashboard.frame.minY, window.frame.minY + 70,
+                                 "Home content must begin near the top safe area, not below a large blank band.")
         XCTAssertGreaterThanOrEqual(dashboard.frame.minX, window.frame.minX - 1)
         XCTAssertLessThanOrEqual(dashboard.frame.maxX, window.frame.maxX + 1)
-        XCTAssertGreaterThanOrEqual(dashboard.frame.maxY, tabBar.frame.minY - 2,
-                                     "Home content must extend down to the persistent tab bar.")
-        XCTAssertGreaterThan(tabBar.frame.width, window.frame.width * 0.95,
-                             "Bottom navigation must span the device width.")
-        XCTAssertGreaterThanOrEqual(tabBar.frame.maxY, window.frame.maxY - 12,
-                                     "Bottom navigation must remain attached to the bottom safe area.")
-        XCTAssertEqual(tabBar.buttons.count, 5,
+        XCTAssertGreaterThanOrEqual(dashboard.frame.maxY, bottomNavigation.frame.minY - 1,
+                                     "Home content must extend to the fixed bottom navigation.")
+        XCTAssertGreaterThan(bottomNavigation.frame.width, window.frame.width * 0.98,
+                             "Bottom navigation must span the full device width.")
+        XCTAssertGreaterThanOrEqual(bottomNavigation.frame.maxY, window.frame.maxY - 90,
+                                     "Bottom navigation must be attached to the device bottom safe area.")
+        XCTAssertLessThanOrEqual(bottomNavigation.frame.height, 76,
+                                 "Bottom navigation must use a compact fixed-height dock.")
+        let allTabButtons = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "gativx-tab-"))
+        XCTAssertEqual(allTabButtons.count, 5,
                        "Home, Activity, Missions, Community and Profile must all be present together.")
 
         for label in ["Home", "Activity", "Missions", "Community", "Profile"] {
-            let tab = tabBar.buttons.matching(NSPredicate(format: "label == %@", label)).firstMatch
-            XCTAssertTrue(tab.waitForExistence(timeout: 5), "Missing bottom navigation tab: \(label)")
-            XCTAssertTrue(tab.isHittable, "The \(label) tab must be visible and tappable.")
+            let tab = tabButton(app, label: label)
+            XCTAssertTrue(tab.waitForExistence(timeout: 5), "Missing bottom navigation tab: \\(label)")
+            XCTAssertTrue(tab.isHittable, "The \\(label) tab must be visible and tappable.")
             XCTAssertGreaterThanOrEqual(tab.frame.minX, window.frame.minX - 1)
             XCTAssertLessThanOrEqual(tab.frame.maxX, window.frame.maxX + 1)
         }
 
         // The dashboard is a vertical surface with fixed bottom tabs, not a horizontally
         // paging carousel. A left/right swipe must not switch the selected destination.
-        let homeTab = tabBar.buttons["Home"]
+        let homeTab = tabButton(app, label: "Home")
         dashboard.swipeLeft()
         XCTAssertTrue(homeTab.isSelected, "A left swipe must not move the dashboard sideways to another tab.")
         dashboard.swipeRight()
