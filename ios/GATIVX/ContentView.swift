@@ -2019,7 +2019,8 @@ struct ContentView: View {
         .padding(.bottom, 4)
         .frame(maxWidth: .infinity)
         .frame(height: 56)
-        .background(pageBackground)
+        // The root paints the home-indicator safe area; keep it outside the dock's frame.
+        .background(pageBackground, ignoresSafeAreaEdges: [])
         .overlay(alignment: .top) { Rectangle().fill(neon.opacity(0.22)).frame(height: 1) }
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("gativx-bottom-navigation")
