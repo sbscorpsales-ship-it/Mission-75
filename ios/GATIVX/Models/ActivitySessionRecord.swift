@@ -93,6 +93,8 @@ struct ActivitySessionRecord: Codable, Identifiable, Equatable {
             guard speed >= 0.5, speed <= 8 else { return total }
             return total + interval
         }
+        // No qualifying movement is not a measured zero-minute workout.
+        guard movingSeconds > 0 else { return nil }
         return Int(movingSeconds.rounded())
     }
 
