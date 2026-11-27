@@ -5703,3 +5703,46 @@ Changes are on the existing isolated PR #137 branch; no PR was merged.
 2. Decide whether saved history should freeze weight/height and calculation version at save time; if yes, add backward-compatible local provenance fields and tests. Do not upload raw local profile body metrics without an explicit product/privacy decision.
 3. Port the accepted metric presentation and shared golden fixtures to Android and Web Hub, then extend the backend contract/migrations for moving-time and metric provenance.
 4. Keep all PRs open/unmerged; continue physical-device and signing acceptance only when the required devices and owner credentials are available.
+
+
+## 2026-11-28 03:45 IST — GPS-backed live metrics acceptance test
+
+### Repository and PR state
+- Verified branch **feat/gativx-activity-metrics-ui-20261128** advanced from **2b0e12183b5976a64b2773b45a0f1097882583fb** to **bc76fdb523635ce9e992a95604a9aa5cf614f08a**.
+- PR #163 remains open/draft and unmerged, based on **fix/gativx-session-metrics-engine-20261127** at **f41fb5df967358094cb70e7cd3eb86b96ceb2d03**.
+- New commit: [bc76fdb](https://github.com/sbscorpsales-ship-it/Mission-75/commit/bc76fdb523635ce9e992a95604a9aa5cf614f08a) — test(ios): verify GPS-backed activity metrics in live UI and history.
+- Files changed: ios/GATIVX/GPSRouteRecorder.swift, ios/GATIVX/ContentView.swift, ios/GATIVXUITests/GATIVXDashboardUITests.swift, ios/GATIVXTests/GPSRouteDraftPersistenceTests.swift, .github/workflows/gativx-ios.yml.
+
+### Change details
+- Added a DEBUG-only deterministic route fixture for simulator UI tests. It injects 41 accepted points representing 1 km over 12 minutes, at approximately 5 km/h, without requesting real location permission or starting Core Location updates.
+- Added a recorder unit test for atomic draft persistence, non-recording test-fixture state, session-ID-scoped cleanup, and removal only after verified local save.
+- Added testGPSBackedActivityMetricsAreShownAndPersistedWithProvenance: checks live Activity distance (1.00 km), moving time (12:00), estimated calories (40 kcal at the test-only 80 kg local Profile value), GPS measured provenance, and “not HealthKit”; then verifies the same values in saved history after relaunch.
+- Existing pedometer-only assertions remain: distance, moving time and estimated calories must remain unavailable without valid evidence.
+- Added a CI static safeguard requiring the synthetic route fixture to remain DEBUG-only and not request live location updates.
+
+### Exact-head CI state
+- [Run #723](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/46076080143) is **in progress** on exact head **bc76fdb523635ce9e992a95604a9aa5cf614f08a**; no test result is claimed for this commit yet. The job was at “Install XcodeGen”; subsequent project generation, static safeguards, full XCTest, simulator build, unsigned Release build and IPA packaging are pending.
+- Previous exact head **2b0e12183b5976a64b2773b45a0f1097882583fb**, [run #722](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/46063556699), passed 81 unit tests + 12 UI tests, 0 failed, 0 cancelled; tracking safeguards, simulator build, unsigned Release build and IPA packaging passed. This result does not validate the new commit.
+- PR #136 exact head **31e5b70d85537113e74dd003d06b3ae95ba323f4**, [run #670](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45847572105): 76 unit tests passed; 9 UI tests with 1 failure. testDashboardFillsDeviceViewportAndExposesAllFiveTabs measured the dock at 113.0625 pt, above the 76 pt requirement. The other 8 UI cases passed. Tracking safeguards, simulator build, unsigned Release build and IPA packaging passed; overall CI failed on the dock assertion.
+- PR #161 [run #715](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/46048494016) remains the later successful layout baseline: 76 unit + 13 UI tests passed, including five destinations, full-screen Activity, dock <=76 pt, Guru keyboard dismissal, Finish & Save/history, Profile clearance and root-hosted photo picker. Simulator/CI evidence only.
+
+### Installer state
+- Android PR #137 run #190 artifact remains a verified **debug-only** APK: 14 JVM tests passed, 0 failed, 0 skipped; 25 safeguards passed; archive integrity passed. No Android device or Health Connect acceptance.
+- iOS PR #163 run #722 produced a structurally valid **unsigned** IPA; no _CodeSignature or embedded.mobileprovision. It is not directly installable. Run #723 has not yet produced an artifact.
+- No signed release installer, physical-device test or production deployment is claimed.
+
+### Gap ledger updates
+| Item | Status | Evidence / next gate |
+|---|---|---|
+| PR #163 live GPS metrics display and saved-history values | **implemented-but-unverified** | New exact-head UI test committed; run #723 pending |
+| DEBUG-only route fixture persistence/cleanup | **implemented-but-unverified** | Focused unit test committed; run #723 pending |
+| Historical weight/height snapshot and engine-versioned metric provenance | **missing** | Current history still recomputes from raw route/steps and current local Profile values; decide local snapshot semantics before implementing |
+| Android/Web metric engine and shared dashboard contract | **missing** | Cross-platform presentation and canonical metric/provenance contract remain open |
+| iOS signing and Android release signing | **blocked** | Requires owner-authorized Apple signing/provisioning and Android release keystore |
+| Physical iPhone GPS, background tracking and HealthKit read-back | **blocked** | Requires real iPhone, permissions and screen-locked acceptance walk |
+| Production Supabase security remediation | **blocked** | Excessive anon grants, broad future-object ACLs, migration-source/history mismatch and leaked-password protection remain unresolved; no production changes |
+
+### Safety and next action
+- PR #107 remains untouched/open. PR #112 remains open/unmerged. PRs #136, #161, #162 and #163 remain open/unmerged. No PR was merged.
+- Default branch main was still at **143889db3e72540fb478b76c486082f45395e9bd** at this checkpoint; all current work remains in PR/feature branches.
+- Next action: inspect run #723 job logs as soon as available; fix genuine compiler, static-check, unit or UI failures without narrowing tests. Then continue historical metric provenance and Android/Web contract work.
