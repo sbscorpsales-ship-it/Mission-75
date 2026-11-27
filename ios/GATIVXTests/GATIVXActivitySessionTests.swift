@@ -655,12 +655,114 @@ final class GATIVXActivitySessionTests: XCTestCase {
         XCTAssertEqual(record.activeDurationText, "—")
     }
 
-    func testCaloriesRequireValidWeightAndDistance() {
+    func testCanonicalActivityEngineMatchesSharedGoldenValues() {
+        let brisk = GATIVXActivityCalculationEngine.estimate(
+            weightKg: 70,
+            movingMinutes: 30,
+            speedKmh: 5,
+            grade: 0,
+            cadenceSpm: 112
+        )
+        XCTAssertEqual(brisk.status, .estimated)
+        XCTAssertEqual(brisk.engineVersion, "1.1.2")
+        XCTAssertEqual(brisk.met!, 3.38, accuracy: 0.02)
+        XCTAssertEqual(brisk.activeCaloriesKcal!, 88, accuracy: 1)
+        XCTAssertEqual(brisk.activityPoints, 30)
+        XCTAssertEqual(brisk.intensitySource, .metEstimate)
+        XCTAssertEqual(brisk.calculationMethod, .speedGradeMET)
+
+        let cadenceOnly = GATIVXActivityCalculationEngine.estimate(
+            weightKg: 70,
+            movingMinutes: 30,
+            speedKmh: nil,
+            cadenceSpm: 100
+        )
+        XCTAssertEqual(cadenceOnly.status, .estimated)
+        XCTAssertEqual(cadenceOnly.met!, 3.21, accuracy: 0.02)
+        XCTAssertEqual(cadenceOnly.activeCaloriesKcal!, 81.4, accuracy: 1)
+        XCTAssertEqual(cadenceOnly.calculationMethod, .cadenceMET)
+
+        let heartRate = GATIVXActivityCalculationEngine.estimate(
+            weightKg: 70,
+            movingMinutes: 12,
+            speedKmh: 5,
+            heartRateBpm: 120,
+            ageYears: 40
+        )
+        XCTAssertEqual(heartRate.activityPoints, 12)
+        XCTAssertEqual(heartRate.intensitySource, .heartRate)
+
+        let atBoundary = GATIVXActivityCalculationEngine.estimateMET(speedKmh: 6)!
+        let belowBoundary = GATIVXActivityCalculationEngine.estimateMET(speedKmh: 5.9999)!
+        let aboveBoundary = GATIVXActivityCalculationEngine.estimateMET(speedKmh: 6.0001)!
+        XCTAssertEqual(atBoundary, 13.5 / 3.5, accuracy: 0.001)
+        XCTAssertEqual(belowBoundary, atBoundary, accuracy: 0.001)
+        XCTAssertEqual(aboveBoundary, atBoundary, accuracy: 0.002)
+
+        let unsupported = GATIVXActivityCalculationEngine.estimate(
+            weightKg: 70,
+            movingMinutes: 30,
+            speedKmh: 5,
+            activityType: "running"
+        )
+        XCTAssertEqual(unsupported.status, .insufficientData)
+        XCTAssertNil(unsupported.activeCaloriesKcal)
+
+        let missing = GATIVXActivityCalculationEngine.estimate(
+            weightKg: 70,
+            movingMinutes: 30,
+            speedKmh: nil
+        )
+        XCTAssertEqual(missing.status, .insufficientData)
+        XCTAssertNil(missing.activeCaloriesKcal)
+    }
+
+    func testCaloriesUseCanonicalFormulaAndRequireMovingTime() {
         let start = Date(timeIntervalSince1970: 1_800_000_000)
-        let record = ActivitySessionRecord(id: UUID(), activity: "Walking", startedAt: start, finishedAt: start.addingTimeInterval(60), steps: 1000, routePoints: nil, motionDistanceMeters: 1000)
-        XCTAssertEqual(record.estimatedCaloriesKcal(weightKg: 80, heightCm: nil)!, 40, accuracy: 0.001)
+        let latitudeStep = 25.0 / 111_195.0
+        let points = (0...40).map { index in
+            GATIVXRoutePoint(
+                latitude: 15.8500 + Double(index) * latitudeStep,
+                longitude: 74.5000,
+                timestamp: start.addingTimeInterval(Double(index) * 30),
+                horizontalAccuracy: 4,
+                breakBefore: index == 0
+            )
+        }
+        let record = ActivitySessionRecord(
+            id: UUID(),
+            activity: "Walking",
+            startedAt: start,
+            finishedAt: start.addingTimeInterval(1_200),
+            steps: 1_000,
+            routePoints: points,
+            motionDistanceMeters: nil
+        )
+        XCTAssertEqual(record.activeDurationSeconds, 1_200)
+        XCTAssertEqual(record.estimatedCaloriesKcal(weightKg: 80, heightCm: nil)!, 42, accuracy: 0.5)
+        XCTAssertEqual(record.estimatedActivityPoints(weightKg: 80, heightCm: nil), 20)
+
+        let pedometerOnly = ActivitySessionRecord(
+            id: UUID(),
+            activity: "Walking",
+            startedAt: start,
+            finishedAt: start.addingTimeInterval(1_200),
+            steps: 1_000,
+            routePoints: nil,
+            motionDistanceMeters: 1_000
+        )
+        XCTAssertNil(pedometerOnly.estimatedCaloriesKcal(weightKg: 80, heightCm: nil))
         XCTAssertNil(record.estimatedCaloriesKcal(weightKg: 0, heightCm: nil))
-        let empty = ActivitySessionRecord(id: UUID(), activity: "Walking", startedAt: start, finishedAt: start.addingTimeInterval(60), steps: nil, routePoints: nil, motionDistanceMeters: nil)
+
+        let empty = ActivitySessionRecord(
+            id: UUID(),
+            activity: "Walking",
+            startedAt: start,
+            finishedAt: start.addingTimeInterval(60),
+            steps: nil,
+            routePoints: nil,
+            motionDistanceMeters: nil
+        )
         XCTAssertNil(empty.estimatedCaloriesKcal(weightKg: 80, heightCm: nil))
     }
     private func makeActivityStore() -> (ActivitySessionStore, URL, UserDefaults, String) {
