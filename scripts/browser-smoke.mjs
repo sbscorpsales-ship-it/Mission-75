@@ -339,4 +339,101 @@ assert(recoveryErrors.length===0,"Recovery replay browser errors: "+recoveryErro
 await recoveryPage.close();
 console.log("PASS: premium dashboard rings, live status and journal replay");
 
+// Sign-up responses without a session must be handled without disclosing whether
+// the address exists. Password recovery is mocked here; live email delivery and
+// the Supabase redirect allowlist remain separate release gates.
+const authRecoveryPage = await browser.newPage({viewport:{width:390,height:844}});
+const authRecoveryErrors = [];
+authRecoveryPage.on("pageerror", error => authRecoveryErrors.push(error.message));
+await authRecoveryPage.addInitScript(() => {
+  window.__authRecovery = {signUpCalls: 0, resetCalls: [], updateCalls: [], listener: null};
+  window.supabase = {
+    createClient: () => ({
+      auth: {
+        getSession: async () => ({data: {session: null}, error: null}),
+        onAuthStateChange: callback => {
+          window.__authRecovery.listener = callback;
+          return {data: {subscription: {unsubscribe() {}}}};
+        },
+        signUp: async () => {
+          window.__authRecovery.signUpCalls += 1;
+          return {data: {user: {id: "existing-member", identities: []}, session: null}, error: null};
+        },
+        signInWithPassword: async () => ({data: {user: null, session: null}, error: {message: "Invalid login credentials"}}),
+        resetPasswordForEmail: async (email, options) => {
+          window.__authRecovery.resetCalls.push({email, options});
+          return {error: null};
+        },
+        updateUser: async payload => {
+          window.__authRecovery.updateCalls.push(payload);
+          return {error: null};
+        }
+      },
+      from: () => ({
+        select: () => ({eq: async () => ({data: [], error: null})}),
+        upsert: async () => ({error: null}),
+        insert: async () => ({error: null})
+      })
+    })
+  };
+});
+await authRecoveryPage.route("https://**/*", route => route.abort());
+await authRecoveryPage.goto(pathToFileURL(path.resolve("app-v2.html")).href, {waitUntil:"domcontentloaded"});
+await authRecoveryPage.locator("#cloudEmail").fill("member@example.com");
+await authRecoveryPage.locator("#cloudPassword").fill("not-a-real-password");
+await authRecoveryPage.locator("#cloudSignUp").click();
+assert((await authRecoveryPage.locator("#cloudSignUp").textContent()).trim() === "Create account",
+       "The second sign-up step must not be labelled as email confirmation.");
+assert(await authRecoveryPage.locator("#cloudNameWrap").isVisible(),
+       "The new-account name field must appear before sign-up.");
+await authRecoveryPage.locator("#cloudName").fill("GATIVX QA");
+await authRecoveryPage.locator("#cloudSignUp").click();
+await authRecoveryPage.waitForFunction(() =>
+  document.querySelector("#cloudStatus")?.textContent.includes("If this is a new registration")
+);
+const neutralSignup = await authRecoveryPage.locator("#cloudStatus").textContent();
+assert(neutralSignup.includes("switch to Sign in") && neutralSignup.includes("Forgot password"),
+       "No-session sign-up guidance must provide sign-in and recovery paths.");
+assert(!neutralSignup.includes("already registered") && !neutralSignup.includes("Account created."),
+       "No-session sign-up must not disclose account existence or claim a new account was created.");
+assert(await authRecoveryPage.evaluate(() => window.__authRecovery.signUpCalls) === 1,
+       "The sign-up action must be submitted exactly once.");
+
+await authRecoveryPage.locator("#cloudForgotPassword").click();
+await authRecoveryPage.waitForFunction(() =>
+  document.querySelector("#cloudStatus")?.textContent.includes("If an account exists for this email")
+);
+const resetRequest = await authRecoveryPage.evaluate(() => window.__authRecovery.resetCalls[0]);
+assert(resetRequest?.email === "member@example.com", "Password reset must use the entered email address.");
+assert(resetRequest?.options?.redirectTo === window.location.origin + window.location.pathname,
+       "Password reset must return to the current GATIVX page.");
+assert((await authRecoveryPage.locator("#cloudStatus").textContent()).includes("you will receive a password reset link"),
+       "Password reset guidance must not claim delivery before the provider confirms it.");
+
+await authRecoveryPage.evaluate(() => window.__authRecovery.listener("PASSWORD_RECOVERY", {user:{id:"existing-member"}}));
+await authRecoveryPage.waitForFunction(() =>
+  getComputedStyle(document.querySelector("#cloudPasswordRecovery")).display !== "none"
+);
+await authRecoveryPage.locator("#cloudNewPassword").fill("short");
+await authRecoveryPage.locator("#cloudSaveNewPassword").click();
+await authRecoveryPage.waitForFunction(() =>
+  document.querySelector("#cloudStatus")?.textContent.includes("between 12 and 64 characters")
+);
+assert(await authRecoveryPage.evaluate(() => window.__authRecovery.updateCalls.length) === 0,
+       "Invalid recovery password must not be submitted to Supabase.");
+const recoveryPassword = "Gativx!2026#Move";
+await authRecoveryPage.locator("#cloudNewPassword").fill(recoveryPassword);
+await authRecoveryPage.locator("#cloudSaveNewPassword").click();
+await authRecoveryPage.waitForFunction(() =>
+  document.querySelector("#cloudStatus")?.textContent.includes("Your password has been updated")
+);
+assert(await authRecoveryPage.evaluate(password =>
+  window.__authRecovery.updateCalls.length === 1 &&
+  window.__authRecovery.updateCalls[0].password === password, recoveryPassword),
+  "A valid recovery password must be sent once to Supabase Auth.");
+assert(authRecoveryErrors.length === 0,
+       "Auth recovery browser errors: " + authRecoveryErrors.join("; "));
+await authRecoveryPage.close();
+console.log("PASS: neutral sign-up guidance, password-reset request and recovery validation");
+
 await browser.close();
