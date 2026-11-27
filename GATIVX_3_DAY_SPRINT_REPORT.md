@@ -4066,3 +4066,17 @@ The six PR #152 simulator screenshots (Activity, Profile, Welcome, Guru and two 
 - Next engineering work: inspect/continue Finish & Save integration from the passing Activity baseline, then plan real-device acceptance only when a compatible signing/provisioning path and physical iPhone are available. Continue Android device/Health Connect and Web live-auth checks separately.
 - Owner/admin action remains necessary for production Supabase grant/default-ACL hardening, Leaked Password Protection and GitHub branch protection.
 - PR #107 remains untouched; PR #112 remains unmerged; no PR is to be merged.
+
+### Finish & Save / HealthKit queue audit — 27/11/2026, 12:24 IST (2026-11-27T06:54Z)
+
+A source-level audit was performed against the exact PR #152 head `3d5221ed36b180436f81d5c00580f93dea820aa7`:
+
+- GitHub commit comparisons confirm PR #136 is a descendant of PR #121 (49 commits ahead, 0 behind) and PR #117 (52 commits ahead, 0 behind). PR #152 is itself 23 commits ahead of PR #136. Therefore the Finish & Save / HealthKit queue work from those earlier branches is present in the current PR #152 simulator baseline; this is not inferred from branch names alone.
+- The local ActivitySessionRecord is upserted into existing history, written, reloaded and checked for the same session UUID before the app reports local save success or attempts HealthKit export.
+- HealthKit workout queue insertion is idempotent by stable workout UUID. Queue data is encoded, written and read back byte-for-byte, decoded again, and its ID sequence is verified. If queue acceptance fails, Finish & Save keeps the GPS draft and the same session ID available for retry. If queue acceptance succeeds but HealthKit export later fails, the queued item remains available for retry.
+- HealthKit queue acknowledgement occurs only after an existing workout with the stable sync identifier is found, or a new workout is confirmed saved; queue acknowledgement itself must read back successfully. The 121 source safeguards include these ordering/retention conditions.
+- The PR #152 unit suite includes 18 Finish & Save regression tests. It explicitly covers queue failure with local session retention, restoring a saved session using a fresh store, repeated save idempotency, measured-step selection and coalesced export failure delivery. The full run #45933957530 executed the 18-test suite with zero failures as part of 76/76 unit tests.
+- The 10 passing UI tests do **not** execute a complete Start Walk → Finish & Save → reopen History flow. `testHomeStartWalkNavigatesWithoutStartingSession` only verifies that Home navigates to Activity and does not silently start tracking. Thus the core Finish & Save logic has meaningful unit/source coverage, but end-to-end UI and physical-device save/recovery remain **implemented-but-unverified**.
+- Historical isolated runs are not treated as acceptance: PR #117 run #45674730866 was cancelled; PR #121 run #45713205787 failed at the older dashboard UI snapshot timeout. Their commits are ancestors of the later PR #136/#152 baseline, whose current simulator evidence is the 86/86 passing run #45933957530.
+
+**Next test task:** add a deterministic, DEBUG-only sensor/session test seam (without changing production sensor behavior) and an end-to-end simulator UI test for Start Walk → Finish & Save → visible saved record → app relaunch/history recovery. Keep the existing 76 unit, 10 UI and 121 tracking safeguards intact. Physical iPhone HealthKit and background GPS still require actual device acceptance.
