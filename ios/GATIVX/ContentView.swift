@@ -697,7 +697,8 @@ struct ContentView: View {
         GeometryReader { geometry in
             homeDashboardContent(width: geometry.size.width, height: geometry.size.height)
         }
-        .accessibilityIdentifier("gativx-home-dashboard")
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("gativx-home-viewport")
     }
 
     private func homeDashboardContent(width: CGFloat, height: CGFloat) -> some View {
