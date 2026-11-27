@@ -4275,3 +4275,111 @@ PR #156 is a draft stacked directly on PR #155's exact head. Run #45965326550 is
 - **Independent activity engine PR #131**, head `37b9866b13bcedc99fd0cbb1fbaf0cef7f8b8f95`, [run #45945165684](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45945165684): activity-engine job succeeded. The engine's walking-only calorie boundary change remains a separate branch and is not yet integrated into all platform clients.
 
 These results improve automated source/JVM/browser confidence but do not change the device, live-service or production release gates in the gap ledger.
+
+
+## Checkpoint 14 — 2026-11-27 14:46 IST (09:16 UTC)
+
+### Repository and branch snapshot
+
+- `main` remains `143889db3e72540fb478b76c486082f45395e9bd`; GitHub reports `protected=false`.
+- PR #136 remains open/draft at exact head `31e5b70d85537113e74dd003d06b3ae95ba323f4`.
+- PR #152 remains open/draft at `3d5221ed36b180436f81d5c00580f93dea820aa7`.
+- PR #155 remains open/draft at `630e98b49f8cfaea4b6e584bfb56a2cddb5ed790`; run #45957821065 latest attempt 2 failed.
+- PR #156 remains open/draft at `9d16bd2d178cea9a5297776bc9d3f4b2d6274cfd`; exact-head run #45965326550 completed successfully.
+- PR #107 remains untouched at `c19bdbd307df7048cefd86bd3e6064ac4f4e3042`; PR #112 remains open/unmerged at `b6c04d41dc67bd191ed0cf8966331eb5661a9887`.
+- No PR was merged, no production deployment/database mutation occurred, and Design C/product decisions were not changed.
+
+### PR #136 — exact head and artifacts
+
+[Run #45847572105](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45847572105), exact head `31e5b70d85537113e74dd003d06b3ae95ba323f4`:
+
+- Unit tests: 76 passed, 0 failed.
+- UI tests: 9 executed, 8 passed, 1 failed, 0 cancelled.
+- The failure was `testDashboardFillsDeviceViewportAndExposesAllFiveTabs`: measured dock frame 113.0625 pt against the 76 pt maximum.
+- Tracking/source safeguards: 121 passed, 0 failed.
+- Simulator build and unsigned Release build succeeded. IPA ZIP integrity succeeded, but the exact-head artifact lacked `UILaunchScreen`; it was unsigned and had no provisioning profile.
+- Latest-attempt artifacts: IPA ID `15146711639`; xcresult ID `15146161829`; simulator ID `15145957076`; XCTest diagnostics ID `15145517291`.
+- The run log records Activity full-viewport, five-tab, Home and Profile screenshots. This exact head remains failed; descendant evidence must not be substituted for it.
+
+### PR #152 — later passing simulator baseline
+
+[Run #45933957530](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45933957530), head `3d5221ed36b180436f81d5c00580f93dea820aa7`:
+
+- Unit tests: 76 passed, 0 failed.
+- UI tests: 10 passed, 0 failed, 0 cancelled.
+- Tracking/source safeguards: 121 passed, 0 failed.
+- Simulator build, unsigned Release build, launch-screen metadata, IPA ZIP integrity and bundle identity/version checks passed.
+- Screenshot attachments in the xcresult include Activity full viewport, full-device screen, five tabs, Home, Guru goal field, Profile direct-from-Home and Welcome.
+- IPA remains unsigned; this is simulator and package evidence, not an installable iPhone release.
+
+### PR #155 — latest failed attempt
+
+[Run #45957821065](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45957821065), attempt 2, head `630e98b49f8cfaea4b6e584bfb56a2cddb5ed790`:
+
+- Unit tests: 76 passed, 0 failed.
+- UI tests: 11 executed, 5 assertion failures, 0 cancelled. Three assertions failed in `testDashboardFillsDeviceViewportAndExposesAllFiveTabs` after guest entry (Home dashboard/dock not found); two assertions failed in `testFinishSavePersistsAndRecoversActivityHistory` because the saved-row accessibility identifier was double-escaped.
+- Tracking safeguards: 120 passed, 1 failed. The failing check was `Finish & Save clears the GPS draft only after queue acceptance`.
+- Simulator build and unsigned Release/IPA packaging completed, but release validation failed on XCTest and tracking safeguards.
+
+### PR #156 — corrective implementation and exact-head CI
+
+[PR #156](https://github.com/sbscorpsales-ship-it/Mission-75/pull/156), branch `fix/gativx-finish-save-ui-evidence-20261127`, exact head `9d16bd2d178cea9a5297776bc9d3f4b2d6274cfd`, based on PR #155.
+
+Changed file:
+- `ios/GATIVX/ContentView.swift` (13 additions, 11 deletions).
+
+The patch corrects the saved-row accessibility identifier interpolation. In the explicit DEBUG simulated-walk path it avoids starting/stopping GPS and does not clear a route draft that the test never created. The production path still clears the GPS draft only inside the HealthKit queue-accepted branch. No production sensor or HealthKit behavior and no approved design decision was changed.
+
+[Exact-head CI run #45965326550](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45965326550) completed successfully:
+
+- Unit tests: 76 passed, 0 failed, 0 cancelled.
+- UI tests: 11 passed, 0 failed, 0 cancelled.
+- Tracking/source safeguards: 130 PASS assertions, 0 FAIL assertions.
+- Simulator build: passed.
+- Unsigned Release build: passed.
+- Unsigned IPA packaging, ZIP integrity, bundle identity/version and launch-screen metadata: passed.
+- All automated release-gate checks passed.
+
+The exact UI log confirms `testFinishSavePersistsAndRecoversActivityHistory` passed in 55.378 seconds. It taps Finish & Save, finds the UUID-specific saved row, checks the label contains Walking and 123, terminates and relaunches the app, re-enters the guest session, returns to Activity, and finds the same row ID with Walking and 123 again. This verifies the deterministic DEBUG local-history save/relaunch path on the simulator. It does not exercise real GPS or HealthKit export.
+
+Artifacts for run #45965326550:
+- Simulator: ID `15185035208`, 2,788,723 bytes.
+- XCTest result bundle: ID `15184400989`, 139,829,102 bytes.
+- Unsigned IPA: ID `15184089834`, 766,721 bytes (outer artifact).
+- XCTest diagnostics: ID `15183724894`, 131,034,790 bytes.
+
+The downloaded IPA artifact was independently extracted and checked:
+- Inner `GATIVX-unsigned.ipa`: 773,684 bytes; ZIP integrity clean.
+- Bundle ID `com.paramitsolutions.gativx`; version 1.0.0, build 1.
+- `UILaunchScreen` is present as an empty dictionary.
+- Executable exists (4,056,592 bytes) and has Mach-O magic `cffaedfe`.
+- No embedded provisioning profile and no code-signature entries; it remains unsigned and cannot be installed as-is.
+- SHA-256 of extracted IPA: `3c29cf3ea9dc741e82ef84a9d0109a0fb779c3aed8a2e6b1b8df9d48a2f625f7`.
+
+The xcresult log lists seven visual attachments: Activity full viewport/fixed navigation, full-device screen, five-tab viewport, Home dashboard, Guru goal field, Profile direct-from-Home and Welcome full-device screen. The Finish & Save test's pass/relaunch sequence is in the log; there is no separately named Finish & Save screenshot attachment in the log.
+
+### Gap-ledger changes
+
+| Area | Status | Evidence / remaining gate |
+|---|---|---|
+| PR #136 exact-head navigation/dock | implemented-but-unverified / failed | Exact run has 1 UI failure: 113.0625 pt > 76 pt. Do not relabel from descendant evidence. |
+| Five destinations, dock <=76 pt, full-screen Activity, root-hosted Profile picker, Guru keyboard | verified (simulator only) | PR #152 and PR #156 UI suites pass; physical iPhone remains unverified. |
+| Finish & Save local history and relaunch recovery | verified (deterministic simulator test path) | PR #156 test verifies the same UUID row and Walking/123 label after app relaunch. Real sensor and HealthKit production path remains unverified. |
+| HealthKit queue/export and physical authorization/write | implemented-but-unverified | Unit/source safeguards pass; no physical iPhone authorization, write or background-delivery evidence. |
+| iPhone pedometer/GPS/background recording | implemented-but-unverified | Simulator/source checks only; no physical iPhone or locked-screen acceptance. |
+| Android / Health Connect | implemented-but-unverified | Prior source/JVM/Debug APK evidence only; no physical Android acceptance. |
+| Web Hub auth recovery | implemented-but-unverified | PR #153 browser checks pass; live reset email, redirect allowlist and production deployment unverified. |
+| Missions lifecycle, Community feed/moderation, push notifications | missing | Current experiences remain starter/gated/inactive. |
+| Profile photo cloud/cross-device sync | missing | Local picker exists; cross-device delivery not implemented/verified. |
+| Supabase least-privilege/default ACLs and leaked-password protection | blocked | Requires authorized project owner/admin action and post-change verification. |
+| Signed iOS installation | blocked | No signing identity/provisioning profile; inspected IPA is unsigned. |
+| Android signed release and production Web deployment | blocked | No device/signing/deployment evidence. |
+| GitHub branch protection | blocked | GitHub reports `main.protected=false`; owner/admin action required. |
+
+### Next actions
+
+1. Keep PR #136's exact failure documented; preserve PR #152 as the later passing simulator baseline.
+2. Add/retain deterministic failure-path tests for local history write failure and HealthKit queue rejection, proving the same session and GPS draft remain retryable. Do not weaken existing assertions.
+3. Pursue physical iPhone testing separately from simulator CI. Required evidence: a signed installable build, HealthKit permission and workout write, background/locked-screen GPS, and a real walk saved/reopened.
+4. Continue Android/Health Connect, live auth email, backend ACL and production deployment gates with account/device evidence.
+5. Keep PR #107 untouched, PR #112 unmerged, and never merge any PR during this sprint.
