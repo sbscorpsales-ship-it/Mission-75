@@ -87,9 +87,10 @@ final class GATIVXDashboardUITests: XCTestCase {
                       "Home must render the Heart Points progress ring.")
         XCTAssertEqual(heartPointsRing.label, "Heart Points progress")
 
-        // A scroll view's child accessibility frame may extend below the fold.
-        // Verify the actual viewport stops above the fixed dock, then prove the
-        // mission card can be scrolled fully into that unobstructed viewport.
+        // XCTest reports the ScrollView's backing accessibility frame, not its
+        // clipped viewport, so comparing that frame directly with the dock is invalid.
+        // Prove both an early dashboard card and the final Home card can be scrolled
+        // fully above the dock. This verifies content reachability, not clip geometry.
         let scrollView = app.scrollViews["gativx-home-dashboard"]
         XCTAssertTrue(scrollView.waitForExistence(timeout: 5),
                       "Home must expose its scrollable dashboard viewport.")
@@ -155,6 +156,22 @@ final class GATIVXDashboardUITests: XCTestCase {
         }
         XCTAssertTrue(caloriesMetric.waitForExistence(timeout: 2), "Missing approved dashboard metric: calories")
         XCTAssertTrue(averageHeartRateMetric.waitForExistence(timeout: 2), "Missing approved dashboard metric: average heart rate")
+
+        // The final Home card must also be reachable above the fixed dock. This
+        // catches bottom-content clipping that a middle-card assertion can miss.
+        let communityCard = app.buttons["gativx-community-gati-card"]
+        for _ in 0..<24 where !communityCard.isHittable {
+            scrollTowardBottom(scrollView)
+        }
+        XCTAssertTrue(communityCard.waitForExistence(timeout: 5),
+                      "The final Community Gati card must remain part of the Home dashboard.")
+        XCTAssertTrue(communityCard.isHittable,
+                      "The final Home card must be reachable without interacting through the dock.")
+        for _ in 0..<12 where communityCard.frame.maxY > bottomNavigation.frame.minY + 1 {
+            scrollTowardBottom(scrollView)
+        }
+        XCTAssertLessThanOrEqual(communityCard.frame.maxY, bottomNavigation.frame.minY + 1,
+                                 "The final Home card must be fully scrollable above the persistent dock.")
 
         let notifications = app.buttons["Notifications"]
         XCTAssertTrue(notifications.waitForExistence(timeout: 5))
