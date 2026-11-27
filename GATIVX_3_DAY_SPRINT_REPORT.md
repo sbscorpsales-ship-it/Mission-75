@@ -4264,3 +4264,14 @@ PR #156 is a draft stacked directly on PR #155's exact head. Run #45965326550 is
 2. If PR #156 passes, verify the saved-row accessibility identifier and the same UUID after app relaunch in the UI result evidence before changing the relaunch-recovery ledger status.
 3. If it fails, fix the observed defect only and rerun the complete serial unit/UI suite, all 121 tracking safeguards, simulator build, unsigned Release build and IPA integrity checks.
 4. Continue to keep PR #107 untouched, PR #112 unmerged, and all other PRs unmerged. Keep physical iPhone, Android device, production Auth/database, signing and deployment gates explicitly separate.
+
+
+### Cross-platform and security CI evidence additionally rechecked — 2026-11-27 13:51 IST
+
+- **Android PR #137**, head `d5edab346eb9a00de7d02407fe501c8193a655c2`, [run #45840866819](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45840866819): 25 Android source safeguards passed, 6 JVM unit tests passed, 0 failed, 0 skipped; Debug APK build and artifact upload succeeded (artifact ID `15128630240`). No physical Android device or Health Connect account was exercised.
+- **Web escaping PR #138**, head `45f7fd32f78aeb462ae56ac1202cdf7a5142f293`, [run #45839703732](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45839703732): 23 source/browser assertions passed, 0 failed. This includes member-controlled history escaping and browser smoke checks; it does not constitute production deployment evidence.
+- **Supabase public-grant hardening PR #144**, head `edd9f211c3029c38d8ad6255c341ca8e235b3b46`, [run #45891894462](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45891894462): web checks passed (22 logged PASS assertions) and the separate `supabase-grant-regression` job completed successfully against its test fixture. No production project privileges were changed by this run.
+- **Web authentication PR #153**, head `a21ac8890047274699d66351b61c4f5ab7cfd8e9`, [run #45940205733](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45940205733): 25 source/browser assertions passed, 0 failed, including neutral duplicate-sign-up guidance and password-reset request/recovery validation. Actual email delivery, redirect allowlist and live production deployment remain unverified.
+- **Independent activity engine PR #131**, head `37b9866b13bcedc99fd0cbb1fbaf0cef7f8b8f95`, [run #45945165684](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45945165684): activity-engine job succeeded. The engine's walking-only calorie boundary change remains a separate branch and is not yet integrated into all platform clients.
+
+These results improve automated source/JVM/browser confidence but do not change the device, live-service or production release gates in the gap ledger.
