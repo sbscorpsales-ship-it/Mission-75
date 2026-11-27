@@ -5564,3 +5564,14 @@ Changes are on the existing isolated PR #137 branch; no PR was merged.
 - Six reviewable commits above; no Android device/emulator test performed.
 - Exact-head Android CI #190 pending; no APK result for the new head yet.
 - iOS #720 (canonical Swift engine) and #715 (Profile clearance) remain in progress.
+
+
+## 2026-11-28 02:35 IST — isolated compiler checks and current CI state
+
+- An isolated Swift compiler check of the canonical engine logic succeeded. Golden checks returned MET 3.38095, active energy 87.5 kcal and 30 Activity Points for the 70 kg / 30 min / 5 km/h case; cadence fallback returned MET 3.21486 and 81.396 kcal; HR intensity and the 6 km/h boundary continuity checks passed. This is a standalone engine check, not an Xcode project build.
+- An isolated Kotlin compiler check of the Android engine and moving-time algorithm also succeeded using a minimal WalkOnPoint model. The same golden calorie/point checks passed and the mixed moving/stationary/gap/break/inaccurate GPS fixture returned exactly 120 moving seconds. This is not a full Android Gradle build.
+- Exact-head full CI remains authoritative:
+  - iOS PR #162 run #720: project generation, scheme validation and source checks passed; full unit/UI test suite is in progress.
+  - iOS PR #161 run #715 retry: project generation and source checks passed; full unit/UI test suite is in progress.
+  - Android PR #137 run #190: SDK/Gradle setup and 25 source safeguards passed; JVM tests are in progress.
+- No pass/fail/cancelled counts are asserted for those three in-progress suites. The new iOS/Android code must not be considered accepted until the corresponding exact-head workflows finish and their logs/diagnostics are reviewed.
