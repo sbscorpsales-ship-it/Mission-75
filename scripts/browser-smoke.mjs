@@ -339,4 +339,57 @@ assert(recoveryErrors.length===0,"Recovery replay browser errors: "+recoveryErro
 await recoveryPage.close();
 console.log("PASS: premium dashboard rings, live status and journal replay");
 
+// A no-session sign-up response can mean that confirmation is still pending or
+// that the address was registered before. The UI must not falsely claim that a
+// new account was created or that a confirmation email was delivered.
+const signupGuidancePage = await browser.newPage({viewport:{width:390,height:844}});
+const signupGuidanceErrors = [];
+signupGuidancePage.on("pageerror", error => signupGuidanceErrors.push(error.message));
+await signupGuidancePage.addInitScript(() => {
+  window.__signupGuidance = {calls: 0};
+  window.supabase = {
+    createClient: () => ({
+      auth: {
+        getSession: async () => ({data: {session: null}, error: null}),
+        onAuthStateChange: () => ({data: {subscription: {unsubscribe() {}}}}),
+        signUp: async () => {
+          window.__signupGuidance.calls += 1;
+          return {data: {user: {id: "existing-account", identities: []}, session: null}, error: null};
+        },
+        signInWithPassword: async () => ({data: {user: null, session: null}, error: {message: "Invalid login credentials"}})
+      },
+      from: () => ({
+        select: () => ({eq: async () => ({data: [], error: null})}),
+        upsert: async () => ({error: null}),
+        insert: async () => ({error: null})
+      })
+    })
+  };
+});
+await signupGuidancePage.route("https://**/*", route => route.abort());
+await signupGuidancePage.goto(pathToFileURL(path.resolve("app-v2.html")).href, {waitUntil:"domcontentloaded"});
+await signupGuidancePage.locator("#cloudEmail").fill("existing@example.com");
+await signupGuidancePage.locator("#cloudPassword").fill("not-a-real-password");
+await signupGuidancePage.locator("#cloudSignUp").click();
+assert((await signupGuidancePage.locator("#cloudSignUp").textContent()).trim() === "Create account",
+       "The second sign-up step must not be labelled as email confirmation.");
+assert(await signupGuidancePage.locator("#cloudNameWrap").isVisible(),
+       "The new-account name field must appear before sign-up.");
+await signupGuidancePage.locator("#cloudName").fill("GATIVX QA");
+await signupGuidancePage.locator("#cloudSignUp").click();
+await signupGuidancePage.waitForFunction(() =>
+  document.querySelector("#cloudStatus")?.textContent.includes("If this is a new registration")
+);
+const signupGuidance = await signupGuidancePage.locator("#cloudStatus").textContent();
+assert(signupGuidance.includes("switch to Sign in"),
+       "No-session sign-up guidance must explain how an existing member should proceed.");
+assert(!signupGuidance.includes("Account created."),
+       "No-session sign-up must not claim that a new account was created.");
+assert(await signupGuidancePage.evaluate(() => window.__signupGuidance.calls) === 1,
+       "The sign-up action must be submitted exactly once.");
+assert(signupGuidanceErrors.length === 0,
+       "Sign-up guidance browser errors: " + signupGuidanceErrors.join("; "));
+await signupGuidancePage.close();
+console.log("PASS: no-session sign-up gives neutral confirmation-or-existing-account guidance");
+
 await browser.close();
