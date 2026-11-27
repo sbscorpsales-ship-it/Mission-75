@@ -3332,3 +3332,38 @@ No product code changed in this source-inspection pass. These scope distinctions
 
 ### Next action
 Poll runs #45916191745 and #45916412588. Inspect the full UI results and screenshots, then accept the Home fix only if the Home viewport container ends above the dock, mission content remains reachable above it, the dock is ≤76 pt, Activity remains full-height above the dock, all five tabs/Guru/Profile tests pass, all 76 unit tests pass, tracking safeguards pass, and simulator/unsigned Release/IPA validation all succeed. Keep #107 untouched, #112 unmerged, and all PRs unmerged.
+
+
+## Live Supabase and cross-platform recheck — 2026-11-27 05:52 IST
+
+### Supabase live project (read-only inspection)
+- Project `mission75-cloud` is `ACTIVE_HEALTHY`; database is PostgreSQL 17.11.0.011.
+- `list_migrations` reports **22 applied migration versions**. The current `main` tree contains **10** migration files: **4 exact version matches**, **6 timestamp-drifted names**, and **12 applied versions with no matching source filename**. Do not reconstruct or apply missing migrations by guesswork.
+- All six current public tables have RLS enabled. Their existing policies scope reads/writes to `auth.uid() = user_id` (or `id` for profiles).
+- Live table grants remain over-broad: `anon` has table privileges on `daily_action_progress`, including `TRUNCATE`, `MAINTAIN`, `REFERENCES` and `TRIGGER`; `authenticated` has `MAINTAIN` on all six public tables and `TRUNCATE/REFERENCES/TRIGGER` on `daily_action_progress`.
+- Live default privileges for **both `postgres` and `supabase_admin`** grant `anon` and `authenticated` all table privileges, sequence `SELECT/UPDATE/USAGE`, and function `EXECUTE` for future public objects.
+- Supabase Security Advisor still reports **Leaked Password Protection Disabled**.
+- No production SQL or Auth setting was changed. PR #144's [run #45891894462](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45891894462) passed both Web Hub checks and the isolated PostgreSQL 17.12 grant-regression fixture, including the `supabase_admin` default-ACL action inside the fixture. This is not production remediation.
+
+### Exact administrator action required
+1. Reconcile the 22-version database migration history with the 10 files on `main` before applying any new production migration; recover the missing historical SQL from a trusted backup/source rather than generating replacement SQL from the live schema.
+2. After review and backup, apply the versioned postgres-owned hardening migration and run `supabase/manual/harden_gativx_supabase_admin_default_privileges.sql` from an authorized `supabase_admin` session (or a role that is a member of it).
+3. Enable Leaked Password Protection in Supabase Auth password-security settings, then rerun Security Advisor and the grant query.
+
+### Android and Web Hub evidence refreshed
+- PR #137 exact head `d5edab346eb9a00de7d02407fe501c8193a655c2`, [run #45840866819](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45840866819): **25/25 source safeguards**, **6/6 JVM tests**, 0 failed, 0 skipped; Debug APK build and artifact upload succeeded. No physical Android/Health Connect acceptance.
+- PR #138 exact head `45f7fd32f78aeb462ae56ac1202cdf7a5142f293`, [run #45839703732](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45839703732): **16 structural checks** and **7 mobile Chromium browser smoke assertions** passed. The XSS regression injects member-controlled history labels and verifies they remain text; no production deployment is proven.
+- PR #144 exact head `edd9f211c3029c38d8ad6255c341ca8e235b3b46`, [run #45891894462](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45891894462): both `web-checks` and `supabase-grant-regression` jobs succeeded against the isolated PostgreSQL fixture.
+
+### Current source-scope notes
+- Native Profile photo is validated and stored locally on the iPhone only; cloud photo storage/sync is missing.
+- Community and push notifications remain explicitly gated/inactive; no feed or delivery service was verified.
+- Native Missions currently expose a starter daily consistency mission and progress/action flow; a full mission catalogue/lifecycle remains incomplete.
+- Native Finish & Save uses atomic local activity history, a durable HealthKit workout outbox and retry/recovery paths in source; physical iPhone HealthKit export, background GPS and real device persistence remain unverified.
+- Android WalkOn uses encrypted local route storage, a foreground GPS service and a hardware step-counter sensor in source; physical device and Health Connect behavior remain unverified.
+- Web Hub uses an isolated browser store, Supabase auth/backup and browser GPS; native HealthKit is not available in the browser and depends on the iPhone Shortcut import path.
+
+### CI in progress at this checkpoint
+- PR #148 updated head `d3f29bf42d4fe9287314ba9ffd0e4affcf5d1f38`, [run #45916191745](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45916191745): setup, checkout, Xcode selection, project generation, scheme validation and first-run checks passed; full serial XCTest remains in progress.
+- PR #149 latest head `6786ec2cc36771bd4a1ed7d408b90244125eb45a`, [run #45916412588](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45916412588): setup, checkout, Xcode selection, project generation, scheme validation and first-run checks passed; full serial XCTest remains in progress.
+- No new pass/fail counts are available for either run at this checkpoint. Do not infer a result from the green setup steps.
