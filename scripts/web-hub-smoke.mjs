@@ -23,6 +23,10 @@ await page.locator('[data-view="dashboard"]').click();
 await page.locator("#search").fill("guru");
 await page.locator("#search").press("Enter");
 assert((await page.locator("#page-title").textContent()).includes("Guru"),"Search did not navigate to Guru");
+// Restore the dashboard before asserting its responsive hero. The search assertion
+// intentionally leaves Guru selected, where the dashboard hero is correctly hidden.
+await page.locator('[data-view="dashboard"]').click();
+assert(await page.locator(".hero").isVisible(),"Dashboard hero must be visible before responsive resize");
 await page.setViewportSize({width:390,height:844});
 assert(await page.locator(".nav").isVisible(),"Responsive navigation is missing");
 assert(await page.locator(".hero").isVisible(),"Responsive hero is missing");
