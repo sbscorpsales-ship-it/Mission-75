@@ -325,6 +325,7 @@ function cloudUi(){
  const signed=!!cloudUser;
  $('cloudSignIn').style.display=signed?'none':'block';
  $('cloudSignUp').style.display=signed?'none':'block';
+  $('cloudForgotPassword').style.display=signed?'none':'block';
  $('cloudSyncNow').style.display=signed?'block':'none';
  $('cloudSignOut').style.display=signed?'block':'none';
  $('cloudFields').style.display=signed?'none':'grid';
@@ -424,7 +425,7 @@ async function cloudAuth(mode){
   cloudMsg('Requesting a password reset email…','PASSWORD RECOVERY');
   const reset=await cloudClient.auth.resetPasswordForEmail(email,{redirectTo:window.location.origin+window.location.pathname});
   if(reset.error){cloudMsg('We could not send the reset email: '+reset.error.message,'PASSWORD RESET ISSUE');return}
-  cloudMsg('If an account exists for this email, a password reset link has been sent. Check Inbox, Spam and Promotions. Open the link on this device to choose a new password.','CHECK YOUR EMAIL');return;
+  cloudMsg('If an account exists for this email, you will receive a password reset link. Check Inbox, Spam and Promotions. Open the link on this device to choose a new password.','CHECK YOUR EMAIL');return;
  }
  if(!password){cloudMsg('Enter your password first.','DETAILS NEEDED');return}
  if(password.length<6){cloudMsg('Use a password with at least 6 characters.','DETAILS NEEDED');return}
@@ -432,15 +433,11 @@ async function cloudAuth(mode){
  cloudMsg(mode==='signup'?'Creating your account…':'Signing in…','AUTHENTICATING');
  const result=mode==='signup'?await cloudClient.auth.signUp({email,password,options:{data:{display_name:name}}}):await cloudClient.auth.signInWithPassword({email,password});
  if(result.error){cloudMsg(result.error.message,'SIGN-IN ISSUE');return}
- if(mode==='signup'&&Array.isArray(result.data.user?.identities)&&result.data.user.identities.length===0){
-  signupReady=false;$('cloudNameWrap').style.display='none';$('cloudSignUp').textContent='Create account';
-  cloudMsg('This email is already registered. Please sign in. If you forgot your password, tap “Forgot password?” and follow the reset email.','EMAIL ALREADY REGISTERED');return;
- }
- if(mode==='signup'&&!result.data.session){cloudMsg('Account created. Please check your email for the confirmation link, then return here and sign in.','CONFIRM YOUR EMAIL');return}
+ if(mode==='signup'&&!result.data.session){cloudMsg('If this is a new registration, check your inbox and spam for a confirmation email. If you have registered before, switch to Sign in. If you cannot access the password, tap Forgot password.','CHECK EMAIL OR SIGN IN');return}
  activateCloudUser(result.data.user);applyPendingShortcutToActiveAccount();cloudUi();await cloudSync();
 }
 $('cloudSignIn').onclick=()=>cloudAuth('signin');
-$('cloudSignUp').onclick=()=>{if(!signupReady){signupReady=true;$('cloudNameWrap').style.display='block';$('cloudSignUp').textContent='Confirm account creation';cloudMsg('Enter your name, then confirm account creation.','CREATE ACCOUNT');return}cloudAuth('signup')};
+$('cloudSignUp').onclick=()=>{if(!signupReady){signupReady=true;$('cloudNameWrap').style.display='block';cloudMsg('Enter your name, then create your account.','CREATE ACCOUNT');return}cloudAuth('signup')};
 $('cloudForgotPassword').onclick=()=>cloudAuth('forgot');
 $('cloudSaveNewPassword').onclick=async()=>{
  if(!cloudClient){cloudMsg('Cloud service is still loading. Please try again shortly.','CONNECTING');return}
