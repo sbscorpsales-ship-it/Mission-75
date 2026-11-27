@@ -5102,3 +5102,110 @@ Connected project URL and publishable key were compared without exposing key val
 5. Obtain a signed iOS build with HealthKit entitlement, then run physical iPhone HealthKit read/write, queued-workout retry, locked-screen GPS and same-account Web sync acceptance.
 6. Install the Android debug build on a physical device and test Health Connect, permissions, local draft recovery and account-scoped sync.
 7. Consolidate the 60 open PRs into one reviewed GATIVX integration sequence; preserve Design C and the five approved destinations. Keep PR #107 untouched and PR #112 unmerged.
+
+
+---
+
+## Run 17 verified refresh — 2026-11-27 22:42 IST (17:12 UTC)
+
+This is the current verified checkpoint for the scheduled engineering run. It supersedes earlier pending statements about PR #160 run #712. Historical checkpoints remain for traceability.
+
+### Repository and protected refs
+
+- Default branch base observed on current PR stacks: `main` at `143889db3e72540fb478b76c486082f45395e9bd`.
+- **PR #107** remains open/unmerged at `c19bdbd307df7048cefd86bd3e6064ac4f4e3042`; no edits.
+- **PR #112** remains open/unmerged at `b6c04d41dc67bd191ed0cf8966331eb5661a9887`; no edits.
+- No PR was merged. No production database migration or deployment was performed.
+- Open PR count after creating PR #161: 61.
+
+### PR #136 — exact head and failed gate
+
+- PR: [#136](https://github.com/sbscorpsales-ship-it/Mission-75/pull/136)
+- Exact head: `31e5b70d85537113e74dd003d06b3ae95ba323f4`.
+- Workflow: [run #670](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45847572105), completed **failure** on 2026-11-26.
+- Unit suite: **76 passed, 0 failed, 0 cancelled**.
+- UI suite: **9 executed, 8 passed, 1 failed, 0 cancelled**.
+- Combined test cases: **84 passed, 1 failed, 0 cancelled**.
+- The failed case was `testDashboardFillsDeviceViewportAndExposesAllFiveTabs`; the actual dock frame measured **113.0625 pt**, exceeding the required **76 pt** maximum. The exact failing assertion is at `GATIVXDashboardUITests.swift:654`.
+- Guru keyboard/dismissal passed in this run. Tracking safeguard and HealthKit source-entitlement gates passed. Simulator build and unsigned Release build succeeded; unsigned IPA was packaged and its bundle metadata verified.
+- Artifacts were present: unsigned IPA #15146711639 (763,895 bytes), xcresult #15146161829 (126,588,307 bytes), simulator #15145957076, XCTest diagnostics #15145517291. The xcresult was downloaded and its screenshot attachments extracted for review. The dock-height assertion remains the decisive failure; no screenshot overrides it.
+
+### PR #160 — latest full iOS/Web/database verification
+
+- PR: [#160](https://github.com/sbscorpsales-ship-it/Mission-75/pull/160)
+- Exact head: `0f6ddcd5bb97660773f6ffe17ec0a2ca4d6e0cf0`, branch `fix/gativx-guest-state-and-cloud-contract-20261127`.
+- iOS workflow: [run #712](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/46033934027), completed **success** on 2026-11-27 16:49 UTC.
+- Unit suite: **76 passed, 0 failed, 0 cancelled**.
+- UI suite: **12 passed, 0 failed, 0 cancelled**.
+- Combined XCTest: **88 passed, 0 failed, 0 cancelled**.
+- UI cases verified: Activity fills viewport above dock; all five tabs switch from one dock; Community after Missions; Home fills device viewport and exposes five tabs; dashboard metrics/navigation; Finish & Save history recovery; Guru keyboard dismissal; Home Start Walk navigation; guest/local-only state survives relaunch; Notifications sheet dismissal; direct Profile navigation and photo-picker open/cancel; Welcome fills viewport.
+- Dock geometry assertion passed at **<=76 pt**. Source sets the dock frame to **56 pt**, with home-indicator safe area outside that frame. Activity full-viewport assertion passed.
+- Root-hosted Profile photo-picker source guard passed; the simulator opened and cancelled the picker. Actual photo selection and persistence through the system photo library remain unverified.
+- Tracking safeguard gate: **success** (the current job log reports success but does not print a numeric assertion count; no count is inferred here). HealthKit source entitlement validation: success.
+- Simulator build: **BUILD SUCCEEDED**. Unsigned iPhone Release build: **BUILD SUCCEEDED**. IPA packaging and bundle identity/version verification passed.
+- Downloaded IPA inner archive: **780,089 bytes**, SHA-256 `6746ec29d3608384cbd4e9715c1e618aafba1f4755a912b7c48ea986fc1eb7c1`; bundle ID `com.paramitsolutions.gativx`, version `1.0.0`, build `1`. ZIP integrity passed. The IPA contains no `_CodeSignature`, no `embedded.mobileprovision`, and no embedded entitlement file. It is an **unsigned build artifact, not a signed/installable iPhone release**.
+- Artifacts: xcresult #15218145408 (112 MB), XCTest diagnostics #15217890836, unsigned IPA #15217671419, simulator app #15217464790. The xcresult was downloaded; retained Home, Activity, Profile, Guru and Welcome screenshots were extracted and visually inspected. Home and Today’s Activity show unavailable dashes for distance, active time and calories; the dashboard explicitly says unavailable readings are not estimated. The Activity screen shows GPS distance 0.00 km before a walk starts. Heart Points are currently described as one point per Apple Exercise minute, not intensity-weighted GATIVX Activity Points.
+- Web checks [run #464](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/46033934044) and [run #463](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/46033923961) completed successfully. The run #464 log confirms 33 structural/source assertions and 7 browser smoke assertions. PostgreSQL 17 activity-session migration/RLS regression completed successfully in the same run. This is isolated CI evidence, not live account/device sync.
+- PR #160 changed: `.github/workflows/web-checks.yml`, `ios/GATIVX/ContentView.swift`, `ios/GATIVXUITests/GATIVXDashboardUITests.swift`, `scripts/check-web.mjs`, two activity-session SQL migrations, and SQL regression fixtures/tests.
+
+### PR #161 — new Profile clearance regression
+
+- Created isolated branch `fix/gativx-profile-bottom-clearance-20261127` from the exact PR #160 head above.
+- Commit: `cdef69957c9a0f62b291ed6a62ea336c8a81c776`.
+- PR: [#161](https://github.com/sbscorpsales-ship-it/Mission-75/pull/161), draft, stacked on PR #160.
+- Changed only `ios/GATIVXUITests/GATIVXDashboardUITests.swift`: added `testProfileAboutSectionRemainsReachableAboveFixedBottomNavigation`. It navigates to Profile, scrolls to the final About section, asserts the text is hittable and ends above the fixed dock, and retains a simulator screenshot.
+- CI run [#713](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/46040346312) is **in progress**. No test result is claimed yet. No test was removed, skipped, narrowed or weakened.
+
+### Independent activity calculation engine — verified as a library, not integrated
+
+- PR: [#131](https://github.com/sbscorpsales-ship-it/Mission-75/pull/131), draft, exact head `37b9866b13bcedc99fd0cbb1fbaf0cef7f8b8f95).
+- Engine CI [run #6](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45945165684) passed: Node syntax checks and the standalone regression script completed successfully.
+- Version 1.1.2 supports walking estimates only. Inputs include member weight, moving minutes, speed/grade or cadence, and optional heart rate/age. It estimates active kcal using MET minus resting energy, and GATIVX Activity Points using moderate/vigorous intensity thresholds. Unsupported activity types return unavailable rather than reusing walking equations.
+- **Critical integration gap:** PR #131 does not wire the engine into iOS, Android or the Web Hub. No Swift/Kotlin ports or cross-platform golden fixtures exist yet.
+- Current iOS `ActivitySessionRecord` stores start/finish, steps, GPS route points and optional pedometer distance; it has no persisted active moving duration, active calories, intensity intervals, Activity Points or metric provenance. The current activity flow has no pause/resume accounting. The Activity UI does not yet show session active time or estimated calories. The dashboard’s daily active calories, distance and exercise minutes remain HealthKit-measured values; when no readings arrive, the screenshot shows unavailable dashes. The distance ring/card is not yet reconciled with saved GATIVX GPS sessions.
+- Therefore the user-visible distance/active-time/calorie issue is **not just a permission problem**. GPS route distance capture exists, but the independent calculation engine is not connected to session persistence or daily aggregation. HealthKit/Health Connect permissions must remain optional, not prerequisites.
+
+### Current gap ledger — authoritative for this checkpoint
+
+| Product area | Status | Evidence / next action |
+|---|---|---|
+| iOS five-destination navigation and Design C shell | **Verified** | PR #160 run #712 passed the single-dock, five-tab and full-device viewport UI checks. Preserve the five destinations and approved styling. |
+| Dock <=76 pt | **Verified** | Run #712 geometry assertion passed; source dock frame is 56 pt. PR #136 exact head failed at 113.0625 pt. |
+| iOS Activity full viewport | **Verified** | Run #712 UI case passed; screenshot reviewed. |
+| Profile root-hosted photo picker open/cancel | **Verified** | Source guard and simulator open/cancel passed. |
+| Profile photo actual selection and persistence | **Implemented-but-unverified** | No real photo selection/persistence acceptance yet; PR #161 adds final-content reachability test only. |
+| Guru keyboard dismissal | **Verified** | Run #712 UI test passed. |
+| GPS route capture and route-draft recovery | **Implemented-but-unverified** | Source guards, persistence tests and simulator tests pass; no physical background-GPS walk evidence. |
+| Session distance display/save and daily aggregation | **Implemented-but-unverified** | GPS route distance is computed and shown in Activity, but dashboard daily distance is not yet aggregated from GATIVX sessions. Physical route accuracy remains unverified. |
+| Active moving time and pause accounting | **Missing** | No active-duration field or pause/resume interval model in iOS session record/flow. |
+| Independent active-calorie estimator integration | **Missing** | PR #131 engine is standalone JavaScript; not wired into iOS/Android/Web. Requires member weight and valid moving-time/intensity inputs. |
+| GATIVX intensity-weighted Activity Points | **Missing / partial implementation** | Current iOS ring maps Apple Exercise minutes 1:1; this is not the approved intensity-weighted point model. |
+| HealthKit measured data | **Implemented-but-unverified** | Read requests and source entitlement checks pass; no signed physical iPhone HealthKit authorization/read/export proof. |
+| Android Health Connect | **Implemented-but-unverified** | Earlier debug APK/JVM checks exist; no physical Android device acceptance or full metric parity. |
+| Web Hub structural/browser behavior | **Verified in CI only** | 33 structural checks and 7 browser smoke assertions pass; live auth/data synchronization and production deployment are not verified. |
+| Authentication and cross-device account sync | **Implemented-but-unverified** | iOS/Web project/key contract matches; real credential sign-in, email delivery and same-account mobile/Web sync remain unverified. |
+| Onboarding and health permissions | **Implemented-but-unverified** | iOS first-run/optional Health entry exists; physical permission lifecycle and Android parity are not verified. |
+| Goals, purpose and Guru | **Implemented-but-unverified** | Local deterministic purpose/emotion/next-action flow and UI test exist; cloud/account sync is missing. |
+| Missions | **Missing / incomplete** | Current native screen is a limited daily consistency card, not a full member-specific mission lifecycle. |
+| Community | **Missing / gated** | Current native Community is a placeholder; no live feed/groups/challenges. |
+| Profile and member metrics | **Implemented-but-unverified** | Photo is local-only; no shared profile/weight data contract yet. |
+| Notifications | **Missing** | Current sheet explicitly says notifications are not active; no push delivery. |
+| Shared backend activity-session contract | **Verified in isolated CI** | PR #160 restores activity-session migration source and passes PostgreSQL 17 regression; production sync remains unverified. |
+| Supabase privilege/security hardening | **Blocked** | Live broad grants and default ACL findings remain; PR #144/#125/#130 are unmerged and not applied. Owner-authorized `supabase_admin` session and migration reconciliation required. |
+| Migration-source reconciliation | **Blocked** | Live migration history and repository sources still require complete version-by-version reconciliation before normal production migration. |
+| iOS simulator and unsigned Release package | **Verified** | Run #712 simulator and Release builds succeeded; IPA archive integrity and metadata verified. |
+| iOS signing / physical installation / HealthKit entitlement on device | **Blocked** | Current IPA has no signature/profile. Owner must provide an Apple Developer team/App ID with HealthKit capability and provisioning profile, then CI must produce and device-test a signed build. |
+| Android physical release acceptance | **Blocked** | Only debug APK/JVM evidence; a physical Android device with Health Connect is required. |
+| Production deployment | **Missing** | No production deployment claimed or performed. |
+
+### Next actions
+
+1. Inspect PR #161 run #713 logs and retained Profile screenshot. If the new assertion fails, fix only the actual scroll/dock clearance defect; keep the assertion intact.
+2. Integrate PR #131’s calculation contract into the iOS session model only after adding a member weight source and a defensible active-time/pause model. Keep measured vs estimated provenance explicit; never fabricate zero or sum measured and estimated calories.
+3. Add Swift/Kotlin ports with shared golden fixtures before claiming cross-platform parity.
+4. Reconcile daily distance from saved GATIVX sessions with HealthKit all-source totals without double counting.
+5. Complete HealthKit/Health Connect permission and real-device tests.
+6. Reconcile Supabase migration history and obtain explicit owner authorization before applying security changes.
+7. Obtain signing capability/profile for a signed iOS build; test on the user’s iPhone and Android device.
+
+**Protected state:** PR #107 untouched; PR #112 open/unmerged; no PR merged; no production DB mutation; no production deployment.
