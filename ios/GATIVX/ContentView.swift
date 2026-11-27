@@ -126,6 +126,103 @@ struct ContentView: View {
         return activityHistory.filter { $0.ownerID == nil }
     }
 
+    private var validProfileWeightKg: Double? {
+        guard let value = Double(profileWeightKgText.trimmingCharacters(in: .whitespacesAndNewlines)),
+              value.isFinite, (25...300).contains(value) else { return nil }
+        return value
+    }
+
+    private var validProfileHeightCm: Double? {
+        guard let value = Double(profileHeightCmText.trimmingCharacters(in: .whitespacesAndNewlines)),
+              value.isFinite, (100...250).contains(value) else { return nil }
+        return value
+    }
+
+    /// A temporary view of the current or recovered session. It uses only sensor
+    /// readings already collected by the route recorder and Core Motion.
+    private var liveActivityMetricsRecord: ActivitySessionRecord? {
+        let startedAt = sessionStarted ?? routeRecorder.recoveredStartedAt
+        guard let startedAt else { return nil }
+        let finishedAt = sessionStarted == nil
+            ? (routeRecorder.points.last?.timestamp ?? startedAt)
+            : Date()
+        return ActivitySessionRecord(
+            id: routeRecorder.activitySessionID ?? activeSessionID ?? UUID(),
+            activity: routeRecorder.recoveredActivity ?? selectedActivity,
+            startedAt: startedAt,
+            finishedAt: max(startedAt, finishedAt),
+            steps: sessionSteps,
+            routePoints: routeRecorder.points,
+            motionDistanceMeters: sessionMotionDistanceMeters,
+            ownerID: routeRecorder.activityOwnerID
+        )
+    }
+
+    private func activityDistanceValue(for record: ActivitySessionRecord) -> String {
+        guard let meters = record.distance(heightCm: validProfileHeightCm).meters else { return "—" }
+        return String(format: "%.2f km", meters / 1_000)
+    }
+
+    private func activityDistanceDetail(for record: ActivitySessionRecord) -> String {
+        switch record.distance(heightCm: validProfileHeightCm).source {
+        case .gps:
+            return "GPS route · measured"
+        case .pedometer:
+            return "iPhone pedometer · measured"
+        case .strideEstimate:
+            return "Stride estimate · current profile height"
+        case .unavailable:
+            return "Awaiting GPS or pedometer distance"
+        }
+    }
+
+    private func activeCaloriesValue(for record: ActivitySessionRecord) -> String {
+        guard let weightKg = validProfileWeightKg,
+              let calories = record.estimatedCaloriesKcal(
+                weightKg: weightKg,
+                heightCm: validProfileHeightCm
+              ) else { return "—" }
+        return String(format: "%.0f kcal", calories)
+    }
+
+    private func activeCaloriesDetail(for record: ActivitySessionRecord) -> String {
+        guard record.activity.caseInsensitiveCompare("Walking") == .orderedSame else {
+            return "GATIVX estimate currently supports walking only"
+        }
+        guard validProfileWeightKg != nil else { return "Add a valid weight in Profile" }
+        guard record.activeDurationSeconds != nil else { return "Needs valid GPS moving-time evidence" }
+        guard record.distance(heightCm: validProfileHeightCm).meters != nil else {
+            return "Needs measured distance or profile height"
+        }
+        return "Estimated · GATIVX \(GATIVXActivityCalculationEngine.version) · not HealthKit"
+    }
+
+    private func activityMetricCard(
+        title: String,
+        value: String,
+        detail: String,
+        identifier: String
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title.uppercased())
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(.secondary)
+            Text(value)
+                .font(.title3.weight(.bold).monospacedDigit())
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+            Text(detail)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .lineLimit(2)
+        }
+        .frame(maxWidth: .infinity, minHeight: 100, alignment: .leading)
+        .padding(12)
+        .background(cardBackground, in: RoundedRectangle(cornerRadius: 16))
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier(identifier)
+    }
+
     private func loadActivityHistory() {
         do {
             activityHistory = try activityStore.load()
@@ -360,12 +457,42 @@ struct ContentView: View {
               !isFinishingSession,
               routeRecorder.recoveredStartedAt == nil,
               !routeRecorder.hasUnreadableDraft else { return }
-        let start = Date()
         #if DEBUG
-        // This deterministic sensor seam is available only in DEBUG builds and only
-        // when an explicit UI-test launch argument is supplied. Release builds never
-        // synthesize steps or bypass the real pedometer/HealthKit paths.
-        if ProcessInfo.processInfo.arguments.contains("-gativx-ui-test-simulated-walk") {
+        let launchArguments = ProcessInfo.processInfo.arguments
+        if launchArguments.contains("-gativx-ui-test-simulated-gps-walk") {
+            let routeStart = Date().addingTimeInterval(-720)
+            let sessionID = UUID(uuidString: "00000000-0000-4000-8000-000000000124")!
+            // Forty 18-second intervals at approximately 25 m each represent
+            // 1 km in 12 minutes (5 km/h), with valid accuracy and no segment gaps.
+            let latitudeStep = 25.0 / 111_195.0
+            let points = (0...40).map { index in
+                GATIVXRoutePoint(
+                    latitude: 15.8500 + Double(index) * latitudeStep,
+                    longitude: 74.5000,
+                    timestamp: routeStart.addingTimeInterval(Double(index) * 18),
+                    horizontalAccuracy: 4,
+                    breakBefore: index == 0
+                )
+            }
+            guard routeRecorder.installUITestRoute(
+                activity: "Walking",
+                startedAt: routeStart,
+                points: points,
+                sessionID: sessionID
+            ) else {
+                sessionStatus = routeRecorder.status
+                return
+            }
+            sessionStarted = routeStart
+            activeSessionID = sessionID
+            recoveredSessionWasResumed = false
+            sessionSteps = 1_000
+            sessionMotionDistanceMeters = nil
+            sessionStatus = "Recording deterministic DEBUG UI-test GPS route."
+            return
+        }
+        if launchArguments.contains("-gativx-ui-test-simulated-walk") {
+            let start = Date()
             sessionStarted = start
             activeSessionID = UUID(uuidString: "00000000-0000-4000-8000-000000000123")!
             recoveredSessionWasResumed = false
@@ -375,7 +502,13 @@ struct ContentView: View {
             return
         }
         #endif
+        let start = Date()
         sessionStarted = start
+        activeSessionID = UUID()
+        recoveredSessionWasResumed = false
+        sessionSteps = nil
+        sessionMotionDistanceMeters = nil
+        // GPS recording is independent of the motion sensor. A device without
         activeSessionID = UUID()
         recoveredSessionWasResumed = false
         sessionSteps = nil
@@ -416,15 +549,20 @@ struct ContentView: View {
         )
         let activity = selectedActivity
         #if DEBUG
-        let skipHealthExportForUITest = ProcessInfo.processInfo.arguments.contains("-gativx-ui-test-simulated-walk")
+        let uiTestArguments = ProcessInfo.processInfo.arguments
+        let simulatedPedometerWalkForUITest = uiTestArguments.contains("-gativx-ui-test-simulated-walk")
+        let simulatedGPSWalkForUITest = uiTestArguments.contains("-gativx-ui-test-simulated-gps-walk")
+        let skipHealthExportForUITest = simulatedPedometerWalkForUITest || simulatedGPSWalkForUITest
         #else
+        let simulatedPedometerWalkForUITest = false
+        let simulatedGPSWalkForUITest = false
         let skipHealthExportForUITest = false
         #endif
         pedometer.stopUpdates()
-        if !skipHealthExportForUITest {
+        if !simulatedPedometerWalkForUITest {
             routeRecorder.stop()
         }
-        let routePoints = skipHealthExportForUITest ? [] : routeRecorder.points
+        let routePoints = simulatedPedometerWalkForUITest ? [] : routeRecorder.points
         // Keep route persistence independent of the optional pedometer result.
         let saveRecord: (Int?, Double?) -> Void = { queriedSteps, queriedDistance in
             DispatchQueue.main.async {
@@ -486,9 +624,13 @@ struct ContentView: View {
                     self.isFinishingSession = false
                     self.syncSavedActivitySessions()
                     if skipHealthExportForUITest {
-                        // The deterministic UI-test session never starts GPS, so there is
-                        // no route draft to clear and no HealthKit queue to create. Production
-                        // paths below still clear the GPS draft only after queue acceptance.
+                        // UI-test fixtures never touch HealthKit. A simulated GPS route
+                        // is cleared only after its local history record was read back above.
+                        #if DEBUG
+                        if simulatedGPSWalkForUITest {
+                            self.routeRecorder.clearUITestRouteAfterVerifiedSave(sessionID: recordID)
+                        }
+                        #endif
                         self.recoveredSessionWasResumed = false
                     } else {
                         let healthExportQueued = self.health.saveActivityWorkout(
@@ -531,7 +673,10 @@ struct ContentView: View {
         }
         // Query the complete interval after stopping live updates so the final
         // motion samples are included even if the last callback was delayed.
-        if CMPedometer.isStepCountingAvailable() {
+        if skipHealthExportForUITest {
+            // Keep the deterministic simulator fixture independent of host sensors.
+            saveRecord(nil, nil)
+        } else if CMPedometer.isStepCountingAvailable() {
             pedometer.queryPedometerData(from: start, to: finishedAt) { data, _ in
                 saveRecord(data?.numberOfSteps.intValue, data?.distance?.doubleValue)
             }
@@ -561,6 +706,9 @@ struct ContentView: View {
     @AppStorage("gativx.activeEnergyGoalKcal") private var activeEnergyGoalKcal = 500
     @AppStorage("gativx.heartPointsGoal") private var heartPointsGoal = 30
     @AppStorage("gativx.dailyStepGoal") private var dailyStepGoal = 10_000
+    // Optional body metrics stay local to this iPhone. They are never added to cloud activity records.
+    @AppStorage("gativx.profile.weightKg") private var profileWeightKgText = ""
+    @AppStorage("gativx.profile.heightCm") private var profileHeightCmText = ""
     @State private var selectedTab = 0
     @State private var isProfilePhotoPickerPresented = false
     @State private var selectedProfilePhoto: PhotosPickerItem?
@@ -1192,8 +1340,27 @@ struct ContentView: View {
                         Text(sessionSteps?.formatted() ?? "—").font(.system(size: 36, weight: .bold, design: .rounded))
                         Text("session steps").font(.subheadline).foregroundStyle(.secondary)
                     }
-                    Text("GPS distance · " + String(format: "%.2f", routeRecorder.routeDistanceMeters / 1000) + " km")
-                        .font(.subheadline.weight(.semibold))
+                    let metricsRecord = liveActivityMetricsRecord
+                    HStack(spacing: 10) {
+                        activityMetricCard(
+                            title: "Distance",
+                            value: metricsRecord.map { activityDistanceValue(for: $0) } ?? "—",
+                            detail: metricsRecord.map { activityDistanceDetail(for: $0) } ?? "Start a walk to measure distance",
+                            identifier: "gativx-activity-distance-metric"
+                        )
+                        activityMetricCard(
+                            title: "Moving time",
+                            value: metricsRecord?.activeDurationText ?? "—",
+                            detail: metricsRecord.map { $0.activeDurationSeconds == nil ? "Needs valid GPS movement intervals" : "Accepted moving GPS intervals" } ?? "No active session",
+                            identifier: "gativx-activity-moving-time-metric"
+                        )
+                        activityMetricCard(
+                            title: "Est. active kcal",
+                            value: metricsRecord.map { activeCaloriesValue(for: $0) } ?? "—",
+                            detail: metricsRecord.map { activeCaloriesDetail(for: $0) } ?? "Requires valid weight and session data",
+                            identifier: "gativx-activity-active-calories-metric"
+                        )
+                    }
                     if showLiveRouteMap || routeRecorder.isRecording || !routeRecorder.points.isEmpty {
                         liveRouteMap
                     } else {
@@ -1277,9 +1444,12 @@ struct ContentView: View {
                             HStack { Text(item.activity).font(.headline); Spacer(); Text(item.startedAt.formatted(date: .abbreviated, time: .shortened)).font(.caption).foregroundStyle(.secondary) }
                             HStack(spacing: 12) {
                                 Label(item.steps.map { $0.formatted() } ?? "—", systemImage: "figure.walk")
-                                Label(String(format: "%.2f km", item.gpsDistanceMeters / 1000), systemImage: "location")
-                                Label(item.durationText, systemImage: "clock")
+                                Label("Distance " + activityDistanceValue(for: item), systemImage: "location")
+                                Label("Moving time " + item.activeDurationText, systemImage: "clock")
+                                Label("Estimated active calories " + activeCaloriesValue(for: item), systemImage: "flame")
                             }.font(.caption).foregroundStyle(.secondary)
+                            Text(activityDistanceDetail(for: item) + " · " + activeCaloriesDetail(for: item))
+                                .font(.caption2).foregroundStyle(.secondary)
                         }.padding(14).frame(maxWidth: .infinity, alignment: .leading).background(cardBackground, in: RoundedRectangle(cornerRadius: 16))
                             .accessibilityElement(children: .combine)
                             .accessibilityIdentifier("gativx-saved-activity-\(item.id.uuidString.lowercased())")
@@ -1772,6 +1942,26 @@ struct ContentView: View {
                     }
                 }
                 Text(profilePhotoStatus).font(.caption).foregroundStyle(.secondary)
+            }
+            Section("Activity estimate inputs · local only") {
+                TextField("Weight (kg)", text: $profileWeightKgText)
+                    .keyboardType(.decimalPad)
+                    .accessibilityIdentifier("gativx-profile-weight-kg")
+                TextField("Height (cm)", text: $profileHeightCmText)
+                    .keyboardType(.decimalPad)
+                    .accessibilityIdentifier("gativx-profile-height-cm")
+                Text("Optional. Weight enables estimated walking calories; height enables the clearly labelled step/stride distance fallback. These values stay on this iPhone, are not uploaded, and are not added to measured Apple Health energy.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .accessibilityIdentifier("gativx-profile-metrics-local-only")
+                if !profileWeightKgText.isEmpty && validProfileWeightKg == nil {
+                    Text("Enter a weight from 25 to 300 kg to enable calorie estimates.")
+                        .font(.caption).foregroundStyle(.orange)
+                }
+                if !profileHeightCmText.isEmpty && validProfileHeightCm == nil {
+                    Text("Enter a height from 100 to 250 cm to enable stride estimates.")
+                        .font(.caption).foregroundStyle(.orange)
+                }
             }
             Section("Appearance") {
                 Picker("Theme", selection: $appearanceMode) {

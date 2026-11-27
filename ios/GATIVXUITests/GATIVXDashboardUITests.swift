@@ -484,6 +484,12 @@ final class GATIVXDashboardUITests: XCTestCase {
                       "The saved history row must retain the selected activity type.")
         XCTAssertTrue(savedRow.label.contains("123"),
                       "The saved history row must retain the deterministic DEBUG test step reading.")
+        XCTAssertTrue(savedRow.label.contains("Distance —"),
+                      "Pedometer steps alone must not be presented as a measured distance without profile height.")
+        XCTAssertTrue(savedRow.label.contains("Moving time —"),
+                      "Pedometer-only sessions must not invent active time from elapsed duration.")
+        XCTAssertTrue(savedRow.label.contains("Estimated active calories —"),
+                      "Estimated calories must remain unavailable without GPS moving time and a valid profile weight.")
 
         // Relaunch the app to prove the row is read back from durable local history,
         // not merely retained in ContentView state.
@@ -502,6 +508,91 @@ final class GATIVXDashboardUITests: XCTestCase {
                       "A saved activity must remain visible after terminating and relaunching GATIVX.")
         XCTAssertTrue(recoveredRow.label.contains("Walking"))
         XCTAssertTrue(recoveredRow.label.contains("123"))
+    }
+
+    func testGPSBackedActivityMetricsAreShownAndPersistedWithProvenance() {
+        let app = XCUIApplication()
+        launchFreshGuestApp(app, additionalArguments: [
+            "-gativx-ui-test-simulated-gps-walk",
+            "-gativx.profile.weightKg", "80"
+        ])
+
+        let guestEntry = app.buttons["gativx-continue-guest"]
+        XCTAssertTrue(guestEntry.waitForExistence(timeout: 10))
+        guestEntry.tap()
+
+        let profileTab = tabButton(app, label: "Profile")
+        XCTAssertTrue(profileTab.waitForExistence(timeout: 5))
+        profileTab.tap()
+        let weightField = app.textFields["gativx-profile-weight-kg"]
+        XCTAssertTrue(weightField.waitForExistence(timeout: 5))
+        XCTAssertEqual(weightField.value as? String, "80",
+                       "The test-only UserDefaults input must populate the local Profile weight.")
+        
+        let activityTab = tabButton(app, label: "Activity")
+        XCTAssertTrue(activityTab.waitForExistence(timeout: 5))
+        activityTab.tap()
+        XCTAssertTrue(app.scrollViews["gativx-activity-screen"].waitForExistence(timeout: 10))
+
+        let startWalk = app.buttons["Start Walk"]
+        XCTAssertTrue(startWalk.waitForExistence(timeout: 5))
+        startWalk.tap()
+
+        let distanceMetric = app.descendants(matching: .any)["gativx-activity-distance-metric"].firstMatch
+        let movingTimeMetric = app.descendants(matching: .any)["gativx-activity-moving-time-metric"].firstMatch
+        let caloriesMetric = app.descendants(matching: .any)["gativx-activity-active-calories-metric"].firstMatch
+        XCTAssertTrue(distanceMetric.waitForExistence(timeout: 5))
+        XCTAssertTrue(movingTimeMetric.waitForExistence(timeout: 5))
+        XCTAssertTrue(caloriesMetric.waitForExistence(timeout: 5))
+
+        let expectedLiveValues: [(XCUIElement, String)] = [
+            (distanceMetric, "1.00 km"),
+            (distanceMetric, "GPS route · measured"),
+            (movingTimeMetric, "12:00"),
+            (movingTimeMetric, "Accepted moving GPS intervals"),
+            (caloriesMetric, "40 kcal"),
+            (caloriesMetric, "not HealthKit")
+        ]
+        for (element, expected) in expectedLiveValues {
+            let predicate = NSPredicate(format: "label CONTAINS %@", expected)
+            let expectation = XCTNSPredicateExpectation(predicate: predicate, object: element)
+            XCTAssertEqual(
+                XCTWaiter.wait(for: [expectation], timeout: 8),
+                .completed,
+                "Live Activity metric must display \(expected). Actual label: \(element.label)"
+            )
+        }
+
+        let finishSave = app.buttons["Finish & save activity"]
+        XCTAssertTrue(finishSave.waitForExistence(timeout: 5))
+        finishSave.tap()
+
+        let savedRowID = "gativx-saved-activity-00000000-0000-4000-8000-000000000124"
+        let savedRow = app.descendants(matching: .any)[savedRowID].firstMatch
+        XCTAssertTrue(savedRow.waitForExistence(timeout: 15),
+                      "The GPS-backed activity must be stored in local history.")
+        XCTAssertTrue(savedRow.label.contains("Distance 1.00 km"), savedRow.label)
+        XCTAssertTrue(savedRow.label.contains("Moving time 12:00"), savedRow.label)
+        XCTAssertTrue(savedRow.label.contains("Estimated active calories 40 kcal"), savedRow.label)
+        XCTAssertTrue(savedRow.label.contains("GPS route · measured"), savedRow.label)
+        XCTAssertTrue(savedRow.label.contains("not HealthKit"), savedRow.label)
+
+        app.terminate()
+        app.launch()
+        let relaunchedGuestEntry = app.buttons["gativx-continue-guest"]
+        XCTAssertTrue(relaunchedGuestEntry.waitForExistence(timeout: 10))
+        relaunchedGuestEntry.tap()
+        let relaunchedActivityTab = tabButton(app, label: "Activity")
+        XCTAssertTrue(relaunchedActivityTab.waitForExistence(timeout: 5))
+        relaunchedActivityTab.tap()
+
+        let recoveredRow = app.descendants(matching: .any)[savedRowID].firstMatch
+        XCTAssertTrue(recoveredRow.waitForExistence(timeout: 15),
+                      "GPS-backed metric values must survive app termination and history reload.")
+        XCTAssertTrue(recoveredRow.label.contains("Distance 1.00 km"), recoveredRow.label)
+        XCTAssertTrue(recoveredRow.label.contains("Moving time 12:00"), recoveredRow.label)
+        XCTAssertTrue(recoveredRow.label.contains("Estimated active calories 40 kcal"), recoveredRow.label)
+        XCTAssertTrue(recoveredRow.label.contains("not HealthKit"), recoveredRow.label)
     }
 
     func testHomeStartWalkNavigatesWithoutStartingSession() {
@@ -555,6 +646,13 @@ final class GATIVXDashboardUITests: XCTestCase {
                       "Profile must render when opened directly from a fresh dashboard.")
         XCTAssertTrue(app.descendants(matching: .any)["gativx-member-login-id"].waitForExistence(timeout: 5),
                       "Profile must identify the local-only member.")
+
+        XCTAssertTrue(app.textFields["gativx-profile-weight-kg"].exists,
+                      "Members must be able to provide an optional weight for clearly labelled estimates.")
+        XCTAssertTrue(app.textFields["gativx-profile-height-cm"].exists,
+                      "Members must be able to provide an optional height for the stride-distance fallback.")
+        XCTAssertTrue(app.staticTexts["gativx-profile-metrics-local-only"].exists,
+                      "Body metrics used for estimates must be identified as local-only and not uploaded.")
 
         // The photo picker sheet belongs to the root member shell, not the Profile
         // navigation subtree. Verify it opens and dismisses from the Profile screen.
@@ -748,6 +846,14 @@ final class GATIVXDashboardUITests: XCTestCase {
 
         let activityScreen = app.scrollViews["gativx-activity-screen"]
         XCTAssertTrue(activityScreen.waitForExistence(timeout: 10))
+        for identifier in [
+            "gativx-activity-distance-metric",
+            "gativx-activity-moving-time-metric",
+            "gativx-activity-active-calories-metric"
+        ] {
+            XCTAssertTrue(app.descendants(matching: .any)[identifier].waitForExistence(timeout: 5),
+                          "Activity must expose the \\(identifier) metric card.")
+        }
         XCTAssertGreaterThan(activityScreen.frame.width, window.frame.width * 0.95,
                              "Activity must use the full device width.")
         XCTAssertGreaterThan(activityScreen.frame.height, window.frame.height * 0.70,

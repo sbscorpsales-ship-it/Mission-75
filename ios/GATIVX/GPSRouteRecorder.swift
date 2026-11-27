@@ -258,6 +258,54 @@ final class GPSRouteRecorder: NSObject, ObservableObject {
         }
     }
 
+    #if DEBUG
+    /// Deterministic GPS fixture for simulator UI tests only. It does not request
+    /// location permission or start Core Location updates; Release builds omit it.
+    @discardableResult
+    func installUITestRoute(
+        activity: String,
+        startedAt: Date,
+        points: [GATIVXRoutePoint],
+        sessionID: UUID,
+        ownerID: String? = nil
+    ) -> Bool {
+        guard !hasUnreadableDraft,
+              !isRecording,
+              (activeStartedAt == nil || activitySessionID == sessionID) else {
+            status = "Cannot install the UI-test route while another or unreadable GPS draft is active."
+            return false
+        }
+        manager.stopUpdatingLocation()
+        manager.allowsBackgroundLocationUpdates = false
+        manager.showsBackgroundLocationIndicator = false
+        pendingStartAfterAuthorization = false
+        self.points = points
+        activeStartedAt = startedAt
+        activeActivity = activity
+        activitySessionID = sessionID
+        activityOwnerID = ownerID
+        recoveredStartedAt = nil
+        recoveredActivity = nil
+        needsSegmentBreak = false
+        guard persistDraft() else { return false }
+        status = "DEBUG UI-test GPS route installed · \(points.count) accepted points."
+        return true
+    }
+
+    /// Clear only the deterministic test session, and only after its local history
+    /// record has been read back and verified by Finish & Save.
+    func clearUITestRouteAfterVerifiedSave(sessionID: UUID) {
+        guard activitySessionID == sessionID else { return }
+        manager.stopUpdatingLocation()
+        manager.allowsBackgroundLocationUpdates = false
+        manager.showsBackgroundLocationIndicator = false
+        isRecording = false
+        pendingStartAfterAuthorization = false
+        clearDraft()
+        status = "DEBUG UI-test GPS route cleared after verified local save."
+    }
+    #endif
+
     func resumeRecovered() {
         guard !hasUnreadableDraft, activeStartedAt != nil else { return }
         // A recovered route may have been interrupted while iOS suspended or terminated the app.
