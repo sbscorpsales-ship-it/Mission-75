@@ -1,0 +1,39 @@
+name: GATIVX Activity Engine Tests
+
+on:
+  pull_request:
+    branches: ["main"]
+    paths:
+      - "shared/**"
+      - "docs/GATIVX_ACTIVITY_ENGINE_SPEC.md"
+      - ".github/workflows/gativx-activity-engine.yml"
+  push:
+    branches: ["main", "feat/gativx/**", "feat/gativx-independent-activity-engine"]
+    paths:
+      - "shared/**"
+      - "docs/GATIVX_ACTIVITY_ENGINE_SPEC.md"
+      - ".github/workflows/gativx-activity-engine.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: "gativx-activity-engine-${{ github.ref }}"
+  cancel-in-progress: true
+
+jobs:
+  activity-engine:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Validate JavaScript syntax
+        run: |
+          node --check shared/gativx-activity-engine.js
+          node --check shared/gativx-activity-engine.test.js
+      - name: Run activity engine regression tests
+        run: node shared/gativx-activity-engine.test.js
