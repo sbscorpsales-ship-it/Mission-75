@@ -5806,3 +5806,10 @@ Changes are on the existing isolated PR #137 branch; no PR was merged.
 | Community disabled-state copy visible | **verified** |
 | Full-screen viewport and dock <=76 pt on PR #136 | **failed** — dock 113.0625 pt |
 | Physical iPhone display/HealthKit behavior | **blocked / not tested** |
+
+
+## 2026-11-28 03:58 IST — PR #136 and PR #163 IPA package verification
+
+- PR #136 run #670 IPA artifact #15146711639 was downloaded. Artifact ZIP SHA-256 **7c0afb58294dd6235b111ece4831b76ba3758982f5a7547267320b258edc8d6e** matches GitHub's artifact digest. The inner GATIVX-unsigned.ipa SHA-256 is **1522fb2266e03d3b9f170c1d8457d0b51b7038385ed98a1d4bdb9c9049c0c7ae**. Both ZIP layers passed integrity checks; Payload/GATIVX.app/Info.plist and the GATIVX executable are present. Neither _CodeSignature nor embedded.mobileprovision exists.
+- PR #163 run #722 IPA SHA-256 **e366ad1d0dcf815e3a37baf42de0cff86276fdb65e6acd2356dd44ba42f84b64**; ZIP integrity passed, Info.plist and GATIVX executable are present, and neither _CodeSignature nor embedded.mobileprovision exists.
+- Both are valid unsigned build packages for engineering inspection, **not directly installable signed iPhone apps**. PR #136 also retains its independent dock assertion failure; PR #163 run #722 predates the current head bc76fdb.
