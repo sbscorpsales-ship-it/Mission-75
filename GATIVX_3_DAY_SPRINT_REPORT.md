@@ -5277,3 +5277,79 @@ This is the current verified checkpoint for the scheduled engineering run. It su
 7. Obtain signing capability/profile for a signed iOS build; test on the user’s iPhone and Android device.
 
 **Protected state:** PR #107 untouched; PR #112 open/unmerged; no PR merged; no production DB mutation; no production deployment.
+
+
+## 2026-11-28 00:48 IST — live repository / CI checkpoint
+
+**Source of truth:** live GitHub PR metadata, exact PR head SHAs, workflow run records, job logs, structured XCTest diagnostics, downloaded xcresult artifacts, and the checked-in Android workflow. This is an evidence update, not a claim of product completion.
+
+### Exact PR heads and CI evidence
+
+| PR | Exact head SHA | Latest inspected result | Finding |
+|---|---|---|---|
+| #136 single navigation/dock | `31e5b70d85537113e74dd003d06b3ae95ba323f4` | [iOS run](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45847572105) failed | Structured XCTest summary: **84 passed, 1 failed, 0 skipped** (85 total). The 76 unit tests passed; 8 of 9 UI tests passed. `testDashboardFillsDeviceViewportAndExposesAllFiveTabs` measured the dock at **113.0625 pt**, exceeding the 76 pt limit. Simulator and unsigned Release packaging steps completed, but the release validation correctly failed because XCTest failed. Artifacts: diagnostics #15145517291, xcresult #15146161829, simulator #15145957076, unsigned IPA #15146711639. |
+| #161 Profile bottom clearance | `c92dc7505320b63fabf13f79dceacf12d6978b59` | [run #715](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/46048494016) retry in progress | First attempt: **76 unit tests passed, 0 failed, 0 skipped**; UI runner did not execute tests because XCTest timed out waiting for the AX-loaded notification. This is a simulator test-runner initialization failure, not a Profile assertion result. Retried the full job without changing or narrowing tests; job #140698230489 is running. |
+| #162 session metric calculation | `3a2cb5ac4aa90ff6d31af9d5210e6154d0da7d6d` | [run #716](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/46048498810) succeeded | Structured XCTest summary: **92 passed, 0 failed, 0 skipped** (80 unit + 12 UI). All automated release gates passed: source safeguards, simulator build, unsigned Release build, IPA archive integrity and bundle/version metadata. Artifacts: diagnostics #15224814294, xcresult #15225028939, simulator #15225302831, unsigned IPA #15226255140 (773,452 bytes). |
+| #137 Android unreadable-draft safeguard | `d5edab346eb9a00de7d02407fe501c8193a655c2` | [Android run #184](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45840866819) succeeded | 25 source safeguard assertions passed; Android JVM unit-test Gradle task and debug APK build succeeded. The retrieved log does not expose the JVM test count, so no exact count is asserted here. Debug APK artifact #15128630240 (10,307,226 bytes). No emulator or physical-device installation evidence. |
+| #157 desktop Web Hub | `186708706f7ca0956e7d12571ab1ec5db3ac9bc2` | [web run #448](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45976721881) failed | Mobile browser smoke passed; desktop Web Hub smoke failed with **“Responsive hero is missing.”** No production deployment. |
+| #158 native Supabase key contract | `e157d58a79a411a6223a684ed967fceee21bcfdb` | [web run #455](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/46025120481) succeeded; [iOS run #705](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/46025120477) failed | Web cross-platform source contract passed. The separate iOS run is not treated as green; the newer downstream #162 run is the current successful iOS evidence. |
+| #144 Supabase grant hardening | `edd9f211c3029c38d8ad6255c341ca8e235b3b46` | [web/PostgreSQL run #440](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45891894462) succeeded | Hardening assertions passed in an isolated PostgreSQL 17 fixture only. No production DDL, grants or Auth settings were changed. |
+| #131 independent activity engine | `37b9866b13bcedc99fd0cbb1fbaf0cef7f8b8f95` | [engine run #6](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45945165684) succeeded | Standalone JavaScript tests pass. The engine is not yet wired into the iOS, Android or Web Hub tracker/history UI. |
+| #153 account recovery | `a21ac8890047274699d66351b61c4f5ab7cfd8e9` | [web run #45940205733](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45940205733) succeeded | 25 browser checks passed, 0 failed. Supabase Auth is mocked in CI; real email delivery and production redirect allowlist remain unverified. |
+
+### PR #136 review and downstream evidence
+
+- Reviewed PR #136's exact head, patch, job steps, full logs, structured diagnostics and xcresult screenshot artifact. Its own exact head is still failing: the UI geometry assertion reports 113.0625 pt for the dock, not <=76 pt.
+- The later descendant PR #162 run now passes the dock/viewport assertion and the five-destination navigation UI test. Do not rewrite the historical #136 failure as a pass; the green result belongs to the newer descendant head.
+- Inspected the PR #162 xcresult screenshots for Home, Activity, Guru and Profile. Activity occupies the portrait simulator viewport and retains the single five-destination dock. Profile's local-only state and member-photo action are visible. The UI test in `testDashboardSectionsMetricsAndPrimaryNavigation` opens the root-hosted member-photo sheet and cancels it successfully. Guru keyboard dismissal passes.
+- The Home screenshot still displays unavailable measured readings as dashes / “Waiting for measured data”; the Activity screenshot shows GPS distance 0.00 km before a walk begins. This is honest pre-session UI, not proof of live distance/time/calorie integration. The Profile final-content clearance assertion is being tested separately by PR #161; do not mark it accepted until the retry completes and its screenshot/logs are reviewed.
+- PR #162 adds tested calculation primitives: distance precedence GPS > pedometer > labelled stride estimate; active duration from valid moving GPS intervals only; calorie estimate requiring valid weight and distance. These primitives are **not yet connected to live tracking state, persisted session metrics, daily aggregation or the dashboard**. Pedometer-only active time remains unavailable; pause/resume accounting and member height/weight wiring remain open.
+
+### Current product gap ledger (status as of this checkpoint)
+
+| Product area | Status | Evidence / next action |
+|---|---|---|
+| iOS single five-destination navigation | **verified** | PR #162 run #716 UI test passed. |
+| iOS dock <=76 pt | **verified on PR #162 head; failing on PR #136 exact head** | #716 geometry assertion passes; #136 recorded 113.0625 pt. Keep both results traceable. |
+| iOS Activity full portrait viewport | **verified in simulator CI** | #716 UI test and Activity screenshot pass; physical iPhone layout remains unverified. |
+| Root-hosted Profile photo picker open/cancel | **verified in simulator CI** | #716 dashboard/navigation UI test opens and cancels the root sheet. Actual photo selection, storage across relaunch and cloud profile sync remain unverified. |
+| Profile final content above dock | **blocked / pending CI** | PR #161 first attempt failed before UI test initialization; full-job retry #715 attempt 2 is running. |
+| Guru keyboard dismissal and local goal flow | **verified in simulator CI** | #716 Guru UI test passed; cloud/account journey sync remains unverified. |
+| Local activity history save/recovery | **verified in simulator UI test only** | #716 Finish & Save test relaunches and reads the saved row. Physical GPS walk and HealthKit export are separate gates. |
+| GPS/background route recording | **implemented-but-unverified** | Source safeguards and simulator tests pass; no physical locked-screen/background walk evidence. |
+| Distance calculation | **implemented-but-unverified** | PR #162 unit tests pass; live tracker/history/UI and daily aggregation wiring is missing. |
+| Active moving time and pause/resume | **missing from live session flow** | Calculation primitive exists for valid GPS intervals, but it is not wired/persisted; pause/resume and pedometer-only duration are not implemented. |
+| Active calorie estimate | **implemented-but-unverified** | Formula unit-tested; profile weight source, session persistence, display and measured-vs-estimated aggregation are not wired. |
+| GATIVX intensity-weighted Activity Points | **missing / partial** | Current iOS Heart Points display explicitly uses 1 point per Apple Exercise minute; it is not the standalone engine's intensity-weighted model. |
+| HealthKit | **implemented-but-unverified** | Read path and source entitlement checks pass in CI; no signed physical iPhone permission/read/write acceptance. |
+| Android Health Connect | **implemented-but-unverified** | JVM/source safeguards and debug build pass; no Android device/emulator acceptance. |
+| Android signed release APK | **missing** | Current checked-in Android workflow builds/uploads debug APK only; no release keystore/signing pipeline. |
+| Web mobile release | **verified in CI only** | Browser checks pass; live auth/data and production deployment not verified. |
+| Desktop Web Hub | **blocked** | PR #157 desktop smoke fails because the responsive hero is missing. |
+| Auth/password recovery | **implemented-but-unverified** | 25 mocked browser checks pass; real email delivery and redirect allowlist not verified. |
+| Goals, purpose and Guru | **implemented-but-unverified** | Local journey logic/UI tests pass; account-scoped cloud persistence/sync remains incomplete. |
+| Missions | **missing / incomplete** | Current native experience is a limited daily consistency card, not the full mission lifecycle. |
+| Community | **missing / gated** | Current native Community is a gated placeholder, not a live feed/groups/challenges experience. |
+| Profile photo persistence/cloud profile | **implemented-but-unverified** | Local photo store tests and picker open/cancel pass; actual selection/relaunch and cloud sync not accepted. |
+| Notifications/push | **missing** | Current screen explicitly says notifications are not active. |
+| Shared backend activity-session migrations | **verified in isolated CI only** | PostgreSQL 17 fixture regression passes; production migration history and live sync remain unverified. |
+| Supabase privilege hardening | **blocked** | Live broad table/default ACL findings and disabled leaked-password protection remain; production admin session and migration reconciliation required. |
+| iOS unsigned Release build and IPA integrity | **verified in CI** | PR #162 run #716 passed archive and metadata validation. IPA is unsigned and cannot be installed directly without a signing/sideload route. |
+| iOS signed install / physical HealthKit / background GPS | **blocked** | Requires owner-controlled Apple signing profile/certificate with HealthKit entitlement and physical iPhone acceptance. |
+| Android device acceptance / signed release | **blocked** | Requires Android device or emulator for behavior validation and owner-controlled release keystore for signed APK. |
+| Production deployment | **missing** | No production deployment performed or claimed. |
+
+### Blockers and exact owner actions
+
+1. **iOS signing:** Provide an Apple Developer distribution certificate and provisioning profile for the GATIVX bundle ID with HealthKit capability, configured as GitHub Actions secrets by the repository owner. Alternatively, the owner can sideload the unsigned IPA using their own Apple ID and a supported signing tool such as AltStore; this is a temporary signing path, not a permanent App Store install. Do not send signing passwords or private keys in chat.
+2. **Android release signing:** The owner must generate a release keystore and configure its file/password/alias as GitHub Actions secrets. The current workflow contains only `assembleDebug`; a reviewed release-signing workflow is still required.
+3. **Physical-device acceptance:** Install the signed/sideloaded build on the actual iPhone and an Android device, grant HealthKit/Health Connect permissions, perform a walk with the screen locked/backgrounded, finish/save, relaunch, and verify local history plus health export. No physical-device result is claimed in this report.
+4. **Supabase security:** Reconcile all 22 applied migration versions against repository sources, restore missing migration source files, resolve timestamp drift, obtain an appropriately authorized `supabase_admin` session, and separately enable Leaked Password Protection. Production changes require explicit owner authorization; none were applied by this sprint run.
+
+### Work performed this checkpoint
+
+- **Application source changes:** none. No application tests were modified, skipped, narrowed or weakened.
+- **CI action:** re-ran the complete PR #161 iOS job after its first attempt failed at XCTest runner initialization; retry is still in progress (job #140698230489).
+- **Files changed:** `GATIVX_3_DAY_SPRINT_REPORT.md` only (this documentation addendum).
+- **Protected state:** PR #107 untouched; PR #112 remains open/unmerged; no PR merged; no production database mutation; no production deployment.
+- **Next action:** inspect PR #161 retry logs, XCTest summary and Profile screenshot as soon as the job completes; then fix only any reproduced Profile/dock defect. Continue with native session metric persistence and dashboard integration on a separate reviewable branch, preserving measured/estimated provenance and all existing safeguards.
