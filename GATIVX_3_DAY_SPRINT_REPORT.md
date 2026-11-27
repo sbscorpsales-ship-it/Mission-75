@@ -4907,3 +4907,88 @@ PR #156 artifacts:
 - **Tests for the documentation-only commit:** none. All test counts above come from the exact GitHub workflow logs; no tests were removed, skipped or weakened.
 - **Next action:** retain PR #156 as the current passing simulator baseline without merging; resolve the missing `sync_activity_session_steps` migration source through a read-only source/provenance review before changing the contract; perform physical iPhone HealthKit + locked-screen GPS + same-account Web acceptance with a signed/sideloaded build; continue Android emulator/device acceptance; retrieve the exact approved Web Hub HTML before implementation; add the consent-first onboarding flow and full member data mapping; obtain authorized admin review for production security remediation.
 - **Protected state:** PR #107 untouched, PR #112 unmerged, all PRs unmerged, no production database/Auth setting changed, no deployment performed.
+
+
+---
+
+## Hourly engineering checkpoint — 2026-11-27 21:05 IST (15:35 UTC)
+
+### Repository and protected-branch state
+
+- Default `main` remains at `143889db3e72540fb478b76c486082f45395e9bd`; no PR was merged in this checkpoint.
+- PR #136 exact head remains `31e5b70d85537113e74dd003d06b3ae95ba323f4` on `fix/gativx-single-navigation-dock-20261126`.
+- PR #107 remains open/draft at `c19bdbd307df7048cefd86bd3e6064ac4f4e3042`; it was not changed.
+- PR #112 remains open/draft and unmerged at `b6c04d41dc67bd191ed0cf8966331eb5661a9887`; it was not changed.
+- PR #159 remains open/draft at `26308272abc64ea9f1c7570881467b0c67ace16a`.
+- PR #160 is a new draft follow-up, based on the exact PR #159 head. Current head: `b55f0d86cc8597bc0b05f94ff17f733ce70293da`. No PR was merged.
+
+### PR #136 exact-head review and descendant evidence
+
+- Workflow run #670, [run 45847572105](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45847572105), on exact PR #136 head: **84/85 tests passed**; 76 unit tests passed and 8/9 UI tests passed; 1 UI test failed; 0 skipped and 0 cancelled.
+- The failed UI assertion measured the bottom dock at **113.0625 pt**, above the 76 pt acceptance ceiling. Simulator build, source entitlement validation, tracking safeguards, unsigned Release build and IPA artifact creation succeeded.
+- The PR #136 unsigned IPA artifact was downloaded and inspected: both ZIP layers pass integrity checks; app bundle is `com.paramitsolutions.gativx`, version 1.0.0/build 1, arm64 Mach-O, with HealthKit usage descriptions. It has no embedded provisioning profile and no code signature. It is a package, not an installable signed release.
+- Later descendant PR #159 run #701, [run 46018451241](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/46018451241), contains the later full-device viewport work. Its screenshot attachments are 1206×2622 iPhone simulator captures. Home shows the mountain header, daily movement ring, Active Calories and Heart Points cards, mission and five-tab dock. Activity fills the viewport and exposes Start Walk. The dashboard screenshot still shows unavailable/dash readings for steps, calories and Heart Points; the design structure is present, but live health values are not proven.
+- PR #159 run #701: **86/87 tests passed**; 76 unit tests passed and 10/11 UI tests passed; 1 UI test failed; 0 skipped and 0 cancelled. The failing test is `testCommunityTabAfterMissionsFromFreshDashboard`: after the local-only button tap, the UI hierarchy remained on Welcome rather than presenting the member dashboard. The same run passed the five-destination navigation, full-device Home viewport, dock <=76 pt, full-height Activity, Guru keyboard dismissal, Profile navigation, Finish & Save recovery and welcome-screen tests.
+- Source inspection confirms the Profile photo sheet is attached to the root `ContentView`; the PR #159 UI suite did not exercise opening/cancelling it. PR #160 adds that explicit regression test.
+
+### Isolated engineering work
+
+- PR #160 adds a local-only/auth state separation: a false auth notification no longer clears an explicit guest choice; explicit Sign out clears it. It adds a stronger guest-to-dashboard assertion, a guest-choice relaunch test and a root-hosted Profile photo-sheet open/cancel test.
+- PR #160 adds a Web/native source contract check for project URL, publishable-key equality, Web table paths and checked-in native RPC migrations.
+- PR #160 adds source files for the live `activity_sessions` table/RPC and authenticated-only RPC grant. These SQL files were reconstructed from read-only live schema/function metadata. **They have not been applied to production and still require isolated PostgreSQL execution/review.**
+- PR #160 corrects Web workflow triggers for `fix/gativx-*` stacked branches and adds the native client/migration paths so these contract checks run on future changes.
+- The first Web contract run exposed an incorrectly escaped native URL regex. The exact failing log was inspected, the regex was corrected, and the latest PR #160 Web run passed.
+- Code commit introducing the PR #160 changes: `b8853dd8f57274ff7b6f36822e600069d500dbcd`. Latest branch head at this checkpoint: `b55f0d86cc8597bc0b05f94ff17f733ce70293da`.
+- PR #158 was also updated with the same two migration source files and Web trigger paths; latest head: `e157d58a79a411a6223a684ed967fceee21bcfdb`. Its native publishable key matches the live project's published key. PR #159's current stack already has that corrected key; default `main` remains unchanged until PR #158 is reviewed/merged.
+
+### Exact CI results observed this checkpoint
+
+| Area / run | Result |
+|---|---|
+| PR #136 iOS run #670 | 84/85 tests; 1 dock-height UI failure; unsigned IPA and simulator/release builds produced |
+| PR #159 iOS run #701 | 86/87 tests; 1 guest-entry UI failure; simulator and unsigned Release/package gates passed |
+| PR #160 Web run [46025920704](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/46025920704) | 33 structural/source checks + 7 browser smoke assertions passed; 0 failures |
+| PR #158 Web run [46025120481](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/46025120481) | 33 structural/source checks + 7 browser smoke assertions passed; 0 failures |
+| PR #137 Android run [45840866819](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45840866819) | 25 source safeguards + 6 JVM tests passed; Gradle debug APK built; no emulator/device test |
+| PR #144 security run [45891894462](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45891894462) | Web checks passed; isolated PostgreSQL 17 grant-hardening regression job passed |
+
+- PR #160 latest iOS CI run [46025920878](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/46025920878) was **pending/queued** at report time on the latest branch head. Earlier superseded iOS runs were cancelled by newer commits; they are not counted as test failures.
+- PR #158 iOS CI run #46025120477 was also queued. No result is claimed until logs are available.
+
+### Backend, Web Hub and security audit
+
+- Read-only inspection of the connected Supabase project found **22 applied migration-history entries**. The PR #159 source tree had 10 migration files; PR #160 adds 2, leaving source-history reconciliation incomplete.
+- Ten live migration versions still have no matching checked-in file: `20261106053936`, `20261106095244`, `20261106103424`, `20261107183639`, `20261107184813`, `20261111061101`, `20261113150913`, `20261113172744`, `20261113200314`, `20261113200433`.
+- Six checked-in migrations have timestamp/version mismatches against live history: `202611040001` vs `20261106054358`; `20261107022000` vs `20261107021753`; `20261107080400` vs `20261107080437`; `20261107140500` vs `20261107140341`; `20261107140600` vs `20261107140614`; `20261112080000` vs `20261112081338`. Contents must be compared before any migration is applied.
+- Live `activity_sessions` has owner-scoped RLS policies and a live `sync_activity_session_steps` function executable by authenticated/service roles; its migration source was absent from the PR #159 tree. PR #160 restores source, but SQL execution against an isolated PostgreSQL/Supabase fixture is still required.
+- Live security inspection still shows excessive `anon` grants on `daily_action_progress`, including TRUNCATE. The PR #144 hardening migration and isolated PostgreSQL 17 regression pass are not deployed. Supabase Security Advisor also reports leaked-password protection disabled. No production database or Auth setting was changed.
+- PR #157's `web-hub.html` is a static preview: it contains no Supabase URL/client, auth flow or fetch/data integration. Its mobile browser smoke fails the responsive-hero assertion at 390 px. It is not a live Web Hub.
+- The existing `app-v2.html` browser smoke passes in CI, but a real same-account iPhone-to-Web round trip remains unverified.
+
+### Updated gap ledger
+
+| Area | Status | Evidence / next gate |
+|---|---|---|
+| Five-destination navigation, dock <=76 pt, Home full-device viewport | **verified (simulator on PR #159 descendant)** | PR #159 UI assertions and 1206×2622 simulator screenshots pass; physical iPhone still unverified |
+| Activity full viewport and fixed dock | **verified (simulator)** | `testActivityScreenFillsViewportAboveFixedBottomNavigation` passed; real GPS/background behavior remains unverified |
+| Root-hosted Profile photo picker | **implemented; verification pending on PR #160** | Root ContentView sheet confirmed in source; explicit open/cancel UI regression added, CI pending |
+| Guest/local-only entry | **defect under repair** | PR #159 run #701 shows Welcome remains after tap; PR #160 separates guest choice from auth false notifications and adds relaunch coverage; CI pending |
+| Guru keyboard dismissal | **verified (simulator)** | UI test passed; real Guru service/cloud persistence not proven |
+| Home rings and health readings | **partially implemented / blocked on device** | Ring UI exists; screenshots show unavailable measurements. Installed build reports missing HealthKit entitlement |
+| Physical iPhone HealthKit read/write and workout export | **blocked / implemented-but-unverified** | Entitlement source file and Xcode target configuration are present; unsigned IPA has no signed entitlements/profile. Requires Apple Developer signing capability and device acceptance |
+| iPhone background GPS and saved-walk cloud round trip | **implemented-but-unverified** | Source safeguards and simulator save/recovery pass; requires locked-screen physical walk and same-account Web verification |
+| iOS account auth and cloud sync | **implemented-but-unverified** | Native/Web project/key contract now passes source check; no real account login and iPhone↔Web data round trip |
+| Android tracking and Health Connect | **implemented-but-unverified / partial** | 25 safeguards, 6 JVM tests and debug APK pass; no emulator or physical device acceptance |
+| Desktop Web Hub | **missing / blocked** | PR #157 is static preview and fails responsive hero smoke; no live auth/data service |
+| Community feed and shared missions | **missing** | Native screen explicitly says not active in this build |
+| Notifications, complete Missions, training/food/water/sleep journaling | **partial / missing** | Some local UI/guidance exists; push/scheduled delivery and full cross-platform lifecycle not verified |
+| Supabase migration provenance and production security | **blocked** | 22 live history entries vs 12 source files, 10 absent versions and 6 timestamp mismatches; broad live grants and disabled leaked-password protection remain |
+| Signed iOS/Android releases and production deployment | **blocked** | iOS IPA is unsigned; Android debug APK only; no signed store artifact or production Web Hub deployment verified |
+
+### Files, tests and next action
+
+- **PR #160 files:** `.github/workflows/web-checks.yml`, `ios/GATIVX/ContentView.swift`, `ios/GATIVXUITests/GATIVXDashboardUITests.swift`, `scripts/check-web.mjs`, `supabase/migrations/20261106090900_activity_session_step_sync.sql`, `supabase/migrations/20261106090921_restrict_activity_session_rpc_to_authenticated.sql`.
+- **PR #158 files:** same two activity-session migration files and Web workflow trigger update, alongside its native Supabase key correction and contract check.
+- **Report branch:** this checkpoint is being appended on the existing isolated PR #118 documentation branch; application branches remain separate.
+- **Next action:** inspect the exact PR #160 iOS run and its logs/screenshots; fix any real failure without weakening tests; run the new activity-session SQL migration against an isolated PostgreSQL 17/Supabase fixture; reconcile the remaining migration history; review/apply PR #144 security hardening only with authorized admin access; sign the iOS build with the HealthKit capability and test on a physical iPhone; verify one real account's walk/steps/calories appear on Web; continue Android emulator/device acceptance.
+- **Protected state:** PR #107 untouched; PR #112 unmerged and untouched; no PR merged; no production Supabase migration/Auth setting changed; no physical-device or production deployment claim made.
