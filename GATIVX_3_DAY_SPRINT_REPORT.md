@@ -5441,3 +5441,50 @@ Project `mission75-cloud` (`crarbbsvcczwmtvxyrxo`) is `ACTIVE_HEALTHY`, PostgreS
 - **Production:** read-only audit only; no migration, grant, Auth setting or deployment mutation.
 - **PR #161:** full iOS retry #715 remains in progress; no final Profile clearance claim.
 - **Report branch prior commit:** `ae41650fb884b7bcb4b6a743236d4e70df337590`.
+
+
+## 2026-11-28 01:45 IST — canonical iOS activity engine port committed
+
+### Why this change was made
+
+PR #131's checked-in v1.1.2 specification and shared JavaScript engine define the approved MET-based walking calorie calculation, cadence fallback, measured-vs-estimated separation and GATIVX Activity Points. PR #162 had temporarily introduced a separate `0.5 × weight × distance` calorie shortcut. That would create two competing formulas, so it was replaced before any UI integration.
+
+### Reviewable PR #162 commits
+
+All changes are on the existing isolated PR #162 branch; no PR was merged.
+
+| Commit | Files | Change |
+|---|---|---|
+| `c6dc3b203c53f46f9981968c860eeee075e81ca7` | `ios/GATIVX/Models/GATIVXActivityCalculationEngine.swift` | New Swift port of shared v1.1.2: ACSM speed/grade walking VO2, level-walking MET anchors, cadence-only fallback, gross/resting/active kcal separation, heart-rate/MET intensity classification and 1x/2x GATIVX Activity Points. Unsupported activities and missing inputs return unavailable rather than fabricated zero values. |
+| `db7e6d13817d2b6163b8894577b05f65ef2e2f8c` | `ios/GATIVX/Models/ActivitySessionRecord.swift` | Session estimate now uses accepted distance plus measured moving GPS time to derive speed and call the canonical engine. No elapsed-time substitution; HealthKit measured energy is explicitly kept separate. |
+| `dc5ae643508a1d1b95c4b18b5a10ce14c4839db1` | `ios/GATIVXTests/GATIVXActivitySessionTests.swift` | Added shared golden-value tests for brisk walking, cadence fallback, HR points, unsupported activity and MET boundary continuity. |
+| `f41fb5df967358094cb70e7cd3eb86b96ceb2d03` | `ios/GATIVXTests/GATIVXActivitySessionTests.swift` | Session-level fixture now uses 24 valid 30-second GPS intervals (12 moving minutes) to verify canonical calorie output and Activity Points; pedometer-only/no-moving-time cases must remain unavailable. |
+
+### CI status — exact final head
+
+- Latest PR #162 head: `f41fb5df967358094cb70e7cd3eb86b96ceb2d03`.
+- [Run #720](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/46057280800) was pending at this checkpoint on the exact final head.
+- Run #719 is in progress on the immediately preceding test commit `dc5ae643508a1d1b95c4b18b5a10ce14c4839db1`; runs #717 and #718 were cancelled by newer commits in the same branch concurrency group. Do not use those cancelled runs as test results.
+- No local Xcode execution is available in this environment. The full GitHub iOS CI must compile the new Swift source and run the complete unit/UI suites. No pass is claimed for these new tests until #720 completes.
+- The earlier #716 success (92 tests) validates the previous head only; it does not validate these later code changes.
+
+### Updated metric gap ledger
+
+| Item | Status | Evidence / remaining work |
+|---|---|---|
+| Canonical Swift MET walking engine | **implemented-but-unverified** | Port committed; exact-head CI #720 pending. |
+| Shared JS/Swift golden values | **implemented-but-unverified** | Tests added for 5 km/h brisk walking (70 kg, 30 min), cadence fallback, HR classification and 6 km/h boundary; CI pending. |
+| Session calorie calculation | **implemented-but-unverified** | Now requires GPS-derived moving time and distance; no pedometer-only calorie estimate until active duration/cadence inputs are available. |
+| GATIVX Activity Points | **implemented-but-unverified** | Canonical session-average calculation added; interval-level time-series classification and UI ring wiring remain open. |
+| Live Activity tracker metrics | **missing from the user-facing session flow** | The engine is not yet wired to the live tracker, session save model, history cards or dashboard. |
+| Persisted metric provenance | **missing** | Store engine version, measured/estimated/unavailable source, raw inputs and outputs with each session before release. |
+| Daily aggregation / HealthKit reconciliation | **missing / unverified** | Must deduplicate overlapping sessions and never add measured HealthKit active energy to the estimate. |
+
+The previous note that PR #162 still used the 0.5 × weight × distance shortcut is superseded by these commits. The engine is now aligned to the canonical v1.1.2 formula, but it is not yet a finished end-to-end metric feature.
+
+### Work performed
+
+- Application source changes: 2 Swift files; tests: 1 Swift test file.
+- Four reviewable commits listed above.
+- CI: #717/#718 cancelled due newer commits; #719 in progress on prior head; #720 pending on final head. Exact pass/fail/cancelled test counts are not yet available for the new code.
+- No physical iPhone, HealthKit, background GPS, Android device or production deployment claim.
