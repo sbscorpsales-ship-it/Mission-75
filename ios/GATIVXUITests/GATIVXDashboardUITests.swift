@@ -603,11 +603,13 @@ final class GATIVXDashboardUITests: XCTestCase {
         XCTAssertTrue(bottomNavigation.waitForExistence(timeout: 5))
 
         let aboutText = app.staticTexts["From Goals to Xcellence"]
-        XCTAssertTrue(aboutText.waitForExistence(timeout: 5),
-                      "The final About GATIVX content must exist in Profile.")
-        for _ in 0..<20 where !aboutText.isHittable {
+        // SwiftUI Form rows are lazy: the final About section may not enter the
+        // accessibility tree until the Profile form is scrolled down to it.
+        for _ in 0..<20 where !aboutText.exists {
             profileScreen.swipeUp()
         }
+        XCTAssertTrue(aboutText.waitForExistence(timeout: 5),
+                      "The final About GATIVX content must exist after scrolling to the end of Profile.")
         XCTAssertTrue(aboutText.isHittable,
                       "The final Profile content must be scroll-reachable above the fixed dock.")
         XCTAssertLessThanOrEqual(aboutText.frame.maxY, bottomNavigation.frame.minY + 1,
