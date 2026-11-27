@@ -3367,3 +3367,9 @@ Poll runs #45916191745 and #45916412588. Inspect the full UI results and screens
 - PR #148 updated head `d3f29bf42d4fe9287314ba9ffd0e4affcf5d1f38`, [run #45916191745](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45916191745): setup, checkout, Xcode selection, project generation, scheme validation and first-run checks passed; full serial XCTest remains in progress.
 - PR #149 latest head `6786ec2cc36771bd4a1ed7d408b90244125eb45a`, [run #45916412588](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45916412588): setup, checkout, Xcode selection, project generation, scheme validation and first-run checks passed; full serial XCTest remains in progress.
 - No new pass/fail counts are available for either run at this checkpoint. Do not infer a result from the green setup steps.
+
+
+### Repository governance finding — 2026-11-27 05:54 IST
+- GitHub branch metadata for `main` reports `protected: false`; required status-check enforcement is off and there are no required check contexts.
+- This is a release/security governance gap independent of the failing iOS UI tests. Enable a branch protection rule or repository ruleset requiring PR review and the relevant iOS/Android/Web/Supabase CI checks before merge; block force pushes and direct pushes to `main`.
+- No repository settings were changed in this run. No PR was merged.
