@@ -1820,6 +1820,10 @@ struct ContentView: View {
                     Label("Refresh Apple Health readings", systemImage: "arrow.clockwise")
                 }
                 .disabled(!health.isAvailable || health.isRefreshing)
+                Text("Active Energy: " + health.activeEnergyReadStatus)
+                    .font(.caption2).foregroundStyle(health.todayActiveEnergyKcal == nil ? .orange : .secondary)
+                Text("Heart Points source: " + health.exerciseMinutesReadStatus)
+                    .font(.caption2).foregroundStyle(health.todayExerciseMinutes == nil ? .orange : .secondary)
                 if let refreshed = health.lastRefresh {
                     Text("Last successful step refresh: \(refreshed.formatted(date: .abbreviated, time: .shortened))")
                         .font(.caption2).foregroundStyle(.secondary)
