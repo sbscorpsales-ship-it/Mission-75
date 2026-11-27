@@ -3521,3 +3521,113 @@ All six tables having RLS enabled does not neutralize table-level TRUNCATE/MAINT
 2. Accept the Home dock-safe layout only if the measured viewport boundary and actual screenshot both show content above the dock, while all existing navigation/Profile/Guru/Activity tests continue passing.
 3. Keep PR #149 marked as a failed experiment until corrected. Keep PR #148 as the latest passing automated baseline, not as proof of Home no-overlap.
 4. Continue platform/security gaps without touching PR #107, merging PR #112, changing Design C or mutating production data.
+
+
+---
+
+## Automation checkpoint 8 — 2026-11-27 07:46 IST
+
+### Repository state verified
+
+- `main` latest commit: `143889db3e72540fb478b76c486082f45395e9bd` (unchanged).
+- PR #107: open, unmerged, exact head `c19bdbd307df7048cefd86bd3e6064ac4f4e3042`; untouched.
+- PR #112: open, unmerged, exact head `b6c04d41dc67bd191ed0cf8966331eb5661a9887`.
+- PR #136: open/draft, exact head `31e5b70d85537113e74dd003d06b3ae95ba323f4`.
+- PR #148: open/draft, exact head `d3f29bf42d4fe9287314ba9ffd0e4affcf5d1f38`.
+- PR #149: open/draft, exact head `6786ec2cc36771bd4a1ed7d408b90244125eb45a`; previously failed and remains unaccepted.
+- PR #150: open/draft, exact head `d4bb1a86eb4ab63eb2ad3fe6611dcf6c585d57c3`; failed exact-head CI and marked not accepted in its PR body/comment.
+- New PR #151: open/draft, exact head `08add9c8ef377f3d992d3a0636b657d486018c69`, based on PR #148's passing head.
+- No PR was merged. Design C and approved product decisions remain unchanged.
+
+### Priority: PR #136 exact-head audit
+
+[PR #136 run #45847572105](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45847572105), exact head `31e5b70d85537113e74dd003d06b3ae95ba323f4):
+
+- XCTest diagnostics summary: **85 total; 84 passed; 1 failed; 0 skipped**.
+- Unit suite: **76 passed, 0 failed**.
+- UI suite: **9 executed; 8 passed; 1 failed**.
+- Sole failure: dock measured **113.0625 pt**, greater than the 76 pt maximum.
+- Tracking safeguard script: **102 PASS checks, 0 FAIL checks** (counted directly from the job log).
+- Simulator build, unsigned Release build and IPA packaging/upload steps passed.
+- Downloaded and inspected the actual IPA. Outer artifact ZIP and inner IPA both pass ZIP integrity checks. Bundle ID `com.paramitsolutions.gativx`, version `1.0.0`, build `1`; executable is a **4,030,192-byte arm64 Mach-O**. The generated Info.plist has no `UILaunchScreen`; no embedded provisioning profile or code signature exists.
+- Verdict: PR #136 is not accepted; dock and full-device launch metadata fail the later release criteria.
+
+### Passing automated baseline: PR #148
+
+[PR #148 run #45916191745](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45916191745), exact head `d3f29bf42d4fe9287314ba9ffd0e4affcf5d1f38):
+
+- XCTest diagnostics summary: **86 total; 86 passed; 0 failed; 0 skipped**.
+- Unit tests: **76 passed**.
+- UI tests: **10 passed**.
+- Tracking safeguards: **111 PASS checks, 0 FAIL checks** (direct log count).
+- Simulator build, unsigned Release build, IPA packaging and artifact upload passed.
+- Downloaded and inspected the IPA. ZIP integrity passed; bundle ID/version/build are correct; `UILaunchScreen: {}` is present; executable is a **4,036,944-byte arm64 Mach-O**. No signature or provisioning profile exists.
+- The passing UI suite covers five-tab navigation, Activity viewport, Guru keyboard dismissal, Profile picker open/cancel, Home Start Walk navigation without starting a recording, Notifications dismissal and full-device Welcome.
+- Home's mission card is verified scrollable fully above the dock. This is a content-reachability assertion, not a measurement of the ScrollView's clipped viewport. No physical iPhone acceptance is implied.
+
+### Failed strict-geometry experiment: PR #150
+
+[PR #150 run #45922758211](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45922758211), exact head `d4bb1a86eb4ab63eb2ad3fe6611dcf6c585d57c3):
+
+- Unit tests: **76 passed, 0 failed**.
+- UI tests: **10 executed; 2 passed; 8 failed; 16 assertion failures; 0 cancelled**.
+- Combined XCTest: **86 total; 78 passed; 8 failed; 0 skipped**.
+- Tracking safeguards: **102 PASS checks, 0 FAIL checks**.
+- Simulator build, unsigned Release build, IPA packaging and artifact upload passed; final release gate failed on XCTest.
+- Downloaded and inspected the IPA. ZIP integrity passed; bundle ID/version/build are correct; `UILaunchScreen: {}` is present; executable is a **4,048,176-byte arm64 Mach-O**. It is unsigned and has no provisioning profile.
+- The GeometryReader accessibility grouping changed the accessibility tree: `gativx-home-dashboard` disappeared from the ScrollView and the ScrollView was exposed as `gativx-home-viewport`. Home selectors then failed and cascaded into tab, Activity, Guru, Notifications and Profile tests.
+- The asserted **874 pt** frame is the accessibility backing frame, not a valid measurement of the ScrollView's clipped viewport; dock top was 785 pt. This experiment is not accepted.
+- PR #150 body and comment were updated with exact failure counts and the disposition. Comment ID: `7208077550`.
+
+**Correction to earlier safeguard counts:** direct counting of the exact run logs shows PR #136 = 102, PR #148 = 111 and PR #150 = 102 passing safeguard assertions. These exact log counts supersede earlier 121-check references.
+
+### New isolated QA follow-up: PR #151
+
+[PR #151](https://github.com/sbscorpsales-ship-it/Mission-75/pull/151) was created from the passing PR #148 head. It adds no layout or visual change.
+
+Files changed:
+- `ios/GATIVX/ContentView.swift`: adds `gativx-community-gati-card` accessibility identifier to the existing final Home card.
+- `ios/GATIVXUITests/GATIVXDashboardUITests.swift`: corrects the inaccurate ScrollView-frame comment and adds assertions that the final Community Gati card exists, remains hittable and can be scrolled fully above the dock.
+
+Commits:
+- `fe9de5993e8ecf39c9478592ff34d82fb1e14d6b` — expose final Home card to UI automation.
+- `08add9c8ef377f3d992d3a0636b657d486018c69` — verify final-card dock clearance.
+
+Exact-head CI run [#45927899952](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45927899952) was **queued** at this checkpoint. No tests have been claimed for PR #151 yet. The full 76-unit/10-UI suite and existing tracking/build/package gates must run unchanged.
+
+### Cross-platform and backend evidence retained
+
+- Android PR #137 [run #45840866819](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45840866819): 25 source safeguards and 6 JVM tests passed; Debug APK built/uploaded. No physical Android or Health Connect acceptance.
+- Web Hub PR #138 [run #45839703732](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45839703732): 16 structural checks and 7 mobile Chromium assertions passed. No production deployment acceptance.
+- Supabase PR #144 [run #45891894462](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45891894462): isolated PostgreSQL grant regression and Web checks passed. No production DDL or Auth settings were changed.
+- Existing live-project security blockers remain: excessive table/default privileges, Leaked Password Protection disabled, and migration-source reconciliation. Authorized project-admin remediation and staging verification are required.
+
+### Product gap ledger
+
+| Area | Status | Evidence / remaining acceptance |
+|---|---|---|
+| Single five-destination iOS navigation | Verified in simulator CI | PR #148 all five destinations pass |
+| Dock <=76 pt | Verified in PR #148 simulator suite | PR #136 exact head fails at 113.0625 pt |
+| Full-device Welcome and Activity | Verified in simulator CI | Simulator only |
+| Home bottom content | Implemented-but-unverified | PR #148 mission card reachability passes; PR #151 adds final-card regression, CI pending |
+| Guru keyboard dismissal | Verified in simulator CI | PR #148 passes |
+| Profile root-hosted photo picker | Verified open/cancel | Real photo selection, relaunch persistence and cloud upload unverified |
+| Finish & Save / local recovery | Implemented-but-unverified | Unit regression coverage passes; physical iPhone interruption/save acceptance absent |
+| HealthKit / background GPS | Implemented-but-unverified | Source safeguards/simulator tests pass; real iPhone permissions, export and locked-screen GPS unverified |
+| Auth / onboarding | Implemented-but-unverified / missing | Auth source exists; live account/OTP acceptance absent; guided onboarding journey incomplete |
+| Goals, purpose and Guru | Implemented-but-unverified | Local journey unit tests pass; cross-device persistence and full coaching service unverified |
+| Missions | Partial / missing lifecycle | Starter consistency mission exists; complete catalogue and lifecycle missing |
+| Community feed | Missing | Gated placeholder; no feed/groups/moderation service |
+| Push notifications | Missing | Explicitly inactive; no delivery pipeline |
+| Android / Health Connect | Implemented-but-unverified | CI only; physical device/provider acceptance absent |
+| Web Hub | Implemented-but-unverified | Structural/browser CI only; production deployment/live backend absent |
+| Shared backend/sync | Implemented-but-unverified | Local outboxes/RPCs exist; two-account staging/conflict/recovery acceptance absent |
+| Supabase security | Blocked | Admin hardening and leaked-password protection required |
+| Signed iOS installation | Blocked | Apple signing identity and provisioning profile with HealthKit capability required |
+
+### Next actions
+
+1. Poll PR #151 run #45927899952 and inspect the exact-head XCTest logs, screenshots/diagnostics, tracking safeguards, simulator build, unsigned Release build and IPA.
+2. Accept PR #151 only if all 86 existing XCTest cases plus the new final-card assertion pass, with the dock <=76 pt and all five destinations/Guru/Profile/Activity regressions preserved.
+3. Keep PR #150 rejected and PR #148 as the last complete passing automated baseline; do not call Home clip geometry proven.
+4. Continue backend security/migration and Android/Web acceptance work without touching PR #107, merging PR #112, changing Design C or mutating production data.
