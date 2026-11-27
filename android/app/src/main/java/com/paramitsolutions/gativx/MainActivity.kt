@@ -565,7 +565,10 @@ private fun GativxAndroidScreen() {
                                 Text("Finish active device route")
                             }
                         } else if (activeWalk != null) {
-                            Text("RECORDING · %.2f km · %d GPS points".format(activeWalk!!.distanceMeters / 1000.0, activeWalk!!.points.size), color = Color.White, fontWeight = FontWeight.Bold)
+                            val currentWalk = activeWalk!!
+                            val movingSeconds = GativxActivityCalculationEngine.movingDurationSeconds(currentWalk.points)
+                            Text("RECORDING · %.2f km · %d GPS points".format(currentWalk.distanceMeters / 1000.0, currentWalk.points.size), color = Color.White, fontWeight = FontWeight.Bold)
+                            Text("ACTIVE MOVING TIME · ${movingSeconds?.let(::formatWalkDuration) ?: "Not yet available"}", color = Color(0xFFD8FF3E), fontSize = 12.sp)
                             Button(onClick = { stopWalkOn() }, enabled = !busy && !walkSyncBusy, modifier = Modifier.fillMaxWidth()) {
                                 Text("Finish & save WalkOn")
                             }
@@ -585,8 +588,9 @@ private fun GativxAndroidScreen() {
                             Text("GPS route trace preview · not a street map", color = Color(0xFF9DAEB6), fontSize = 10.sp)
                         }
                         latestWalk?.let { walk ->
+                            val activeLabel = walk.movingDurationSeconds?.let(::formatWalkDuration) ?: "Not available"
                             Text(
-                                "Last route · %.2f km · %d seconds · %d measured steps".format(walk.distanceMeters / 1000.0, walk.durationSeconds, walk.sessionSteps),
+                                "Last route · %.2f km · %s active · %d seconds elapsed · %d measured steps".format(walk.distanceMeters / 1000.0, activeLabel, walk.durationSeconds, walk.sessionSteps),
                                 color = Color.White,
                                 fontSize = 12.sp
                             )
@@ -701,6 +705,15 @@ private fun GativxAndroidScreen() {
             }
         }
     }
+}
+
+private fun formatWalkDuration(seconds: Long): String {
+    val safeSeconds = seconds.coerceAtLeast(0)
+    val hours = safeSeconds / 3_600
+    val minutes = (safeSeconds % 3_600) / 60
+    val remainingSeconds = safeSeconds % 60
+    return if (hours > 0) "%dh %02dm".format(hours, minutes)
+    else "%dm %02ds".format(minutes, remainingSeconds)
 }
 
 private fun startWalkOnService(context: Context) {
