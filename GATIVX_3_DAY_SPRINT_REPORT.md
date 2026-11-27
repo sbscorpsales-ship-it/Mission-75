@@ -5524,3 +5524,43 @@ Reviewed the exact PR #162 head source, not only its PR description:
 | Home daily metric aggregation | **missing** | Aggregate GATIVX sessions when HealthKit is unavailable; prefer measured HealthKit values without summing estimates. |
 | Android equivalent engine and session persistence | **missing** | Port the same v1.1.2 constants/golden fixtures to Kotlin and wire to the Android tracker. |
 
+
+
+## 2026-11-28 02:20 IST — Android moving-time and canonical engine work committed
+
+### PR #137 Android commits
+
+Changes are on the existing isolated PR #137 branch; no PR was merged.
+
+| Commit | Files | Change |
+|---|---|---|
+| `73dc8acfd3c3e7aa12595c0795286ca1c8199205` | `android/app/src/main/java/com/paramitsolutions/gativx/GativxActivityCalculationEngine.kt` | Added Kotlin port of shared v1.1.2 MET walking formula, cadence fallback, active/gross/resting kcal separation and GATIVX Activity Points. |
+| `1e22dbfee4dd0b5afa5cd5c58b01a1647ccbe3d0` | `WalkOnStore.kt` | Added nullable movingDurationSeconds to encrypted active/completed session JSON, preserving compatibility with older records. |
+| `8bf8f2d3aa87a770ed5c0cd989cbf98f455d94c5` | `WalkOnStore.kt` | Made strict session decode internal so the legacy/new schema can be tested without Android storage context. |
+| `b1fdca569ec44318579e5b0abf6e507944d7b423` | `WalkOnLocationService.kt` | Compute moving time from accepted GPS intervals; exclude break markers, stationary intervals, gaps over 30 seconds, inaccurate points and speeds outside 0.5–8 m/s. Persist the result in active drafts and completed local history. |
+| `892f48cda5a3d29f8184625fa39baec0aad2458c` | `MainActivity.kt` | Show active moving time separately from elapsed wall-clock duration during a walk and in the last-route summary. |
+| `25ecb3a914590b5babadda2ea2b51a44bc0fd330` | `GativxActivityCalculationEngineTest.kt` | Added 8 JVM tests for shared golden values, cadence fallback, HR intensity, missing inputs, MET boundary continuity, moving-interval filtering and legacy/new session decoding. |
+
+### Android exact-head CI
+
+- PR #137 head: `25ecb3a914590b5babadda2ea2b51a44bc0fd330`.
+- [Android run #190](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/46057928964) is in progress. Checkout and Java 17 setup passed; Android 36 SDK installation is currently running. Safeguards, JVM tests and debug APK build are pending. No test counts or APK are claimed for this new head yet.
+- The prior Android run #184 validated the previous head only; it does not validate these new changes.
+- Existing elapsed duration is preserved for compatibility; moving duration is stored separately. The current cloud route RPC still syncs elapsed duration only, so moving time remains local-only until the backend contract and migration are extended.
+- The Kotlin calorie engine is available and tested in source, but the Android UI still has no member weight input and does not display an estimated calorie value. No default body mass has been invented.
+
+### Cross-platform metric status
+
+- iOS Swift engine: committed on PR #162; full exact-head run #720 is in progress.
+- Android Kotlin engine + local moving-time persistence: committed on PR #137; exact-head run #190 is in progress.
+- Web Hub currently has no equivalent saved-session metric engine wired into the dashboard.
+- Neither mobile app currently persists canonical calorie output or GATIVX Activity Points with session provenance; profile weight/height input and end-to-end UI/history/cloud wiring remain open.
+- Android UI remains an early-access feature hub: Home, Activity and Profile are marked available; Mission is testing; Wellness, Strength, GURU, Community, Motion 3D, Rewards and Referrals are marked coming soon or under development. This is not yet a complete Android product surface.
+
+### Work performed
+
+- Android source files changed: GativxActivityCalculationEngine.kt, WalkOnStore.kt, WalkOnLocationService.kt, MainActivity.kt.
+- Android test file added: GativxActivityCalculationEngineTest.kt (8 new test methods).
+- Six reviewable commits above; no Android device/emulator test performed.
+- Exact-head Android CI #190 pending; no APK result for the new head yet.
+- iOS #720 (canonical Swift engine) and #715 (Profile clearance) remain in progress.
