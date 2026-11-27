@@ -103,13 +103,60 @@ struct ActivitySessionRecord: Codable, Identifiable, Equatable {
         return String(format: "%d:%02d", seconds / 60, seconds % 60)
     }
 
-    /// GATIVX estimate: 0.5 kcal × body mass (kg) × distance (km).
-    /// This is deliberately separate from measured HealthKit active energy.
-    func estimatedCaloriesKcal(weightKg: Double, heightCm: Double?) -> Double? {
-        guard weightKg.isFinite, weightKg > 0,
+    /// Canonical MET-based estimate from the shared GATIVX activity engine.
+    /// Requires measured moving time and a usable distance; never substitutes
+    /// elapsed wall-clock time or emits a zero when the inputs are unavailable.
+    func activityCalculation(
+        weightKg: Double,
+        heightCm: Double?,
+        ageYears: Double? = nil,
+        heartRateBpm: Double? = nil
+    ) -> GATIVXActivityCalculationResult {
+        guard activity.caseInsensitiveCompare("Walking") == .orderedSame,
+              let movingSeconds = activeDurationSeconds,
+              movingSeconds > 0,
               let meters = distance(heightCm: heightCm).meters,
-              meters > 0 else { return nil }
-        return weightKg * (meters / 1000.0) * 0.5
+              meters.isFinite, meters > 0 else {
+            return GATIVXActivityCalculationEngine.estimate(
+                weightKg: weightKg,
+                movingMinutes: 0,
+                speedKmh: nil,
+                activityType: activity
+            )
+        }
+
+        let movingMinutes = Double(movingSeconds) / 60.0
+        let speedKmh = (meters / 1_000.0) / (movingMinutes / 60.0)
+        return GATIVXActivityCalculationEngine.estimate(
+            weightKg: weightKg,
+            movingMinutes: movingMinutes,
+            speedKmh: speedKmh,
+            grade: 0,
+            heartRateBpm: heartRateBpm,
+            ageYears: ageYears,
+            activityType: activity
+        )
+    }
+
+    /// Estimated active calories only. Measured HealthKit energy must remain a
+    /// separate authoritative value and must never be added to this estimate.
+    func estimatedCaloriesKcal(weightKg: Double, heightCm: Double?) -> Double? {
+        activityCalculation(weightKg: weightKg, heightCm: heightCm).activeCaloriesKcal
+    }
+
+    func estimatedActivityPoints(
+        weightKg: Double,
+        heightCm: Double?,
+        ageYears: Double? = nil,
+        heartRateBpm: Double? = nil
+    ) -> Int? {
+        let result = activityCalculation(
+            weightKg: weightKg,
+            heightCm: heightCm,
+            ageYears: ageYears,
+            heartRateBpm: heartRateBpm
+        )
+        return result.status == .estimated ? result.activityPoints : nil
     }
 
     /// A session can be uploaded to the activity cloud only when it contains
