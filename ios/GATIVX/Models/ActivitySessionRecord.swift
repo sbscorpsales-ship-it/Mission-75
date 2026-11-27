@@ -33,16 +33,130 @@ struct ActivitySessionRecord: Codable, Identifiable, Equatable {
         self.motionDistanceMeters = motionDistanceMeters
     }
 
+    /// Distance from accepted GPS fixes. Segment breaks and invalid GPS gaps are
+    /// excluded so the app never draws or counts a straight line across a dropout.
     var gpsDistanceMeters: Double {
         guard let routePoints, routePoints.count > 1 else { return 0 }
-
         return zip(routePoints, routePoints.dropFirst()).reduce(0.0) { total, pair in
             guard !pair.1.breakBefore else { return total }
-
             let previous = CLLocation(latitude: pair.0.latitude, longitude: pair.0.longitude)
             let current = CLLocation(latitude: pair.1.latitude, longitude: pair.1.longitude)
             return total + current.distance(from: previous)
         }
+    }
+
+    enum DistanceSource: String, Codable {
+        case gps
+        case pedometer
+        case strideEstimate
+        case unavailable
+    }
+
+    struct DistanceResult: Equatable {
+        let meters: Double?
+        let source: DistanceSource
+        var isEstimate: Bool { source == .strideEstimate }
+    }
+
+    /// GPS is authoritative when it has a usable route; Core Motion distance is
+    /// the next choice. Step/stride distance is an explicitly estimated fallback.
+    func distance(heightCm: Double?) -> DistanceResult {
+        if gpsDistanceMeters > 0 {
+            return DistanceResult(meters: gpsDistanceMeters, source: .gps)
+        }
+        if let motionDistanceMeters, motionDistanceMeters.isFinite, motionDistanceMeters > 0 {
+            return DistanceResult(meters: motionDistanceMeters, source: .pedometer)
+        }
+        if let steps, steps > 0, let heightCm, heightCm.isFinite, heightCm > 0 {
+            return DistanceResult(meters: Double(steps) * (heightCm / 100.0) * 0.415,
+                                  source: .strideEstimate)
+        }
+        return DistanceResult(meters: nil, source: .unavailable)
+    }
+
+    /// Active time is calculated only from GPS intervals that indicate movement.
+    /// Pauses, long GPS gaps, segment breaks and stationary intervals are excluded.
+    /// Without adequate GPS evidence it returns nil rather than labelling elapsed
+    /// wall-clock time as active exercise time.
+    var activeDurationSeconds: Int? {
+        guard let routePoints, routePoints.count > 1 else { return nil }
+        let movingSeconds = zip(routePoints, routePoints.dropFirst()).reduce(0.0) { total, pair in
+            let (previous, current) = pair
+            guard !current.breakBefore,
+                  current.horizontalAccuracy >= 0, current.horizontalAccuracy <= 50,
+                  previous.horizontalAccuracy >= 0, previous.horizontalAccuracy <= 50 else { return total }
+            let interval = current.timestamp.timeIntervalSince(previous.timestamp)
+            guard interval > 0, interval <= 30 else { return total }
+            let a = CLLocation(latitude: previous.latitude, longitude: previous.longitude)
+            let b = CLLocation(latitude: current.latitude, longitude: current.longitude)
+            let speed = b.distance(from: a) / interval
+            guard speed >= 0.5, speed <= 8 else { return total }
+            return total + interval
+        }
+        // No qualifying movement is not a measured zero-minute workout.
+        guard movingSeconds > 0 else { return nil }
+        return Int(movingSeconds.rounded())
+    }
+
+    var activeDurationText: String {
+        guard let seconds = activeDurationSeconds else { return "—" }
+        return String(format: "%d:%02d", seconds / 60, seconds % 60)
+    }
+
+    /// Canonical MET-based estimate from the shared GATIVX activity engine.
+    /// Requires measured moving time and a usable distance; never substitutes
+    /// elapsed wall-clock time or emits a zero when the inputs are unavailable.
+    func activityCalculation(
+        weightKg: Double,
+        heightCm: Double?,
+        ageYears: Double? = nil,
+        heartRateBpm: Double? = nil
+    ) -> GATIVXActivityCalculationResult {
+        guard activity.caseInsensitiveCompare("Walking") == .orderedSame,
+              let movingSeconds = activeDurationSeconds,
+              movingSeconds > 0,
+              let meters = distance(heightCm: heightCm).meters,
+              meters.isFinite, meters > 0 else {
+            return GATIVXActivityCalculationEngine.estimate(
+                weightKg: weightKg,
+                movingMinutes: 0,
+                speedKmh: nil,
+                activityType: activity
+            )
+        }
+
+        let movingMinutes = Double(movingSeconds) / 60.0
+        let speedKmh = (meters / 1_000.0) / (movingMinutes / 60.0)
+        return GATIVXActivityCalculationEngine.estimate(
+            weightKg: weightKg,
+            movingMinutes: movingMinutes,
+            speedKmh: speedKmh,
+            grade: 0,
+            heartRateBpm: heartRateBpm,
+            ageYears: ageYears,
+            activityType: activity
+        )
+    }
+
+    /// Estimated active calories only. Measured HealthKit energy must remain a
+    /// separate authoritative value and must never be added to this estimate.
+    func estimatedCaloriesKcal(weightKg: Double, heightCm: Double?) -> Double? {
+        activityCalculation(weightKg: weightKg, heightCm: heightCm).activeCaloriesKcal
+    }
+
+    func estimatedActivityPoints(
+        weightKg: Double,
+        heightCm: Double?,
+        ageYears: Double? = nil,
+        heartRateBpm: Double? = nil
+    ) -> Int? {
+        let result = activityCalculation(
+            weightKg: weightKg,
+            heightCm: heightCm,
+            ageYears: ageYears,
+            heartRateBpm: heartRateBpm
+        )
+        return result.status == .estimated ? result.activityPoints : nil
     }
 
     /// A session can be uploaded to the activity cloud only when it contains
@@ -73,6 +187,7 @@ struct ActivitySessionRecord: Codable, Identifiable, Equatable {
         )
     }
 
+    /// Elapsed session time retained for backward compatibility with existing history.
     var durationText: String {
         let seconds = max(0, Int(finishedAt.timeIntervalSince(startedAt)))
         return String(format: "%d:%02d", seconds / 60, seconds % 60)

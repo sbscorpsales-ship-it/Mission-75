@@ -613,6 +613,158 @@ final class GATIVXActivitySessionTests: XCTestCase {
         XCTAssertNil(try store.load())
     }
 
+    func testDistanceUsesGPSThenPedometerThenStrideFallback() {
+        let start = Date(timeIntervalSince1970: 1_800_000_000)
+        let gpsPoints = [
+            GATIVXRoutePoint(latitude: 15.8500, longitude: 74.5000, timestamp: start, horizontalAccuracy: 4, breakBefore: true),
+            GATIVXRoutePoint(latitude: 15.8510, longitude: 74.5000, timestamp: start.addingTimeInterval(10), horizontalAccuracy: 4)
+        ]
+        let gps = ActivitySessionRecord(id: UUID(), activity: "Walking", startedAt: start, finishedAt: start.addingTimeInterval(60), steps: 100, routePoints: gpsPoints, motionDistanceMeters: 50)
+        XCTAssertEqual(gps.distance(heightCm: 176).source, .gps)
+        let motion = ActivitySessionRecord(id: UUID(), activity: "Walking", startedAt: start, finishedAt: start.addingTimeInterval(60), steps: 100, routePoints: nil, motionDistanceMeters: 50)
+        XCTAssertEqual(motion.distance(heightCm: 176).meters, 50)
+        XCTAssertEqual(motion.distance(heightCm: 176).source, .pedometer)
+        let stride = ActivitySessionRecord(id: UUID(), activity: "Walking", startedAt: start, finishedAt: start.addingTimeInterval(60), steps: 100, routePoints: nil, motionDistanceMeters: nil)
+        XCTAssertEqual(stride.distance(heightCm: 176).meters!, 73.04, accuracy: 0.001)
+        XCTAssertEqual(stride.distance(heightCm: 176).source, .strideEstimate)
+        XCTAssertNil(stride.distance(heightCm: nil).meters)
+    }
+
+    func testActiveTimeCountsMovingGPSIntervalsOnly() {
+        let start = Date(timeIntervalSince1970: 1_800_000_000)
+        let points = [
+            GATIVXRoutePoint(latitude: 15.8500, longitude: 74.5000, timestamp: start, horizontalAccuracy: 4, breakBefore: true),
+            GATIVXRoutePoint(latitude: 15.8501, longitude: 74.5000, timestamp: start.addingTimeInterval(10), horizontalAccuracy: 4),
+            GATIVXRoutePoint(latitude: 15.8501, longitude: 74.5000, timestamp: start.addingTimeInterval(20), horizontalAccuracy: 4),
+            GATIVXRoutePoint(latitude: 15.8502, longitude: 74.5000, timestamp: start.addingTimeInterval(30), horizontalAccuracy: 4),
+            GATIVXRoutePoint(latitude: 15.8503, longitude: 74.5000, timestamp: start.addingTimeInterval(90), horizontalAccuracy: 4, breakBefore: true)
+        ]
+        let record = ActivitySessionRecord(id: UUID(), activity: "Walking", startedAt: start, finishedAt: start.addingTimeInterval(120), steps: 100, routePoints: points, motionDistanceMeters: nil)
+        XCTAssertEqual(record.activeDurationSeconds, 20)
+        XCTAssertEqual(record.activeDurationText, "0:20")
+    }
+
+    func testActiveTimeIsUnavailableWhenGPSHasNoMovingIntervals() {
+        let start = Date(timeIntervalSince1970: 1_800_000_000)
+        let points = [
+            GATIVXRoutePoint(latitude: 15.8500, longitude: 74.5000, timestamp: start, horizontalAccuracy: 4, breakBefore: true),
+            GATIVXRoutePoint(latitude: 15.8500, longitude: 74.5000, timestamp: start.addingTimeInterval(10), horizontalAccuracy: 4)
+        ]
+        let record = ActivitySessionRecord(id: UUID(), activity: "Walking", startedAt: start, finishedAt: start.addingTimeInterval(60), steps: 100, routePoints: points, motionDistanceMeters: nil)
+        XCTAssertNil(record.activeDurationSeconds)
+        XCTAssertEqual(record.activeDurationText, "—")
+    }
+
+    func testCanonicalActivityEngineMatchesSharedGoldenValues() {
+        let brisk = GATIVXActivityCalculationEngine.estimate(
+            weightKg: 70,
+            movingMinutes: 30,
+            speedKmh: 5,
+            grade: 0,
+            cadenceSpm: 112
+        )
+        XCTAssertEqual(brisk.status, .estimated)
+        XCTAssertEqual(brisk.engineVersion, "1.1.2")
+        XCTAssertEqual(brisk.met!, 3.38, accuracy: 0.02)
+        XCTAssertEqual(brisk.activeCaloriesKcal!, 88, accuracy: 1)
+        XCTAssertEqual(brisk.activityPoints, 30)
+        XCTAssertEqual(brisk.intensitySource, .metEstimate)
+        XCTAssertEqual(brisk.calculationMethod, .speedGradeMET)
+
+        let cadenceOnly = GATIVXActivityCalculationEngine.estimate(
+            weightKg: 70,
+            movingMinutes: 30,
+            speedKmh: nil,
+            cadenceSpm: 100
+        )
+        XCTAssertEqual(cadenceOnly.status, .estimated)
+        XCTAssertEqual(cadenceOnly.met!, 3.21, accuracy: 0.02)
+        XCTAssertEqual(cadenceOnly.activeCaloriesKcal!, 81.4, accuracy: 1)
+        XCTAssertEqual(cadenceOnly.calculationMethod, .cadenceMET)
+
+        let heartRate = GATIVXActivityCalculationEngine.estimate(
+            weightKg: 70,
+            movingMinutes: 12,
+            speedKmh: 5,
+            heartRateBpm: 120,
+            ageYears: 40
+        )
+        XCTAssertEqual(heartRate.activityPoints, 12)
+        XCTAssertEqual(heartRate.intensitySource, .heartRate)
+
+        let atBoundary = GATIVXActivityCalculationEngine.estimateMET(speedKmh: 6)!
+        let belowBoundary = GATIVXActivityCalculationEngine.estimateMET(speedKmh: 5.9999)!
+        let aboveBoundary = GATIVXActivityCalculationEngine.estimateMET(speedKmh: 6.0001)!
+        XCTAssertEqual(atBoundary, 13.5 / 3.5, accuracy: 0.001)
+        XCTAssertEqual(belowBoundary, atBoundary, accuracy: 0.001)
+        XCTAssertEqual(aboveBoundary, atBoundary, accuracy: 0.002)
+
+        let unsupported = GATIVXActivityCalculationEngine.estimate(
+            weightKg: 70,
+            movingMinutes: 30,
+            speedKmh: 5,
+            activityType: "running"
+        )
+        XCTAssertEqual(unsupported.status, .insufficientData)
+        XCTAssertNil(unsupported.activeCaloriesKcal)
+
+        let missing = GATIVXActivityCalculationEngine.estimate(
+            weightKg: 70,
+            movingMinutes: 30,
+            speedKmh: nil
+        )
+        XCTAssertEqual(missing.status, .insufficientData)
+        XCTAssertNil(missing.activeCaloriesKcal)
+    }
+
+    func testCaloriesUseCanonicalFormulaAndRequireMovingTime() {
+        let start = Date(timeIntervalSince1970: 1_800_000_000)
+        let latitudeStep = 25.0 / 111_195.0
+        let points = (0...40).map { index in
+            GATIVXRoutePoint(
+                latitude: 15.8500 + Double(index) * latitudeStep,
+                longitude: 74.5000,
+                timestamp: start.addingTimeInterval(Double(index) * 30),
+                horizontalAccuracy: 4,
+                breakBefore: index == 0
+            )
+        }
+        let record = ActivitySessionRecord(
+            id: UUID(),
+            activity: "Walking",
+            startedAt: start,
+            finishedAt: start.addingTimeInterval(720),
+            steps: 1_000,
+            routePoints: points,
+            motionDistanceMeters: nil
+        )
+        XCTAssertEqual(record.activeDurationSeconds, 720)
+        XCTAssertEqual(record.estimatedCaloriesKcal(weightKg: 80, heightCm: nil)!, 40, accuracy: 0.5)
+        XCTAssertEqual(record.estimatedActivityPoints(weightKg: 80, heightCm: nil), 12)
+
+        let pedometerOnly = ActivitySessionRecord(
+            id: UUID(),
+            activity: "Walking",
+            startedAt: start,
+            finishedAt: start.addingTimeInterval(1_200),
+            steps: 1_000,
+            routePoints: nil,
+            motionDistanceMeters: 1_000
+        )
+        XCTAssertNil(pedometerOnly.estimatedCaloriesKcal(weightKg: 80, heightCm: nil))
+        XCTAssertNil(record.estimatedCaloriesKcal(weightKg: 0, heightCm: nil))
+
+        let empty = ActivitySessionRecord(
+            id: UUID(),
+            activity: "Walking",
+            startedAt: start,
+            finishedAt: start.addingTimeInterval(60),
+            steps: nil,
+            routePoints: nil,
+            motionDistanceMeters: nil
+        )
+        XCTAssertNil(empty.estimatedCaloriesKcal(weightKg: 80, heightCm: nil))
+    }
     private func makeActivityStore() -> (ActivitySessionStore, URL, UserDefaults, String) {
         let suiteName = "GATIVXTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!
