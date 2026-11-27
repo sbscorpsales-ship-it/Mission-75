@@ -5813,3 +5813,49 @@ Changes are on the existing isolated PR #137 branch; no PR was merged.
 - PR #136 run #670 IPA artifact #15146711639 was downloaded. Artifact ZIP SHA-256 **7c0afb58294dd6235b111ece4831b76ba3758982f5a7547267320b258edc8d6e** matches GitHub's artifact digest. The inner GATIVX-unsigned.ipa SHA-256 is **1522fb2266e03d3b9f170c1d8457d0b51b7038385ed98a1d4bdb9c9049c0c7ae**. Both ZIP layers passed integrity checks; Payload/GATIVX.app/Info.plist and the GATIVX executable are present. Neither _CodeSignature nor embedded.mobileprovision exists.
 - PR #163 run #722 IPA SHA-256 **e366ad1d0dcf815e3a37baf42de0cff86276fdb65e6acd2356dd44ba42f84b64**; ZIP integrity passed, Info.plist and GATIVX executable are present, and neither _CodeSignature nor embedded.mobileprovision exists.
 - Both are valid unsigned build packages for engineering inspection, **not directly installable signed iPhone apps**. PR #136 also retains its independent dock assertion failure; PR #163 run #722 predates the current head bc76fdb.
+
+
+## 2026-11-28 04:46 IST — PR #163 exact-head GPS metrics CI completed
+
+### Repository state and exact head
+- Confirmed the isolated branch `feat/gativx-activity-metrics-ui-20261128` exists and is associated with exact commit **bc76fdb523635ce9e992a95604a9aa5cf614f08a**.
+- Commit: [bc76fdb](https://github.com/sbscorpsales-ship-it/Mission-75/commit/bc76fdb523635ce9e992a95604a9aa5cf614f08a) — `test(ios): verify GPS-backed activity metrics in live UI and history`.
+- PR #163 remains open/draft and unmerged. No PR was merged; PR #107 and PR #112 were not modified.
+
+### Exact-head CI — successful
+- [PR #163 run #723](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/46076080143), workflow job **140764001402**, completed with conclusion `success` on exact head **bc76fdb523635ce9e992a95604a9aa5cf614f08a**.
+- Downloaded and parsed the XCTest diagnostics `tests.json` and `summary.json`:
+  - **82 unit tests passed, 0 failed**.
+  - **13 UI tests passed, 0 failed**.
+  - **95 total passed, 0 failed, 0 skipped, 0 cancelled**.
+  - New `testDebugUITestRouteFixturePersistsAndClearsOnlyItsOwnSession` passed.
+  - New `testGPSBackedActivityMetricsAreShownAndPersistedWithProvenance` passed, including live values and saved-history recovery after app relaunch.
+- Tracking safeguard log contains **148 individual PASS assertions**; no FAIL assertions.
+- Xcode log records `TEST SUCCEEDED`; simulator build records `BUILD SUCCEEDED`; HealthKit source entitlement, privacy/entitlement validation, unsigned iPhone Release build, IPA packaging and artifact upload all succeeded.
+- Two non-failing SwiftUI runtime warnings remain in UI tests: `Invalid frame dimension (negative or non-finite)`, observed under `testDashboardSectionsMetricsAndPrimaryNavigation` and `testGuruKeyboardAndDismissalFromFreshHome`. They did not fail XCTest or the release gate and should be investigated separately.
+- XCTest diagnostics `attachments/manifest.json` is empty. Structured test results are available, but no screenshot attachments were exported for this run; visual screenshot acceptance is not claimed.
+
+### Run #723 installer artifact
+- Artifact **#15235849227**, `GATIVX-iPhone-unsigned-IPA`, size **801,388 bytes**, GitHub SHA-256 **a4de1f6e89b4a17254d71b35a67213e82978aac423461294aceff3c55caf9a4a**.
+- Downloaded artifact ZIP passed `unzip -t`; extracted inner `GATIVX-unsigned.ipa` is **808,442 bytes**, SHA-256 **50cd1201ac793667bf8164f2e9b62ca78b08966906727da09b181d8144d3a581**.
+- Inner IPA passed archive integrity; verified bundle ID `com.paramitsolutions.gativx`, version `1.0.0 (1)`, non-empty arm64 Mach-O executable and Info.plist.
+- No `_CodeSignature` or `embedded.mobileprovision` exists. This is a valid **unsigned** Release package for inspection, not a directly installable signed iPhone app.
+- XCResult artifact **#15235808867** (134,188,561 bytes) and diagnostics artifact **#15235399144** (125,811,915 bytes) were downloaded. Outer archive hashes match the GitHub artifact digests.
+
+### Updated gap ledger
+| Item | Status | Evidence / remaining gate |
+|---|---|---|
+| iOS live GPS metrics and saved-history values | **implemented-but-unverified** | Exact-head simulator UI test passed with deterministic DEBUG route; real-device GPS still required |
+| DEBUG route draft persistence and scoped cleanup | **verified in simulator tests** | Focused unit test passed; Release build excludes the fixture |
+| Historical profile-metric snapshot and calculation-version provenance | **missing** | Saved history recomputes distance/calories using current local Profile height/weight; past values can change when Profile inputs change. Add local-only snapshot/version fields without including them in cloud payloads |
+| PR #136 navigation/dock acceptance | **failed on its exact head** | Run #670 still has 76 unit pass, 8 UI pass, 1 UI failure; dock 113.0625 pt >76. Later PR #161 passing baseline does not retroactively pass PR #136 |
+| Android estimated session calories/provenance | **missing** | Kotlin engine exists but no MainActivity estimate call site or saved estimate/source/version fields |
+| Web Hub live auth/member metrics | **missing** | Current Web Hub is a responsive static shell; no authenticated data/engine integration |
+| iOS signing and Android release signing | **blocked** | Requires owner-authorized Apple signing/provisioning and Android release keystore |
+| Physical iPhone GPS/background/HealthKit acceptance | **blocked** | Requires real device, permissions, screen-locked walk and HealthKit read-back |
+| Production backend security | **blocked** | Excessive anon grants, broad future-object ACLs, migration-source/history reconciliation and leaked-password protection remain unresolved; no production changes made |
+
+### Files/commits/tests and next action
+- Application source commit **bc76fdb** changed `ios/GATIVX/GPSRouteRecorder.swift`, `ios/GATIVX/ContentView.swift`, `ios/GATIVXUITests/GATIVXDashboardUITests.swift`, `ios/GATIVXTests/GPSRouteDraftPersistenceTests.swift`, and `.github/workflows/gativx-ios.yml`.
+- This reporting cycle made no additional application-code commit. It verified the complete exact-head CI and artifacts and updated this report.
+- Next: add backward-compatible local-only metric snapshots (weight/height values used, distance source, moving-time source, calculation-engine version and derived values) to saved history; prove the cloud serializer omits all local body-metric snapshots. Then add Kotlin golden-fixture parity and Android UI/history integration, followed by Web Hub contract work.
