@@ -4795,3 +4795,115 @@ PR #156 is open/draft/unmerged at head `9d16bd2d178cea9a5297776bc9d3f4b2d6274cfd
 - PR #158: iOS source safeguards **46/46**, simulator build, entitlements, unsigned device build and IPA ZIP integrity all passed on exact head. Web contract check remains correctly blocked by the absent `sync_activity_session_steps` migration source.
 - PR #118 report branch is updated through commit `e62a83ed287c105a7a449223774c5463e7c28483`; documentation-only. PR #118 remains open/draft/unmerged.
 - No PR merged; PR #107 untouched; PR #112 unmerged. No production database or Auth setting was changed.
+
+
+## Checkpoint 21 — 27 November 2026, 19:47 IST (14:17 UTC)
+
+### Branch and PR state rechecked from GitHub
+
+- Default `main`: `143889db3e72540fb478b76c486082f45395e9bd` (the current base SHA returned by open PR #158).
+- PR #107 remains open/draft/unmerged at `c19bdbd307df7048cefd86bd3e6064ac4f4e3042`; no files or branch refs were changed.
+- PR #112 remains open/draft/unmerged at `b6c04d41dc67bd191ed0cf8966331eb5661a9887`; no files or branch refs were changed.
+- PR #136 remains open/draft/unmerged at exact head `31e5b70d85537113e74dd003d06b3ae95ba323f4`, branch `fix/gativx-single-navigation-dock-20261126`.
+- PR #156 remains open/draft/unmerged at exact head `9d16bd2d178cea9a5297776bc9d3f4b2d6274cfd`, branch `fix/gativx-finish-save-ui-evidence-20261127`.
+- Commit comparison confirms PR #156 is **28 commits ahead and 0 behind** PR #136's exact head. It is the passing successor baseline, not a merged change.
+- PR #137 Android head: `d5edab346eb9a00de7d02407fe501c8193a655c2`.
+- PR #157 desktop Web Hub preview head: `186708706f7ca0956e7d12571ab1ec5db3ac9bc2`.
+- PR #158 native Supabase key contract head: `2ab96a56a273193bd0916a775bf692a8037e740d`; base `main` at `143889db3e72540fb478b76c486082f45395e9bd`.
+- PR #118 report branch parent before this checkpoint: `74771054db196f7aadd26ad58a64e7a4e0ca0431`.
+- The open-PR search still returns the above work as open. No PR was merged, no branch was force-updated, and no production database, Auth setting, or deployment was changed.
+
+### PR #136 — exact-head review and latest available run attempt
+
+PR: <https://github.com/sbscorpsales-ship-it/Mission-75/pull/136>  
+Run: <https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45847572105>
+
+The latest job attempt returned by GitHub is job `140102514612`. Its exact results:
+
+- Unit tests: **76 passed, 0 failed, 0 skipped**.
+- UI tests: **8 passed, 1 failed, 0 skipped/cancelled; 9 executed**.
+- Total XCTest summary: **84 passed, 1 failed, 0 skipped/cancelled**.
+- The sole failure is `testDashboardFillsDeviceViewportAndExposesAllFiveTabs`, at `GATIVXDashboardUITests.swift:654`: measured bottom-navigation accessibility frame **113.0625 pt**, greater than the required **76 pt** maximum.
+- The other eight UI tests passed, including the five-destination navigation journey, Activity viewport, Guru keyboard dismissal, Profile navigation, Home metrics, and Finish & Save simulator path.
+- Tracking safeguard source dictionary: **116 checks; 116 passed, 0 failed**.
+- First-run auth/privacy assertions, HealthKit source-entitlement check, simulator build, simulator privacy validation, simulator artifact upload, unsigned Release build, IPA packaging and IPA upload all passed. The XCTest step and final release gate failed, so PR #136 itself is **not green**.
+
+Artifacts from the latest PR #136 attempt:
+
+- XCTest result bundle #15146161829 (126,588,307 bytes).
+- Structured diagnostics #15145517291 (120,101,420 bytes).
+- Simulator build #15145957076 (2,781,968 bytes).
+- Unsigned IPA #15146711639 (763,895 bytes).
+- Downloaded the xcresult and diagnostics archives and extracted available raster screenshot payloads for visual inspection. These remain simulator captures, not device evidence.
+- Downloaded the unsigned IPA artifact and independently verified the outer artifact ZIP and inner IPA ZIP with `unzip -t`. Artifact SHA-256: `7c0afb58294dd6235b111ece4831b76ba3758982f5a7547267320b258edc8d6e`. The inner app reports bundle ID `com.paramitsolutions.gativx`, version `1.0.0 (1)`, and contains a Mach-O executable. No `_CodeSignature` directory or embedded provisioning profile is present: this is an unsigned package, not a signed installable release.
+
+### PR #156 — passing successor baseline and screenshot/artifact inspection
+
+PR: <https://github.com/sbscorpsales-ship-it/Mission-75/pull/156>  
+Run: <https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45965326550>
+
+Exact-head results on `9d16bd2d178cea9a5297776bc9d3f4b2d6274cfd`:
+
+- Unit tests: **76 passed, 0 failed, 0 skipped**.
+- UI tests: **11 passed, 0 failed, 0 skipped/cancelled; 11 executed**.
+- Total XCTest summary: **87 passed, 0 failed, 0 skipped/cancelled**.
+- Tracking safeguard source dictionary: **116 checks; 116 passed, 0 failed**.
+- First-run auth/privacy assertions, HealthKit source-entitlement check, simulator build, simulator privacy validation, simulator artifact upload, unsigned Release build, IPA packaging and upload all passed.
+- `testDashboardFillsDeviceViewportAndExposesAllFiveTabs` passed its **dock height <=76 pt** assertion. The run log does not publish the exact measured height; only the passing threshold assertion is claimed.
+- `testAllFiveTabsSwitchScreensFromOneNavigationDock` passed for Home, Activity, Missions, Community and Profile.
+- `testActivityScreenFillsViewportAboveFixedBottomNavigation` passed.
+- `testGuruKeyboardAndDismissalFromFreshHome` passed.
+- `testDashboardSectionsMetricsAndPrimaryNavigation` passed and explicitly opened and cancelled the Profile photo picker.
+- `testProfileTabRendersFromFreshDashboard` passed.
+- The root-hosted Profile photo picker source guard passed; PhotosUI is deferred until the member taps the action.
+- The Finish & Save UI test uses the DEBUG-only `-gativx-ui-test-simulated-walk` path. It verifies local history save/relaunch recovery, but deliberately skips real GPS recording and HealthKit workout export. It is not physical iPhone HealthKit evidence.
+
+The direct dock-related source delta from PR #136 to PR #156 is explicit: the dock background changes from `.background(pageBackground)` to `.background(pageBackground, ignoresSafeAreaEdges: [])`, with the dock retained inside the root `.safeAreaInset`. This keeps the home-indicator safe-area paint outside the measured dock frame. The successor's full UI suite passes; PR #136's exact head still fails and has not been silently rewritten.
+
+I downloaded and visually inspected the PR #156 xcresult screenshot payloads. The Home screenshot shows unknown Health values as dashes / “Waiting for measured data”, not fabricated readings. The Activity screenshot shows the full-height tracker, GPS status, Start Walk control and the five-destination dock. Profile, Guru and registration screens were also present in the simulator evidence. These are not physical-device screenshots.
+
+PR #156 artifacts:
+
+- XCTest result bundle #15184400989 (139,829,102 bytes).
+- Structured diagnostics #15183724894 (131,034,790 bytes).
+- Simulator build #15185035208 (2,788,723 bytes).
+- Unsigned IPA #15184089834 (766,721 bytes; artifact SHA-256 `3706b02f159638bfd5fdfb413a669d7bf877bb64f2d4d02b33b54fb316bfbc92`).
+- Downloaded the IPA artifact and verified both ZIP layers. Inner IPA SHA-256: `3c29cf3ea9dc741e82ef84a9d0109a0fb779c3aed8a2e6b1b8df9d48a2f625f7`. Bundle ID `com.paramitsolutions.gativx`, version `1.0.0 (1)`, valid Mach-O executable. No code-signature directory or embedded provisioning profile: still unsigned.
+
+**Correction to prior checkpoint:** the current PR #136 and PR #156 workflow safeguard dictionaries each contain **116**, not 121, checks. All 116 pass on both exact heads. The earlier “121/121” count in checkpoint 20 is superseded by this direct count of the current workflow source and matching run output.
+
+### Android, Web Hub, shared backend and onboarding
+
+- **Android PR #137** run <https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45840866819>: 25 source safeguards passed; **6 JVM tests passed, 0 failed, 0 skipped**; Gradle debug APK build and upload succeeded (artifact #15128630240). Source review confirms Android Health Connect currently requests read access for Steps and Active Calories. GPS uses a foreground location service and Activity Recognition; encrypted route drafts and completed history have fail-closed read-back/acknowledgement behavior. No emulator or physical Android/Health Connect acceptance was run.
+- **PR #157 Web Hub preview** run <https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45976721881> passes the existing app-v2 mobile smoke checks but fails the new desktop Web Hub smoke check with `Error: Responsive hero is missing`. Its `web-hub.html` is a generic desktop-first preview, not the founder-approved HTML reference. No artifact was produced; do not deploy or substitute this page.
+- **PR #158**: iOS run <https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/46007811942> passed 46 source safeguards, simulator build, HealthKit entitlement validation, unsigned device build and IPA package/upload checks; it does not run the full 76-unit/11-UI suite. Web run <https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/46007811886> fails the strict source/migration contract because native code calls `sync_activity_session_steps` but its checked-in migration source is absent. The same-project URL, same publishable key and Web table-path checks pass. Keep this assertion; do not weaken it or invent migration SQL. The one-character native key correction is on PR #158; default `main` remains unchanged until a separately reviewed merge.
+- **Shared account sync:** iOS PR #156 and Web v2 source use the same Supabase project and matching publishable key, and the main native source has a corrective draft in PR #158. Source paths for profile/daily readings/motion steps/activity routes exist, but there is still no live same-account iPhone + browser test. Do not claim cross-device sync is verified.
+- **Web feature parity:** existing `app-v2.html` is not the approved complete Web Hub. The previously selected `index_near final .html` source could not be retrieved from the current conversation files or exact-name Library search in this run. The precise approved source bytes are therefore unavailable for integration; do not replace it with PR #157's preview. Reattach the approved HTML when continuing this work.
+- **HealthifyMe-inspired onboarding requirement:** current iOS entry shows account registration, explicit local-only access and a member-initiated “Connect Apple Health” action; it is not yet the full multi-step profile/goals/activity-level questionnaire shown in the user's reference screenshots. Current iOS HealthKit read types include steps, active energy, walking/running distance, exercise time, heart rate and workouts; write types include workouts and distance. Resting energy, resting heart rate and workout-route read access are not in that current request set. Android Health Connect currently requests Steps and Active Calories read access. A future onboarding implementation must request only data actually used, explain read/write purpose, keep permissions opt-in and retain a way to change permissions later.
+- **Other product gaps remain:** Guru journey is deterministic/local rather than a deployed conversational service; Profile photo is local-only; Missions is partial; Community is gated; notifications are inactive; full Training Videos, meal/diet diary, feelings, water and shared profile-goal fields are not yet feature-complete across platforms.
+- **Production security remains blocked:** prior read-only audit still records broad `daily_action_progress` grants including TRUNCATE, broad default ACLs, Leaked Password Protection disabled and migration-history drift. No production migration or Auth setting was changed in this checkpoint.
+
+### Updated gap ledger
+
+| Area | Status | Evidence / next gate |
+|---|---|---|
+| iOS five destinations, compact dock, full-height Activity, Guru keyboard | **verified (simulator on PR #156)** | 11/11 UI tests pass; dock <=76 assertion passes. PR #136 exact head still fails at 113.0625 pt. |
+| Profile picker open/cancel and root hosting | **verified (simulator/source on PR #156)** | UI test opens and cancels the picker; source guard confirms root-hosted sheet. Actual photo selection persistence and cloud/profile-photo sync **implemented-but-unverified / missing**. |
+| Local Finish & Save and relaunch recovery | **verified (deterministic simulator path)** | DEBUG simulated session; real GPS and HealthKit export are not exercised. |
+| Physical iPhone HealthKit permissions, readings and workout export | **implemented-but-unverified** | Requires member-granted Health permissions and a real workout; no physical-device evidence in CI. |
+| Physical iPhone background/locked-screen GPS | **implemented-but-unverified** | Source safeguards and simulator only; requires real locked-screen walk, route save, relaunch recovery and Apple Health export. |
+| Android GPS/Health Connect | **implemented-but-unverified / partial** | 25 safeguards, 6 JVM tests, debug APK; only Steps and Active Calories read permission currently requested; no emulator/device acceptance. |
+| Web/iOS shared account and core sync | **implemented-but-unverified** | Same project/key and source table/RPC paths; live same-account data/GPS round-trip not tested; migration source check blocks PR #158 Web release gate. |
+| Approved full Web Hub and cross-platform feature parity | **missing / blocked** | Approved HTML source unavailable to this run; PR #157 generic preview fails responsive test and is not approved. |
+| Profile/goals/purpose onboarding and granular health consent | **partial / missing** | Registration and explicit Health connection entry exist; multi-step member profile/goals/activity-level questionnaire is not integrated. |
+| Guru, Missions, Community, notifications, training and wellness journals | **partial / missing** | Local deterministic Guru and partial Missions; Community gated, notifications inactive; no complete cross-platform lifecycle. |
+| Supabase production security and migration provenance | **blocked** | Known broad grants/default ACLs, disabled leaked-password protection and migration drift; requires source reconciliation and authorized admin review. |
+| Signed releases and production deployment | **blocked** | iOS IPA is unsigned; Android has debug APK only; no production Web deployment or signed store release verified. |
+
+### Files, tests and next action
+
+- **Files changed in this checkpoint:** `GATIVX_3_DAY_SPRINT_REPORT.md` only, on the isolated PR #118 documentation branch.
+- **Application source changes:** none. No application code was changed in this run.
+- **Tests for the documentation-only commit:** none. All test counts above come from the exact GitHub workflow logs; no tests were removed, skipped or weakened.
+- **Next action:** retain PR #156 as the current passing simulator baseline without merging; resolve the missing `sync_activity_session_steps` migration source through a read-only source/provenance review before changing the contract; perform physical iPhone HealthKit + locked-screen GPS + same-account Web acceptance with a signed/sideloaded build; continue Android emulator/device acceptance; retrieve the exact approved Web Hub HTML before implementation; add the consent-first onboarding flow and full member data mapping; obtain authorized admin review for production security remediation.
+- **Protected state:** PR #107 untouched, PR #112 unmerged, all PRs unmerged, no production database/Auth setting changed, no deployment performed.
