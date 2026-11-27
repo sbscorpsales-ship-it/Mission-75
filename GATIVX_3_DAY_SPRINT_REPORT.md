@@ -1,6 +1,6 @@
 # GATIVX 3-Day Engineering Sprint Report
 
-**Last updated:** 2026-11-27T18:29:12.211Z
+**Last updated:** 2026-11-28T01:55:00+05:30
 **Repository:** sbscorpsales-ship-it/Mission-75
 **Default branch:** `main` at `143889db3e72540fb478b76c486082f45395e9bd` (last commit 2026-11-17 04:38:35 UTC).
 **Report branch:** `docs/gativx-sprint-report-20261125` (PR #118); checkpoint 17 below is the latest authoritative snapshot. Earlier checkpoints remain historical.
@@ -5489,6 +5489,70 @@ The previous note that PR #162 still used the 0.5 × weight × distance shortcut
 - CI: #717/#718 cancelled due newer commits; #719 in progress on prior head; #720 pending on final head. Exact pass/fail/cancelled test counts are not yet available for the new code.
 - No physical iPhone, HealthKit, background GPS, Android device or production deployment claim.
 
+
+## 2026-11-28 01:55 IST — automation run 3: exact-head QA and activity UI wiring
+
+### Repository and PR safety
+
+- Default branch `main` remains at `143889db3e72540fb478b76c486082f45395e9bd`.
+- PR #107 remains open/draft at `c19bdbd307df7048cefd86bd3e6064ac4f4e3042`; it was not modified. PR #112 remains open/unmerged at `b6c04d41dc67bd191ed0cf8966331eb5661a9887`.
+- No PR was merged. No production database mutation or deployment was performed.
+- PR #163 is open/draft, not merged. Branch `feat/gativx-activity-metrics-ui-20261128`, based on PR #162's exact engine head `f41fb5df967358094cb70e7cd3eb86b96ceb2d03`, now has four reviewable commits and exact head `2b0e12183b5976a64b2773b45a0f1097882583fb`. It changes `ios/GATIVX/ContentView.swift`, `ios/GATIVXTests/GATIVXActivitySessionTests.swift` and `ios/GATIVXUITests/GATIVXDashboardUITests.swift`. PR #163 is stacked on PR #162; no code is merged.
+
+### PR #136 exact-head review and follow-up layout evidence
+
+- PR #136 exact head `31e5b70d85537113e74dd003d06b3ae95ba323f4`, [run #670](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45847572105): 76 unit tests passed, 0 failed; 9 UI tests executed, 1 UI test failed. The failing assertion measured the dock at **113.0625 pt**, exceeding the 76 pt maximum. The Activity viewport, five-destination switching, Guru keyboard dismissal and Profile navigation/photo-picker entry tests passed. Tracking safeguards, simulator build, unsigned Release build and IPA packaging steps passed; the overall release gate failed on the dock assertion.
+- PR #136 source review confirms one custom five-destination dock (Home, Activity, Missions, Community, Profile), a root-hosted Profile photo-picker sheet, and Guru keyboard Done/dismiss handling. These source checks do not override the measured dock failure.
+- PR #139 exact head `96f713704723c530718a5e26a2ea04664986c249`, [run #672](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45859629757): 76 unit tests passed, 0 failed; 9 UI tests executed. One full-device/dock test recorded three failing geometry assertions: app window height 603 pt vs 830.3 pt required, app window top y=135.5 pt vs <=8 pt, and dock 113.0625 pt vs <=76 pt. Tracking safeguards, simulator build and unsigned IPA packaging succeeded; the overall gate failed.
+- Later isolated layout branches provide successful evidence: PR #148 [run #690](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45916191745) and PR #152 [run #695](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45933957530) each passed 76 unit +10 UI tests with 0 failures, including strict full-device/dock geometry and Home scroll-clearance checks; tracking safeguards, simulator build, unsigned Release build and IPA packaging passed.
+- PR #161 exact head `c92dc7505320b63fabf13f79dceacf12d6978b59`, [run #715](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/46048494016): **76 unit +13 UI tests passed, 0 failed, 0 cancelled**. The UI log confirms passing tests for full-screen Activity, all five destinations from one dock, full device viewport and <=76 pt dock, Guru keyboard dismissal, Finish & Save/history recovery, Profile About-section clearance, Profile rendering/photo-picker path, Welcome viewport and notification dismissal. Tracking safeguards, simulator build, unsigned Release build and IPA packaging passed. This is CI/simulator evidence only, not physical iPhone acceptance.
+- The PR #161 run log records full-device and Welcome screenshot attachments. Its diagnostics artifact is 127,829,136 bytes, above the current 104,857,600-byte materialization limit; the screenshots were captured/uploaded but were not visually inspected in this run. Earlier PR #160 screenshot review remains a separate historical checkpoint.
+
+### Canonical activity engine and PR #163 integration
+
+- PR #162 exact head `f41fb5df967358094cb70e7cd3eb86b96ceb2d03`, [run #720](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/46057280800): 81 unit tests executed with 3 failures in `testCaloriesUseCanonicalFormulaAndRequireMovingTime`; 12 UI tests passed, 0 failed. The fixture used 40 GPS intervals of 30 seconds (1,200 seconds total) while the record's finish time implied 720 seconds. That mismatch caused the active-time/calorie/points expectations to disagree; it was a fixture defect, not a reason to change the canonical formula.
+- PR #163 corrects the fixture to 40 intervals of 18 seconds (720 seconds total), representing approximately 1 km in 12 minutes. At 5 km/h the canonical ACSM speed equation yields 3.38095 MET and approximately 40 active kcal at 80 kg. The formula itself is unchanged.
+- PR #163 connects the existing session engine to three live Activity metric cards and saved-history rows. Distance reports GPS, pedometer or stride-estimate provenance. Moving time is shown only when accepted GPS movement intervals exist; elapsed wall-clock time is not substituted. Estimated active kcal is shown only for walking when valid local profile weight, distance and moving time exist. Optional weight/height fields are stored in local app preferences and are not included in GATIVX cloud activity records or measured Apple Health energy.
+- A pedometer-only saved session is explicitly tested to show unavailable distance, moving time and calories when height/weight/GPS evidence is absent. The UI suite also checks metric-card presence and local-only Profile inputs.
+- Exact-head [run #722](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/46063556699) is **pending**. No jobs or test logs were available at this checkpoint; no PR #163 test/build result is claimed. Derived values are recomputed from persisted route/step inputs and current local profile values; separate persisted metric snapshots/provenance and cross-device profile sync remain open.
+
+### Android and installer artifact inspection
+
+- PR #137 exact head `25ecb3a914590b5babadda2ea2b51a44bc0fd330`, [run #190](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/46057928964): **14 JVM tests passed, 0 failed, 0 skipped**; all 25 tracking/privacy/cloud-sync source safeguards passed; debug APK build and upload succeeded.
+- Downloaded artifact #15227790518: archive 10,317,618 bytes; ZIP integrity check passed. Extracted `app-debug.apk` is 29,610,636 bytes with SHA-256 `70cd7a24902d82e26a83093251624b0770ee88e26c37aca6075d57409e9db97b`, matching the CI artifact's recorded APK hash. It is **debug-only**, not a release-signed APK; no emulator, physical Android, background-walk or Health Connect test was performed.
+- Downloaded PR #161 unsigned IPA artifact #15227918215: outer ZIP 773,027 bytes, ZIP integrity passed; inner `GATIVX-unsigned.ipa` is 780,089 bytes with SHA-256 `4a66c46983bb1e6601c2795d9f587ec0d955f5d64e17084c02f8da9ca55ee5f0`. The archive contains `Payload/GATIVX.app/GATIVX`, `Info.plist` and `PkgInfo`, but no `_CodeSignature` or `embedded.mobileprovision`. This is a structurally valid **unsigned** IPA, not a directly installable signed iPhone package.
+- PR #136's unsigned IPA outer ZIP also passed integrity checking; its CI gate nevertheless failed on the dock assertion. No installer is labelled final.
+
+### Other product-scope checks and gap ledger
+
+- PR #157 Web Hub exact head `32bae4f7bda8eb638015d20bf179f760dca878fa`, run #466 passed. PR #158 Web run #455 passed; PR #160 iOS run #712 passed. These are automated CI results, not production multi-account acceptance.
+- The latest recorded read-only Supabase audit still reports anonymous TRUNCATE/CRUD grants on `daily_action_progress`, broad future-object default ACLs for `supabase_admin`, migration-source/history mismatches and leaked-password protection disabled. No production fix was applied; owner/admin authorization and migration reconciliation remain blockers.
+
+| Area | Status | Current evidence / gap |
+|---|---|---|
+| Five-destination iOS navigation and full-screen Activity | **verified in simulator on PR #161** | 13 UI tests pass, including five tabs and strict full-device/dock geometry; no physical iPhone test. PR #136 exact head itself still fails the dock limit. |
+| Live Activity distance/moving-time/calorie UI | **implemented-but-unverified** | PR #163 code and focused tests committed; exact-head run #722 pending. |
+| iOS local save/recovery | **verified in simulator tests** | Finish & Save/history/recovery tests pass; physical GPS/save/HealthKit path remains unverified. |
+| iOS HealthKit and background GPS | **implemented-but-unverified** | Source safeguards and simulator checks pass; no signed iPhone, real permission, export or background-walk evidence. |
+| Android tracking / Health Connect | **implemented-but-unverified** | 14 JVM tests and 25 safeguards pass; debug APK only; no device/emulator or Health Connect acceptance. |
+| Web Hub | **verified by automated smoke checks** | PR #157 run #466 passes; production account sync and two-account isolation remain unverified. |
+| Auth and onboarding | **implemented-but-unverified** | Local-only entry and UI checks pass; live registration, verification, sign-in and recovery not account-tested. |
+| Goals, purpose and Guru | **verified locally / implemented-but-unverified for cloud** | Local goal/Guru and keyboard UI tests pass; production AI/cloud behavior is not accepted. |
+| Missions, Community and Notifications | **missing / partial** | Missions are limited; Community and Notifications remain gated or incomplete. |
+| Shared metrics and dashboard aggregation | **implemented-but-unverified / missing cross-platform wiring** | Swift engine and Kotlin engine exist; PR #163 iOS UI wiring pending CI; Android UI, Web Hub and shared cloud contract are not integrated. |
+| Backend sync and security | **blocked** | Production grant/default-ACL exposure, migration-history reconciliation and leaked-password protection remain unresolved. |
+| Release installers and deployment | **blocked** | iOS artifact unsigned; Android artifact debug-only; signing credentials, device acceptance and production deployment absent. |
+
+### Required actions and next step
+
+1. Inspect exact-head PR #163 run #722 when jobs appear; review compiler output, all unit/UI test counts, safeguards, simulator build, unsigned Release build, IPA integrity and screenshots. Fix defects on the isolated branch without weakening tests.
+2. Keep PR #107 untouched and PR #112 unmerged. Do not merge PR #136, #139, #161, #162 or #163 as part of this sprint run.
+3. For an installable iOS release, the owner must provide an Apple Developer Team/certificate and provisioning profile with the required HealthKit entitlement, or explicitly choose a temporary personal sideload route. For a release Android APK, the owner must provide/authorize a signing keystore and configuration.
+4. Physical acceptance requires an iPhone and Android device, real location/Motion/HealthKit/Health Connect permissions, screen-locked/background walk, Finish & Save, relaunch/recovery and cloud-sync checks.
+5. Complete the Android/Web metric UI and shared dashboard/cloud contract after iOS exact-head acceptance; persist metric provenance safely without uploading raw local profile weight/height by accident.
+6. Resolve the Supabase owner/admin blocker: reconcile all applied migrations, authorize least-privilege default ACL remediation, enable leaked-password protection, then re-audit grants and RLS under anonymous/authenticated roles.
+
+**Chronology note:** this checkpoint uses the verified local clock 01:55 IST. Later-dated 02:00–02:50 sections were already present in the report before this update; they are preserved unchanged and their timestamps are not treated as evidence from this run.
 
 ## 2026-11-28 02:00 IST — verified live metric data-flow gap
 
