@@ -457,12 +457,42 @@ struct ContentView: View {
               !isFinishingSession,
               routeRecorder.recoveredStartedAt == nil,
               !routeRecorder.hasUnreadableDraft else { return }
-        let start = Date()
         #if DEBUG
-        // This deterministic sensor seam is available only in DEBUG builds and only
-        // when an explicit UI-test launch argument is supplied. Release builds never
-        // synthesize steps or bypass the real pedometer/HealthKit paths.
-        if ProcessInfo.processInfo.arguments.contains("-gativx-ui-test-simulated-walk") {
+        let launchArguments = ProcessInfo.processInfo.arguments
+        if launchArguments.contains("-gativx-ui-test-simulated-gps-walk") {
+            let routeStart = Date().addingTimeInterval(-720)
+            let sessionID = UUID(uuidString: "00000000-0000-4000-8000-000000000124")!
+            // Forty 18-second intervals at approximately 25 m each represent
+            // 1 km in 12 minutes (5 km/h), with valid accuracy and no segment gaps.
+            let latitudeStep = 25.0 / 111_195.0
+            let points = (0...40).map { index in
+                GATIVXRoutePoint(
+                    latitude: 15.8500 + Double(index) * latitudeStep,
+                    longitude: 74.5000,
+                    timestamp: routeStart.addingTimeInterval(Double(index) * 18),
+                    horizontalAccuracy: 4,
+                    breakBefore: index == 0
+                )
+            }
+            guard routeRecorder.installUITestRoute(
+                activity: "Walking",
+                startedAt: routeStart,
+                points: points,
+                sessionID: sessionID
+            ) else {
+                sessionStatus = routeRecorder.status
+                return
+            }
+            sessionStarted = routeStart
+            activeSessionID = sessionID
+            recoveredSessionWasResumed = false
+            sessionSteps = 1_000
+            sessionMotionDistanceMeters = nil
+            sessionStatus = "Recording deterministic DEBUG UI-test GPS route."
+            return
+        }
+        if launchArguments.contains("-gativx-ui-test-simulated-walk") {
+            let start = Date()
             sessionStarted = start
             activeSessionID = UUID(uuidString: "00000000-0000-4000-8000-000000000123")!
             recoveredSessionWasResumed = false
@@ -472,7 +502,13 @@ struct ContentView: View {
             return
         }
         #endif
+        let start = Date()
         sessionStarted = start
+        activeSessionID = UUID()
+        recoveredSessionWasResumed = false
+        sessionSteps = nil
+        sessionMotionDistanceMeters = nil
+        // GPS recording is independent of the motion sensor. A device without
         activeSessionID = UUID()
         recoveredSessionWasResumed = false
         sessionSteps = nil
@@ -513,15 +549,20 @@ struct ContentView: View {
         )
         let activity = selectedActivity
         #if DEBUG
-        let skipHealthExportForUITest = ProcessInfo.processInfo.arguments.contains("-gativx-ui-test-simulated-walk")
+        let uiTestArguments = ProcessInfo.processInfo.arguments
+        let simulatedPedometerWalkForUITest = uiTestArguments.contains("-gativx-ui-test-simulated-walk")
+        let simulatedGPSWalkForUITest = uiTestArguments.contains("-gativx-ui-test-simulated-gps-walk")
+        let skipHealthExportForUITest = simulatedPedometerWalkForUITest || simulatedGPSWalkForUITest
         #else
+        let simulatedPedometerWalkForUITest = false
+        let simulatedGPSWalkForUITest = false
         let skipHealthExportForUITest = false
         #endif
         pedometer.stopUpdates()
-        if !skipHealthExportForUITest {
+        if !simulatedPedometerWalkForUITest {
             routeRecorder.stop()
         }
-        let routePoints = skipHealthExportForUITest ? [] : routeRecorder.points
+        let routePoints = simulatedPedometerWalkForUITest ? [] : routeRecorder.points
         // Keep route persistence independent of the optional pedometer result.
         let saveRecord: (Int?, Double?) -> Void = { queriedSteps, queriedDistance in
             DispatchQueue.main.async {
@@ -583,9 +624,13 @@ struct ContentView: View {
                     self.isFinishingSession = false
                     self.syncSavedActivitySessions()
                     if skipHealthExportForUITest {
-                        // The deterministic UI-test session never starts GPS, so there is
-                        // no route draft to clear and no HealthKit queue to create. Production
-                        // paths below still clear the GPS draft only after queue acceptance.
+                        // UI-test fixtures never touch HealthKit. A simulated GPS route
+                        // is cleared only after its local history record was read back above.
+                        #if DEBUG
+                        if simulatedGPSWalkForUITest {
+                            self.routeRecorder.clearUITestRouteAfterVerifiedSave(sessionID: recordID)
+                        }
+                        #endif
                         self.recoveredSessionWasResumed = false
                     } else {
                         let healthExportQueued = self.health.saveActivityWorkout(
@@ -628,7 +673,10 @@ struct ContentView: View {
         }
         // Query the complete interval after stopping live updates so the final
         // motion samples are included even if the last callback was delayed.
-        if CMPedometer.isStepCountingAvailable() {
+        if skipHealthExportForUITest {
+            // Keep the deterministic simulator fixture independent of host sensors.
+            saveRecord(nil, nil)
+        } else if CMPedometer.isStepCountingAvailable() {
             pedometer.queryPedometerData(from: start, to: finishedAt) { data, _ in
                 saveRecord(data?.numberOfSteps.intValue, data?.distance?.doubleValue)
             }
