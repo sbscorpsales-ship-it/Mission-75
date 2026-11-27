@@ -2000,11 +2000,10 @@ struct ContentView: View {
         case 4:
             profileScreen
         default:
-            NavigationStack {
-                homeDashboard
-                    .navigationTitle("")
-                    .toolbar(.hidden, for: .navigationBar)
-            }
+            // Home has no navigation destinations. Keep its GeometryReader and
+            // ScrollView directly in the member shell so the root safe-area inset
+            // for the fixed dock constrains the dashboard viewport as intended.
+            homeDashboard
         }
     }
 
