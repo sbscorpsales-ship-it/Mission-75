@@ -1030,6 +1030,7 @@ struct ContentView: View {
             .background(cardBackground, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
         }
         .buttonStyle(.plain)
+        .accessibilityIdentifier("gativx-community-gati-card")
     }
 
     private func wellnessSnapshotCard(_ title: String, value: String, unit: String, symbol: String, tint: Color) -> some View {
