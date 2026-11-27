@@ -415,9 +415,16 @@ struct ContentView: View {
             recoveredWithoutResume: recoveredWithoutResume
         )
         let activity = selectedActivity
+        #if DEBUG
+        let skipHealthExportForUITest = ProcessInfo.processInfo.arguments.contains("-gativx-ui-test-simulated-walk")
+        #else
+        let skipHealthExportForUITest = false
+        #endif
         pedometer.stopUpdates()
-        routeRecorder.stop()
-        let routePoints = routeRecorder.points
+        if !skipHealthExportForUITest {
+            routeRecorder.stop()
+        }
+        let routePoints = skipHealthExportForUITest ? [] : routeRecorder.points
         // Keep route persistence independent of the optional pedometer result.
         let saveRecord: (Int?, Double?) -> Void = { queriedSteps, queriedDistance in
             DispatchQueue.main.async {
@@ -478,15 +485,10 @@ struct ContentView: View {
                     self.activeSessionID = nil
                     self.isFinishingSession = false
                     self.syncSavedActivitySessions()
-                    #if DEBUG
-                    let skipHealthExportForUITest = ProcessInfo.processInfo.arguments.contains("-gativx-ui-test-simulated-walk")
-                    #else
-                    let skipHealthExportForUITest = false
-                    #endif
                     if skipHealthExportForUITest {
-                        // This UI test isolates local persistence/recovery. HealthKit queue
-                        // behavior remains covered by its dedicated unit tests.
-                        self.routeRecorder.clearDraft()
+                        // The deterministic UI-test session never starts GPS, so there is
+                        // no route draft to clear and no HealthKit queue to create. Production
+                        // paths below still clear the GPS draft only after queue acceptance.
                         self.recoveredSessionWasResumed = false
                     } else {
                         let healthExportQueued = self.health.saveActivityWorkout(
@@ -1280,7 +1282,7 @@ struct ContentView: View {
                             }.font(.caption).foregroundStyle(.secondary)
                         }.padding(14).frame(maxWidth: .infinity, alignment: .leading).background(cardBackground, in: RoundedRectangle(cornerRadius: 16))
                             .accessibilityElement(children: .combine)
-                            .accessibilityIdentifier("gativx-saved-activity-\\(item.id.uuidString.lowercased())")
+                            .accessibilityIdentifier("gativx-saved-activity-\(item.id.uuidString.lowercased())")
                     }
                 }
             }.padding(16)
