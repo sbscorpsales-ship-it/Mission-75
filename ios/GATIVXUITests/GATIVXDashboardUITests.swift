@@ -557,8 +557,7 @@ final class GATIVXDashboardUITests: XCTestCase {
                       "Profile must identify the local-only member.")
 
         // The photo picker sheet belongs to the root member shell, not the Profile
-        // navigation subtree; this guards the single-shell presentation owner.
-        // tab's navigation container. Verify it opens and dismisses from Profile.
+        // navigation subtree. Verify it opens and dismisses from the Profile screen.
         let photoPickerOpen = app.buttons["gativx-profile-photo-picker-open"]
         XCTAssertTrue(photoPickerOpen.waitForExistence(timeout: 5))
         photoPickerOpen.tap()
