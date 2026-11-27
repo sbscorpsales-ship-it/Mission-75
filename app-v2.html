@@ -420,11 +420,11 @@ async function cloudAuth(mode){
  cloudMsg(mode==='signup'?'Creating your account…':'Signing in…','AUTHENTICATING');
  const result=mode==='signup'?await cloudClient.auth.signUp({email,password,options:{data:{display_name:name}}}):await cloudClient.auth.signInWithPassword({email,password});
  if(result.error){cloudMsg(result.error.message,'SIGN-IN ISSUE');return}
- if(mode==='signup'&&!result.data.session){cloudMsg('Account created. Confirm your email, then sign in here.','CONFIRM EMAIL');return}
+ if(mode==='signup'&&!result.data.session){cloudMsg('If this is a new registration, check your inbox and spam for a confirmation email. If you have registered before, switch to Sign in; another registration is not needed.','CHECK EMAIL OR SIGN IN');return}
  activateCloudUser(result.data.user);applyPendingShortcutToActiveAccount();cloudUi();await cloudSync();
 }
 $('cloudSignIn').onclick=()=>cloudAuth('signin');
-$('cloudSignUp').onclick=()=>{if(!signupReady){signupReady=true;$('cloudNameWrap').style.display='block';$('cloudSignUp').textContent='Confirm account creation';cloudMsg('Enter your name, then confirm account creation.','CREATE ACCOUNT');return}cloudAuth('signup')};
+$('cloudSignUp').onclick=()=>{if(!signupReady){signupReady=true;$('cloudNameWrap').style.display='block';cloudMsg('Enter your name, then create your account.','CREATE ACCOUNT');return}cloudAuth('signup')};
 $('cloudSyncNow').onclick=()=>cloudSync();
 $('cloudSignOut').onclick=async()=>{const r=await cloudClient.auth.signOut();if(r.error){cloudMsg(r.error.message,'SIGN-OUT ISSUE');return}activateCloudUser(null);cloudUi()};
 function initCloud(){
