@@ -1,9 +1,9 @@
 # GATIVX 3-Day Engineering Sprint Report
 
-**Last updated:** 2026-11-27T04:30:00Z
+**Last updated:** 2026-11-27T12:19:00Z
 **Repository:** sbscorpsales-ship-it/Mission-75
 **Default branch:** `main` at `143889db3e72540fb478b76c486082f45395e9bd` (last commit 2026-11-17 04:38:35 UTC).
-**Report branch:** `docs/gativx-sprint-report-20261125` (PR #118); checkpoint 10 below is the latest authoritative snapshot. Earlier checkpoints remain historical.
+**Report branch:** `docs/gativx-sprint-report-20261125` (PR #118); checkpoint 16 below is the latest authoritative snapshot. Earlier checkpoints remain historical.
 
 **Protected baseline:** PR #107 remains open/draft/unmerged at `c19bdbd307df7048cefd86bd3e6064ac4f4e3042`. PR #107 was not modified. No PR was merged. No production deployment or live database mutation was performed.
 
@@ -4453,7 +4453,7 @@ PR #156 is open/draft/unmerged at head `9d16bd2d178cea9a5297776bc9d3f4b2d6274cfd
 |---|---|---|
 | iOS five-destination shell, dock <=76 pt, full-screen Activity, Guru keyboard dismissal | **verified (simulator)** | PR #156 exact-head run #45965326550; 11/11 UI tests passed. PR #136's own exact head remains failed. |
 | iOS local Finish & Save and same-session relaunch recovery | **verified (deterministic simulator path)** | PR #156 UI test verifies the saved UUID row and Walking/123 steps after terminate/relaunch. Real sensor/HealthKit path is separate. |
-| Profile root-hosted photo picker presentation and cancellation | **verified (simulator/source)** | PR #156 UI interaction plus 130 source safeguards; photo selection and persisted profile-photo reload not tested. |
+| Profile root-hosted photo picker presentation and cancellation | **verified (simulator/source)** | PR #156 UI interaction plus 121 source safeguards; photo selection and persisted profile-photo reload not tested. |
 | Physical iPhone steps/GPS, locked-screen/background recording, HealthKit permissions and workout writes | **implemented-but-unverified** | Source/unit/simulator evidence only; no physical iPhone session or HealthKit write evidence. |
 | Android tracking/save/recovery source paths and debug package | **implemented-but-unverified** | PR #137 source/JVM/Debug APK checks pass; no emulator or physical Android test. |
 | Android Health Connect and background tracking | **implemented-but-unverified** | Source safeguards only; real Health Connect permissions/data and locked-screen behavior remain untested. |
@@ -4547,3 +4547,74 @@ PR #156 is open/draft/unmerged at head `9d16bd2d178cea9a5297776bc9d3f4b2d6274cfd
 - **Application source changed:** none. No application code was changed because the highest-risk gaps now require the approved uploaded HTML to be integrated deliberately and physical-device/account evidence is unavailable to this runner; changing the unapproved PR #157 layout or guessing at HealthKit behavior would be unsafe.
 - **Tests for this documentation-only change:** none. Evidence above is from the exact PR heads, workflow logs, source inspection and independent IPA/APK/xcresult archive inspection.
 - **Next engineering action:** keep PR #156 as the passing iOS simulator descendant baseline without merging; run the real Finish & Save + HealthKit path on an owner-controlled iPhone; continue Android device acceptance; build the Web Hub from the supplied HTML rather than PR #157; then implement the shared account-scoped contract for all member data, including Community and profile photos. Keep PR #107 untouched, PR #112 unmerged and all PRs unmerged.
+
+## Checkpoint 16 — 27 November 2026, 17:49 IST (12:19 UTC)
+
+### Repository snapshot and protected refs
+
+- Default branch `main` remains at `143889db3e72540fb478b76c486082f45395e9bd`, committed 17 November 2026 04:38:35 UTC. No new default-branch commit was found.
+- PR #136 remains open/draft/unmerged at exact head `31e5b70d85537113e74dd003d06b3ae95ba323f4`, base `78a759c188644bed6f5ec893daea431031be15c9`; exact compare is 8 commits ahead, 0 behind.
+- PR #156 remains open/draft/unmerged at exact head `9d16bd2d178cea9a5297776bc9d3f4b2d6274cfd`, base `630e98b49f8cfaea4b6e584bfb56a2cddb5ed790`. Exact compare from PR #136 head to PR #156 head is 28 commits ahead, 0 behind. PR #156 is the passing descendant baseline containing the #136 navigation work plus later viewport and Finish & Save test work.
+- PR #118 report branch was `1a5fe348570d393700add0a6b64d7f3ded97543e` before this documentation update; this checkpoint is committed to that isolated docs branch.
+- PR #107 remains open/draft/unmerged at `c19bdbd307df7048cefd86bd3e6064ac4f4e3042`; it was not modified. PR #112 remains open/draft/unmerged at `b6c04d41dc67bd191ed0cf8966331eb5661a9887`; it was not modified. No PR was merged, no production deployment was made, and no live database mutation was performed.
+
+### PR #136 — exact-head run and failure
+
+- Exact-head workflow: [run #45847572105 / run 670](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45847572105), head `31e5b70d85537113e74dd003d06b3ae95ba323f4`. The latest job attempt returned by GitHub's workflow-run-jobs endpoint was inspected.
+- XCTest from that job log: **76 unit passed, 0 failed, 0 cancelled**; **9 UI executed, 8 passed, 1 failed, 0 cancelled**.
+- The single UI failure is `testDashboardFillsDeviceViewportAndExposesAllFiveTabs`: the measured bottom-navigation accessibility frame is **113.0625 pt**, above the approved **76 pt maximum**. The test's other checks and the separate five-destination switching test passed. Activity viewport, Guru keyboard dismissal, and Profile tab rendering also passed on this exact head.
+- The tracking-safeguard step emitted **121 PASS assertions, 0 FAIL assertions**. HealthKit source entitlement validation, simulator build, simulator privacy/entitlement validation, unsigned iPhone Release build, IPA packaging/ZIP integrity, and artifact upload all succeeded. The overall job and release gate correctly failed because XCTest failed.
+- Run artifacts verified in GitHub metadata:
+  - unsigned IPA #15146711639, 763,895 bytes, SHA-256 `7c0afb58294dd6235b111ece4831b76ba3758982f5a7547267320b258edc8d6e`;
+  - XCTest result bundle #15146161829, 126,588,307 bytes;
+  - simulator app #15145957076, 2,781,968 bytes, SHA-256 `6c464a4ac457ba2d5993460435bec48860a3b93b2695553e72515c67a26cc970`;
+  - structured diagnostics #15145517291, 120,101,420 bytes.
+- This exact-head result does **not** satisfy the dock-height gate. Do not treat PR #136 alone as release-ready. The root-hosted photo-picker source guard is present, but PR #136's nine-test UI suite does not independently prove actual photo selection or persistence.
+
+### PR #156 — latest passing iOS descendant
+
+- Exact-head workflow: [run #45965326550 / run 697](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45965326550), head `9d16bd2d178cea9a5297776bc9d3f4b2d6274cfd`; latest job completed successfully.
+- XCTest: **76 unit passed, 0 failed, 0 cancelled**; **11 UI passed, 0 failed, 0 cancelled**.
+- Tracking safeguards: **121 passed, 0 failed**.
+- The unchanged automated acceptance checks passed for the single five-destination dock, dock <=76 pt, full-height Activity viewport, Guru keyboard dismissal, and Profile navigation. The Profile UI journey opens and cancels the root-hosted photo-picker sheet. Selecting an actual photo and verifying its persisted reload remain untested.
+- The Finish & Save UI test passes local save/read-back and same-session history recovery after app termination/relaunch. It uses the DEBUG-only `-gativx-ui-test-simulated-walk` launch argument, does not start the real GPS recorder, and skips HealthKit export. It is not evidence of real GPS sampling or an Apple Health workout write.
+- Simulator build, privacy/entitlement validation, unsigned iPhone Release build, IPA packaging/integrity, artifact upload and the final release-validation step all passed.
+- Verified artifacts:
+  - unsigned IPA #15184089834, 766,721 bytes, SHA-256 `3706b02f159638bfd5fdfb413a669d7bf877bb64f2d4d02b33b54fb316bfbc92`;
+  - simulator app #15185035208, 2,788,723 bytes, SHA-256 `b886f072408ec45135ee51ffd6313565c4e4edad84565a7fedfff505a5579cc6`;
+  - XCTest screenshot/result bundle #15184400989, 139,829,102 bytes, SHA-256 `f96ec94a007b838f84bd0a575c3015c752abfbf71910335a60efa5c01e7e42d3`;
+  - structured diagnostics #15183724894, 131,034,790 bytes.
+- The current run reconfirmed artifact metadata and the passing UI test log. Re-materializing the 139,829,102-byte xcresult archive for pixel-level screenshot review was blocked by the file materialization service's 100 MiB limit. Checkpoint 15's prior screenshot inspection remains historical evidence; no new pixel-level screenshot inspection is claimed in this checkpoint.
+- The IPA remains **unsigned** with no provisioning profile or code signature. CI success does not establish a signed distributable iPhone release. The user's separate confirmation that the installed app now fills the iPhone screen is physical display feedback, not HealthKit/background-GPS acceptance.
+
+### Additional live-scope observations
+
+- **HealthKit dashboard rings — implemented-but-unverified / user-reported defect.** Current `HealthKitManager.swift` on the PR #156 head reads active calories from an `activeEnergyBurned` cumulative HealthKit query and exercise minutes from `appleExerciseTime`; both queries are gated by the persisted `gativx.healthkit.connectionRequested` flag and HealthKit availability. If the connection was not requested on this install or HealthKit returns no sample, the model remains nil and the dashboard shows `—`. The source cannot establish whether this user's missing readings are caused by permission state, missing Health data, or a runtime query error. The UI's “Heart Points” label is backed by Apple Exercise Time, not a separately computed intensity-weighted heart-points measure. No code change was made without physical HealthKit evidence.
+- **PR #157 Web Hub draft — failed and not approved.** Head `186708706f7ca0956e7d12571ab1ec5db3ac9bc2`, run [#45976721881](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45976721881): existing mobile browser smoke passed; the added desktop Web Hub browser smoke failed with exact error `Responsive hero is missing`. This is a separate generic navy/orange `web-hub.html`, not the founder-supplied `index_near final .html` reference. Keep it unmerged and do not deploy or substitute it.
+- **Android PR #137** head `d5edab346eb9a00de7d02407fe501c8193a655c2`, run #45840866819: 25 source safeguards and 6 JVM tests passed; debug APK build/upload passed. No emulator or physical Android behavior is verified.
+- **Web security PR #138** head `45f7fd32f78aeb462ae56ac1202cdf7a5142f293`, run #45839703732 passed its browser/security checks. This does not integrate the supplied HTML or prove shared data.
+- **Web auth PR #153** head `a21ac8890047274699d66351b61c4f5ab7cfd8e9`, run #45940205733 passed 25 checks. CI uses mocked Supabase Auth; actual email delivery and redirect allowlist remain unverified.
+- **Supabase security PR #144** head `edd9f211c3029c38d8ad6255c341ca8e235b3b46`, isolated PostgreSQL grant regression run #45891894462 passed. Production grant hardening and leaked-password protection remain blocked on authorized owner/admin action and migration-history reconciliation.
+
+### Updated gap ledger
+
+| Product area | Status | Exact evidence / remaining gate |
+|---|---|---|
+| iOS five-destination navigation, <=76 pt dock, full-screen Activity, Guru keyboard dismissal | **verified (simulator)** | PR #156 exact head, run #45965326550; 76/76 unit, 11/11 UI, 121/121 safeguards. PR #136 exact head still fails dock measurement. |
+| iOS local Finish & Save and relaunch recovery | **verified (deterministic simulator path)** | PR #156 UI test; DEBUG simulated walk only, no real sensor/HealthKit path. |
+| Profile root-hosted photo picker open/cancel | **verified (simulator/source)** | PR #156 UI journey and source safeguards; real photo selection/persistence/cloud sync unverified or missing. |
+| Physical iPhone HealthKit readings/workout export | **implemented-but-unverified** | User reports blank calorie/Heart Points rings; HealthKit query/permission/runtime evidence not captured. Heart Points label currently uses Exercise Time. |
+| Physical iPhone GPS and locked-screen/background tracking | **implemented-but-unverified** | Source safeguards and simulator checks only; requires owner-controlled physical walk with screen locked and route/save read-back. |
+| Android tracking and Health Connect | **implemented-but-unverified** | PR #137 source/JVM/debug package only; emulator/device permission, sensor and locked-screen checks remain. |
+| Supplied Web Hub features and layout | **missing (native parity and cloud integration)** | The approved HTML still contains Yoga, Tai Chi, Zumba, Gym/Diet links, diet/water logs, feelings, devices and GPS; these are not yet all available in the native app or shared across clients. PR #157 is a failed, unapproved alternative. |
+| Shared identity/data across iOS, Android and Web | **missing / partial** | Existing auth and sensor/activity outboxes do not prove one account and end-to-end visibility for goals, weight, diet, water, feelings, Guru, missions, Community, profile photos and GPS sessions. |
+| Missions lifecycle, Community interactions, notifications | **missing / partial** | Starter/gated native surfaces; no verified end-to-end mission/community lifecycle or push delivery. |
+| Production Supabase security | **blocked** | Isolated SQL tests pass; production migration reconciliation and privileged admin execution still required. |
+| Signed iOS release / signed Android release / production Web deployment | **blocked** | Unsigned iPhone IPA and Android debug APK only; no signed release or production deployment evidence. |
+
+### Files, tests and next action
+
+- **File changed:** `GATIVX_3_DAY_SPRINT_REPORT.md` only, on the isolated PR #118 documentation branch.
+- **Application source changed:** none. No application code was changed this hour; no safe source change can be justified for the user's HealthKit ring issue without physical permission/query evidence, and the Web Hub integration needs the approved HTML and a real shared-backend contract rather than another substitute layout.
+- **Tests for this documentation-only commit:** none. CI counts above are from the exact linked workflow logs; no tests were removed, skipped or weakened.
+- **Next action:** retain PR #156 as the passing simulator baseline without merging; obtain an owner-controlled iPhone HealthKit permission/sample check and real GPS/Finish & Save run; implement the supplied Web Hub features against one account-scoped shared backend; continue Android device validation and production security hardening only with authorized owner/admin action. Preserve PR #107 untouched, PR #112 unmerged, and never merge any PR.
