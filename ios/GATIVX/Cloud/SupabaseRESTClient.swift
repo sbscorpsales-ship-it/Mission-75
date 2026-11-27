@@ -29,7 +29,7 @@ final class SupabaseRESTClient: ObservableObject {
 
     private let baseURL = URL(string: "https://crarbbsvcczwmtvxyrxo.supabase.co")!
     // Supabase publishable key is a client-side key. Never place a service-role key in the app.
-    private let publishableKey = "sb_publishable_XAGRFtrWrFqJ-JSfXh2WbRQ_jCcPnr-6"
+    private let publishableKey = "sb_publishable_XAGRFtrWrFqJ-SfXh2WbRQ_jCcPnr-6"
     private let sessionStore = "com.paramitsolutions.gativx.session"
     private let healthOutboxKey = "com.paramitsolutions.gativx.health-sync-outbox.v1"
     private var accessToken: String?
