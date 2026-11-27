@@ -3270,3 +3270,65 @@ No product code changed in this source-inspection pass. These scope distinctions
 1. Poll exact-head run #45910058696; inspect its full XCTest logs, screenshots/result bundle, simulator build, unsigned Release build and IPA.
 2. Accept the PR #147 safe-area dock change only if the dashboard viewport ends above the dock, the mission card can scroll fully into view, Activity fills the usable viewport, dock <=76 pt, all five destinations and Guru/Profile regressions pass.
 3. Keep #107 untouched, #112 unmerged, all PRs open and Design C locked. No production SQL or settings change without owner authorization. Do not claim physical-device, signing, HealthKit, background GPS, Android-device or deployment acceptance without direct evidence.
+
+
+---
+
+## Hourly QA checkpoint — 2026-11-27 05:48 IST
+
+### Repository and protected refs verified
+- Default branch `main`: `143889db3e72540fb478b76c486082f45395e9bd`.
+- PR #136 remains open/draft at exact head `31e5b70d85537113e74dd003d06b3ae95ba323f4`; base `feat/gativx-nurun-guru-fullscreen-20261126`.
+- PR #107 remains open/unmerged and untouched at `c19bdbd307df7048cefd86bd3e6064ac4f4e3042`.
+- PR #112 remains open/unmerged at `b6c04d41dc67bd191ed0cf8966331eb5661a9887`.
+- No PR was merged. Design C and approved product decisions were not changed.
+
+### PR #136 exact-head QA — run #45847572105
+[Workflow run](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45847572105)
+- Unit tests: **76 passed, 0 failed**.
+- UI tests: **9 executed, 8 passed, 1 failed, 0 cancelled**.
+- Failure: dock accessibility frame **113.0625 pt**, above the **76 pt** maximum.
+- Tracking safeguard script: **121 passed, 0 failed**.
+- Five-destination navigation, Activity screen, Guru keyboard dismissal and Profile screen tests passed in this run.
+- Simulator build, unsigned Release build, IPA packaging and artifact uploads succeeded; the overall workflow failed because XCTest failed.
+- Downloaded and inspected the actual IPA. Outer artifact ZIP and inner IPA ZIP are valid. Bundle ID `com.paramitsolutions.gativx`, version `1.0.0 (1)`, executable `GATIVX` is 4,030,192 bytes and has valid arm64 Mach-O magic `cffaedfe`. The built Info.plist has **no UILaunchScreen**; no embedded provisioning profile or code signature is present. This is a structurally valid unsigned package, not an installable build.
+- Inspected four XCTest PNG attachments: each is **960×1440**, showing the centered app window with black letterboxing. These are app-window captures, not full-device evidence.
+
+### PR #148 exact-head QA — run #45910058696
+[Workflow run](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45910058696), tested head `2cc3e1a7885886521e7e94e6f040d256d5699240`.
+- Unit tests: **76 passed, 0 failed**.
+- UI tests: **10 executed, 9 passed, 1 failed, 0 cancelled**.
+- Failure: Home ScrollView accessibility frame reported **874 pt** while dock top was **785 pt**. The failing assertion treated the ScrollView's backing accessibility frame as the clipped visible viewport.
+- Inspected all six full-device XCTest PNG attachments (1206×2622). The Activity screen fills the space above the dock. The Home screenshot shows dashboard content extending below the dock into the home-indicator region; therefore a separate Home container/layout issue remains to be fixed, not merely a test-label issue.
+- Simulator build, unsigned Release build, IPA packaging and uploads succeeded. The downloaded IPA has a valid ZIP, correct bundle identity, a 4,036,944-byte arm64 Mach-O executable and `UILaunchScreen: {}`; it has no provisioning profile or signature.
+- Tracking safeguard step was not reached in this failed run's later steps; do not transfer PR #136's 121-check result to PR #148.
+
+### Changes made this checkpoint
+1. PR #148 branch `fix/gativx-viewport-aware-activity-qa-20261127`: commit `d3f29bf42d4fe9287314ba9ffd0e4affcf5d1f38`, file `ios/GATIVXUITests/GATIVXDashboardUITests.swift`. Replaced the invalid comparison of the ScrollView backing frame with checks that the scroll view and dock remain hittable and the mission card can be scrolled fully above the dock. This is not accepted until the full unchanged suite passes.
+   - Exact-head CI run [#45916191745](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45916191745) is **in progress**; project generation, scheme validation and first-run checks passed; full serial XCTest is running.
+2. PR #149 [Draft: keep Home dashboard inside the dock-safe viewport](https://github.com/sbscorpsales-ship-it/Mission-75/pull/149), latest head `6786ec2cc36771bd4a1ed7d408b90244125eb45a`, base PR #148's updated head `d3f29bf42d4fe9287314ba9ffd0e4affcf5d1f38`.
+   - Files: `ios/GATIVX/ContentView.swift`, `ios/GATIVXUITests/GATIVXDashboardUITests.swift`.
+   - Removes the unused Home-only NavigationStack (Home has no NavigationLink or navigationDestination), exposes a separate `gativx-home-viewport` accessibility container, and asserts that this container ends above the fixed dock. Five destinations, 56 pt dock and Design C remain unchanged.
+   - Exact-head CI run [#45916412588](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45916412588) is **in progress**; checkout and Xcode selection passed; project/scheme validation is running.
+- Both PRs remain draft/open. No tests were removed, skipped or weakened.
+
+### Current gap ledger updates
+| Area | Status | Evidence / blocker |
+|---|---|---|
+| Five iOS destinations | Verified in simulator | PR #136 and #148 UI runs |
+| Dock ≤76 pt | Verified on PR #140/#147; PR #136 fails | PR #136 measures 113.0625 pt; current stacked fix awaits PR #149 CI |
+| Full-device Welcome/Home | Verified on PR #146/#147 screenshots | 1206×2622 simulator captures |
+| Activity full-screen above dock | Verified in simulator | PR #148 Activity screenshot; physical device unverified |
+| Home viewport clearance above dock | Blocked | PR #148 screenshot shows content below dock; PR #149 tests a targeted fix |
+| Guru keyboard dismissal | Verified in simulator | PR #136 and #148 UI tests |
+| Profile root-hosted picker | Source guard verified; picker selection interaction unverified | UI test renders Profile; no confirmed photo selection/persistence interaction |
+| Finish & Save / recovery | Implemented, device-unverified | 121 safeguard checks passed on PR #136; no physical iPhone acceptance |
+| HealthKit / background GPS | Implemented, device-unverified | Source safeguards only; signing and real iPhone required |
+| Signed iOS install | Blocked | No signing identity, provisioning profile or signed IPA |
+| Android / Health Connect | CI verified; device-unverified | No physical Android device evidence |
+| Web Hub | CI verified; production deployment unverified | No production URL/account evidence |
+| Community feed / push delivery | Missing | Explicitly gated in app source |
+| Supabase production hardening | Blocked | Requires migration-history reconciliation, authorized admin default-ACL action and Leaked Password Protection setting |
+
+### Next action
+Poll runs #45916191745 and #45916412588. Inspect the full UI results and screenshots, then accept the Home fix only if the Home viewport container ends above the dock, mission content remains reachable above it, the dock is ≤76 pt, Activity remains full-height above the dock, all five tabs/Guru/Profile tests pass, all 76 unit tests pass, tracking safeguards pass, and simulator/unsigned Release/IPA validation all succeed. Keep #107 untouched, #112 unmerged, and all PRs unmerged.
