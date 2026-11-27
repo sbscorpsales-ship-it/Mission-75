@@ -613,6 +613,45 @@ final class GATIVXActivitySessionTests: XCTestCase {
         XCTAssertNil(try store.load())
     }
 
+    func testDistanceUsesGPSThenPedometerThenStrideFallback() {
+        let start = Date(timeIntervalSince1970: 1_800_000_000)
+        let gpsPoints = [
+            GATIVXRoutePoint(latitude: 15.8500, longitude: 74.5000, timestamp: start, horizontalAccuracy: 4, breakBefore: true),
+            GATIVXRoutePoint(latitude: 15.8510, longitude: 74.5000, timestamp: start.addingTimeInterval(10), horizontalAccuracy: 4)
+        ]
+        let gps = ActivitySessionRecord(id: UUID(), activity: "Walking", startedAt: start, finishedAt: start.addingTimeInterval(60), steps: 100, routePoints: gpsPoints, motionDistanceMeters: 50)
+        XCTAssertEqual(gps.distance(heightCm: 176).source, .gps)
+        let motion = ActivitySessionRecord(id: UUID(), activity: "Walking", startedAt: start, finishedAt: start.addingTimeInterval(60), steps: 100, routePoints: nil, motionDistanceMeters: 50)
+        XCTAssertEqual(motion.distance(heightCm: 176).meters, 50)
+        XCTAssertEqual(motion.distance(heightCm: 176).source, .pedometer)
+        let stride = ActivitySessionRecord(id: UUID(), activity: "Walking", startedAt: start, finishedAt: start.addingTimeInterval(60), steps: 100, routePoints: nil, motionDistanceMeters: nil)
+        XCTAssertEqual(stride.distance(heightCm: 176).meters!, 72.92, accuracy: 0.001)
+        XCTAssertEqual(stride.distance(heightCm: 176).source, .strideEstimate)
+        XCTAssertNil(stride.distance(heightCm: nil).meters)
+    }
+
+    func testActiveTimeCountsMovingGPSIntervalsOnly() {
+        let start = Date(timeIntervalSince1970: 1_800_000_000)
+        let points = [
+            GATIVXRoutePoint(latitude: 15.8500, longitude: 74.5000, timestamp: start, horizontalAccuracy: 4, breakBefore: true),
+            GATIVXRoutePoint(latitude: 15.8501, longitude: 74.5000, timestamp: start.addingTimeInterval(10), horizontalAccuracy: 4),
+            GATIVXRoutePoint(latitude: 15.8501, longitude: 74.5000, timestamp: start.addingTimeInterval(20), horizontalAccuracy: 4),
+            GATIVXRoutePoint(latitude: 15.8502, longitude: 74.5000, timestamp: start.addingTimeInterval(30), horizontalAccuracy: 4),
+            GATIVXRoutePoint(latitude: 15.8503, longitude: 74.5000, timestamp: start.addingTimeInterval(90), horizontalAccuracy: 4, breakBefore: true)
+        ]
+        let record = ActivitySessionRecord(id: UUID(), activity: "Walking", startedAt: start, finishedAt: start.addingTimeInterval(120), steps: 100, routePoints: points, motionDistanceMeters: nil)
+        XCTAssertEqual(record.activeDurationSeconds, 20)
+        XCTAssertEqual(record.activeDurationText, "0:20")
+    }
+
+    func testCaloriesRequireValidWeightAndDistance() {
+        let start = Date(timeIntervalSince1970: 1_800_000_000)
+        let record = ActivitySessionRecord(id: UUID(), activity: "Walking", startedAt: start, finishedAt: start.addingTimeInterval(60), steps: 1000, routePoints: nil, motionDistanceMeters: 1000)
+        XCTAssertEqual(record.estimatedCaloriesKcal(weightKg: 80, heightCm: nil)!, 40, accuracy: 0.001)
+        XCTAssertNil(record.estimatedCaloriesKcal(weightKg: 0, heightCm: nil))
+        let empty = ActivitySessionRecord(id: UUID(), activity: "Walking", startedAt: start, finishedAt: start.addingTimeInterval(60), steps: nil, routePoints: nil, motionDistanceMeters: nil)
+        XCTAssertNil(empty.estimatedCaloriesKcal(weightKg: 80, heightCm: nil))
+    }
     private func makeActivityStore() -> (ActivitySessionStore, URL, UserDefaults, String) {
         let suiteName = "GATIVXTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!
