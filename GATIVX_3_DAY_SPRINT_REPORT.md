@@ -1,9 +1,9 @@
 # GATIVX 3-Day Engineering Sprint Report
 
-**Last updated:** 2026-11-27T01:20:42Z
+**Last updated:** 2026-11-27T04:26:00Z
 **Repository:** sbscorpsales-ship-it/Mission-75
 **Default branch:** `main` at `143889db3e72540fb478b76c486082f45395e9bd` (last commit 2026-11-17 04:38:35 UTC).
-**Report branch:** `docs/gativx-sprint-report-20261125` (PR #118); this update is a new documentation commit.
+**Report branch:** `docs/gativx-sprint-report-20261125` (PR #118); checkpoint 10 below is the latest authoritative snapshot. Earlier checkpoints remain historical.
 
 **Protected baseline:** PR #107 remains open/draft/unmerged at `c19bdbd307df7048cefd86bd3e6064ac4f4e3042`. PR #107 was not modified. No PR was merged. No production deployment or live database mutation was performed.
 
@@ -3790,3 +3790,123 @@ PR #152, [Home bottom-card scroll-clearance follow-up](https://github.com/sbscor
 - No PR merged; PR #107 untouched; PR #112 unmerged; no production database or account settings changed.
 - Next: inspect the complete PR #152 run #45933957530 logs, XCTest result bundle/screenshots, tracking safeguards, simulator build, unsigned Release build and IPA integrity. Accept only if the unchanged 76-unit/10-UI suite passes and the final card is fully above the dock.
 - Continue auth/device ownership and production security work as separate reviewed changes. Physical-device, signing, HealthKit, background GPS, Android hardware and production deployment gates remain open.
+
+
+---
+
+## Automation checkpoint 10 — 27/11/2026, 09:46 IST (2026-11-27T04:16Z)
+
+This checkpoint was refreshed from the live GitHub refs, exact PR heads, workflow jobs/logs, downloaded artifacts and a read-only Supabase audit. It supersedes earlier **current/pending** wording above. No pull request was merged, no production database or Auth setting was changed, and no Design C decision was altered.
+
+### Repository safety and exact refs
+
+- Default branch `main` remains `143889db3e72540fb478b76c486082f45395e9bd` (2026-11-17 04:38:35 UTC); branch metadata reports `protected=false`.
+- There are **54 open pull requests** at this checkpoint. The stack is still highly branched; do not merge a dependent PR out of order.
+- PR #107 remains open/draft/unmerged at `c19bdbd307df7048cefd86bd3e6064ac4f4e3042`; it was not modified.
+- PR #112 remains open/draft/unmerged at `b6c04d41dc67bd191ed0cf8966331eb5661a9887`; it was not modified.
+- PR #136 remains open/draft/unmerged at `31e5b70d85537113e74dd003d06b3ae95ba323f4`, based on PR #135 head `78a759c188644bed6f5ec893daea431031be15c9`.
+- PR #152 remains open/draft/unmerged at `3d5221ed36b180436f81d5c00580f93dea820aa7`, based on PR #151 head `08add9c8ef377f3d992d3a0636b657d486018c69`. This passing branch is stacked on the PR #136 full-screen/navigation work and its viewport follow-ups.
+- PR #154 was created during this checkpoint as an isolated Web Hub auth-guidance fix. It is open/draft/unmerged at `07b8b119ad777e71b7b72e2bd3819e67d079fd6a`, based on main. Its two commits are `285a3a3e79f396d50eb7d4de0e200ce6c218a9a3` and `07b8b119ad777e71b7b72e2bd3819e67d079fd6a`.
+- PR #118 is the report branch. No PR was merged and no force-push or branch deletion was performed.
+
+### Priority audit — PR #136 exact head and artifacts
+
+[PR #136](https://github.com/sbscorpsales-ship-it/Mission-75/pull/136), exact head `31e5b70d85537113e74dd003d06b3ae95ba323f4`; [run #45847572105](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45847572105), run 670, attempt 3, completed **failure**.
+
+- XCTest result bundle and downloaded structured diagnostics independently report **85 total tests: 84 passed, 1 failed, 0 skipped**.
+- Unit suite: **76 passed, 0 failed**. UI suite: **9 executed; 8 passed, 1 failed; 0 cancelled**.
+- Sole failure: `testDashboardFillsDeviceViewportAndExposesAllFiveTabs`; the measured bottom navigation accessibility frame was **113.0625 pt**, above the approved **76 pt** maximum.
+- The explicit five-destination navigation test passed. Activity full-viewport test passed. Guru keyboard/dismissal test passed. Direct Profile navigation and its on-demand photo-picker open/cancel path passed.
+- Root-hosted Profile photo-picker placement and deferred PhotosUI construction passed the source safeguard.
+- Tracking safeguards: **121 PASS, 0 FAIL**, counted from the exact step log block.
+- Simulator build, unsigned iPhone Release build, unsigned IPA packaging and artifact upload all passed. The overall release gate correctly failed on XCTest.
+- Downloaded IPA artifact #15146711639. Outer artifact ZIP and inner IPA ZIP both passed integrity checks. Bundle ID `com.paramitsolutions.gativx`, version `1.0.0`, build `1`, minimum iOS `17.0`. The PR #136 IPA had no `UILaunchScreen` entry, no embedded provisioning profile and no code signature. It is not install-ready.
+- Downloaded the PR #136 `GATIVX-xcresult` artifact #15146161829 and diagnostics artifact #15145517291. The structured summary confirms the single dock-height failure. The diagnostics `attachments/manifest.json` is empty; success screenshots remain embedded in the xcresult. This runtime has no Xcode `xcrun/xcresulttool`, so I did **not** claim a visual inspection of the embedded screenshot images.
+
+**PR #136 verdict:** not accepted as a standalone head. The 113.0625 pt dock and missing launch-screen metadata are concrete failures on that exact commit.
+
+### Latest passing iOS stack — PR #152 exact head
+
+[PR #152](https://github.com/sbscorpsales-ship-it/Mission-75/pull/152), head `3d5221ed36b180436f81d5c00580f93dea820aa7`; [run #45933957530](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45933957530), run 695, attempt 1, completed **success**.
+
+- Structured XCTest summary from the downloaded diagnostics artifact: **86 total; 86 passed; 0 failed; 0 skipped** — 76 unit tests and 10 UI tests.
+- Tracking safeguards: **121 PASS, 0 FAIL**.
+- The full unchanged UI suite passed: single five-destination navigation, dock frame `<=76 pt`, full-screen Activity viewport, Guru keyboard dismissal, direct Profile navigation including photo-picker open/cancel, Home final-card reachability above the dock, and the remaining dashboard/community/notification/first-run checks.
+- Simulator build, privacy/entitlement validation, unsigned Release build, IPA packaging and artifact uploads all passed.
+- PR #152 changes only `ios/GATIVX/ContentView.swift`: Home ScrollView content-only bottom padding increased from 28 pt to 56 pt. The dock remains a 56 pt frame and paints no extra home-indicator safe-area height. No card styling/order, tab taxonomy, Design C layout, or test was removed or weakened.
+- Downloaded simulator artifact #15170391876 and unsigned IPA artifact #15170865537. Both ZIP layers passed integrity checks. Bundle ID `com.paramitsolutions.gativx`, name `GATIVX`, version `1.0.0`, build `1`, minimum iOS `17.0`; `UILaunchScreen: {}` is present. The IPA contains no code signature or embedded provisioning profile and is therefore still **unsigned/not installable as delivered**.
+- Downloaded PR #152 xcresult artifact #15170745407 and diagnostics artifact #15170651026. `summary-counts.txt` confirms 86/86, 0 skipped. The diagnostics attachment manifest is empty because no test failed; the successful UI screenshots remain inside the xcresult. Visual rendering of those embedded screenshots remains blocked by the absence of `xcresulttool` in this runtime.
+
+**Current iOS CI verdict:** the PR #152 stacked simulator baseline is green and verifies the requested navigation/viewport behavior. It is not a signed device release and does not establish physical iPhone HealthKit, locked-screen GPS, background delivery, or real installation.
+
+### Cross-platform and auth refresh
+
+- **Android PR #137** head `d5edab346eb9a00de7d02407fe501c8193a655c2`; [run #45840866819](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45840866819) succeeded. Job log: **25/25 source safeguards**, **6 JVM unit tests passed, 0 failed, 0 skipped**, Debug APK build and upload succeeded (artifact #15128630240). No Android emulator/physical-device or Health Connect provider acceptance was performed.
+- **Web Hub PR #138** head `45f7fd32f78aeb462ae56ac1202cdf7a5142f293`; [run #45839703732](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45839703732) succeeded. Job log contains **23 PASS, 0 FAIL** (16 structural/syntax checks and 7 mobile-browser assertions, including stored-history HTML escaping). The fix remains unmerged and is not live on the published main branch.
+- **Web Hub auth guidance PR #154** changes only `app-v2.html` and `scripts/browser-smoke.mjs`. It removes the misleading second-step label “Confirm account creation” and replaces the no-session message “Account created. Confirm your email…” with neutral guidance: new registrations should check inbox/spam; existing members should switch to Sign in. A Playwright regression simulates a no-session/previously-registered response and verifies the copy does not claim an account was created or an email delivered. [Run #45939631942](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45939631942) succeeded: **23 PASS, 0 FAIL**, including the new regression. PR #154 is open/draft; no production deployment occurred. The current live page still has the old message until this PR is reviewed, merged and deployed.
+- **Live Auth account check:** the relevant account row has `email_confirmed_at` populated and a prior successful sign-in. Recent no-session signup requests were logged as `user_repeated_signup`; one recent password sign-in attempt returned `invalid_credentials`. This proves the account is already confirmed, but does not prove an email was delivered to the inbox. No password was changed, no confirmation email was resent, and no SMTP/Auth settings were modified. The current Web Hub has no password-reset flow; a member who no longer knows the original password needs a separately implemented and tested recovery path.
+- **Supabase PR #144** head `edd9f211c3029c38d8ad6255c341ca8e235b3b46`; [run #45891894462](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45891894462) succeeded. Both the Web Hub job and isolated PostgreSQL 17 grant-regression job passed, including the postgres-owned migration and the separate `supabase_admin` default-privilege fixture. These tests ran against a disposable CI database, not production.
+
+### Fresh read-only Supabase security snapshot
+
+- Production migration ledger currently contains **22 applied versions**.
+- `anon` still has broad table privileges on `public.daily_action_progress`, including SELECT/INSERT/UPDATE/DELETE and TRUNCATE. `authenticated` still has TRUNCATE and other table-wide privileges, including MAINTAIN.
+- Default ACLs for both `postgres` and `supabase_admin` still grant broad table, sequence and function privileges to `anon` and `authenticated` for future public objects.
+- Supabase Security Advisor still reports **Leaked Password Protection Disabled**: https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection
+- PR #144's isolated regression passing does **not** apply its migration or manual script to the live project. No production SQL, migration, grants, or Auth settings were changed.
+
+**Required owner/admin action:** reconcile the 22 applied migration versions with repository migration files; review and apply the postgres-owned hardening migration using the approved migration process; separately run `supabase/manual/harden_gativx_supabase_admin_default_privileges.sql` from a session authorized as `supabase_admin`; then enable Leaked Password Protection in Supabase Auth. Back up and verify the live project before any production write.
+
+### Updated product gap ledger
+
+| Area | Status | Latest evidence and remaining gate |
+|---|---|---|
+| Design C / approved visual decisions | verified | PR #152 changes only scroll runway; no dashboard styling, ordering, typography, or approved product decision was changed. |
+| iOS single five-destination navigation | verified | PR #152 full UI suite passes the five-tab switching test. |
+| iOS dock <=76 pt | verified | PR #136 standalone failed at 113.0625 pt; the later stacked PR #152 run passes the unchanged <=76 pt assertion. |
+| Full-screen Activity viewport | verified | PR #152 simulator UI test passes; physical iPhone viewport behavior remains unverified. |
+| Home final-card clearance above dock | verified | PR #152 full UI suite passes the final-card reachability assertion after the 28-to-56 pt content-only padding correction. |
+| Root-hosted Profile photo picker | verified | Source safeguard and simulator open/cancel path pass; selecting a real photo, persisting it and cloud image sync remain unverified. |
+| Guru keyboard dismissal | verified | PR #152 simulator UI test passes; Guru remains deterministic/local guidance rather than a verified remote conversational service. |
+| Finish & Save / activity recovery | implemented-but-unverified | Unit and 121 source safeguards pass; physical iPhone interruption, local history recovery, HealthKit export and real cloud acknowledgement still need device acceptance. |
+| iPhone pedometer / GPS / background recording | implemented-but-unverified | Source safeguards and simulator build pass; Motion & Fitness permission, locked-screen GPS, real location permission changes and background operation are not device-verified. |
+| HealthKit read/write and workout export | implemented-but-unverified | Source entitlement checks and simulator CI pass; real HealthKit authorization, step/energy samples, workout export/de-duplication and background delivery are unverified on an iPhone. |
+| Android tracking / Health Connect | implemented-but-unverified | 25 safeguards, 6 JVM tests and Debug APK build pass; no emulator/physical Android or Health Connect provider acceptance. |
+| Web Hub dashboard / GPS / cloud sync | implemented-but-unverified | Structural and mobile-browser CI passes; live-account two-device sync, real GPS, production deployment and data reconciliation remain unverified. |
+| Web history HTML escaping | implemented-but-unverified | PR #138 CI passes; PR remains unmerged, so the published main page does not yet contain the fix. |
+| Web sign-up duplicate/no-session guidance | implemented-but-unverified | PR #154 CI passes 23/23; not merged or deployed. Live page still shows the old misleading message. |
+| Email confirmation delivery | implemented-but-unverified | Database confirms the account; inbox delivery is not evidenced and no mail provider delivery log was available. |
+| Web password recovery | missing | Current `app-v2.html` has no Forgot Password/reset-password flow; recovery must be added with a tested redirect and actual delivery acceptance. |
+| Mobile-number/OTP authentication | missing | Current iOS/Web auth is email/password; phone OTP and cross-platform phone login are not implemented. |
+| Account/device/family ownership | implemented-but-unverified | Owner-scoped queues exist, but explicit member/device switching, optional family linking and two-account acceptance are incomplete. |
+| Goals, purpose and Guru journey | implemented-but-unverified | Local journey logic and tests exist; cross-device persistence, recovery and a production coaching service are not proven. |
+| Missions catalogue and lifecycle | missing | A starter consistency card exists; member-specific mission catalogue, assignment, progression and completion lifecycle are absent. |
+| Community feed/groups/moderation | missing | Community remains a gated placeholder; no live member feed, group service or moderation workflow. |
+| Profile photo cloud sync | missing | Local photo picker exists; cloud image upload and cross-device profile photo delivery are not implemented/verified. |
+| Push notifications | missing | UI explicitly says notifications are inactive; no delivery pipeline or device-token registration. |
+| Shared backend/sync | implemented-but-unverified | Owner-scoped outboxes, idempotency and RPC acknowledgements have source/unit coverage; live two-account staging, conflict resolution and device recovery acceptance remain absent. |
+| Supabase least-privilege security | blocked | Live broad table/default grants remain; PR #144 only proves isolated CI behavior. Requires authorized owner/admin production change and verification. |
+| Leaked Password Protection | blocked | Supabase Security Advisor reports disabled; requires owner/admin Auth setting change. |
+| iOS signed install | blocked | CI IPA is unsigned and has no provisioning profile; no compatible signing identity/profile or Mac/Xcode installation path is available in this session. |
+| Android release/device acceptance | blocked | Debug APK only; signed release and physical device/Play acceptance absent. |
+| Web production deployment | blocked | PR #138 and #154 remain unmerged; no production deployment or live-backend acceptance for their changes. |
+| Screenshot visual QA | blocked | XCTest screenshots are embedded in xcresult; diagnostics exporter only exported failure attachments and its manifest is empty. This runtime lacks `xcrun/xcresulttool` to extract/render the successful screenshots. |
+| Repository governance | blocked | Main branch metadata reports `protected=false`; required review/status-check enforcement needs owner/admin review. |
+
+### Changes made in this checkpoint
+
+- **Web Hub auth guidance PR #154:** `app-v2.html` and `scripts/browser-smoke.mjs`; commits `285a3a3e79f396d50eb7d4de0e200ce6c218a9a3` and `07b8b119ad777e71b7b72e2bd3819e67d079fd6a`. CI run #45939631942: 23 pass, 0 fail.
+- **iOS product code:** no new iOS code commit this checkpoint. PR #152's 3-line Home scroll-runway correction was independently revalidated on exact head `3d5221ed36b180436f81d5c00580f93dea820aa7`; CI run #45933957530 passed 86/86 tests and 121/121 tracking safeguards.
+- **Report:** this checkpoint updates `GATIVX_3_DAY_SPRINT_REPORT.md` on PR #118.
+- No PR merged; PR #107 and #112 untouched; no live database/Auth mutation; no production deployment.
+
+### Next actions
+
+1. Keep PR #136 unaccepted as a standalone head; use the PR #152 stacked simulator result as the current UI baseline, and keep all existing tests enabled.
+2. Extract and visually review the successful Activity/Profile/Home screenshots from the xcresult on a macOS/Xcode runner; do not treat test pass counts as visual screenshot inspection.
+3. Implement Web Hub password recovery with a tested redirect and verify actual email delivery; keep phone OTP explicitly missing until a provider and cost model are approved.
+4. Complete physical iPhone Finish & Save, HealthKit and locked-screen GPS acceptance with a compatible signing/provisioning path; no unsigned IPA is installable.
+5. Add Android emulator/device and Health Connect acceptance; no physical Android behavior is claimed.
+6. Obtain owner/admin approval and perform a backed-up, staged production Supabase privilege-hardening change; enable Leaked Password Protection and verify grants afterward.
+7. Keep PR #138 and #154 unmerged until reviewed; do not claim the live Web Hub contains their changes before merge/deployment.
+8. Preserve PR #107 and PR #112; never merge any PR without explicit user authorization.
