@@ -1,6 +1,6 @@
 # GATIVX 3-Day Engineering Sprint Report
 
-**Last updated:** 2026-11-27T04:26:00Z
+**Last updated:** 2026-11-27T04:30:00Z
 **Repository:** sbscorpsales-ship-it/Mission-75
 **Default branch:** `main` at `143889db3e72540fb478b76c486082f45395e9bd` (last commit 2026-11-17 04:38:35 UTC).
 **Report branch:** `docs/gativx-sprint-report-20261125` (PR #118); checkpoint 10 below is the latest authoritative snapshot. Earlier checkpoints remain historical.
@@ -3794,7 +3794,7 @@ PR #152, [Home bottom-card scroll-clearance follow-up](https://github.com/sbscor
 
 ---
 
-## Automation checkpoint 10 — 27/11/2026, 09:46 IST (2026-11-27T04:16Z)
+## Automation checkpoint 10 — 27/11/2026, 10:00 IST (2026-11-27T04:30Z)
 
 This checkpoint was refreshed from the live GitHub refs, exact PR heads, workflow jobs/logs, downloaded artifacts and a read-only Supabase audit. It supersedes earlier **current/pending** wording above. No pull request was merged, no production database or Auth setting was changed, and no Design C decision was altered.
 
@@ -3806,7 +3806,8 @@ This checkpoint was refreshed from the live GitHub refs, exact PR heads, workflo
 - PR #112 remains open/draft/unmerged at `b6c04d41dc67bd191ed0cf8966331eb5661a9887`; it was not modified.
 - PR #136 remains open/draft/unmerged at `31e5b70d85537113e74dd003d06b3ae95ba323f4`, based on PR #135 head `78a759c188644bed6f5ec893daea431031be15c9`.
 - PR #152 remains open/draft/unmerged at `3d5221ed36b180436f81d5c00580f93dea820aa7`, based on PR #151 head `08add9c8ef377f3d992d3a0636b657d486018c69`. This passing branch is stacked on the PR #136 full-screen/navigation work and its viewport follow-ups.
-- PR #154 was created during this checkpoint as an isolated Web Hub auth-guidance fix. It is open/draft/unmerged at `07b8b119ad777e71b7b72e2bd3819e67d079fd6a`, based on main. Its two commits are `285a3a3e79f396d50eb7d4de0e200ce6c218a9a3` and `07b8b119ad777e71b7b72e2bd3819e67d079fd6a`.
+- PR #153 is the active Web Hub auth-recovery change, open/draft/unmerged at `a21ac8890047274699d66351b61c4f5ab7cfd8e9`, based on main. It now has six commits and changes `app-v2.html`, `scripts/check-web.mjs` and `scripts/browser-smoke.mjs`.
+- PR #154 was closed as a duplicate of PR #153 to avoid competing edits to `app-v2.html`; it was **not merged**.
 - PR #118 is the report branch. No PR was merged and no force-push or branch deletion was performed.
 
 ### Priority audit — PR #136 exact head and artifacts
@@ -3843,8 +3844,8 @@ This checkpoint was refreshed from the live GitHub refs, exact PR heads, workflo
 
 - **Android PR #137** head `d5edab346eb9a00de7d02407fe501c8193a655c2`; [run #45840866819](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45840866819) succeeded. Job log: **25/25 source safeguards**, **6 JVM unit tests passed, 0 failed, 0 skipped**, Debug APK build and upload succeeded (artifact #15128630240). No Android emulator/physical-device or Health Connect provider acceptance was performed.
 - **Web Hub PR #138** head `45f7fd32f78aeb462ae56ac1202cdf7a5142f293`; [run #45839703732](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45839703732) succeeded. Job log contains **23 PASS, 0 FAIL** (16 structural/syntax checks and 7 mobile-browser assertions, including stored-history HTML escaping). The fix remains unmerged and is not live on the published main branch.
-- **Web Hub auth guidance PR #154** changes only `app-v2.html` and `scripts/browser-smoke.mjs`. It removes the misleading second-step label “Confirm account creation” and replaces the no-session message “Account created. Confirm your email…” with neutral guidance: new registrations should check inbox/spam; existing members should switch to Sign in. A Playwright regression simulates a no-session/previously-registered response and verifies the copy does not claim an account was created or an email delivered. [Run #45939631942](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45939631942) succeeded: **23 PASS, 0 FAIL**, including the new regression. PR #154 is open/draft; no production deployment occurred. The current live page still has the old message until this PR is reviewed, merged and deployed.
-- **Live Auth account check:** the relevant account row has `email_confirmed_at` populated and a prior successful sign-in. Recent no-session signup requests were logged as `user_repeated_signup`; one recent password sign-in attempt returned `invalid_credentials`. This proves the account is already confirmed, but does not prove an email was delivered to the inbox. No password was changed, no confirmation email was resent, and no SMTP/Auth settings were modified. The current Web Hub has no password-reset flow; a member who no longer knows the original password needs a separately implemented and tested recovery path.
+- **Web Hub auth/recovery PR #153** now handles no-session sign-up responses with neutral guidance (no account-existence disclosure), keeps the button labelled “Create account”, and adds Forgot Password, reset-email request, recovery callback and a 12–64 character mixed-class password update. It also hides Forgot Password while signed in. [Final run #45940205733](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45940205733) succeeded: **25 PASS, 0 FAIL**, including the new Playwright tests for sign-up privacy, reset redirect, recovery callback, invalid-password rejection and valid-password update. Two earlier expanded runs exposed test-only issues (the page-reload fixture re-seeded the initial store; then a Node assertion referenced `window` outside the browser). Both were corrected without removing or weakening existing assertions; the final run passes. PR #153 remains open/draft and is not deployed. PR #154 was closed as its duplicate, not merged.
+- **Live Auth account check:** the relevant account row has `email_confirmed_at` populated and a prior successful sign-in. Recent no-session signup requests were logged as `user_repeated_signup`; one recent password sign-in attempt returned `invalid_credentials`. This proves the account is already confirmed, but does not prove an email was delivered to the inbox. No password was changed, no confirmation email was resent, and no SMTP/Auth settings were modified. The current live Web Hub on `main` still has no password-reset flow; PR #153 adds a browser-mocked reset path, but it is unmerged and actual reset-email delivery plus the deployed redirect allowlist remain unverified.
 - **Supabase PR #144** head `edd9f211c3029c38d8ad6255c341ca8e235b3b46`; [run #45891894462](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45891894462) succeeded. Both the Web Hub job and isolated PostgreSQL 17 grant-regression job passed, including the postgres-owned migration and the separate `supabase_admin` default-privilege fixture. These tests ran against a disposable CI database, not production.
 
 ### Fresh read-only Supabase security snapshot
@@ -3876,7 +3877,7 @@ This checkpoint was refreshed from the live GitHub refs, exact PR heads, workflo
 | Web history HTML escaping | implemented-but-unverified | PR #138 CI passes; PR remains unmerged, so the published main page does not yet contain the fix. |
 | Web sign-up duplicate/no-session guidance | implemented-but-unverified | PR #154 CI passes 23/23; not merged or deployed. Live page still shows the old misleading message. |
 | Email confirmation delivery | implemented-but-unverified | Database confirms the account; inbox delivery is not evidenced and no mail provider delivery log was available. |
-| Web password recovery | missing | Current `app-v2.html` has no Forgot Password/reset-password flow; recovery must be added with a tested redirect and actual delivery acceptance. |
+| Web password recovery | implemented-but-unverified | PR #153 adds `resetPasswordForEmail`, `PASSWORD_RECOVERY` callback and `updateUser` with 12–64 mixed-class validation; 25/25 CI checks pass. Actual reset email delivery and the deployed redirect allowlist are not verified; the live page is unchanged until merge/deployment. |
 | Mobile-number/OTP authentication | missing | Current iOS/Web auth is email/password; phone OTP and cross-platform phone login are not implemented. |
 | Account/device/family ownership | implemented-but-unverified | Owner-scoped queues exist, but explicit member/device switching, optional family linking and two-account acceptance are incomplete. |
 | Goals, purpose and Guru journey | implemented-but-unverified | Local journey logic and tests exist; cross-device persistence, recovery and a production coaching service are not proven. |
@@ -3895,7 +3896,7 @@ This checkpoint was refreshed from the live GitHub refs, exact PR heads, workflo
 
 ### Changes made in this checkpoint
 
-- **Web Hub auth guidance PR #154:** `app-v2.html` and `scripts/browser-smoke.mjs`; commits `285a3a3e79f396d50eb7d4de0e200ce6c218a9a3` and `07b8b119ad777e71b7b72e2bd3819e67d079fd6a`. CI run #45939631942: 23 pass, 0 fail.
+- **Web Hub auth/recovery PR #153:** `app-v2.html`, `scripts/check-web.mjs` and `scripts/browser-smoke.mjs`; final head `a21ac8890047274699d66351b61c4f5ab7cfd8e9`. CI run #45940205733: 25 pass, 0 fail. PR #154 closed as a duplicate; no merge/deploy.
 - **iOS product code:** no new iOS code commit this checkpoint. PR #152's 3-line Home scroll-runway correction was independently revalidated on exact head `3d5221ed36b180436f81d5c00580f93dea820aa7`; CI run #45933957530 passed 86/86 tests and 121/121 tracking safeguards.
 - **Report:** this checkpoint updates `GATIVX_3_DAY_SPRINT_REPORT.md` on PR #118.
 - No PR merged; PR #107 and #112 untouched; no live database/Auth mutation; no production deployment.
@@ -3904,7 +3905,7 @@ This checkpoint was refreshed from the live GitHub refs, exact PR heads, workflo
 
 1. Keep PR #136 unaccepted as a standalone head; use the PR #152 stacked simulator result as the current UI baseline, and keep all existing tests enabled.
 2. Extract and visually review the successful Activity/Profile/Home screenshots from the xcresult on a macOS/Xcode runner; do not treat test pass counts as visual screenshot inspection.
-3. Implement Web Hub password recovery with a tested redirect and verify actual email delivery; keep phone OTP explicitly missing until a provider and cost model are approved.
+3. Verify PR #153's Supabase redirect allowlist and actual reset-email delivery on the deployed URL; keep phone OTP explicitly missing until a provider and cost model are approved.
 4. Complete physical iPhone Finish & Save, HealthKit and locked-screen GPS acceptance with a compatible signing/provisioning path; no unsigned IPA is installable.
 5. Add Android emulator/device and Health Connect acceptance; no physical Android behavior is claimed.
 6. Obtain owner/admin approval and perform a backed-up, staged production Supabase privilege-hardening change; enable Leaked Password Protection and verify grants afterward.
