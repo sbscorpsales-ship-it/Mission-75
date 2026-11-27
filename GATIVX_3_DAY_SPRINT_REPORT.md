@@ -4770,3 +4770,28 @@ PR #156 is open/draft/unmerged at head `9d16bd2d178cea9a5297776bc9d3f4b2d6274cfd
 - Web release workflow #46007811886 / run 449: **failed** on the strict missing `sync_activity_session_steps` migration-source assertion. Same-project, same-key and all four Web table-path checks passed. Four RPC source checks passed; one failed because the live routine is not represented by a checked-in migration file.
 - PR #158 remains open/draft/unmerged. Keep the failing migration assertion. The next safe task is migration-history reconciliation, not skipping the missing-source check.
 - No production schema, grants, auth settings, user records or deployments were changed. No PR was merged.
+
+
+## Checkpoint 20 — 27 November 2026, 19:05 IST (13:35 UTC)
+
+### PR #136 diagnostic artifact review completed
+
+- Downloaded exact run #670 structured diagnostics artifact #15145517291 and inspected the XCTest stdout/stderr and attachment records.
+- The exact UI sequence confirms:
+  - `testActivityScreenFillsViewportAboveFixedBottomNavigation`: passed; Activity full-viewport attachment captured.
+  - `testAllFiveTabsSwitchScreensFromOneNavigationDock`: passed.
+  - `testCommunityTabAfterMissionsFromFreshDashboard`: passed.
+  - `testDashboardFillsDeviceViewportAndExposesAllFiveTabs`: failed at `GATIVXDashboardUITests.swift:654`; measured dock **113.0625 pt** against **76 pt** maximum; five-tab viewport attachment captured.
+  - `testDashboardSectionsMetricsAndPrimaryNavigation`: passed; Home dashboard attachment captured.
+  - `testGuruKeyboardAndDismissalFromFreshHome`: passed.
+  - `testHomeStartWalkNavigatesWithoutStartingSession`: passed.
+  - `testNotificationsSheetDismissesFromFreshHome`: passed.
+  - `testProfileTabRendersFromFreshDashboard`: passed; Profile attachment captured.
+- The diagnostics ZIP confirms attachment names for Activity, five-tab viewport, Home and Profile. It does not contain standalone raster image files; embedded xcresult screenshots require `xcrun/xcresulttool`, which is unavailable in this Linux inspection environment. Therefore attachment capture and UI assertions are verified, but pixel-level screenshot review is explicitly **not** claimed.
+- This reinforces the exact-head result: 76/76 unit tests, 8/9 UI tests, 121/121 safeguards, with the single dock-height failure. PR #156 remains the passing descendant simulator baseline.
+
+### Final checkpoint status
+
+- PR #158: iOS source safeguards **46/46**, simulator build, entitlements, unsigned device build and IPA ZIP integrity all passed on exact head. Web contract check remains correctly blocked by the absent `sync_activity_session_steps` migration source.
+- PR #118 report branch is updated through commit `e62a83ed287c105a7a449223774c5463e7c28483`; documentation-only. PR #118 remains open/draft/unmerged.
+- No PR merged; PR #107 untouched; PR #112 unmerged. No production database or Auth setting was changed.
