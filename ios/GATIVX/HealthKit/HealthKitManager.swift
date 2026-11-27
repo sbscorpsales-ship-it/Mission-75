@@ -11,6 +11,8 @@ final class HealthKitManager: ObservableObject {
     @Published private(set) var todayWalkingRunningDistanceKm: Double?
     @Published private(set) var todayExerciseMinutes: Int?
     @Published private(set) var todayAverageHeartRateBPM: Int?
+    @Published private(set) var activeEnergyReadStatus = "Not refreshed yet."
+    @Published private(set) var exerciseMinutesReadStatus = "Not refreshed yet."
     @Published private(set) var isAvailable = HKHealthStore.isHealthDataAvailable()
     @Published private(set) var isRefreshing = false
     @Published private(set) var hasRequestedAccess = UserDefaults.standard.bool(forKey: "gativx.healthkit.connectionRequested")
@@ -233,6 +235,8 @@ final class HealthKitManager: ObservableObject {
             Task { @MainActor in
                 guard let self else { onComplete?(); return }
                 if let error {
+                    self.todayActiveEnergyKcal = nil
+                    self.activeEnergyReadStatus = "Read failed: \(error.localizedDescription)"
                     self.statusMessage = "Apple Health active-energy read failed: \(error.localizedDescription)"
                     onComplete?()
                     return
@@ -241,6 +245,7 @@ final class HealthKitManager: ObservableObject {
                     max(0, Int($0.doubleValue(for: .kilocalorie()).rounded()))
                 }
                 self.todayActiveEnergyKcal = total
+                self.activeEnergyReadStatus = total.map { "Measured today: \($0) kcal" } ?? "No active-energy sample returned. Check Health read access or whether data exists today."
                 if let total { self.onActiveEnergy?(start, total) }
                 onComplete?()
             }
@@ -278,8 +283,13 @@ final class HealthKitManager: ObservableObject {
         group.enter()
         let exerciseQuery = HKStatisticsQuery(quantityType: exerciseType, quantitySamplePredicate: predicate, options: .cumulativeSum) { [weak self] _, statistics, error in
             Task { @MainActor in
-                if error == nil {
-                    self?.todayExerciseMinutes = statistics?.sumQuantity().map { Int($0.doubleValue(for: .minute()).rounded()) }
+                if let error {
+                    self?.todayExerciseMinutes = nil
+                    self?.exerciseMinutesReadStatus = "Read failed: \(error.localizedDescription)"
+                } else {
+                    let minutes = statistics?.sumQuantity().map { max(0, Int($0.doubleValue(for: .minute()).rounded())) }
+                    self?.todayExerciseMinutes = minutes
+                    self?.exerciseMinutesReadStatus = minutes.map { "Measured today: \($0) Apple Exercise minutes" } ?? "No Exercise-minute sample returned. Check Health read access or whether data exists today."
                 }
                 group.leave()
             }
@@ -561,6 +571,8 @@ final class HealthKitManager: ObservableObject {
         todayWalkingRunningDistanceKm = nil
         todayExerciseMinutes = nil
         todayAverageHeartRateBPM = nil
+        activeEnergyReadStatus = "Apple Health disconnected."
+        exerciseMinutesReadStatus = "Apple Health disconnected."
         lastRefresh = nil
         statusMessage = "Apple Health disconnected in GATIVX."
     }
