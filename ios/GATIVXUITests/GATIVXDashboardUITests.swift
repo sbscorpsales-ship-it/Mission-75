@@ -582,6 +582,43 @@ final class GATIVXDashboardUITests: XCTestCase {
     }
 
 
+    func testProfileAboutSectionRemainsReachableAboveFixedBottomNavigation() {
+        let app = XCUIApplication()
+        launchFreshGuestApp(app)
+
+        let guestEntry = app.buttons["gativx-continue-guest"]
+        XCTAssertTrue(guestEntry.waitForExistence(timeout: 10))
+        guestEntry.tap()
+
+        let profileTab = tabButton(app, label: "Profile")
+        XCTAssertTrue(profileTab.waitForExistence(timeout: 5))
+        profileTab.tap()
+        XCTAssertTrue(profileTab.isSelected)
+
+        let profileScreen = app.descendants(matching: .any)["gativx-profile-screen"].firstMatch
+        XCTAssertTrue(profileScreen.waitForExistence(timeout: 10),
+                      "Profile must render before checking its final section.")
+
+        let bottomNavigation = app.descendants(matching: .any)["gativx-bottom-navigation"].firstMatch
+        XCTAssertTrue(bottomNavigation.waitForExistence(timeout: 5))
+
+        let aboutText = app.staticTexts["From Goals to Xcellence"]
+        XCTAssertTrue(aboutText.waitForExistence(timeout: 5),
+                      "The final About GATIVX content must exist in Profile.")
+        for _ in 0..<20 where !aboutText.isHittable {
+            profileScreen.swipeUp()
+        }
+        XCTAssertTrue(aboutText.isHittable,
+                      "The final Profile content must be scroll-reachable above the fixed dock.")
+        XCTAssertLessThanOrEqual(aboutText.frame.maxY, bottomNavigation.frame.minY + 1,
+                                 "The final Profile content must not sit underneath the fixed navigation dock.")
+
+        let screenshot = XCTAttachment(screenshot: app.screenshot())
+        screenshot.name = "GATIVX-Profile-Final-Section-Above-Dock"
+        screenshot.lifetime = .keepAlways
+        add(screenshot)
+    }
+
     func testAllFiveTabsSwitchScreensFromOneNavigationDock() {
         let app = XCUIApplication()
         launchFreshGuestApp(app)
