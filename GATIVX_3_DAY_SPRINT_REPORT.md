@@ -5514,7 +5514,7 @@ The previous note that PR #162 still used the 0.5 × weight × distance shortcut
 - PR #163 corrects the fixture to 40 intervals of 18 seconds (720 seconds total), representing approximately 1 km in 12 minutes. At 5 km/h the canonical ACSM speed equation yields 3.38095 MET and approximately 40 active kcal at 80 kg. The formula itself is unchanged.
 - PR #163 connects the existing session engine to three live Activity metric cards and saved-history rows. Distance reports GPS, pedometer or stride-estimate provenance. Moving time is shown only when accepted GPS movement intervals exist; elapsed wall-clock time is not substituted. Estimated active kcal is shown only for walking when valid local profile weight, distance and moving time exist. Optional weight/height fields are stored in local app preferences and are not included in GATIVX cloud activity records or measured Apple Health energy.
 - A pedometer-only saved session is explicitly tested to show unavailable distance, moving time and calories when height/weight/GPS evidence is absent. The UI suite also checks metric-card presence and local-only Profile inputs.
-- Exact-head [run #722](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/46063556699) is **pending**. No jobs or test logs were available at this checkpoint; no PR #163 test/build result is claimed. Derived values are recomputed from persisted route/step inputs and current local profile values; separate persisted metric snapshots/provenance and cross-device profile sync remain open.
+- Exact-head [run #722](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/46063556699) completed successfully after this checkpoint; see the 02:44 IST verification entry below for the exact 81-unit / 12-UI results and artifact inspection. Derived values are recomputed from persisted route/step inputs and current local profile values; separate persisted metric snapshots/provenance and cross-device profile sync remain open.
 
 ### Android and installer artifact inspection
 
@@ -5656,3 +5656,49 @@ Changes are on the existing isolated PR #137 branch; no PR was merged.
 - Artifact: `GATIVX-Android-debug` (#15227790518)
 - Local integrity-checked copy: `/mnt/data/gativx-android-pr137-run190/app-debug.apk`
 - No iOS or production release artifact is claimed by this Android result.
+
+
+## 2026-11-28 02:44 IST — PR #163 exact-head iOS CI passed
+
+### Repository and PR verification
+
+- PR #163 remains **open, draft and unmerged**, base `fix/gativx-session-metrics-engine-20261127`, head branch `feat/gativx-activity-metrics-ui-20261128`, exact head `2b0e12183b5976a64b2773b45a0f1097882583fb`.
+- [Exact-head run #722](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/46063556699) completed with conclusion `success`. The latest-attempt `build-ios` job and all 20 workflow steps completed successfully.
+- PR #162 remains open/unmerged at `f41fb5df967358094cb70e7cd3eb86b96ceb2d03`; its earlier exact-head run #720 had 81 unit tests with 3 fixture-related failures and 12/12 UI tests passing. PR #163 corrects the 40-point route fixture to 18-second intervals (720 seconds total); the canonical formula is unchanged.
+- PR #161 remains open/unmerged at `c92dc7505320b63fabf13f79dceacf12d6978b59`. Its run #715 is the successful 76-unit / 13-UI layout baseline. PR #136 itself remains open/unmerged at `31e5b70d85537113e74dd003d06b3ae95ba323f4`; run #670 still records the 113.0625 pt dock failure against the 76 pt maximum. A separate passing baseline does not retroactively make PR #136 pass.
+- PR #107 remains open/draft and untouched at `c19bdbd307df7048cefd86bd3e6064ac4f4e3042`. PR #112 remains open/draft and unmerged at `b6c04d41dc67bd191ed0cf8966331eb5661a9887`. No PR was merged.
+
+### Exact test and build evidence
+
+- Downloaded XCTest diagnostics artifact #15232270572 and xcresult artifact #15231253736; both outer ZIP archives passed `unzip -t` integrity checks.
+- Parsed the run #722 `tests.json` result tree: **93 test cases Passed (81 unit + 12 UI), 0 Failed, 0 Skipped, 0 Cancelled**. The xcodebuild job log independently records 81/81 unit tests, 12/12 UI tests and `TEST SUCCEEDED`.
+- Focused engine tests passed for GPS → pedometer → stride distance precedence, valid moving GPS intervals, unavailable moving time without valid movement, and the canonical calorie formula. UI tests passed for the metric-card layout, explicit unavailable values for a pedometer-only saved walk, local-only weight/height inputs, Finish & Save/history recovery, all five tabs, full-screen Activity, Guru keyboard dismissal and Profile rendering.
+- The tracking/source-safety script emitted 138 individual `PASS:` assertions; the final tracking-safeguard gate reported success. HealthKit source entitlements, simulator privacy/entitlement checks, simulator build, unsigned Release build, IPA packaging and artifact upload all reported success.
+- A Release compiler warning remains at `ContentView.swift:524:55`: the DEBUG-only UI-test flag is constant false in Release, so the test-only ternary branch is unreachable. This is non-blocking and did not fail the build; retain as a small cleanup item rather than changing the tested Finish & Save behavior.
+- The XCTest diagnostics `attachments/manifest.json` is empty. The run produced no exported screenshot attachments despite the screenshot-evidence upload step; UI assertions and test logs are available, but no screenshot was visually reviewed for run #722.
+
+### Run #722 IPA artifact inspection
+
+- Downloaded artifact #15231578441 (`GATIVX-iPhone-unsigned-IPA`). The artifact ZIP and inner `GATIVX-unsigned.ipa` both passed archive integrity checks.
+- Extracted inner IPA size: 808,688 bytes. SHA-256: `e366ad1d0dcf815e3a37baf42de0cff86276fdb65e6acd2356dd44ba42f84b64`.
+- Verified bundle ID `com.paramitsolutions.gativx`, version `1.0.0 (1)`, non-empty arm64 Mach-O executable and Info.plist. No `_CodeSignature` directory and no `embedded.mobileprovision` exist. This is a structurally valid **unsigned** IPA, not a directly installable signed iPhone app.
+
+### Updated implementation and gap ledger
+
+| Item | Status | Current evidence / remaining gap |
+|---|---|---|
+| PR #163 iOS metrics UI structure and calculation unit tests | **implemented-but-unverified** | Exact-head simulator suite passes 81 unit + 12 UI tests; real GPS sensor values and on-device behavior remain unverified. |
+| Saved-history derived metric snapshot/provenance | **missing** | Current view recomputes from persisted raw route/steps plus current local height/weight; historical weight/height snapshot and engine-versioned metric record are not persisted. |
+| iOS physical GPS / HealthKit / background tracking | **blocked** | Requires owner iPhone, real permissions, screen-locked walk and HealthKit export/read-back acceptance. |
+| Android canonical engine / moving-time local persistence | **implemented-but-unverified** | PR #137 run #190 passes 14 JVM tests and 25 safeguards; debug APK only; calorie UI, Health Connect and shared moving-time cloud contract remain open. |
+| Web Hub metric engine and shared dashboard aggregation | **missing** | No equivalent saved-session metric engine or cross-platform aggregation contract is wired. |
+| iOS signed release installer | **blocked** | Current run #722 artifact is unsigned; owner must provide an Apple Developer Team/signing certificate and matching provisioning profile, or choose a temporary personal sideload route. |
+| Android release installer | **blocked** | Current artifact is debug-only; owner must provide/authorize a release keystore and configuration. |
+| Backend/security | **blocked** | Supabase anon grants, broad future-object default ACLs, migration-history reconciliation and leaked-password protection findings remain unresolved; no production change made. |
+
+### Next action
+
+1. Add a focused GPS-backed UI test that verifies actual live distance, moving-time and estimated-calorie values (not only card presence), while retaining the pedometer-only unavailable assertions.
+2. Decide whether saved history should freeze weight/height and calculation version at save time; if yes, add backward-compatible local provenance fields and tests. Do not upload raw local profile body metrics without an explicit product/privacy decision.
+3. Port the accepted metric presentation and shared golden fixtures to Android and Web Hub, then extend the backend contract/migrations for moving-time and metric provenance.
+4. Keep all PRs open/unmerged; continue physical-device and signing acceptance only when the required devices and owner credentials are available.
