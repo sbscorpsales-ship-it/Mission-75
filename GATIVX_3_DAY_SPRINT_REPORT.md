@@ -3631,3 +3631,39 @@ Exact-head CI run [#45927899952](https://github.com/sbscorpsales-ship-it/Mission
 2. Accept PR #151 only if all 86 existing XCTest cases plus the new final-card assertion pass, with the dock <=76 pt and all five destinations/Guru/Profile/Activity regressions preserved.
 3. Keep PR #150 rejected and PR #148 as the last complete passing automated baseline; do not call Home clip geometry proven.
 4. Continue backend security/migration and Android/Web acceptance work without touching PR #107, merging PR #112, changing Design C or mutating production data.
+
+
+## Additional verification during automation turn 8 — 2026-11-27 07:55 IST
+
+### PR #151 CI poll
+
+Exact head `08add9c8ef377f3d992d3a0636b657d486018c69`; [run #45927899952](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45927899952):
+
+- Job `build-ios` is **in_progress**.
+- Setup, checkout, Xcode 26 selection, XcodeGen installation, project generation, scheme validation and first-run/auth/portrait/permission checks all completed successfully.
+- Full serial XCTest step is still running.
+- Screenshot/XCTest artifact export, tracking safeguard verification, simulator build, unsigned Release build, IPA packaging and final release gate have not started.
+- Test counts remain **not yet available**; no pass/fail result is claimed.
+
+### Fresh read-only Supabase verification
+
+The connected project was rediscovered and confirmed as `mission75-cloud`, project `crarbbsvcczwmtvxyrxo`, status `ACTIVE_HEALTHY`, PostgreSQL 17.11.0.011. No writes were made.
+
+- Six public tables are present and all six have RLS enabled.
+- `anon` has SELECT, INSERT, UPDATE, DELETE, TRUNCATE and MAINTAIN on `daily_action_progress`.
+- `authenticated` has TRUNCATE and MAINTAIN on `daily_action_progress`, and MAINTAIN on each of the other five public tables.
+- Default ACLs for both `postgres` and `supabase_admin` still grant broad table, sequence and function privileges to `anon` and `authenticated` for future public objects.
+- Security Advisor still reports **Leaked Password Protection Disabled**. Remediation: https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection
+- Database migration ledger has **22 applied versions**. The main branch contains **10 migration source files**: 4 exact version matches, 6 timestamp-drifted names and 12 applied versions with no matching filename in the current main migration directory.
+
+No production SQL, grants, migrations or Auth settings were changed. PR #144's isolated regression fixture is not production acceptance. Owner/admin must reconcile migration source/history, stage and apply the proposed privilege hardening with a backup, and enable Leaked Password Protection.
+
+### Repository ruleset access limitation
+
+- GitHub repository rulesets endpoint returned an empty list.
+- Direct `main` branch-protection endpoint returned HTTP 403, `Resource not accessible by integration`.
+- Therefore branch protection status cannot be independently confirmed from this connection. A repository owner/admin must inspect Settings → Branches and enable required PR review/status checks plus block force pushes/deletions/direct pushes. No repository settings were changed.
+
+### QA governance note
+
+PR #150's PR body was updated and a detailed QA comment was posted (comment `7208077550`). GitHub rejected a formal REQUEST_CHANGES review with HTTP 422 because the connected bot is the PR author; the comment and PR-body disposition remain recorded. PR #150 stays open/draft and not accepted.
