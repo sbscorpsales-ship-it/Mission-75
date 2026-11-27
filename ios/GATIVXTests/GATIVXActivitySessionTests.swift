@@ -733,14 +733,14 @@ final class GATIVXActivitySessionTests: XCTestCase {
             id: UUID(),
             activity: "Walking",
             startedAt: start,
-            finishedAt: start.addingTimeInterval(1_200),
+            finishedAt: start.addingTimeInterval(720),
             steps: 1_000,
             routePoints: points,
             motionDistanceMeters: nil
         )
-        XCTAssertEqual(record.activeDurationSeconds, 1_200)
-        XCTAssertEqual(record.estimatedCaloriesKcal(weightKg: 80, heightCm: nil)!, 42, accuracy: 0.5)
-        XCTAssertEqual(record.estimatedActivityPoints(weightKg: 80, heightCm: nil), 20)
+        XCTAssertEqual(record.activeDurationSeconds, 720)
+        XCTAssertEqual(record.estimatedCaloriesKcal(weightKg: 80, heightCm: nil)!, 40, accuracy: 0.5)
+        XCTAssertEqual(record.estimatedActivityPoints(weightKg: 80, heightCm: nil), 12)
 
         let pedometerOnly = ActivitySessionRecord(
             id: UUID(),
