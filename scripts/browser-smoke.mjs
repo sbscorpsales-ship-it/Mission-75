@@ -409,7 +409,8 @@ await authRecoveryPage.waitForFunction(() =>
 );
 const resetRequest = await authRecoveryPage.evaluate(() => window.__authRecovery.resetCalls[0]);
 assert(resetRequest?.email === "member@example.com", "Password reset must use the entered email address.");
-assert(resetRequest?.options?.redirectTo === window.location.origin + window.location.pathname,
+const expectedRecoveryRedirect = await authRecoveryPage.evaluate(() => window.location.origin + window.location.pathname);
+assert(resetRequest?.options?.redirectTo === expectedRecoveryRedirect,
        "Password reset must return to the current GATIVX page.");
 assert((await authRecoveryPage.locator("#cloudStatus").textContent()).includes("you will receive a password reset link"),
        "Password reset guidance must not claim delivery before the provider confirms it.");
