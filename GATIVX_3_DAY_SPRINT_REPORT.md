@@ -1,6 +1,6 @@
 # GATIVX 3-Day Engineering Sprint Report
 
-**Last updated:** 2026-11-26T16:33:59.855Z
+**Last updated:** 2026-11-27T01:20:42Z
 **Repository:** sbscorpsales-ship-it/Mission-75
 **Default branch:** `main` at `143889db3e72540fb478b76c486082f45395e9bd` (last commit 2026-11-17 04:38:35 UTC).
 **Report branch:** `docs/gativx-sprint-report-20261125` (PR #118); this update is a new documentation commit.
@@ -3373,3 +3373,151 @@ Poll runs #45916191745 and #45916412588. Inspect the full UI results and screens
 - GitHub branch metadata for `main` reports `protected: false`; required status-check enforcement is off and there are no required check contexts.
 - This is a release/security governance gap independent of the failing iOS UI tests. Enable a branch protection rule or repository ruleset requiring PR review and the relevant iOS/Android/Web/Supabase CI checks before merge; block force pushes and direct pushes to `main`.
 - No repository settings were changed in this run. No PR was merged.
+
+
+---
+
+## 2026-11-27 06:50 IST — verified refresh (Run 7)
+
+This section supersedes earlier pending/current-state wording above. Repository and CI state was re-read from GitHub; the connected Supabase project was inspected with read-only queries. No PR was merged and no production database or Auth setting was changed.
+
+### Repository and PR heads
+
+- Default branch: `main` at `143889db3e72540fb478b76c486082f45395e9bd`. A `main...main` compare returned identical (0 ahead / 0 behind).
+- GitHub returned the 50 most recent open PRs; the relevant repair stack is still open/draft.
+- PR #107 remains open/draft at `c19bdbd307df7048cefd86bd3e6064ac4f4e3042`; it was not modified.
+- PR #112 remains open/draft/unmerged at `b6c04d41dc67bd191ed0cf8966331eb5661a9887`; it was not modified.
+- PR #118 (this report) was open/draft at `a1aba01f7b140c34ebfc897661f09e858a115593` before this report update.
+- PR #136 remains open/draft at `31e5b70d85537113e74dd003d06b3ae95ba323f4`.
+- PR #148 remains open/draft at `d3f29bf42d4fe9287314ba9ffd0e4affcf5d1f38`.
+- PR #149 remains open/draft at `6786ec2cc36771bd4a1ed7d408b90244125eb45a`.
+- New QA-only PR #150 is open/draft at `d4bb1a86eb4ab63eb2ad3fe6611dcf6c585d57c3`, based on PR #148's exact head. It changes only the Home viewport accessibility container and adds a strict viewport-vs-dock geometry assertion. No product navigation or Design C change was made.
+
+### Priority review — PR #136 exact head
+
+PR #136 head `31e5b70d85537113e74dd003d06b3ae95ba323f4`; latest inspected run [#45847572105](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45847572105):
+
+- Unit tests: **76 passed, 0 failed**.
+- UI tests: **9 executed, 8 passed, 1 failed, 0 cancelled**.
+- Failure: dock measured **113.0625 pt**, exceeding the 76 pt maximum.
+- Tracking safeguard script: **121 checks passed**.
+- Simulator build: passed.
+- Unsigned Release build: passed.
+- IPA packaging and bundle metadata gate: passed; overall release gate failed at XCTest.
+
+Downloaded and inspected the exact-run artifacts:
+- The four XCTest screenshots are **960 × 1440 app-window captures**, showing the centered legacy app window and black letterboxing. They are not full-device screenshots.
+- The IPA outer artifact ZIP and inner IPA both pass ZIP integrity checks.
+- Bundle: `com.paramitsolutions.gativx`, version `1.0.0`, build `1`.
+- Executable: `GATIVX`, 4,030,192 bytes, valid arm64 Mach-O magic.
+- Packaged `Info.plist` has no `UILaunchScreen`; no code signature or embedded provisioning profile exists.
+
+Verdict for #136: navigation and most UI behavior improved, but its exact head does not satisfy dock height or full-device viewport requirements. Its unsigned IPA is structurally valid, not installable as delivered.
+
+### Latest passing full iOS suite — PR #148
+
+PR #148 exact head `d3f29bf42d4fe9287314ba9ffd0e4affcf5d1f38`; [run #45916191745](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45916191745) completed successfully.
+
+- Unit suite: **76 passed, 0 failed, 0 cancelled**.
+- UI suite: **10 passed, 0 failed, 0 cancelled**.
+- Combined XCTest: **86 test cases passed, 0 failed, 0 cancelled**.
+- Tracking safeguards: **121 checks passed**.
+- HealthKit source-entitlement check: passed.
+- iPhone Simulator build: passed.
+- Unsigned iPhone Release build: passed.
+- Unsigned IPA package, executable and launch-screen metadata validation: passed.
+- All workflow steps, including artifact uploads and final release validation, completed successfully.
+
+The 10 passing UI cases cover:
+1. Activity screen fills the usable viewport above the fixed dock.
+2. All five destinations switch from one navigation dock.
+3. Community tab after Missions.
+4. Full-device Dashboard and five tabs.
+5. Dashboard sections, metrics, Notifications, Guru and Profile-photo picker open/cancel journey.
+6. Guru keyboard dismissal.
+7. Home Start Walk navigation without starting a session.
+8. Notifications sheet dismissal.
+9. Direct Profile navigation from fresh Home.
+10. Full-device Welcome before guest entry.
+
+The Profile photo picker test opens the root-hosted on-demand sheet and cancels it. This proves open/cancel interaction, not selecting a real photo or cloud upload.
+
+Downloaded and inspected the six retained XCTest PNG attachments: each is **1206 × 2622 px**, from an **iPhone 17 Pro / iOS 26.5 simulator**. Welcome, Activity, Home, Guru and Profile are represented. Activity fills the area above the dock. Some Home captures show lower scroll content extending beneath/behind the fixed dock; the passing #148 suite does not assert the Home GeometryReader boundary itself. This remains a specific visual/layout acceptance gap rather than being declared fixed.
+
+Downloaded and inspected the #148 unsigned IPA:
+- Outer artifact ZIP and inner IPA pass integrity checks.
+- Bundle `com.paramitsolutions.gativx`, version `1.0.0`, build `1`.
+- Executable `GATIVX`: 4,036,944 bytes, valid arm64 Mach-O.
+- `UILaunchScreen` is present as an empty dictionary.
+- No code signature or embedded provisioning profile.
+
+### PR #149 — failed Home-only source experiment
+
+PR #149 exact head `6786ec2cc36771bd4a1ed7d408b90244125eb45a`; [run #45916412588](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45916412588):
+
+- Unit tests: **76 passed, 0 failed**.
+- UI tests: **10 executed; 2 test cases passed, 8 failed; 16 assertion failures; 0 cancelled**.
+- The Home viewport assertion measured **874 pt** while the dock began at **785 pt**.
+- Several existing Home selectors no longer appeared in the accessibility snapshot after the source/container change; this cascaded into Activity-after-entry, five-tab, Guru, Notifications and Profile assertions.
+- Simulator build, unsigned Release build and IPA packaging succeeded, but the full XCTest/release gate failed.
+
+The PR #149 source diff removes the Home-only `NavigationStack` and changes the GeometryReader accessibility container. The combined change regresses both the Home accessibility hierarchy and its measured safe-area boundary. A detailed independent QA comment was posted on PR #149 (comment ID `7207288747`) with the exact run evidence and requested correction. Do not treat #149 as accepted.
+
+### New QA follow-up — PR #150
+
+PR #150 branch `fix/gativx-home-safearea-geometry-qa-20261127`:
+- Commit 1: `7aea98ce218dece15fa514caa64ed47438f32b7a` — expose a distinct `gativx-home-viewport` accessibility container while retaining the Home `NavigationStack` and the existing `gativx-home-dashboard` ScrollView identifier.
+- Commit 2: `d4bb1a86eb4ab63eb2ad3fe6611dcf6c585d57c3` — add an explicit assertion that the Home viewport bottom is no lower than the dock top.
+- Files: `ios/GATIVX/ContentView.swift`; `ios/GATIVXUITests/GATIVXDashboardUITests.swift`.
+- Exact-head full CI [run #45922758211](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45922758211) is **in progress**. At this refresh, job `140257085078` had completed setup and checkout; Xcode selection was running; project generation and the full 76-unit/10-UI suite had not started. Therefore test count is **0 executed so far**, not a pass.
+- No tests were removed, skipped or narrowed. No source layout or navigation behavior was changed in this QA-only follow-up.
+
+### Android and Web Hub latest verified CI
+
+- PR #137 head `d5edab346eb9a00de7d02407fe501c8193a655c2`, [run #45840866819](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45840866819): 25 source safeguards passed; 6 JVM tests passed, 0 failed, 0 skipped; Debug APK build and upload passed. No emulator or physical Android test ran.
+- PR #138 head `45f7fd32f78aeb462ae56ac1202cdf7a5142f293`, [run #45839703732](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45839703732): 16 structural checks and 7 Chromium mobile-browser smoke assertions passed. No production deployment or live-backend acceptance was established.
+- These are CI/build results only. Android physical sensors, Health Connect and production Web Hub remain unverified.
+
+### Live Supabase read-only security refresh
+
+Connected project `mission75-cloud` (`crarbbsvcczwmtvxyrxo`) is `ACTIVE_HEALTHY`, PostgreSQL 17.11.0.011. Read-only inspection returned **22 applied migrations** and six public tables; RLS is enabled on all six.
+
+Explicit `has_table_privilege` checks confirmed:
+- `anon`: TRUNCATE and MAINTAIN on `daily_action_progress`.
+- `authenticated`: TRUNCATE and MAINTAIN on `daily_action_progress`; MAINTAIN on the other five public tables.
+- Default ACLs for both `postgres` and `supabase_admin` still grant broad privileges to `anon` and `authenticated` for future public tables, sequences and functions, including TRUNCATE/MAINTAIN/EXECUTE.
+- Supabase Security Advisor still reports **Leaked Password Protection Disabled**.
+
+All six tables having RLS enabled does not neutralize table-level TRUNCATE/MAINTAIN privileges. PR #144's isolated PostgreSQL regression run [#45891894462](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45891894462) passed, but no production DDL or Auth setting was changed. Owner/admin action is still required to stage and apply hardening and enable leaked-password protection. The existing migration-source reconciliation gap remains open; this refresh rechecked 22 applied versions but did not re-enumerate the source tree.
+
+### Latest product gap ledger
+
+| Area | Status | Evidence / remaining acceptance |
+|---|---|---|
+| Single five-destination iOS navigation | Verified in simulator CI | #148 full five-tab switching passed |
+| Dock <=76 pt | Verified in #148 simulator suite | #136 exact head still fails at 113.0625 pt |
+| Full-device Welcome and Activity | Verified in #148 simulator screenshots/tests | Simulator only; no physical iPhone acceptance |
+| Home viewport ends above dock | Implemented-but-unverified | #148 passes scroll-card reachability; screenshots show some Home content under dock; #149 regression failed strict geometry; #150 strict geometry run pending |
+| Guru keyboard dismissal | Verified in simulator CI | #148 full UI case passed |
+| Profile root-hosted photo picker | Verified for open/cancel in simulator CI | Actual photo selection, persistence across relaunch and cloud upload not verified; photo is explicitly local-only |
+| Finish & Save / local recovery | Implemented-but-unverified | Unit regressions pass; no physical iPhone interruption/save test |
+| HealthKit workout export / background GPS | Implemented-but-unverified | Source safeguards and simulator tests pass; real iPhone permission, export and screen-locked route behavior not tested |
+| Auth / sign-in / password recovery | Implemented-but-unverified | No live-account email/OTP acceptance; guided onboarding journey is missing |
+| Goals, purpose and Guru | Implemented-but-unverified | Local goal/purpose/emotion journey and 8 journey unit tests pass; cross-device persistence and full coaching service unverified |
+| Missions | Partial / missing full lifecycle | One local consistency mission; member-created mission catalogue, milestones and review lifecycle missing |
+| Community | Missing | Gated placeholder; no feed/groups/sharing/moderation service |
+| Notifications | Missing | Explicit inactive message; no delivery pipeline |
+| Android / Health Connect | Implemented-but-unverified | CI safeguards/JVM/build pass; device and Health Connect provider acceptance absent |
+| Web Hub | Implemented-but-unverified | Structural/browser CI pass; live auth/backend and production deployment absent |
+| Shared sync / backend | Implemented-but-unverified | Local outboxes and seven sync RPCs exist; two-account staging/conflict/recovery acceptance absent |
+| Supabase security | Blocked | Excessive table/default grants and leaked-password protection require admin remediation |
+| Signed iOS install | Blocked | Requires Apple signing identity and provisioning profile with HealthKit capability |
+| Android release | Blocked | Requires signed release bundle and device/Play release acceptance |
+| Web production | Blocked | Requires verified production deployment URL and live-backend acceptance |
+
+### Next action
+
+1. Finish exact-head PR #150 run #45922758211; inspect the strict Home viewport geometry, all 86 XCTest cases, tracking safeguards, simulator/Release builds, IPA metadata and screenshots.
+2. Accept the Home dock-safe layout only if the measured viewport boundary and actual screenshot both show content above the dock, while all existing navigation/Profile/Guru/Activity tests continue passing.
+3. Keep PR #149 marked as a failed experiment until corrected. Keep PR #148 as the latest passing automated baseline, not as proof of Home no-overlap.
+4. Continue platform/security gaps without touching PR #107, merging PR #112, changing Design C or mutating production data.
