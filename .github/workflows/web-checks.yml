@@ -2,21 +2,25 @@ name: GATIVX web release checks
 
 on:
   push:
-    branches: ["main", "gativx/dashboard-connected-data-v2", "fix/gativx/**"]
+    branches: ["main", "gativx/dashboard-connected-data-v2", "fix/gativx/**", "feat/gativx-desktop-web-hub-20261127"]
     paths:
       - "index.html"
       - "app-v2.html"
+      - "web-hub.html"
       - "sw.js"
       - "scripts/check-web.mjs"
       - "scripts/browser-smoke.mjs"
+      - "scripts/web-hub-smoke.mjs"
       - ".github/workflows/web-checks.yml"
   pull_request:
     branches: [main]
     paths:
       - "index.html"
       - "app-v2.html"
+      - "web-hub.html"
       - "scripts/check-web.mjs"
       - "scripts/browser-smoke.mjs"
+      - "scripts/web-hub-smoke.mjs"
       - ".github/workflows/web-checks.yml"
   workflow_dispatch:
 
@@ -33,11 +37,13 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Validate GATIVX web release
+      - name: Validate existing GATIVX web release
         run: node scripts/check-web.mjs
       - name: Install browser test runner
         run: npm install --no-save playwright
       - name: Install Chromium
         run: npx playwright install chromium
-      - name: Run mobile browser smoke test
+      - name: Run existing mobile browser smoke test
         run: node scripts/browser-smoke.mjs
+      - name: Run desktop Web Hub browser smoke test
+        run: node scripts/web-hub-smoke.mjs
