@@ -5784,3 +5784,25 @@ Changes are on the existing isolated PR #137 branch; no PR was merged.
 - Keep Android calories unavailable until a valid local Profile weight and GPS-derived moving time/speed exist; then add the estimate to both live and saved WalkOn UI with engine version and source provenance. Add Kotlin golden-fixture parity tests before UI integration.
 - Wire Web Hub to authenticated, account-scoped data only after the shared schema and production security grants are reconciled. Do not substitute its static cards for live member data.
 - Continue polling iOS run #723 on exact head **bc76fdb523635ce9e992a95604a9aa5cf614f08a**; its XCTest step is running, but logs are not yet available from the job-log endpoint.
+
+
+## 2026-11-28 03:55 IST — PR #136 simulator screenshots and recording inspected
+
+- Downloaded and verified PR #136 run #670 artifacts from the exact head **31e5b70d85537113e74dd003d06b3ae95ba323f4**:
+  - XCTest result bundle artifact #15146161829: ZIP integrity passed; SHA-256 **cc45f3798260c4cfa08bf755adee0df2baa9fcff339e690febe581027269bae9**.
+  - XCTest diagnostics artifact #15145517291: SHA-256 **8055b2cc9738f38664a8d9ce1cb2cdd4d6a073bfae016a1f77eac85b0e3a3771**. Its attachments/manifest.json is an empty array; screenshots are embedded in the xcresult bundle instead.
+- Extracted four PNG images (960x1440) and one QuickTime recording (1206x2622, 22.06 seconds) from the xcresult. The capture is from the iPhone 17 Pro simulator, not a physical iPhone.
+- Visual findings: Home/Welcome, Profile and Activity screens are present, and the five-destination dock is visible in the recording. However, the app surface appears as a centered/inset window with large black regions above and below it in the captured frames. This is consistent with the viewport/layout concern, but the numeric acceptance result remains the authoritative measurement: run #670 recorded the dock at 113.0625 pt, above the 76 pt limit.
+- The Community Gati screenshot explicitly displays “NOT ACTIVE IN THIS BUILD” and says the community feed and shared missions are not available yet. This is direct evidence that Community is not a completed feature in this build.
+- The Profile capture shows Local-only access; it does not establish account sign-in or cloud profile sync.
+- The Activity capture shows the Activity screen heading and tracker entry; it does not establish real GPS, HealthKit export or physical-device save behavior.
+- No attempt was made to infer device behavior from simulator screenshots. The later PR #161 run #715 remains the passing simulator layout baseline; PR #136 itself remains open and failed its dock assertion.
+
+### Visual evidence status
+| Evidence | Status |
+|---|---|
+| PR #136 xcresult ZIP integrity | **verified** |
+| Embedded simulator screenshots and 22.06s screen recording extracted | **verified** |
+| Community disabled-state copy visible | **verified** |
+| Full-screen viewport and dock <=76 pt on PR #136 | **failed** — dock 113.0625 pt |
+| Physical iPhone display/HealthKit behavior | **blocked / not tested** |
