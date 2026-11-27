@@ -3836,7 +3836,7 @@ This checkpoint was refreshed from the live GitHub refs, exact PR heads, workflo
 - Simulator build, privacy/entitlement validation, unsigned Release build, IPA packaging and artifact uploads all passed.
 - PR #152 changes only `ios/GATIVX/ContentView.swift`: Home ScrollView content-only bottom padding increased from 28 pt to 56 pt. The dock remains a 56 pt frame and paints no extra home-indicator safe-area height. No card styling/order, tab taxonomy, Design C layout, or test was removed or weakened.
 - Downloaded simulator artifact #15170391876 and unsigned IPA artifact #15170865537. Both ZIP layers passed integrity checks. Bundle ID `com.paramitsolutions.gativx`, name `GATIVX`, version `1.0.0`, build `1`, minimum iOS `17.0`; `UILaunchScreen: {}` is present. The IPA contains no code signature or embedded provisioning profile and is therefore still **unsigned/not installable as delivered**.
-- Downloaded PR #152 xcresult artifact #15170745407 and diagnostics artifact #15170651026. `summary-counts.txt` confirms 86/86, 0 skipped. The diagnostics attachment manifest is empty because no test failed; the successful UI screenshots remain inside the xcresult. Visual rendering of those embedded screenshots remains blocked by the absence of `xcresulttool` in this runtime.
+- Downloaded PR #152 xcresult artifact #15170745407 and diagnostics artifact #15170651026. `summary-counts.txt` confirms 86/86, 0 skipped. The diagnostics attachment manifest is empty because no test failed; six PNG screenshots were extracted directly from the xcresult Data payload and visually reviewed (Activity, Profile, Welcome, Guru and Home). This supersedes the earlier statement that screenshot review was blocked by the absence of `xcresulttool`.
 
 **Current iOS CI verdict:** the PR #152 stacked simulator baseline is green and verifies the requested navigation/viewport behavior. It is not a signed device release and does not establish physical iPhone HealthKit, locked-screen GPS, background delivery, or real installation.
 
@@ -3891,7 +3891,7 @@ This checkpoint was refreshed from the live GitHub refs, exact PR heads, workflo
 | iOS signed install | blocked | CI IPA is unsigned and has no provisioning profile; no compatible signing identity/profile or Mac/Xcode installation path is available in this session. |
 | Android release/device acceptance | blocked | Debug APK only; signed release and physical device/Play acceptance absent. |
 | Web production deployment | blocked | PR #138 and #154 remain unmerged; no production deployment or live-backend acceptance for their changes. |
-| Screenshot visual QA | blocked | XCTest screenshots are embedded in xcresult; diagnostics exporter only exported failure attachments and its manifest is empty. This runtime lacks `xcrun/xcresulttool` to extract/render the successful screenshots. |
+| Screenshot visual QA | verified (simulator-only) | Extracted six PNG attachments directly from PR #152 xcresult artifact #15170745407 and visually reviewed Activity, Profile, Welcome, Guru and Home screens. This does not establish physical-iPhone acceptance. |
 | Repository governance | blocked | Main branch metadata reports `protected=false`; required review/status-check enforcement needs owner/admin review. |
 
 ### Changes made in this checkpoint
@@ -3911,3 +3911,63 @@ This checkpoint was refreshed from the live GitHub refs, exact PR heads, workflo
 6. Obtain owner/admin approval and perform a backed-up, staged production Supabase privilege-hardening change; enable Leaked Password Protection and verify grants afterward.
 7. Keep PR #138 and #154 unmerged until reviewed; do not claim the live Web Hub contains their changes before merge/deployment.
 8. Preserve PR #107 and PR #112; never merge any PR without explicit user authorization.
+
+
+---
+
+## Automation checkpoint 11 — 27/11/2026, 10:42 IST (2026-11-27T05:12Z)
+
+This checkpoint re-read the live PR heads, latest workflow runs and the exact PR #136 / PR #152 artifacts. No PR was merged, no branch was force-pushed or deleted, no production database/Auth setting was changed, and no deployment was made. Design C and the approved five destinations remain unchanged.
+
+### Live repository and protected refs
+
+- `main` remains `143889db3e72540fb478b76c486082f45395e9bd` (2026-11-17T04:38:35Z). The repository reports 54 open PRs.
+- PR #107 remains open/draft/unmerged at `c19bdbd307df7048cefd86bd3e6064ac4f4e3042`; untouched.
+- PR #112 remains open/draft/unmerged at `b6c04d41dc67bd191ed0cf8966331eb5661a9887`; untouched.
+- PR #136 remains open/draft/unmerged at `31e5b70d85537113e74dd003d06b3ae95ba323f4`.
+- PR #152 remains open/draft/unmerged at `3d5221ed36b180436f81d5c00580f93dea820aa7`. GitHub compare reports PR #152 is 23 commits ahead and 0 behind the exact PR #136 head; it is a later stacked descendant, not the same commit.
+- PR #153 remains open/draft/unmerged at `a21ac8890047274699d66351b61c4f5ab7cfd8e9`; Web Hub run #45940205733 passed 25 checks, 0 failed. This is CI-only evidence; no deployment or real password-reset email delivery was verified.
+- PR #118 report branch head before this update: `26cacbe3fb5c3b9ac8096ef094bf73290a51a09e`.
+
+### PR #136 — exact-head verdict remains failed
+
+[PR #136](https://github.com/sbscorpsales-ship-it/Mission-75/pull/136), exact head `31e5b70d85537113e74dd003d06b3ae95ba323f4`; [run #45847572105](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45847572105), attempt 3, completed failure.
+
+- XCTest: 85 total, 84 passed, 1 failed, 0 skipped. Unit suite: 76/76 passed. UI suite: 8/9 passed, 1 failed, 0 cancelled.
+- Sole failure: `testDashboardFillsDeviceViewportAndExposesAllFiveTabs`; XCTest measured the bottom-navigation accessibility frame at 113.0625 pt, exceeding the 76 pt maximum.
+- The five-destination switch, full-viewport Activity test, Guru keyboard-dismissal test and Profile navigation/photo-picker flow passed on this exact head. Tracking safeguards: 121 PASS, 0 FAIL. HealthKit source-entitlement, simulator build, unsigned Release build, IPA packaging and artifact upload steps passed; the release gate failed because XCTest failed.
+- Downloaded and inspected IPA artifact #15146711639. ZIP integrity passed. Bundle ID `com.paramitsolutions.gativx`, version 1.0.0, build 1. Its Info.plist lacked `UILaunchScreen`; it had no code signature or embedded provisioning profile. It is not install-ready.
+
+**Standalone PR #136 is not accepted.** Its exact head retains the dock-height failure and lacks launch-screen metadata.
+
+### Later stacked iOS baseline — PR #152
+
+[PR #152](https://github.com/sbscorpsales-ship-it/Mission-75/pull/152), exact head `3d5221ed36b180436f81d5c00580f93dea820aa7`; [run #45933957530](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45933957530), attempt 1, completed success.
+
+- Structured XCTest: 86/86 passed, 0 failed, 0 skipped — 76 unit tests and 10 UI tests. The full unchanged UI suite passed: single five-destination navigation, dock frame <=76 pt, full-screen Activity viewport, Guru keyboard dismissal, Profile navigation including picker open/cancel, Home final-card reachability, Community/Missions transition, Notifications dismissal and first-run viewport.
+- Tracking safeguards: 121 PASS, 0 FAIL. HealthKit source-entitlement validation, iPhone Simulator build, simulator privacy/entitlement validation, unsigned Release build, IPA package-integrity check and all artifact uploads passed.
+- Downloaded artifacts: simulator app #15170391876, XCTest result bundle #15170745407, diagnostics #15170651026, unsigned IPA #15170865537. The inner IPA ZIP passed integrity checks; Info.plist has bundle ID `com.paramitsolutions.gativx`, version 1.0.0, build 1, minimum iOS 17.0 and `UILaunchScreen: {}`. It remains unsigned with no embedded provisioning profile.
+- Six PNG screenshots were extracted from the xcresult bundle and visually inspected: Activity, Profile, Welcome, Guru and two Home views. The simulator captures show a full-height portrait screen, compact five-item dock, Activity controls, Profile photo action, Guru goal/purpose/emotion/next-action form, and Home metrics that correctly display “Waiting for data” rather than fabricated readings. These are simulator captures, not physical-iPhone evidence.
+- The passing PR #152 result validates a descendant that includes PR #136's work plus 23 subsequent commits. It must not be rewritten as “PR #136 exact head passed.” Later commits separate the dock from the home-indicator safe area and add the launch-screen metadata that was missing in PR #136's IPA.
+
+### Cross-platform and release gap deltas
+
+| Area | Status | Current evidence / remaining gate |
+|---|---|---|
+| iOS five destinations and compact dock | verified (simulator CI) | PR #152 passes the unchanged five-tab and <=76 pt assertions; PR #136 exact head still fails at 113.0625 pt. |
+| Activity full viewport | verified (simulator CI) | PR #152 Activity viewport UI test and screenshot pass; physical iPhone layout remains unverified. |
+| Profile photo picker | verified (simulator flow) | Root-hosted placement safeguard and Profile open/cancel UI path pass; real photo selection, persistence and cloud image sync remain unverified. |
+| Guru keyboard dismissal | verified (simulator CI) | Keyboard appears and dismisses in the UI test; Guru goal/purpose state remains local and deterministic, not a verified remote AI service. |
+| Activity save/recovery, GPS and HealthKit | implemented-but-unverified | 76 unit tests and 121 source safeguards pass, but no physical iPhone Finish & Save, HealthKit export or locked-screen/background GPS acceptance was performed. |
+| Android / Health Connect | implemented-but-unverified | Prior PR #137 evidence remains 25 source safeguards + 6 JVM tests + Debug APK build; no new emulator/device run or Health Connect provider acceptance in this checkpoint. |
+| Web Hub auth recovery | implemented-but-unverified | PR #153 CI run #45940205733: 25 PASS, 0 FAIL; PR remains unmerged, deployed redirect allowlist and actual reset-email delivery are unverified. |
+| Missions / Community / Notifications | missing or gated | Missions remains a starter consistency card, Community is gated, and Notifications explicitly state inactive. |
+| Supabase least-privilege and leaked-password protection | blocked | Production grants/default ACLs and Auth security setting still require authorized owner/admin changes; no live mutation was made. |
+| Signed iOS installation | blocked | IPA is unsigned; a signing identity/provisioning profile with required capabilities and a supported install path are still absent. |
+| Android signed release / Web production deployment | blocked | No signed Android release/device acceptance or production Web deployment was verified. |
+
+### Work performed this hour
+
+- No product-code commit and no new CI run were created this hour. The work was a live-state verification of PR #136, its exact attempt-3 failure, the later passing PR #152 descendant, its logs/artifacts/screenshots, and PR #153's latest CI.
+- The report's screenshot status is corrected: simulator screenshot extraction and visual review are now complete; physical-device visual/functional acceptance remains open.
+- Next: continue from PR #152's green simulator baseline without merging; prioritize owner-approved physical-device/signing path and cross-platform/device acceptance. Keep PR #107 untouched, PR #112 unmerged and every PR unmerged.
