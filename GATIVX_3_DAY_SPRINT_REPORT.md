@@ -5353,3 +5353,40 @@ This is the current verified checkpoint for the scheduled engineering run. It su
 - **Files changed:** `GATIVX_3_DAY_SPRINT_REPORT.md` only (this documentation addendum).
 - **Protected state:** PR #107 untouched; PR #112 remains open/unmerged; no PR merged; no production database mutation; no production deployment.
 - **Next action:** inspect PR #161 retry logs, XCTest summary and Profile screenshot as soon as the job completes; then fix only any reproduced Profile/dock defect. Continue with native session metric persistence and dashboard integration on a separate reviewable branch, preserving measured/estimated provenance and all existing safeguards.
+
+
+## 2026-11-28 01:00 IST — follow-up corrections and Web Hub smoke-test fix
+
+### Repository heads / protected work
+
+- Current `main` head: `143889db3e72540fb478b76c486082f45395e9bd` (“Record GATIVX premium dashboard release and test status”, 17 Nov 2026 04:38:35Z).
+- PR #107 remains open/unmerged at head `c19bdbd307df7048cefd86bd3e6064ac4f4e3042`; no file or branch action was taken on it.
+- PR #112 remains open/unmerged at head `b6c04d41dc67bd191ed0cf8966331eb5661a9887`; no file or branch action was taken on it.
+- No PR has been merged.
+
+### Correction: PR #158 iOS run #705
+
+The run record reports **cancelled**, not failed. Its job #140594416353 concluded `cancelled`. The web run #455 on the same PR head succeeded. This corrects the earlier wording; cancellation is not counted as a test failure and no pass is claimed for that cancelled iOS attempt. The later downstream PR #162 iOS run #716 is the current successful automated iOS evidence.
+
+### Safe Web Hub test correction
+
+- PR #157 exact head advanced to `32bae4f7bda8eb638015d20bf179f760dca878fa`.
+- Commit changed only `scripts/web-hub-smoke.mjs`.
+- Root cause in the test: it correctly searched to the Guru view, then immediately asserted that the dashboard-only `.hero` was visible at mobile width while Guru was still selected. The dashboard hero was correctly hidden in that state; the test sequence, not the responsive hero CSS, caused the false failure.
+- Fix: explicitly navigate back to Dashboard and assert the dashboard hero is visible before resizing to 390px and checking responsive navigation/hero. No UI design or production data behavior was changed.
+- New exact-head web CI runs [#465](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/46056627532) and [#466](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/46056632791) are both **in progress**. No passing result is claimed yet.
+
+### Additional PR #162 diagnostics
+
+- The structured diagnostics for run #716 report two SwiftUI runtime warnings, both inside passing UI cases: `Invalid frame dimension (negative or non-finite)` during `testDashboardSectionsMetricsAndPrimaryNavigation` and `testGuruKeyboardAndDismissalFromFreshHome`. The tests passed, but the warnings are unresolved and should be traced before release rather than ignored.
+- The #716 Activity screenshot is a full-height portrait Activity screen with the fixed five-destination dock. It displays 0.00 km before a session starts and “No completed activities saved” for the local-only test account; it does not demonstrate a live physical walk.
+- The #716 Profile screenshot shows the local-only account and member-photo action. The root-hosted picker open/cancel flow is exercised by the passing dashboard/navigation UI test. The final Profile content/dock clearance remains pending the separate PR #161 retry.
+- Formula reconciliation remains an open engineering gate: PR #131's standalone engine uses MET/intensity-based walking estimates, while PR #162's new `estimatedCaloriesKcal` method uses `0.5 × weightKg × distanceKm`. Do not wire both competing formulas into the product. Before UI integration, select the approved canonical calculation contract, add shared golden fixtures, and preserve explicit measured-versus-estimated provenance.
+
+### Work performed in this follow-up
+
+- **Application/product source changes:** none.
+- **Reviewable test change:** PR #157 commit `32bae4f7bda8eb638015d20bf179f760dca878fa`, one file: `scripts/web-hub-smoke.mjs`.
+- **CI after change:** PR #157 runs #465 and #466 are in progress; inspect both exact-head logs before marking the responsive Web Hub verified.
+- **PR #161:** full iOS job retry #715 attempt 2 remains in progress; inspect final XCTest diagnostics and the Profile screenshot before changing the ledger.
+- **Report branch:** `docs/gativx-sprint-report-20261125`; prior checkpoint commit `79d8d45d5b8fa91341b213d28d3183388d221e74`. This follow-up is documentation-only.
