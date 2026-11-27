@@ -556,6 +556,25 @@ final class GATIVXDashboardUITests: XCTestCase {
         XCTAssertTrue(app.descendants(matching: .any)["gativx-member-login-id"].waitForExistence(timeout: 5),
                       "Profile must identify the local-only member.")
 
+        // The photo picker sheet belongs to the root member shell, not the Profile
+        // tab's navigation container. Verify it opens and dismisses from Profile.
+        let photoPickerOpen = app.buttons["gativx-profile-photo-picker-open"]
+        XCTAssertTrue(photoPickerOpen.waitForExistence(timeout: 5))
+        photoPickerOpen.tap()
+        let photoPickerSheet = app.staticTexts["gativx-profile-photo-picker-sheet"]
+        XCTAssertTrue(photoPickerSheet.waitForExistence(timeout: 5),
+                      "The root-hosted member photo sheet must open from Profile.")
+        XCTAssertTrue(app.buttons["gativx-profile-photo-picker"].waitForExistence(timeout: 5),
+                      "The photo library entry point must be present in the sheet.")
+        app.buttons["gativx-profile-photo-picker-cancel"].tap()
+        let photoSheetDismissed = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "exists == false"),
+            object: photoPickerSheet
+        )
+        XCTAssertEqual(XCTWaiter.wait(for: [photoSheetDismissed], timeout: 5), .completed,
+                       "Cancelling the root-hosted photo sheet must return to Profile.")
+        XCTAssertTrue(profileScreen.exists)
+
         let screenshot = XCTAttachment(screenshot: app.screenshot())
         screenshot.name = "GATIVX-Profile-Direct-From-Home"
         screenshot.lifetime = .keepAlways
