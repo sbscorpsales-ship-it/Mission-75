@@ -31,7 +31,8 @@ internal data class WalkOnSession(
     val sessionSteps: Long = 0,
     val stepCounterLastValue: Float? = null,
     val synced: Boolean = false,
-    val ownerUserId: String? = null
+    val ownerUserId: String? = null,
+    val movingDurationSeconds: Long? = null
 )
 
 /** Encrypted local storage for sensitive GPS route drafts and completed walks. */
@@ -118,12 +119,14 @@ internal object WalkOnStore {
         finishedAt: String,
         durationSeconds: Long,
         distanceMeters: Double,
-        points: List<WalkOnPoint>
+        points: List<WalkOnPoint>,
+        movingDurationSeconds: Long? = null
     ): WalkOnSession? {
         val current = active(context) ?: return null
         val finished = current.copy(
             finishedAt = finishedAt,
             durationSeconds = durationSeconds.coerceIn(0, 86_400),
+            movingDurationSeconds = movingDurationSeconds?.coerceIn(0, 86_400),
             distanceMeters = distanceMeters.coerceAtLeast(0.0),
             points = points.toList(),
             synced = false
@@ -257,6 +260,7 @@ internal object WalkOnStore {
         .put("startedAt", session.startedAt)
         .put("finishedAt", session.finishedAt ?: JSONObject.NULL)
         .put("durationSeconds", session.durationSeconds)
+        .put("movingDurationSeconds", session.movingDurationSeconds ?: JSONObject.NULL)
         .put("distanceMeters", session.distanceMeters)
         .put("sessionSteps", session.sessionSteps)
         .put("stepCounterLastValue", session.stepCounterLastValue?.toDouble() ?: JSONObject.NULL)
@@ -281,6 +285,7 @@ internal object WalkOnStore {
             startedAt = json.getString("startedAt"),
             finishedAt = json.optString("finishedAt").takeIf { it.isNotBlank() && it != "null" },
             durationSeconds = json.optLong("durationSeconds", 0),
+            movingDurationSeconds = if (json.isNull("movingDurationSeconds")) null else json.optLong("movingDurationSeconds").coerceIn(0, 86_400),
             distanceMeters = json.optDouble("distanceMeters", 0.0),
             points = points,
             sessionSteps = json.optLong("sessionSteps", 0).coerceAtLeast(0),
