@@ -479,44 +479,16 @@ struct ContentView: View {
                     self.isFinishingSession = false
                     self.syncSavedActivitySessions()
                     #if DEBUG
-                    if ProcessInfo.processInfo.arguments.contains("-gativx-ui-test-simulated-walk") {
-                        // The UI test isolates local Finish & Save persistence/recovery.
-                        // HealthKit queue behavior remains covered by its dedicated unit tests.
-                        self.routeRecorder.clearDraft()
-                        self.recoveredSessionWasResumed = false
-                    } else {
-                    let healthExportQueued = self.health.saveActivityWorkout(
-                        id: record.id,
-                        activity: record.activity,
-                        startedAt: record.startedAt,
-                        finishedAt: record.finishedAt,
-                        steps: record.steps,
-                        distanceMeters: record.gpsDistanceMeters > 0 ? record.gpsDistanceMeters : record.motionDistanceMeters
-                    ) { result in
-                        switch result {
-                        case .success:
-                            self.sessionStatus = activity + " saved on this iPhone and exported to Apple Health · " + stepSummary + " · " + routeSummary
-                            self.health.refreshOnForeground()
-                        case .failure(let error):
-                            self.sessionStatus = activity + " saved on this iPhone; Apple Health export needs attention: " + error.localizedDescription
-                        }
-                    }
-                    if healthExportQueued {
-                        // The export outbox accepted and read back this stable session ID.
-                        // A later HealthKit permission/export failure remains retryable there.
-                        self.routeRecorder.clearDraft()
-                        self.recoveredSessionWasResumed = false
-                    } else {
-                        // Local history is verified, but the export queue could not be
-                        // written/read back. Keep the GPS draft and the same session ID
-                        // active so Finish & Save can retry queue creation without duplicating history.
-                        self.sessionStarted = start
-                        self.activeSessionID = recordID
-                        self.isFinishingSession = false
-                        self.sessionStatus = activity + " saved on this iPhone; Apple Health export could not be queued. Your GPS draft remains preserved. Tap Finish & save activity to retry."
-                    }
-                    }
+                    let skipHealthExportForUITest = ProcessInfo.processInfo.arguments.contains("-gativx-ui-test-simulated-walk")
                     #else
+                    let skipHealthExportForUITest = false
+                    #endif
+                    if skipHealthExportForUITest {
+                        // This UI test isolates local persistence/recovery. HealthKit queue
+                        // behavior remains covered by its dedicated unit tests.
+                        self.routeRecorder.clearDraft()
+                        self.recoveredSessionWasResumed = false
+                    } else {
                     let healthExportQueued = self.health.saveActivityWorkout(
                         id: record.id,
                         activity: record.activity,
@@ -547,7 +519,7 @@ struct ContentView: View {
                         self.isFinishingSession = false
                         self.sessionStatus = activity + " saved on this iPhone; Apple Health export could not be queued. Your GPS draft remains preserved. Tap Finish & save activity to retry."
                     }
-                    #endif
+                    }
                 } catch {
                     self.sessionStatus = "Could not save this activity on this iPhone: " + error.localizedDescription + ". Your GPS draft remains preserved; tap Finish & save activity to retry."
                     self.sessionStarted = start
