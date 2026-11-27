@@ -5390,3 +5390,13 @@ The run record reports **cancelled**, not failed. Its job #140594416353 conclude
 - **CI after change:** PR #157 runs #465 and #466 are in progress; inspect both exact-head logs before marking the responsive Web Hub verified.
 - **PR #161:** full iOS job retry #715 attempt 2 remains in progress; inspect final XCTest diagnostics and the Profile screenshot before changing the ledger.
 - **Report branch:** `docs/gativx-sprint-report-20261125`; prior checkpoint commit `79d8d45d5b8fa91341b213d28d3183388d221e74`. This follow-up is documentation-only.
+
+
+## 2026-11-28 01:15 IST — Web Hub rerun evidence
+
+- PR #157 exact head remains `32bae4f7bda8eb638015d20bf179f760dca878fa`; the only source change on this branch is the smoke-test ordering correction in `scripts/web-hub-smoke.mjs`.
+- [Web run #465](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/46056627532) passed on the exact head. Its logs show the existing mobile browser smoke passed and the desktop Web Hub smoke passed at both 1440px and 390px; all 11 destination buttons and search navigation were exercised.
+- Concurrent [web run #466](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/46056632791) failed in the **existing mobile browser smoke**, not the desktop hero assertion. The exact failure was: `Signed-out device exposed cached records after reload: {"steps":"1,240","cloudState":"DEVICE ONLY","migrated":null,"device":null}`. This may be an account-isolation defect or test-harness state-seeding issue; it is not dismissed as flaky.
+- Reran the failed #466 web job without changing or weakening tests. Retry job #140701097189 is in progress. Its logs and final result must be inspected before PR #157 is considered green.
+- PR #161 full iOS retry #715 is also still running; no Profile bottom-clearance result is claimed yet.
+- The report update before this note is commit `f1acbcca777ecdc4cd823761a9e047bc05797432`. No application feature code was changed in this follow-up; the only code commit remains the PR #157 test correction `32bae4f7bda8eb638015d20bf179f760dca878fa`.
