@@ -740,8 +740,8 @@ final class GATIVXActivitySessionTests: XCTestCase {
         )
         XCTAssertEqual(record.activeDurationSeconds, 720)
         // 1 km in 12 minutes is approximately 5 km/h. The canonical
-        // 3.8-MET walking estimate yields 47.04 active kcal at 80 kg.
-        XCTAssertEqual(record.estimatedCaloriesKcal(weightKg: 80, heightCm: nil)!, 47.04, accuracy: 0.6)
+        // ACSM speed equation yields 3.38095 MET and 40 active kcal at 80 kg.
+        XCTAssertEqual(record.estimatedCaloriesKcal(weightKg: 80, heightCm: nil)!, 40, accuracy: 0.5)
         XCTAssertEqual(record.estimatedActivityPoints(weightKg: 80, heightCm: nil), 12)
 
         let pedometerOnly = ActivitySessionRecord(
