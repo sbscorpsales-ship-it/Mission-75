@@ -269,6 +269,7 @@ class WalkOnLocationService : Service(), LocationListener, SensorEventListener {
             distanceMeters = distanceMeters,
             points = points.toList(),
             sessionSteps = sessionSteps,
+            movingDurationSeconds = GativxActivityCalculationEngine.movingDurationSeconds(points),
             stepCounterLastValue = lastStepCounterValue,
             ownerUserId = ownerUserId
         )
@@ -314,12 +315,14 @@ class WalkOnLocationService : Service(), LocationListener, SensorEventListener {
         persistDraft()
         val finishedMillis = System.currentTimeMillis()
         val duration = ((finishedMillis - startedAtMillis).coerceAtLeast(0L) / 1000L).coerceAtMost(86_400L)
+        val movingDuration = GativxActivityCalculationEngine.movingDurationSeconds(points)
         val finished = WalkOnStore.finishActive(
             this,
             finishedAt = Instant.ofEpochMilli(finishedMillis).toString(),
             durationSeconds = duration,
             distanceMeters = distanceMeters,
-            points = points.toList()
+            points = points.toList(),
+            movingDurationSeconds = movingDuration
         )
         WalkOnStore.setStatus(
             this,
