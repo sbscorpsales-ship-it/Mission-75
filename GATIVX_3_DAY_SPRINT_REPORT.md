@@ -1,13 +1,81 @@
 # GATIVX 3-Day Engineering Sprint Report
 
-**Last updated:** 2026-11-27T12:19:00Z
+**Last updated:** 2026-11-27T18:28:54.807Z
 **Repository:** sbscorpsales-ship-it/Mission-75
 **Default branch:** `main` at `143889db3e72540fb478b76c486082f45395e9bd` (last commit 2026-11-17 04:38:35 UTC).
-**Report branch:** `docs/gativx-sprint-report-20261125` (PR #118); checkpoint 16 below is the latest authoritative snapshot. Earlier checkpoints remain historical.
+**Report branch:** `docs/gativx-sprint-report-20261125` (PR #118); checkpoint 17 below is the latest authoritative snapshot. Earlier checkpoints remain historical.
 
 **Protected baseline:** PR #107 remains open/draft/unmerged at `c19bdbd307df7048cefd86bd3e6064ac4f4e3042`. PR #107 was not modified. No PR was merged. No production deployment or live database mutation was performed.
 
-## Current engineering branches and CI snapshot
+
+## Run 5 verified refresh — 2026-11-27T18:28:54.807Z
+
+### Repository safety and branch state
+
+- Default branch main remains at 143889db3e72540fb478b76c486082f45395e9bd.
+- PR #107 remains open/draft at c19bdbd307df7048cefd86bd3e6064ac4f4e3042 and was not modified. PR #112 remains open at b6c04d41dc67bd191ed0cf8966331eb5661a9887 and was not modified. No PR was merged.
+- No production deployment or live database mutation was performed.
+- The sprint report is maintained on the existing docs/gativx-sprint-report-20261125 branch (PR #118).
+
+### iOS exact-head review and release evidence
+
+- PR #136 exact head 31e5b70d85537113e74dd003d06b3ae95ba323f4, CI run [#45847572105](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45847572105): 76 unit tests and 9 UI tests executed; 84/85 total passed, 1 UI test failed, 0 skipped/cancelled. The measured dock was 113.0625 pt against the required maximum of 76 pt.
+- PR #139 exact head 96f713704723c530718a5e26a2ea04664986c249, CI run [#45859629757](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45859629757): 84/85 passed, 1 UI test failed, 0 skipped/cancelled. The physical-screen assertion reported an app window of 402 x 603 pt, centered at y=135.5 pt, on a 402 x 874 pt iPhone 17 Pro simulator; the dock again measured 113.0625 pt. These are actual failures, not expected-result assumptions.
+- The later integration baseline is PR #160 head 0f6ddcd5bb97660773f6ffe17ec0a2ca4d6e0cf0, CI run [#46033934027](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/46033934027). Its XCTest diagnostics report 88/88 passed, 0 failed, 0 skipped: 76 unit tests plus 12 UI tests on an iPhone 17 Pro, iOS 26.5 simulator (x86_64). The workflow also passed the generated project/scheme checks, HealthKit source-entitlement check, tracking-safeguard check, simulator build, simulator privacy/entitlement checks, unsigned Release build, IPA packaging and upload. This is simulator/CI evidence only.
+- The 12 passing UI tests cover Activity viewport and fixed dock, all five destinations from one dock, Community after Missions, Home/device viewport and horizontal-swipe non-navigation, dashboard metrics and primary navigation, simulated Finish/Save/history recovery, Guru keyboard dismissal and return to Activity, Home Start Walk navigation, local-only persistence across relaunch, Notifications sheet dismissal, Profile rendering, and Welcome full-device viewport. The dashboard primary-navigation test also opens and cancels the root-hosted Profile photo picker.
+- I downloaded and inspected the PR #160 xcresult and diagnostics artifacts. The Activity screenshot shows a full-height Activity screen with the dock at the bottom. Guru and Welcome screenshots are full-height; the Profile screenshot shows the photo-picker entry point. However, the Home screenshots captured after scrolling to lower Home cards show the dock partway up the screen with further Home content below it. This conflicts with the fixed-bottom requirement even though the fresh-Home viewport test passed. Home dock position after scrolling/tab-return is therefore not accepted as verified; a dedicated post-scroll screenshot/geometry regression is required.
+- The same xcresult records the runtime warning “Invalid frame dimension (negative or non-finite)” in the Profile/navigation and Guru keyboard UI tests; those tests passed, but the warning remains unresolved. The primary-navigation UI test took 5m48s, so its runtime should also be watched.
+- The PR #160 unsigned IPA artifact (run #46033934027, artifact GATIVX-iPhone-unsigned-IPA) is 780,089 bytes; SHA-256 6746ec29d3608384cbd4e9715c1e618aafba1f4755a912b7c48ea986fc1eb7c1. Its app bundle is com.paramitsolutions.gativx, version 1.0.0/build 1, includes UILaunchScreen, and contains an ARM64 Mach-O executable. It has no _CodeSignature directory and no embedded.mobileprovision. It is an unsigned CI package, not a directly installable iPhone IPA.
+- PR #161 original head cdef69957c9a0f62b291ed6a62ea336c8a81c776, run [#46040346312](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/46040346312): 88/89 passed, 1 failed, 0 skipped/cancelled. The failure queried the final “From Goals to Xcellence” row before the lazy SwiftUI Form had scrolled it into the accessibility tree. I committed a test correction on the existing isolated PR branch: head c92dc750b4e2c31e7b9e2b37e3a2f44e9c8a6c12, file ios/GATIVXUITests/GATIVXDashboardUITests.swift. The test now scrolls until the lazy row exists before asserting it is reachable above the dock. Full CI run [#46048494016](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/46048494016) is in progress; no result is claimed yet.
+- PR #162 original head 135e8f194abcc91d9615f006b9c29107cd1d1fb7, run [#46040645662](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/46040645662): 88/91 passed, 3 failed, 0 skipped/cancelled. One unit assertion expected 72.92 m where the specified 176 cm × 0.415 × 100 steps calculation is 73.04 m. Two UI test cases also failed (Activity guest-entry readiness and Home dock/tab hit-testing); the Home failure included multiple hit-target assertions. I updated the isolated PR branch with commits fd3c557dbbb9f962fb7fb66a98bd690694cf9f41 and 3a2cb5ac4aa90ff6d31af9d5210e6154d0da7d6d. Files changed: ios/GATIVXTests/GATIVXActivitySessionTests.swift and ios/GATIVX/Models/ActivitySessionRecord.swift. The change corrects the arithmetic expectation, adds a no-moving-GPS test, and makes active time unavailable rather than reporting a measured zero when no qualifying movement interval exists. Full CI run [#46048498810](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/46048498810) is in progress; no result is claimed yet.
+
+### Android, Web Hub and shared calculation engine
+
+- PR #137 Android head d5edab346eb9a00de7d02407fe501c8193a655c2, run [#45840866819](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45840866819): 25 explicit source-safeguard PASS lines, 6/6 JVM unit tests passed, debug APK build succeeded. Artifact app-debug.apk is 29,594,252 bytes; ZIP integrity check passed; SHA-256 151324f835c36d165d51a4d732ce8eb2735d27f9df1d5ebb57598e3c87f6c8a2. No emulator or physical-device installation was performed. This is a debug APK, not a release-signed APK.
+- PR #131 shared JavaScript activity engine head 37b9866b13bcedc99fd0cbb1fbaf0cef7f8b8f95, run [#45945165684](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45945165684): Node 22 syntax check and engine regression script passed; the workflow does not emit a test count. The engine is not yet wired into the iOS or Android tracker, so the cross-platform metric contract is not complete.
+- PR #157 desktop Web Hub head 186708706f7ca0956e7d12571ab1ec5db3ac9bc2, run [#45976721881](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45976721881): 22 explicit PASS lines, but the dedicated desktop Web Hub browser smoke failed with “Responsive hero is missing”. Desktop Web Hub is not release-verified.
+- PR #158 head e157d58a79a411a6223a684ed967fceee21bcfdb: Web release run [#46025120481](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/46025120481) passed with 33 explicit PASS lines. Its iOS run [#46025120477](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/46025120477) was cancelled before native validation. PR #138 Web Hub history escaping run [#45839703732](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45839703732) passed.
+
+### Live Supabase security audit — read-only
+
+- Connected project crarbbsvcczwmtvxyrxo is ACTIVE on PostgreSQL 17.11. The live migration history contains 22 migrations, latest 20261113200433; the November 26–27 privilege-hardening migrations are not applied.
+- All 6 public tables currently have RLS enabled and 3–4 policies each. That does not compensate for the table grants below.
+- daily_action_progress currently grants anon SELECT/INSERT/UPDATE/DELETE/TRUNCATE. authenticated has SELECT/INSERT/UPDATE/DELETE/TRUNCATE/REFERENCES/TRIGGER/MAINTAIN on that table.
+- On the other 5 public tables, anon has no table-level privileges, but authenticated has CRUD plus MAINTAIN.
+- Current default ACLs for both postgres and supabase_admin grant anon and authenticated broad table privileges (CRUD, TRUNCATE, REFERENCES, TRIGGER, MAINTAIN), sequence USAGE/SELECT/UPDATE and function EXECUTE for future public-schema objects.
+- Supabase security advisor reports leaked-password protection is disabled.
+- PR #144 isolated PostgreSQL 17 grant-regression workflow [#45891894462](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45891894462) passed, but no migration or manual supabase_admin script has been applied to the live project. Live privilege hardening remains blocked on owner-approved migration execution and re-audit; leaked-password protection must also be enabled in Auth settings.
+
+### Gap ledger — current authoritative status
+
+| Product area | Status | Evidence / remaining gap |
+|---|---|---|
+| iOS five-tab shell and Activity viewport | Verified in simulator, with Home post-scroll visual discrepancy | 12 UI tests pass on PR #160; Activity screenshot is full-height. Home screenshots show dock/content placement inconsistency after scrolling. |
+| iOS local activity save/recovery | Verified in simulator tests | Finish/Save/recovery UI and persistence regression pass; no physical GPS or HealthKit device evidence. |
+| iOS HealthKit and background GPS | Implemented-but-unverified | Source entitlements and safeguards pass; no signed iPhone install, real HealthKit permission/export or background GPS session test. |
+| Android tracker and Health Connect | Implemented-but-unverified | Debug APK and 6 JVM tests pass; no emulator/device install, Health Connect permission/data test or release signing. |
+| Web Hub mobile | Verified by automated checks | PR #158 Web workflow passes; production account sync and two-account behavior remain unverified. |
+| Web Hub desktop | Implemented-but-unverified / failing | PR #157 desktop browser smoke fails the responsive-hero assertion. |
+| Auth and onboarding | Implemented-but-unverified | Local-only path and welcome UI are tested; live account creation, email verification, sign-in and recovery are not device/account verified. |
+| Goals, purpose and Guru | Verified locally; cloud/AI integration missing | Goal-purpose-emotion-next-action unit/UI flows pass locally; no verified cloud sync or production AI service. |
+| Missions, Community, Profile, Notifications | Partial / implemented-but-unverified | Missions remain a limited local experience; Community and Notifications are gated; Profile photo is local; Profile bottom-content reachability is pending PR #161 CI. |
+| Shared metrics engine | Implemented-but-unverified | PR #131 JavaScript engine tests pass; PR #162 native engine remains under CI and is not integrated into live Activity UI. |
+| Shared backend, sync and security | Blocked for production | Live grant/default-ACL exposure and disabled leaked-password protection remain; no live migration or two-account staging acceptance. |
+| Release installers and deployment | Blocked / missing | iOS artifact is unsigned; Android artifact is debug-only; signed installers, physical-device acceptance and production deployment are not complete. |
+
+### Required owner actions and next engineering actions
+
+1. Provide an iOS signing route: Apple Developer Team/certificate and provisioning profile with the required HealthKit entitlement, or explicitly accept a temporary personal sideload route. Without this, an unsigned IPA cannot be installed directly and permanently.
+2. Provide/authorize an Android release keystore and signing configuration; the current APK is debug-only.
+3. Authorize a controlled Supabase privilege-hardening window. Apply the reviewed migration stack and the supabase_admin default-privilege script under an authorized admin role, enable leaked-password protection, then re-query grants and run authenticated/anonymous RLS tests. No production change will be made without this authorization.
+4. Finish PR #161 and #162 full CI; inspect their exact-head logs, xcresult, screenshots and artifacts.
+5. Add a Home post-scroll/tab-return dock geometry test, resolve the Home screenshot discrepancy and investigate the invalid-frame runtime warning before calling the Home shell accepted.
+6. Integrate one canonical metric contract across iOS, Android and Web Hub; wire distance/active-time/calorie results into Activity only after measured-vs-estimated provenance and profile height/weight inputs are explicit.
+7. Run physical iPhone and Android acceptance for GPS, background tracking, HealthKit/Health Connect, save/recovery and the Fast-track wearable path. No such physical-device result is claimed in this checkpoint.
+
+**Release verdict:** No complete, directly installable iOS IPA or release Android APK is verified at this checkpoint. The available iOS artifact is unsigned; the available Android artifact is debug-only. Do not label either as the finished release.
+
+## Previous engineering branches and CI snapshot (superseded by Run 5)
 
 This snapshot supersedes the older "current" branch and run statements retained in the historical sections below. All listed PRs remain open/draft; no PR was merged.
 
