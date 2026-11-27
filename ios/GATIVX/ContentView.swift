@@ -1814,6 +1814,23 @@ struct ContentView: View {
             Section("Apple Health") {
                 Label(health.hasRequestedAccess ? "Connection requested" : "Not connected", systemImage: "heart.text.square")
                 Text(health.statusMessage).font(.caption).foregroundStyle(.secondary)
+                Button {
+                    health.refreshOnForeground()
+                } label: {
+                    Label("Refresh Apple Health readings", systemImage: "arrow.clockwise")
+                }
+                .disabled(!health.isAvailable || health.isRefreshing)
+                if let refreshed = health.lastRefresh {
+                    Text("Last successful step refresh: \(refreshed.formatted(date: .abbreviated, time: .shortened))")
+                        .font(.caption2).foregroundStyle(.secondary)
+                }
+                if health.hasRequestedAccess &&
+                    health.todayActiveEnergyKcal == nil &&
+                    health.todayExerciseMinutes == nil &&
+                    health.todaySteps == nil {
+                    Text("No readable Health measurements have arrived yet. In Apple Health, open Profile → Apps and Services → GATIVX and enable the required read categories (Active Energy, Exercise Minutes and Steps). Apple does not tell apps whether a read permission was denied, so GATIVX cannot distinguish disabled access from no samples.")
+                        .font(.caption2).foregroundStyle(.orange)
+                }
                 if !health.isWorkoutOutboxReadable {
                     Text("Apple Health workout export queue unreadable. Pending export count is unknown; local activity history remains saved.")
                         .font(.caption).foregroundStyle(.red)
@@ -1881,9 +1898,12 @@ struct ContentView: View {
             HStack(spacing: 12) {
                 ZStack {
                     Circle().stroke(tint.opacity(0.16), lineWidth: 9)
-                    Circle().trim(from: 0, to: min(Double(value ?? 0) / Double(max(goal, 1)), 1))
-                        .stroke(tint, style: StrokeStyle(lineWidth: 9, lineCap: .round)).rotationEffect(.degrees(-90))
-                    Image(systemName: symbol).font(.title3.weight(.bold)).foregroundStyle(tint)
+                    if let value {
+                        Circle().trim(from: 0, to: min(Double(max(value, 0)) / Double(max(goal, 1)), 1))
+                            .stroke(tint, style: StrokeStyle(lineWidth: 9, lineCap: .round)).rotationEffect(.degrees(-90))
+                    }
+                    Image(systemName: symbol).font(.title3.weight(.bold))
+                        .foregroundStyle(value == nil ? .secondary : tint)
                 }.frame(width: 58, height: 58)
                 VStack(alignment: .leading, spacing: 3) {
                     HStack(alignment: .firstTextBaseline, spacing: 3) {
@@ -1891,8 +1911,19 @@ struct ContentView: View {
                         Text(unit).font(.caption).foregroundStyle(.secondary)
                     }
                     Text("Goal: \(goal) \(unit)").font(.caption2).foregroundStyle(.secondary)
-                    Text(value == nil ? "Waiting for measured data" : "\(Int(min(Double(value ?? 0) / Double(max(goal, 1)), 1) * 100))% of goal")
-                        .font(.caption2.weight(.semibold)).foregroundStyle(tint)
+                    if let value {
+                        let achieved = max(value, 0)
+                        let remaining = max(goal - achieved, 0)
+                        Text(achieved >= goal
+                             ? "Daily target achieved · \(achieved - goal) \(unit) above goal"
+                             : "\(remaining) \(unit) to daily target")
+                            .font(.caption2.weight(.semibold)).foregroundStyle(tint)
+                        Text("\(Int(Double(achieved) / Double(max(goal, 1)) * 100))% of daily target")
+                            .font(.caption2).foregroundStyle(.secondary)
+                    } else {
+                        Text("Waiting for measured data")
+                            .font(.caption2.weight(.semibold)).foregroundStyle(.secondary)
+                    }
                 }
             }
             Text(explanation).font(.caption2).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
