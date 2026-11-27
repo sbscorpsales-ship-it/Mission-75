@@ -4167,3 +4167,100 @@ Implementation:
 - No PR was merged, no force push was made, PR #107 remains untouched, PR #112 remains unmerged, and no production Auth/database settings or deployments were changed.
 - Next: poll run #45957821065; inspect the full XCTest result/log and screenshots. If it fails, fix only the actual defect on the same isolated branch and rerun the full suite. If it passes, verify exact counts and the saved-row screenshot/xcresult before updating the ledger to simulator-verified.
 - Continue to treat physical iPhone HealthKit/background GPS, Android Health Connect, production auth email, database hardening, signing and deployment as separate acceptance gates.
+
+
+---
+
+## Checkpoint 13 — 2026-11-27 13:51 IST (07:21–08:25 UTC evidence window)
+
+### Repository snapshot
+
+- Default branch `main`: `143889db3e72540fb478b76c486082f45395e9bd`.
+- PR #136 remains open/draft at exact head `31e5b70d85537113e74dd003d06b3ae95ba323f4`.
+- PR #152 remains open/draft at `3d5221ed36b180436f81d5c00580f93dea820aa7`.
+- PR #155 remains open/draft at `630e98b49f8cfaea4b6e584bfb56a2cddb5ed790`; its latest observed run #45957821065 is attempt 2 and currently in progress.
+- PR #156 is a new open/draft follow-up at `9d16bd2d178cea9a5297776bc9d3f4b2d6274cfd`, based on PR #155's exact head. Its run #45965326550 is in progress; no result is claimed.
+- PR #107 remains untouched at `c19bdbd307df7048cefd86bd3e6064ac4f4e3042`.
+- PR #112 remains open and unmerged. No PR was merged and no production deployment/database mutation was made.
+
+### PR #136 exact-head verification
+
+[Run #45847572105](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45847572105), attempt 3, exact head `31e5b70d85537113e74dd003d06b3ae95ba323f4`:
+
+- Unit tests: 76 passed, 0 failed.
+- UI tests: 9 executed, 8 passed, 1 failed, 0 cancelled.
+- Tracking/source safeguards: 121 passed, 0 failed.
+- The failing test was `testDashboardFillsDeviceViewportAndExposesAllFiveTabs`; the dock accessibility frame measured 113.0625 pt against the required maximum of 76 pt.
+- Simulator build and unsigned Release build succeeded. IPA ZIP integrity succeeded, but this exact artifact's Info.plist lacked `UILaunchScreen`; it was unsigned and had no provisioning profile.
+- This exact PR head remains failed. Do not substitute descendant evidence for it.
+
+### Later simulator baseline
+
+[PR #152 run #45933957530](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45933957530), head `3d5221ed36b180436f81d5c00580f93dea820aa7`:
+
+- Unit tests: 76 passed, 0 failed.
+- UI tests: 10 passed, 0 failed, 0 cancelled.
+- Tracking safeguards: 121 passed, 0 failed.
+- Simulator build, unsigned Release build, launch-screen metadata check, IPA ZIP integrity and bundle identity/version checks passed.
+- The IPA is still unsigned. This is simulator/packaging evidence only, not an installable iPhone build.
+- PR #152 is 23 commits ahead and 0 behind PR #136's head; it is a later descendant, not a pass on PR #136 itself.
+
+### PR #155 first attempt: actual UI evidence and root cause
+
+[Run #45957821065](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45957821065), attempt 1, head `630e98b49f8cfaea4b6e584bfb56a2cddb5ed790`:
+
+- Unit tests: 76 passed, 0 failed, 0 cancelled.
+- UI tests: 11 executed, 9 passed, 2 assertion failures, 0 cancelled. Both assertions were in the new Finish & Save test, which failed before the relaunch/recovery assertions could run.
+- Tracking safeguards: 120 passed, 1 failed. The failed check was `Finish & Save clears the GPS draft only after queue acceptance`.
+- Simulator build passed.
+- Unsigned Release build passed.
+- Unsigned IPA packaging/integrity, launch-screen metadata, bundle identifier/version and artifact upload passed.
+- Artifacts uploaded: XCTest result bundle ID `15179874514`; diagnostics ID `15180940892`; simulator build ID `15180203120`; unsigned IPA ID `15181075717`.
+
+The downloaded diagnostics prove the activity row was rendered with the expected visible content (`Walking`, `123` steps, `0.00 km`, `0:01`). The row's actual accessibility identifier was the literal string `gativx-saved-activity-\\(item.id.uuidString.lowercased())`, because the Swift interpolation was double-escaped. The test searched for the UUID-specific identifier and therefore failed to locate a row that was already visible. This is an accessibility identity defect; it is not evidence that the local history write failed. However, because the test stopped before termination/relaunch, durable relaunch recovery is still unverified.
+
+The tracking safeguard failure came from the DEBUG-only simulated test path clearing the GPS draft outside the production HealthKit queue-acceptance branch. The test path did not start GPS, so it had no route draft to clear.
+
+### PR #156 corrective implementation
+
+New isolated branch: `fix/gativx-finish-save-ui-evidence-20261127`.
+
+Commit: `9d16bd2d178cea9a5297776bc9d3f4b2d6274cfd`.
+
+Files changed:
+- `ios/GATIVX/ContentView.swift` (13 additions, 11 deletions).
+
+Changes:
+- Correct the saved-activity accessibility identifier to interpolate the stable session UUID.
+- In the explicit DEBUG-only simulated session, do not start/stop the GPS recorder or clear a non-existent test GPS draft.
+- Keep production GPS draft clearing exclusively inside the `if healthExportQueued` acceptance branch.
+- No production sensor, HealthKit or approved Design C behavior was changed.
+
+PR #156 is a draft stacked directly on PR #155's exact head. Run #45965326550 is in progress. No pass/fail/cancelled counts are available yet. PR #155's attempt 2 is also still in progress; do not infer its result from attempt 1.
+
+### Gap ledger update
+
+| Area | Status | Evidence / next gate |
+|---|---|---|
+| PR #136 exact-head navigation/dock | implemented-but-unverified / failed | Exact run has 1 UI failure: dock 113.0625 pt > 76 pt. PR #152 descendant passes; do not relabel PR #136. |
+| Five destinations, dock <=76 pt, full-screen Activity, root-hosted Profile picker, Guru keyboard | verified (simulator descendant only) | PR #152: 10/10 UI tests; no physical iPhone layout claim. |
+| Finish & Save local row rendering | verified (simulator, first attempt) | Diagnostics show saved Walking/123 row; accessibility identifier was literal and prevented test query. |
+| Finish & Save relaunch recovery | implemented-but-unverified | PR #155 test did not reach relaunch; PR #156 corrects identifier and test-only GPS handling, CI pending. |
+| Tracking/source safeguards on PR #155 first attempt | failed | 120 passed, 1 failed; PR #156 removes test-only early draft clear while preserving production queue gate. |
+| HealthKit queue/export | implemented-but-unverified | Unit/source coverage exists; physical iPhone permission, workout write and background delivery remain unverified. |
+| iPhone pedometer/background GPS | implemented-but-unverified | Simulator/source checks only; no physical iPhone or locked-screen evidence. |
+| Android / Health Connect | implemented-but-unverified | Prior source/JVM/Debug APK evidence only; no physical Android acceptance. |
+| Web Hub duplicate-signup/password recovery | implemented-but-unverified | PR #153 browser CI passed; live reset email, redirect allowlist and production deployment remain unverified. |
+| Missions lifecycle, Community feed/moderation, push notifications | missing | Current experiences remain starter/gated/inactive. |
+| Profile photo cross-device sync | missing | Local picker exists; cloud delivery is not implemented/verified. |
+| Supabase least-privilege/default ACLs and leaked-password protection | blocked | Requires authorized project owner/admin action and post-change verification. |
+| Signed iOS install | blocked | No signing identity/provisioning profile; inspected IPA artifacts are unsigned. |
+| Android signed release and production Web deployment | blocked | No device/signing/deployment evidence. |
+| GitHub branch protection | blocked | Repository API reports `main.protected=false`; owner/admin action required. |
+
+### Next action
+
+1. Poll PR #155 attempt 2 and PR #156 CI; inspect the exact job logs and test-result artifacts.
+2. If PR #156 passes, verify the saved-row accessibility identifier and the same UUID after app relaunch in the UI result evidence before changing the relaunch-recovery ledger status.
+3. If it fails, fix the observed defect only and rerun the complete serial unit/UI suite, all 121 tracking safeguards, simulator build, unsigned Release build and IPA integrity checks.
+4. Continue to keep PR #107 untouched, PR #112 unmerged, and all other PRs unmerged. Keep physical iPhone, Android device, production Auth/database, signing and deployment gates explicitly separate.
