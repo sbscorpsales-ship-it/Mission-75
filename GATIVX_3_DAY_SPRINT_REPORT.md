@@ -4714,3 +4714,37 @@ PR #156 is open/draft/unmerged at head `9d16bd2d178cea9a5297776bc9d3f4b2d6274cfd
 - **Application source changed:** none. No application code or new CI progress this hour. The approved HTML source bytes were not rediscoverable in this run, the full data contract requires deliberate mapping, and production grants/Auth settings are not authorized for mutation. Changing the unapproved PR #157 layout or guessing at HealthKit/device behavior would be unsafe.
 - **Tests for this documentation-only update:** none. All test counts above are from exact workflow logs. No tests were removed, skipped or weakened.
 - **Next action:** retain PR #156 as the passing simulator baseline without merging; complete physical iPhone HealthKit + GPS acceptance; reattach the exact approved Web Hub HTML if needed; wire the omitted daily-log/profile fields and the full feature set to the existing Supabase schema with account-isolation/idempotency tests; reconcile production migration history and obtain admin authorization before security changes. Keep PR #107 untouched, PR #112 unmerged and all PRs unmerged.
+
+
+## Checkpoint 18 — 27 November 2026, 19:01 IST (13:31 UTC)
+
+### New cross-platform authentication defect found and isolated
+
+- Read-only Supabase key listing for live project `mission75-cloud` returned one enabled default publishable key. The Web Hub `app-v2.html` uses that enabled key.
+- The default `main` native `ios/GATIVX/Cloud/SupabaseRESTClient.swift` had a one-character typo in its publishable key. The iOS source on PR #136 and the currently passing PR #156 descendant already has the correct key. Therefore the user's currently installed PR #156 IPA is not affected by the stale `main` typo; a future build directly from uncorrected main would be.
+- Created isolated draft **PR #158**: [Fix native Supabase publishable-key mismatch and guard shared auth](https://github.com/sbscorpsales-ship-it/Mission-75/pull/158).
+  - Branch: `fix/gativx-native-supabase-key-contract-20261127`
+  - Head: `2ab96a56a273193bd0916a775bf692a8037e740d` (4 commits ahead of main, 0 behind).
+  - Files changed: `ios/GATIVX/Cloud/SupabaseRESTClient.swift` (one-line key correction) and `scripts/check-web.mjs` (39-line static cross-client contract test).
+  - The test checks that Web and iOS project URLs and publishable keys match, that Web sync table paths remain present, and that native RPC names have checked-in migration sources.
+  - No PR merged, no database mutation and no production setting changed.
+
+### PR #158 CI — exact head
+
+- Web run [#46007811886 / run 449](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/46007811886) completed **failure** at `Validate GATIVX web release`.
+- The new checks passed for same project URL, same publishable key, and Web paths for `profiles`, `daily_logs`, `motion_daily_steps` and `walk_sessions`.
+- Four native RPC-to-migration checks passed. One correctly failed: `sync_activity_session_steps` exists as a live public database routine and is called by native source, but its migration source is absent from main and the current PR #156 branch. Browser smoke did not run because the release-gate step stopped at this failure.
+- This is not a reason to remove or bypass the assertion. It independently reproduces the known migration-history defect: 22 applied live versions versus 10 checked-in main migration files. Keep PR #158 draft until the missing migration source is safely reconciled.
+- iOS run [#46007811942 / run 698](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/46007811942) was still in progress at this checkpoint. Source safeguards passed; Xcode project generation and scheme validation passed; simulator build was in progress. No final build/IPA result is claimed yet.
+
+### Corrected cross-platform status
+
+- Same-account authentication is source-wired for the currently installed PR #156 native branch and the current Web `app-v2.html`: both point to the same active Supabase project and the same enabled publishable key. This is stronger evidence than the earlier generic “not connected” description, but still not a live user-session acceptance test.
+- Core shared readings and GPS paths are source-wired through the existing daily-log, motion-step and walk-session tables/RPCs. The full Web Hub feature set and full field parity remain incomplete; see Checkpoint 17. Do not claim live two-device sync until a real owner account is signed into both clients and a measured reading plus GPS session are observed on both sides.
+
+### Work, test and next action
+
+- **Files changed in this checkpoint:** none in this report commit; application changes are isolated on PR #158 as listed above.
+- **Verified code change:** default-main native publishable-key typo corrected on PR #158; static contract test added. PR remains draft/unmerged.
+- **CI:** Web run 449 failed on the intentionally strict missing-migration-source assertion; iOS run 698 pending at checkpoint time. No test was weakened or skipped.
+- **Next action:** inspect iOS run 698 to completion; restore/reconcile the missing migration source and all other migration drift before rerunning the contract check; keep PR #158 draft until both workflows pass. Then complete live owner-account sign-in and cross-device data/GPS verification. PR #107 remains untouched; PR #112 remains unmerged; no PR is merged.
