@@ -404,6 +404,10 @@ final class GATIVXDashboardUITests: XCTestCase {
         XCTAssertTrue(guestEntry.waitForExistence(timeout: 10))
         guestEntry.tap()
 
+        let homeDashboard = app.descendants(matching: .any)["gativx-home-dashboard"].firstMatch
+        XCTAssertTrue(homeDashboard.waitForExistence(timeout: 10),
+                      "Choosing local-only access must transition from Welcome to the member dashboard.")
+
         let bottomNavigation = app.descendants(matching: .any)["gativx-bottom-navigation"].firstMatch
         XCTAssertTrue(bottomNavigation.waitForExistence(timeout: 5))
 
@@ -421,6 +425,33 @@ final class GATIVXDashboardUITests: XCTestCase {
         XCTAssertTrue(communityScreen.waitForExistence(timeout: 10),
                       "Community must render after leaving the Missions tab.")
         XCTAssertTrue(app.descendants(matching: .any)["gativx-community-gated"].waitForExistence(timeout: 5))
+    }
+
+    func testLocalOnlyEntryPersistsAcrossRelaunch() {
+        let app = XCUIApplication()
+        launchFreshGuestApp(app)
+
+        let guestEntry = app.buttons["gativx-continue-guest"]
+        XCTAssertTrue(guestEntry.waitForExistence(timeout: 10))
+        guestEntry.tap()
+
+        let dashboard = app.descendants(matching: .any)["gativx-home-dashboard"].firstMatch
+        XCTAssertTrue(dashboard.waitForExistence(timeout: 10),
+                      "Local-only entry must open the member dashboard.")
+        XCTAssertTrue(app.buttons["gativx-tab-home"].waitForExistence(timeout: 5))
+
+        app.terminate()
+        // Remove the one-shot UI-test reset argument so the persisted guest choice
+        // is evaluated exactly as it would be on a normal subsequent app launch.
+        app.launchArguments = []
+        app.launch()
+
+        XCTAssertTrue(app.descendants(matching: .any)["gativx-home-dashboard"].waitForExistence(timeout: 10),
+                      "The explicit local-only choice must survive an app relaunch.")
+        XCTAssertTrue(app.buttons["gativx-tab-home"].waitForExistence(timeout: 5))
+        app.buttons["gativx-tab-profile"].tap()
+        XCTAssertTrue(app.descendants(matching: .any)["gativx-member-login-id"].waitForExistence(timeout: 5),
+                      "Profile must identify the member as local-only after relaunch.")
     }
 
     func testFinishSavePersistsAndRecoversActivityHistory() {
@@ -524,6 +555,25 @@ final class GATIVXDashboardUITests: XCTestCase {
                       "Profile must render when opened directly from a fresh dashboard.")
         XCTAssertTrue(app.descendants(matching: .any)["gativx-member-login-id"].waitForExistence(timeout: 5),
                       "Profile must identify the local-only member.")
+
+        // The photo picker sheet belongs to the root member shell, not the Profile
+        // navigation subtree. Verify it opens and dismisses from the Profile screen.
+        let photoPickerOpen = app.buttons["gativx-profile-photo-picker-open"]
+        XCTAssertTrue(photoPickerOpen.waitForExistence(timeout: 5))
+        photoPickerOpen.tap()
+        let photoPickerSheet = app.staticTexts["gativx-profile-photo-picker-sheet"]
+        XCTAssertTrue(photoPickerSheet.waitForExistence(timeout: 5),
+                      "The root-hosted member photo sheet must open from Profile.")
+        XCTAssertTrue(app.buttons["gativx-profile-photo-picker"].waitForExistence(timeout: 5),
+                      "The photo library entry point must be present in the sheet.")
+        app.buttons["gativx-profile-photo-picker-cancel"].tap()
+        let photoSheetDismissed = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "exists == false"),
+            object: photoPickerSheet
+        )
+        XCTAssertEqual(XCTWaiter.wait(for: [photoSheetDismissed], timeout: 5), .completed,
+                       "Cancelling the root-hosted photo sheet must return to Profile.")
+        XCTAssertTrue(profileScreen.exists)
 
         let screenshot = XCTAttachment(screenshot: app.screenshot())
         screenshot.name = "GATIVX-Profile-Direct-From-Home"

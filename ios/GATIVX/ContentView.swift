@@ -1872,7 +1872,10 @@ struct ContentView: View {
                     .font(.caption.weight(.semibold))
                 } else {
                     Label("Cloud account connected", systemImage: "checkmark.icloud")
-                    Button("Sign out", role: .destructive) { cloud.signOut() }
+                    Button("Sign out", role: .destructive) {
+                        cloud.signOut()
+                        localModeEntered = false
+                    }
                 }
                 Text("An account is optional. Your dashboard, step tracking and local activity history are available without signing in.")
                     .font(.caption).foregroundStyle(.secondary)
@@ -2223,8 +2226,10 @@ struct ContentView: View {
             }
         }
         .onChange(of: cloud.isSignedIn) { _, signedIn in
-            localModeEntered = signedIn
+            // A local-only choice is independent of authentication state. Do not erase
+            // it on a false auth notification; explicit Sign out clears it below.
             if signedIn {
+                localModeEntered = true
                 health.onDailyTotal = { day, total in Task { await cloud.syncSteps(date: day, steps: total) } }
                 health.onActiveEnergy = { day, total in Task { await cloud.syncActiveEnergy(date: day, kilocalories: total) } }
                 Task {

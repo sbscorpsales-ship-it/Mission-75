@@ -2,21 +2,27 @@ name: GATIVX web release checks
 
 on:
   push:
-    branches: ["main", "gativx/dashboard-connected-data-v2", "fix/gativx/**"]
+    branches: ["main", "gativx/dashboard-connected-data-v2", "fix/gativx/**", "fix/gativx-*"]
     paths:
       - "index.html"
       - "app-v2.html"
       - "sw.js"
       - "scripts/check-web.mjs"
       - "scripts/browser-smoke.mjs"
+      - "ios/GATIVX/Cloud/SupabaseRESTClient.swift"
+      - "supabase/migrations/**"
+      - "supabase/tests/**"
       - ".github/workflows/web-checks.yml"
   pull_request:
-    branches: [main]
+    branches: ["main", "fix/gativx/**", "fix/gativx-*"]
     paths:
       - "index.html"
       - "app-v2.html"
       - "scripts/check-web.mjs"
       - "scripts/browser-smoke.mjs"
+      - "ios/GATIVX/Cloud/SupabaseRESTClient.swift"
+      - "supabase/migrations/**"
+      - "supabase/tests/**"
       - ".github/workflows/web-checks.yml"
   workflow_dispatch:
 
@@ -41,3 +47,51 @@ jobs:
         run: npx playwright install chromium
       - name: Run mobile browser smoke test
         run: node scripts/browser-smoke.mjs
+
+  activity-session-migration-regression:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      PGHOST: localhost
+      PGPORT: 5432
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      PGDATABASE: postgres
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+      - name: Verify PostgreSQL 17 service
+        run: |
+          for attempt in {1..30}; do
+            if pg_isready; then
+              psql --no-psqlrc -v ON_ERROR_STOP=1 -c "SHOW server_version;"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "PostgreSQL service did not become ready" >&2
+          exit 1
+      - name: Create isolated Supabase auth fixture
+        run: psql --no-psqlrc -v ON_ERROR_STOP=1 -f supabase/tests/fixtures/gativx_activity_session_migration_setup.sql
+      - name: Apply activity-session migration
+        run: psql --no-psqlrc -v ON_ERROR_STOP=1 -f supabase/migrations/20261106090900_activity_session_step_sync.sql
+      - name: Restrict activity-session RPC to authenticated members
+        run: psql --no-psqlrc -v ON_ERROR_STOP=1 -f supabase/migrations/20261106090921_restrict_activity_session_rpc_to_authenticated.sql
+      - name: Verify RLS, owner isolation, idempotency and invalid-input rejection
+        run: psql --no-psqlrc -v ON_ERROR_STOP=1 -f supabase/tests/gativx_activity_session_migration.sql
