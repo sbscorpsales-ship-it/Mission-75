@@ -721,7 +721,9 @@ struct ContentView: View {
             }
             .padding(.horizontal, horizontalInset)
             .padding(.top, 10)
-            .padding(.bottom, 28)
+            // Keep the final Home card scrollable fully above the persistent dock.
+            // The extra runway is content-only; it does not resize the visible dashboard.
+            .padding(.bottom, 56)
             .frame(width: width, alignment: .leading)
         }
         
