@@ -139,8 +139,13 @@ body[data-theme="light"] .mission .eyebrow{color:#294b30}
  <div class="gpsbuttons" style="grid-template-columns:repeat(2,minmax(0,1fr))">
   <button class="primarybtn" id="cloudSignIn" type="button">Sign in</button>
   <button class="secondary" id="cloudSignUp" type="button">Create account</button>
+  <button class="secondary" id="cloudForgotPassword" type="button">Forgot password?</button>
   <button class="secondary" id="cloudSyncNow" type="button" style="display:none">Sync now</button>
   <button class="secondary" id="cloudSignOut" type="button" style="display:none">Sign out</button>
+ </div>
+ <div id="cloudPasswordRecovery" style="display:none;margin-top:12px">
+  <label class="wide">New password<input id="cloudNewPassword" type="password" autocomplete="new-password" placeholder="Choose a new password"></label>
+  <button class="primarybtn" id="cloudSaveNewPassword" type="button" style="margin-top:10px;width:100%">Save new password</button>
  </div>
  <p class="notice">Your GATIVX v2 journal and saved walks sync only after you sign in. Existing legacy records are not imported, changed or deleted.</p>
 </article>
@@ -414,24 +419,45 @@ async function cloudSync(){
 async function cloudAuth(mode){
  if(!cloudClient){cloudMsg('Cloud service is still loading. Please try again shortly.','CONNECTING');return}
  const email=$('cloudEmail').value.trim(),password=$('cloudPassword').value,name=$('cloudName').value.trim();
- if(!email||!password){cloudMsg('Enter your email and password first.','DETAILS NEEDED');return}
+ if(!email){cloudMsg('Enter your email address first.','DETAILS NEEDED');return}
+ if(mode==='forgot'){
+  cloudMsg('Requesting a password reset email…','PASSWORD RECOVERY');
+  const reset=await cloudClient.auth.resetPasswordForEmail(email,{redirectTo:window.location.origin+window.location.pathname});
+  if(reset.error){cloudMsg('We could not send the reset email: '+reset.error.message,'PASSWORD RESET ISSUE');return}
+  cloudMsg('If an account exists for this email, a password reset link has been sent. Check Inbox, Spam and Promotions. Open the link on this device to choose a new password.','CHECK YOUR EMAIL');return;
+ }
+ if(!password){cloudMsg('Enter your password first.','DETAILS NEEDED');return}
  if(password.length<6){cloudMsg('Use a password with at least 6 characters.','DETAILS NEEDED');return}
  if(mode==='signup'&&!name){cloudMsg('Enter your name before creating the account.','DETAILS NEEDED');return}
  cloudMsg(mode==='signup'?'Creating your account…':'Signing in…','AUTHENTICATING');
  const result=mode==='signup'?await cloudClient.auth.signUp({email,password,options:{data:{display_name:name}}}):await cloudClient.auth.signInWithPassword({email,password});
  if(result.error){cloudMsg(result.error.message,'SIGN-IN ISSUE');return}
- if(mode==='signup'&&!result.data.session){cloudMsg('Account created. Confirm your email, then sign in here.','CONFIRM EMAIL');return}
+ if(mode==='signup'&&Array.isArray(result.data.user?.identities)&&result.data.user.identities.length===0){
+  signupReady=false;$('cloudNameWrap').style.display='none';$('cloudSignUp').textContent='Create account';
+  cloudMsg('This email is already registered. Please sign in. If you forgot your password, tap “Forgot password?” and follow the reset email.','EMAIL ALREADY REGISTERED');return;
+ }
+ if(mode==='signup'&&!result.data.session){cloudMsg('Account created. Please check your email for the confirmation link, then return here and sign in.','CONFIRM YOUR EMAIL');return}
  activateCloudUser(result.data.user);applyPendingShortcutToActiveAccount();cloudUi();await cloudSync();
 }
 $('cloudSignIn').onclick=()=>cloudAuth('signin');
 $('cloudSignUp').onclick=()=>{if(!signupReady){signupReady=true;$('cloudNameWrap').style.display='block';$('cloudSignUp').textContent='Confirm account creation';cloudMsg('Enter your name, then confirm account creation.','CREATE ACCOUNT');return}cloudAuth('signup')};
+$('cloudForgotPassword').onclick=()=>cloudAuth('forgot');
+$('cloudSaveNewPassword').onclick=async()=>{
+ if(!cloudClient){cloudMsg('Cloud service is still loading. Please try again shortly.','CONNECTING');return}
+ const next=$('cloudNewPassword').value;
+ if(next.length<12||next.length>64){cloudMsg('Choose a password between 12 and 64 characters.','PASSWORD DETAILS NEEDED');return}
+ if(!/[a-z]/.test(next)||!/[A-Z]/.test(next)||!/[0-9]/.test(next)||!/[^A-Za-z0-9]/.test(next)){cloudMsg('Use uppercase and lowercase letters, a number and a special character.','PASSWORD DETAILS NEEDED');return}
+ const changed=await cloudClient.auth.updateUser({password:next});
+ if(changed.error){cloudMsg('Password could not be updated: '+changed.error.message,'PASSWORD UPDATE ISSUE');return}
+ $('cloudPasswordRecovery').style.display='none';$('cloudNewPassword').value='';cloudMsg('Your password has been updated. You can now sign in with your new password.','PASSWORD UPDATED');
+};
 $('cloudSyncNow').onclick=()=>cloudSync();
 $('cloudSignOut').onclick=async()=>{const r=await cloudClient.auth.signOut();if(r.error){cloudMsg(r.error.message,'SIGN-OUT ISSUE');return}activateCloudUser(null);cloudUi()};
 function initCloud(){
  if(!cloudClient&&window.supabase&&window.supabase.createClient)cloudClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
  if(!cloudClient)return;
  cloudClient.auth.getSession().then(r=>{if(r.error)throw r.error;activateCloudUser(r.data.session&&r.data.session.user||null);cloudUi();applyPendingShortcutToActiveAccount();if(cloudUser)cloudSync()}).catch(e=>cloudMsg(e.message||'Could not restore your account session.','SESSION ISSUE'));
- cloudClient.auth.onAuthStateChange((event,session)=>{activateCloudUser(session&&session.user||null);cloudUi();if(cloudUser&&event==='SIGNED_IN'){applyPendingShortcutToActiveAccount();setTimeout(cloudSync,0)}});
+ cloudClient.auth.onAuthStateChange((event,session)=>{activateCloudUser(session&&session.user||null);cloudUi();if(event==='PASSWORD_RECOVERY'){$('cloudPasswordRecovery').style.display='block';cloudMsg('Choose a new password to finish recovering your account.','RESET YOUR PASSWORD')}if(cloudUser&&event==='SIGNED_IN'){applyPendingShortcutToActiveAccount();setTimeout(cloudSync,0)}});
 }
 initCloud();
 async function refreshPedometerFromCloud(){if(!cloudClient||!cloudUser)return;const userId=cloudUser.id,day=date();try{const [motion,daily]=await Promise.all([cloudClient.from('motion_daily_steps').select('log_date,steps,distance_m,measured_at').eq('user_id',userId),cloudClient.from('daily_logs').select('log_date,steps,steps_source,steps_updated_at,active_energy_kcal,active_energy_source,active_energy_updated_at,walking_km,water_ml,protein_g,weight_kg').eq('user_id',userId)]);if(motion.error)throw motion.error;if(daily.error)throw daily.error;if(!cloudUser||cloudUser.id!==userId||date()!==day)return;motionDaily={};(motion.data||[]).forEach(item=>{const key=String(item.log_date);if(validDay(key))motionDaily[key]={steps:Number(item.steps)||0,distanceMeters:item.distance_m==null?null:Number(item.distance_m),measuredAt:item.measured_at||null}});(daily.data||[]).forEach(item=>{const key=String(item.log_date);if(!validDay(key))return;const remote={steps:item.steps==null?null:Number(item.steps),stepsSource:item.steps_source||null,stepsUpdatedAt:item.steps_updated_at||null,activeEnergyKcal:item.active_energy_kcal==null?null:Number(item.active_energy_kcal),activeEnergySource:item.active_energy_source||null,activeEnergyUpdatedAt:item.active_energy_updated_at||null,distance:item.walking_km==null?null:Number(item.walking_km),water:item.water_ml==null?null:Number(item.water_ml),protein:item.protein_g==null?null:Number(item.protein_g),weight:item.weight_kg==null?null:Number(item.weight_kg)};state.entries[key]=mergeCloudDaily(remote,state.entries[key]||{})});persist();render()}catch(error){console.warn('GATIVX measured activity refresh unavailable',error)}}
