@@ -484,6 +484,12 @@ final class GATIVXDashboardUITests: XCTestCase {
                       "The saved history row must retain the selected activity type.")
         XCTAssertTrue(savedRow.label.contains("123"),
                       "The saved history row must retain the deterministic DEBUG test step reading.")
+        XCTAssertTrue(savedRow.label.contains("Distance —"),
+                      "Pedometer steps alone must not be presented as a measured distance without profile height.")
+        XCTAssertTrue(savedRow.label.contains("Moving time —"),
+                      "Pedometer-only sessions must not invent active time from elapsed duration.")
+        XCTAssertTrue(savedRow.label.contains("Estimated active calories —"),
+                      "Estimated calories must remain unavailable without GPS moving time and a valid profile weight.")
 
         // Relaunch the app to prove the row is read back from durable local history,
         // not merely retained in ContentView state.
@@ -555,6 +561,13 @@ final class GATIVXDashboardUITests: XCTestCase {
                       "Profile must render when opened directly from a fresh dashboard.")
         XCTAssertTrue(app.descendants(matching: .any)["gativx-member-login-id"].waitForExistence(timeout: 5),
                       "Profile must identify the local-only member.")
+
+        XCTAssertTrue(app.textFields["gativx-profile-weight-kg"].exists,
+                      "Members must be able to provide an optional weight for clearly labelled estimates.")
+        XCTAssertTrue(app.textFields["gativx-profile-height-cm"].exists,
+                      "Members must be able to provide an optional height for the stride-distance fallback.")
+        XCTAssertTrue(app.staticTexts["gativx-profile-metrics-local-only"].exists,
+                      "Body metrics used for estimates must be identified as local-only and not uploaded.")
 
         // The photo picker sheet belongs to the root member shell, not the Profile
         // navigation subtree. Verify it opens and dismisses from the Profile screen.
@@ -748,6 +761,14 @@ final class GATIVXDashboardUITests: XCTestCase {
 
         let activityScreen = app.scrollViews["gativx-activity-screen"]
         XCTAssertTrue(activityScreen.waitForExistence(timeout: 10))
+        for identifier in [
+            "gativx-activity-distance-metric",
+            "gativx-activity-moving-time-metric",
+            "gativx-activity-active-calories-metric"
+        ] {
+            XCTAssertTrue(app.descendants(matching: .any)[identifier].waitForExistence(timeout: 5),
+                          "Activity must expose the \\(identifier) metric card.")
+        }
         XCTAssertGreaterThan(activityScreen.frame.width, window.frame.width * 0.95,
                              "Activity must use the full device width.")
         XCTAssertGreaterThan(activityScreen.frame.height, window.frame.height * 0.70,
