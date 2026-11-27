@@ -5488,3 +5488,39 @@ The previous note that PR #162 still used the 0.5 × weight × distance shortcut
 - Four reviewable commits listed above.
 - CI: #717/#718 cancelled due newer commits; #719 in progress on prior head; #720 pending on final head. Exact pass/fail/cancelled test counts are not yet available for the new code.
 - No physical iPhone, HealthKit, background GPS, Android device or production deployment claim.
+
+
+## 2026-11-28 02:00 IST — verified live metric data-flow gap
+
+### Why Distance / Active Time / Calories are not appearing as GATIVX-owned session metrics
+
+Reviewed the exact PR #162 head source, not only its PR description:
+
+1. The Home “TODAY'S ACTIVITY” cards read only HealthKitManager.todayWalkingRunningDistanceKm, todayExerciseMinutes, todayActiveEnergyKcal and todayAverageHeartRateBPM. The UI explicitly says: “Measured values from Apple Health. Unavailable readings are not estimated.”
+2. The Activity screen currently renders sessionSteps and GPSRouteRecorder.routeDistanceMeters. It has no live active-time or calorie value. Recent activity rows show gpsDistanceMeters and durationText (elapsed wall-clock duration), not the pedometer/stride distance fallback, moving time or estimated calories.
+3. Finish & Save creates and persists ActivitySessionRecord with only ID, activity, start/end, steps, GPS route points, pedometer distance and owner ID. It does not persist derived distance source, active moving seconds, estimated calories, Activity Points, calculation version or metric provenance.
+4. The canonical Swift engine and session-calculation methods are now committed on PR #162, but a source search confirms neither ContentView.swift nor ActivitySessionStore.swift calls them yet.
+5. No member height/weight input exists in the current ContentView.swift Profile flow. The engine correctly refuses to invent a calorie estimate without valid weight and moving-time inputs. The stride fallback also needs a valid member height.
+
+**Conclusion:** this is not primarily a missing Apple/Google permission problem. The native screen and saved-session model are not yet wired to GATIVX's own calculated metrics; the dashboard currently shows Apple Health measurements only. The formula port is now present, but it cannot display or persist results until the product adds a member-owned height/weight source, connects live GPS/pedometer inputs to the calculation, and stores the resulting values and provenance with the session. No default body mass or fabricated active time has been inserted.
+
+### Current exact-head CI
+
+- PR #162 final head: f41fb5df967358094cb70e7cd3eb86b96ceb2d03.
+- [Run #720](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/46057280800) has completed checkout, Xcode selection, XcodeGen install, project generation, scheme validation and first-run/source checks successfully. The full unit/UI suite is **in progress**; no test counts are yet available.
+- [Run #719](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/46057264922) was cancelled by the newer commit before XcodeGen/project generation completed. Its later xcodebuild “ios/GATIVX.xcodeproj does not exist” errors are consequences of cancellation before project generation, not compile failures. Do not count #719 as a test result.
+- PR #161 retry #715 is still in its full simulator test step; no Profile bottom-clearance result is yet available.
+- PR #157 exact-head web runs #465 and #466 retry are successful. The first #466 attempt's account-isolation failure remains in the intermittent-risk ledger.
+
+### Updated implementation ledger
+
+| Item | Status | Remaining work |
+|---|---|---|
+| Canonical Swift MET engine | **implemented-but-unverified** | Await #720 compile and full unit/UI result. |
+| Session calculation method | **implemented-but-unverified** | Uses GPS-derived moving time and distance; not called by UI/store. |
+| Live Activity distance / moving time / calories | **missing from UI** | Wire route/pedometer data and show measured/estimated/unavailable states without false zero. |
+| Persisted session metrics and provenance | **missing** | Add backward-compatible Codable fields for distance source, active seconds, calorie estimate, Activity Points, engine version and raw-input provenance. |
+| Member height / weight input | **missing** | Add an approved Profile/onboarding source; no arbitrary default is allowed. |
+| Home daily metric aggregation | **missing** | Aggregate GATIVX sessions when HealthKit is unavailable; prefer measured HealthKit values without summing estimates. |
+| Android equivalent engine and session persistence | **missing** | Port the same v1.1.2 constants/golden fixtures to Kotlin and wire to the Android tracker. |
+
