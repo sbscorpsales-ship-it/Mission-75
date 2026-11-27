@@ -4390,3 +4390,87 @@ The xcresult log lists seven visual attachments: Activity full viewport/fixed na
 - The 11 UI tests on PR #156 and 10 UI tests on PR #152 cover the Activity viewport, all five destination switches, the dock viewport assertion, Guru keyboard dismissal, Home/dashboard, Profile screen navigation, notifications and Welcome. Neither listed UI suite contains a PhotosUI picker open/cancel/selection interaction test.
 - The 130 passing source safeguards do verify that the Profile photo picker sheet is hosted at the root rather than inside the Profile tab. Therefore classify **root-sheet ownership as source-verified**, but classify actual PhotosUI presentation, selection, cancellation and photo persistence as **implemented-but-unverified** until an interaction test or device evidence is recorded.
 - XCTest logs record named screenshot attachments and the xcresult archives are present and ZIP-readable. The simulator screenshot pixels were not individually rendered/visually inspected in this environment; layout claims above are based on the corresponding passing UI assertions and accessibility frames, not a claim of fresh human visual review.
+
+
+## Checkpoint 15 — 2026-11-27 15:45 IST (10:15 UTC)
+
+### Repository and protected-branch state
+
+- Default branch `main` is still `143889db3e72540fb478b76c486082f45395e9bd`; latest main commit remains 2026-11-17. GitHub reports `main.protected=false`.
+- The current open-PR listing was re-read. PR #107 remains open/draft/unmerged at `c19bdbd307df7048cefd86bd3e6064ac4f4e3042`; it was not modified. PR #112 remains open/draft/unmerged at `b6c04d41dc67bd191ed0cf8966331eb5661a9887`; it was not modified.
+- No PR was merged. No production deployment or database mutation occurred. Design C and approved product decisions were not changed.
+- PR #118 is the report-only branch; this checkpoint is committed there. No application source code changed in this checkpoint.
+
+### PR #136 — exact-head QA result (not substituted)
+
+[Run #45847572105](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45847572105), attempt 3, exact head `31e5b70d85537113e74dd003d06b3ae95ba323f4`, branch `fix/gativx-single-navigation-dock-20261126`, based on PR #135 head `78a759c188644bed6f5ec893daea431031be15c9`.
+
+- XCTest total: **85 tests; 84 passed, 1 failed, 0 cancelled**.
+- Unit tests: **76 passed, 0 failed**.
+- UI tests: **9 executed; 8 passed, 1 failed, 0 cancelled**.
+- The sole failure is `testDashboardFillsDeviceViewportAndExposesAllFiveTabs`: the accessibility frame for the bottom dock measured **113.0625 pt**, exceeding the **76 pt** acceptance maximum.
+- The same exact-head UI run passed Activity full-viewport, all-five-tab switching, Guru keyboard dismissal, Profile direct navigation and the other dashboard journeys. Do not mark PR #136 itself green.
+- Tracking safeguards: **121 passed, 0 failed**.
+- iPhone Simulator build: passed. Unsigned iPhone Release build: passed. IPA packaging step: passed.
+- The downloaded nested IPA archive is structurally valid and contains an arm64 Mach-O executable (4,030,192 bytes), bundle ID `com.paramitsolutions.gativx`, version 1.0.0/build 1. The exact-head artifact does **not** contain `UILaunchScreen`; it has no embedded provisioning profile or code-signature directory and is not installable as delivered.
+- Artifacts: unsigned IPA outer artifact ID `15146711639`; xcresult `15146161829`; XCTest diagnostics `15145517291`; simulator `15145957076`.
+
+### Descendant PR #156 — current passing iOS simulator baseline
+
+PR #156 is open/draft/unmerged at head `9d16bd2d178cea9a5297776bc9d3f4b2d6274cfd`, based on PR #155 head `630e98b49f8cfaea4b6e584bfb56a2cddb5ed790`. Comparing its head to PR #136 shows **28 commits ahead, 0 behind**; it contains the PR #136 ancestry plus subsequent isolated corrections. PR #156's own change is limited to `ios/GATIVX/ContentView.swift`.
+
+[Exact-head CI run #45965326550](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45965326550) completed successfully:
+
+- XCTest total: **87 tests; 87 passed, 0 failed, 0 cancelled**.
+- Unit tests: **76 passed, 0 failed, 0 cancelled**.
+- UI tests: **11 passed, 0 failed, 0 cancelled**.
+- Tracking safeguards: **130 passed, 0 failed**.
+- Simulator build, unsigned Release build, unsigned IPA packaging, release validation and artifact uploads: all succeeded.
+- The exact passing UI cases include `testDashboardFillsDeviceViewportAndExposesAllFiveTabs`, `testActivityScreenFillsViewportAboveFixedBottomNavigation`, `testAllFiveTabsSwitchScreensFromOneNavigationDock`, `testGuruKeyboardAndDismissalFromFreshHome`, `testProfileTabRendersFromFreshDashboard`, and `testFinishSavePersistsAndRecoversActivityHistory`.
+- The dock correction uses `.background(pageBackground, ignoresSafeAreaEdges: [])` so the home-indicator safe area is painted by the root background rather than enlarging the dock's own accessibility frame. The existing strict `<= 76 pt` dock assertion remains enabled and passed.
+- The cumulative dashboard UI journey opens the Profile photo picker sheet and cancels it (test source lines 387–393 on the exact PR #156 head). The root-hosted sheet ownership is also checked by the passing source safeguard. **Photo-picker presentation and cancellation are simulator-verified; selecting a real photo and verifying persistence remain unverified.**
+- Independent IPA inspection: inner `GATIVX-unsigned.ipa` is 773,684 bytes and ZIP integrity is clean; bundle ID `com.paramitsolutions.gativx`, version 1.0.0/build 1, minimum iOS 17; `UILaunchScreen` exists as an empty dictionary; executable exists (4,056,592 bytes) with Mach-O magic `cffaedfe`. No embedded provisioning profile and no `_CodeSignature` directory. **This remains an unsigned simulator/CI package, not an installable iPhone release.**
+- Artifacts: simulator `15185035208`; xcresult `15184400989`; unsigned IPA `15184089834`; diagnostics `15183724894`.
+
+**Correction to the final clarification appended to Checkpoint 14:** the exact PR #156 UI test source does contain the Profile photo picker open/cancel interaction inside `testDashboardSectionsMetricsAndPrimaryNavigation`. The earlier sentence saying neither listed suite contains that interaction is superseded by this checkpoint. Selection/persistence is still not tested.
+
+### Android — latest verified branch evidence
+
+- PR #137 remains open/draft/unmerged at head `d5edab346eb9a00de7d02407fe501c8193a655c2`, stacked on PR #129.
+- [Run #45840866819](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45840866819) succeeded: **25 source safeguards passed, 0 failed**; **6 JVM unit tests passed, 0 failed, 0 skipped**; Gradle debug APK build succeeded.
+- Artifact `15128630240` was downloaded and independently inspected. The outer artifact is 10,307,226 bytes; embedded `app-debug.apk` is 29,594,252 bytes, ZIP integrity is clean, and it contains AndroidManifest.xml and DEX payloads. This verifies package structure only. No Android emulator or physical-device test ran; Health Connect permissions, background tracking and account sync are not device-accepted.
+
+### Web Hub — latest draft is not the approved design baseline
+
+- PR #157 remains open/draft/unmerged at head `186708706f7ca0956e7d12571ab1ec5db3ac9bc2`, based on main.
+- [Run #45976721881](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45976721881) failed in `scripts/web-hub-smoke.mjs` at the 390×844 responsive check: **“Responsive hero is missing”**. The existing mobile browser smoke checks preceding the new Web Hub test passed.
+- PR #157 adds a separate generic `web-hub.html` with a navy sidebar/orange hero. It does not integrate the member-supplied `index_near final .html` baseline. Treat PR #157 as an unapproved draft, not as the approved Web Hub implementation. Do not deploy it or substitute its layout for the supplied reference.
+- The supplied HTML remains the design/section blueprint. Its known engineering gaps remain: localStorage-only persistence, incomplete full-session GPS save metadata/recovery, simulated GPS test-point control, nonfunctional device bridge, unenforced diet window, non-history-based weight chart and unsafe member-controlled HTML insertion paths. Preserve its visual structure while fixing those behaviors and adding authenticated cloud sync.
+
+### Product gap ledger — status at this checkpoint
+
+| Area | Status | Evidence / remaining gate |
+|---|---|---|
+| iOS five-destination shell, dock <=76 pt, full-screen Activity, Guru keyboard dismissal | **verified (simulator)** | PR #156 exact-head run #45965326550; 11/11 UI tests passed. PR #136's own exact head remains failed. |
+| iOS local Finish & Save and same-session relaunch recovery | **verified (deterministic simulator path)** | PR #156 UI test verifies the saved UUID row and Walking/123 steps after terminate/relaunch. Real sensor/HealthKit path is separate. |
+| Profile root-hosted photo picker presentation and cancellation | **verified (simulator/source)** | PR #156 UI interaction plus 130 source safeguards; photo selection and persisted profile-photo reload not tested. |
+| Physical iPhone steps/GPS, locked-screen/background recording, HealthKit permissions and workout writes | **implemented-but-unverified** | Source/unit/simulator evidence only; no physical iPhone session or HealthKit write evidence. |
+| Android tracking/save/recovery source paths and debug package | **implemented-but-unverified** | PR #137 source/JVM/Debug APK checks pass; no emulator or physical Android test. |
+| Android Health Connect and background tracking | **implemented-but-unverified** | Source safeguards only; real Health Connect permissions/data and locked-screen behavior remain untested. |
+| Approved Web Hub design from supplied HTML | **missing (integration)** | PR #157 is a separate unapproved layout and its mobile smoke test fails; supplied HTML still needs safe data/persistence wiring. |
+| One account and complete cross-platform data parity (iOS/Android/Web) | **missing / partial implementation** | Existing iOS sensor/activity queues and web auth are not proof of shared end-to-end visibility for goals, weight, diet, water, feelings, Guru, missions, community and profile across all three clients. Add contract/integration tests per data type and owner. |
+| Authentication and password recovery | **implemented-but-unverified** | Web PR #153 browser CI passed; real email delivery, redirect allowlist and full iOS/Android/Web account parity remain unverified. |
+| Goals/purpose and Guru guidance | **implemented-but-unverified** | iOS deterministic journey logic has unit/UI coverage; shared cloud persistence and cross-device continuity are not verified. |
+| Missions lifecycle and Community feed/interactions | **missing / partial** | Current iOS surfaces are starter/gated; no verified full mission lifecycle, feed, member interactions or moderation across platforms. |
+| Notifications | **missing** | iOS UI explicitly states notifications are inactive; push delivery is not implemented/verified. |
+| Supabase least-privilege production grants and leaked-password protection | **blocked** | PR #144 isolated tests do not apply production SQL/settings; requires owner/admin authorization and post-change verification. |
+| Signed iOS install | **blocked** | Verified IPA is unsigned, with no provisioning profile or code signature; owner signing/provisioning path is required. |
+| Android signed release and production Web deployment | **blocked** | Debug APK only; no signed release or production deployment evidence. |
+| GitHub main-branch protection | **blocked** | GitHub API reports `main.protected=false`; owner/admin action required. |
+
+### Files changed, tests and next action
+
+- **File changed in this checkpoint:** `GATIVX_3_DAY_SPRINT_REPORT.md` only.
+- **Application source files changed:** none.
+- **Tests executed for this documentation-only commit:** none. The evidence above is from the linked exact-head CI runs and independent archive inspection.
+- **Next action:** continue from PR #156 as the latest passing iOS simulator baseline without merging it; continue the Android device-readiness audit; replace the unapproved PR #157 layout direction with the supplied HTML reference and its safe data model; design and test the shared account-scoped cross-platform data contract. Keep PR #107 untouched, PR #112 unmerged and every PR unmerged.
