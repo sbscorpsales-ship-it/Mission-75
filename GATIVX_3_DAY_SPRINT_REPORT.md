@@ -4080,3 +4080,90 @@ A source-level audit was performed against the exact PR #152 head `3d5221ed36b18
 - Historical isolated runs are not treated as acceptance: PR #117 run #45674730866 was cancelled; PR #121 run #45713205787 failed at the older dashboard UI snapshot timeout. Their commits are ancestors of the later PR #136/#152 baseline, whose current simulator evidence is the 86/86 passing run #45933957530.
 
 **Next test task:** add a deterministic, DEBUG-only sensor/session test seam (without changing production sensor behavior) and an end-to-end simulator UI test for Start Walk → Finish & Save → visible saved record → app relaunch/history recovery. Keep the existing 76 unit, 10 UI and 121 tracking safeguards intact. Physical iPhone HealthKit and background GPS still require actual device acceptance.
+
+
+### Automation checkpoint 13 — 27/11/2026, 12:52 IST (2026-11-27T07:22Z)
+
+This checkpoint re-queried live repository branches, all open PR metadata relevant to the release, exact PR #136 and PR #152 workflow jobs and decoded job logs. It added a deterministic DEBUG-only simulator UI acceptance path for Finish & Save and local history recovery on a new isolated branch. The new iOS workflow is still running; no result is claimed yet. No PR was merged, PR #107 was not touched, PR #112 remains unmerged, and no production database or deployment was changed.
+
+#### Live repository and PR snapshot
+
+- Default branch `main`: `143889db3e72540fb478b76c486082f45395e9bd`; GitHub reports `protected=false`.
+- PR #136 remains open/draft/unmerged at exact head `31e5b70d85537113e74dd003d06b3ae95ba323f4`.
+- PR #152 remains open/draft/unmerged at exact head `3d5221ed36b180436f81d5c00580f93dea820aa7`; it is 23 commits ahead and 0 behind PR #136.
+- PR #155 is new, open/draft/unmerged, based exactly on PR #152 head `3d5221ed36b180436f81d5c00580f93dea820aa7`, head `630e98b49f8cfaea4b6e584bfb56a2cddb5ed790`. Compare confirms 4 commits ahead, 0 behind; 2 files changed.
+- PR #107 remains open/draft/unmerged at `c19bdbd307df7048cefd86bd3e6064ac4f4e3042`; its branch was not modified.
+- PR #112 remains open/draft/unmerged at `b6c04d41dc67bd191ed0cf8966331eb5661a9887`.
+- PR #153 remains open/draft/unmerged at `a21ac8890047274699d66351b61c4f5ab7cfd8e9`; its web workflow run #45940205733 completed successfully. The job log confirms browser-mocked checks for duplicate-signup privacy, password reset request and recovery callback; it does not prove live email delivery or deployment.
+
+#### PR #136 exact-head CI and artifacts — failed
+
+[PR #136](https://github.com/sbscorpsales-ship-it/Mission-75/pull/136), exact head `31e5b70d85537113e74dd003d06b3ae95ba323f4`; [run #45847572105, attempt 3](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45847572105), job `140102514612`, completed failure.
+
+- Unit tests: **76 passed, 0 failed**.
+- UI tests: **8 passed, 1 failed, 0 cancelled**.
+- Combined XCTest: **84 passed, 1 failed, 0 cancelled**.
+- Exact log failure: `testDashboardFillsDeviceViewportAndExposesAllFiveTabs`, `GATIVXDashboardUITests.swift:654`: measured dock frame **113.0625 pt**, above the **76.0 pt** limit.
+- The single five-destination navigation UI test passed on this exact head; the compact dock-height assertion did not.
+- Tracking safeguard step: **121 named PASS assertions** in the decoded job log; summary `PASS: Tracking safeguards — success`.
+- HealthKit source-entitlement validation, simulator build, simulator privacy/entitlement validation, unsigned Release build, IPA packaging and artifact upload all completed successfully. The overall release-validation step correctly failed because XCTest failed.
+- Artifacts returned by GitHub include IPA `15146711639`, xcresult `15146161829`, simulator app `15145957076`, and structured diagnostics `15145517291` (plus earlier retry-attempt artifacts).
+- Prior nested IPA inspection remains: ZIP integrity valid, app executable present, but no `UILaunchScreen`, code signature or embedded provisioning profile. This is an unsigned package, not an installable iPhone app.
+
+#### PR #152 descendant baseline — passed
+
+[PR #152](https://github.com/sbscorpsales-ship-it/Mission-75/pull/152), exact head `3d5221ed36b180436f81d5c00580f93dea820aa7`; [run #45933957530, attempt 1](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45933957530), job `140292730174`, completed success.
+
+- Unit tests: **76 passed, 0 failed**.
+- UI tests: **10 passed, 0 failed, 0 cancelled**.
+- Combined XCTest: **86 passed, 0 failed, 0 cancelled**.
+- Tracking safeguards: **121 named PASS assertions**, summary `PASS: Tracking safeguards — success`.
+- Decoded job log explicitly confirms the single five-destination switch, root-hosted Profile picker, Finish & Save local-history verification before HealthKit queue creation, queue retention on failure, and all tracking safeguards.
+- Simulator build, simulator privacy/entitlement validation, unsigned Release build, IPA packaging and artifact upload all passed.
+- Artifacts: IPA `15170865537`, xcresult `15170745407`, diagnostics `15170651026`, simulator app `15170391876`.
+- Previously inspected nested IPA has `UILaunchScreen: {}`, valid ZIP integrity and an executable, but remains unsigned with no provisioning profile. Simulator screenshots previously reviewed remain simulator-only evidence.
+- This is a 23-commit descendant of PR #136, not evidence that PR #136's exact head passed.
+
+#### New Finish & Save simulator UI test — PR #155
+
+New isolated branch: `test/gativx-finish-save-ui-recovery-20261127`; head `630e98b49f8cfaea4b6e584bfb56a2cddb5ed790`.
+
+Files changed:
+- `ios/GATIVX/ContentView.swift`
+- `ios/GATIVXUITests/GATIVXDashboardUITests.swift`
+
+Implementation:
+- Adds a DEBUG-only launch-argument-gated deterministic session seam. It uses a stable test UUID and 123 test steps, and returns before starting Core Motion or GPS. Release builds compile the normal sensor path and cannot use the synthetic session.
+- The new UI test calls the real local Finish & Save path, including atomic history save and read-back verification. The UI test skips only the HealthKit export call in its explicit DEBUG test mode; HealthKit queue behavior remains covered by the existing dedicated unit tests and source safeguards. No production behavior or existing test assertion is weakened.
+- Saved history rows now expose a stable accessibility identifier based on their session UUID.
+- New UI test covers Activity → Start Walk → Finish & Save → visible saved Walking/123-step row → terminate app → relaunch → reopen Activity → same row loaded from local history.
+- Source review confirms the existing finish policy retains the highest non-negative value from the live and queried readings; the deterministic DEBUG reading therefore remains available even if the simulator query returns nil or zero.
+
+[PR #155](https://github.com/sbscorpsales-ship-it/Mission-75/pull/155) was opened as a draft against the exact PR #152 branch. [Run #45957821065](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45957821065) was observed in progress at the full serial unit/UI test step; no pass/fail/cancelled counts are available yet. Its current job ID is `140368295189`. Do not claim the new UI test passes until this exact-head run finishes and its logs are inspected.
+
+#### Gap-ledger status and next action
+
+| Area | Status | Evidence / remaining gate |
+|---|---|---|
+| Design C and approved product decisions | verified | No product or visual design changes were made. |
+| iOS five-destination navigation, dock <=76 pt, full-screen Activity | verified (simulator descendant only) | PR #152 passes; PR #136 exact head still fails at 113.0625 pt. Physical iPhone layout remains unverified. |
+| Root-hosted Profile picker | verified (simulator open/cancel only) | Real photo selection, persistence and cloud sync remain unverified. |
+| Guru keyboard dismissal | verified (simulator only) | UI suite passes on PR #152. |
+| Finish & Save local persistence/relaunch recovery | implemented-but-unverified | PR #155 adds the missing simulator UI flow; exact-head CI #45957821065 is still running. Physical interruption/recovery remains unverified. |
+| HealthKit queue and export | implemented-but-unverified | Unit/source safeguards pass; physical authorization, write, de-duplication and background delivery remain unverified. |
+| iPhone pedometer/GPS/background recording | implemented-but-unverified | Simulator/source checks only; physical iPhone and locked-screen acceptance absent. |
+| Android / Health Connect | implemented-but-unverified | Prior source/JVM/Debug APK evidence only; no physical Android acceptance. |
+| Web Hub auth recovery | implemented-but-unverified | PR #153 mocked browser CI passed; live reset email and deployed redirect allowlist not verified. |
+| Missions lifecycle, Community feed/moderation, push notifications | missing | Current experiences remain starter/gated/inactive, not complete member workflows. |
+| Profile photo cloud sync | missing | Local picker exists; cross-device photo delivery is not implemented/verified. |
+| Supabase least-privilege/default ACLs and leaked-password protection | blocked | Authorized project owner/admin action and post-change verification required. |
+| Signed iOS installation | blocked | No signing identity/provisioning profile; both inspected IPA artifacts are unsigned. |
+| Android signed release and production Web deployment | blocked | No device/signing/deployment evidence. |
+| GitHub branch protection | blocked | `main.protected=false`; repository owner/admin action required. |
+
+#### Work performed and next action
+
+- Added the isolated PR #155 code/test changes and opened the draft PR; no application test result is claimed yet.
+- No PR was merged, no force push was made, PR #107 remains untouched, PR #112 remains unmerged, and no production Auth/database settings or deployments were changed.
+- Next: poll run #45957821065; inspect the full XCTest result/log and screenshots. If it fails, fix only the actual defect on the same isolated branch and rerun the full suite. If it passes, verify exact counts and the saved-row screenshot/xcresult before updating the ledger to simulator-verified.
+- Continue to treat physical iPhone HealthKit/background GPS, Android Health Connect, production auth email, database hardening, signing and deployment as separate acceptance gates.
