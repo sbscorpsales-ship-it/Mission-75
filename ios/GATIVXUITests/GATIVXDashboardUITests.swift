@@ -102,8 +102,11 @@ final class GATIVXDashboardUITests: XCTestCase {
         let bottomNavigation = app.descendants(matching: .any)["gativx-bottom-navigation"].firstMatch
         XCTAssertTrue(bottomNavigation.waitForExistence(timeout: 10))
         XCTAssertTrue(bottomNavigation.isHittable, "The fixed dock must remain reachable while Home is selected.")
-        XCTAssertLessThanOrEqual(scrollView.frame.maxY, bottomNavigation.frame.minY + 1,
-                                 "The visible dashboard viewport must end above the dock; off-screen scroll content may continue below the fold.")
+        // XCTest exposes a SwiftUI ScrollView's backing accessibility frame, which
+        // can include the safe-area region occupied by safeAreaInset. Validate the
+        // actual visible content against the dock after scrolling instead of
+        // treating that backing frame as the clipped viewport.
+        XCTAssertTrue(scrollView.isHittable, "The Home dashboard scroll viewport must remain interactive.")
         XCTAssertTrue(missionCard.isHittable, "Today's mission card must remain reachable from the dashboard.")
         for _ in 0..<12 where missionCard.frame.maxY > bottomNavigation.frame.minY + 1 {
             scrollTowardBottom(scrollView)
