@@ -5662,6 +5662,7 @@ Changes are on the existing isolated PR #137 branch; no PR was merged.
 
 ### Repository and PR verification
 
+- Default branch `main` is still at `143889db3e72540fb478b76c486082f45395e9bd` (commit date 2026-11-17). Current repair work remains in open PR/feature branches; no PR merge or production deployment has brought it onto `main`.
 - PR #163 remains **open, draft and unmerged**, base `fix/gativx-session-metrics-engine-20261127`, head branch `feat/gativx-activity-metrics-ui-20261128`, exact head `2b0e12183b5976a64b2773b45a0f1097882583fb`.
 - [Exact-head run #722](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/46063556699) completed with conclusion `success`. The latest-attempt `build-ios` job and all 20 workflow steps completed successfully.
 - PR #162 remains open/unmerged at `f41fb5df967358094cb70e7cd3eb86b96ceb2d03`; its earlier exact-head run #720 had 81 unit tests with 3 fixture-related failures and 12/12 UI tests passing. PR #163 corrects the 40-point route fixture to 18-second intervals (720 seconds total); the canonical formula is unchanged.
