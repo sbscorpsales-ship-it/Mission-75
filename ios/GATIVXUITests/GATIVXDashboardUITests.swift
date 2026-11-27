@@ -15,11 +15,11 @@ final class GATIVXDashboardUITests: XCTestCase {
         start.press(forDuration: 0.05, thenDragTo: end)
     }
 
-    private func launchFreshGuestApp(_ app: XCUIApplication) {
+    private func launchFreshGuestApp(_ app: XCUIApplication, additionalArguments: [String] = []) {
         // UserDefaults persist between XCTest methods on the same simulator.
         // Force the local-only entry flag off so every test starts at Welcome,
         // independent of a guest choice made by an earlier test run.
-        app.launchArguments += ["-gativx-ui-test-reset-local-mode"]
+        app.launchArguments += ["-gativx-ui-test-reset-local-mode"] + additionalArguments
         app.launch()
     }
 
@@ -421,6 +421,56 @@ final class GATIVXDashboardUITests: XCTestCase {
         XCTAssertTrue(communityScreen.waitForExistence(timeout: 10),
                       "Community must render after leaving the Missions tab.")
         XCTAssertTrue(app.descendants(matching: .any)["gativx-community-gated"].waitForExistence(timeout: 5))
+    }
+
+    func testFinishSavePersistsAndRecoversActivityHistory() {
+        let app = XCUIApplication()
+        launchFreshGuestApp(app, additionalArguments: ["-gativx-ui-test-simulated-walk"])
+
+        let guestEntry = app.buttons["gativx-continue-guest"]
+        XCTAssertTrue(guestEntry.waitForExistence(timeout: 10))
+        guestEntry.tap()
+
+        let activityTab = tabButton(app, label: "Activity")
+        XCTAssertTrue(activityTab.waitForExistence(timeout: 5))
+        activityTab.tap()
+        XCTAssertTrue(app.scrollViews["gativx-activity-screen"].waitForExistence(timeout: 10))
+
+        let startWalk = app.buttons["Start Walk"]
+        XCTAssertTrue(startWalk.waitForExistence(timeout: 5))
+        startWalk.tap()
+
+        let finishSave = app.buttons["Finish & save activity"]
+        XCTAssertTrue(finishSave.waitForExistence(timeout: 5),
+                      "Starting a walk must expose the explicit Finish & save action.")
+        finishSave.tap()
+
+        let savedRowID = "gativx-saved-activity-00000000-0000-4000-8000-000000000123"
+        let savedRow = app.descendants(matching: .any)[savedRowID].firstMatch
+        XCTAssertTrue(savedRow.waitForExistence(timeout: 15),
+                      "Finish & Save must write a local history row before reporting success.")
+        XCTAssertTrue(savedRow.label.contains("Walking"),
+                      "The saved history row must retain the selected activity type.")
+        XCTAssertTrue(savedRow.label.contains("123"),
+                      "The saved history row must retain the deterministic DEBUG test step reading.")
+
+        // Relaunch the app to prove the row is read back from durable local history,
+        // not merely retained in ContentView state.
+        app.terminate()
+        app.launch()
+
+        let relaunchedGuestEntry = app.buttons["gativx-continue-guest"]
+        XCTAssertTrue(relaunchedGuestEntry.waitForExistence(timeout: 10))
+        relaunchedGuestEntry.tap()
+        let relaunchedActivityTab = tabButton(app, label: "Activity")
+        XCTAssertTrue(relaunchedActivityTab.waitForExistence(timeout: 5))
+        relaunchedActivityTab.tap()
+
+        let recoveredRow = app.descendants(matching: .any)[savedRowID].firstMatch
+        XCTAssertTrue(recoveredRow.waitForExistence(timeout: 15),
+                      "A saved activity must remain visible after terminating and relaunching GATIVX.")
+        XCTAssertTrue(recoveredRow.label.contains("Walking"))
+        XCTAssertTrue(recoveredRow.label.contains("123"))
     }
 
     func testHomeStartWalkNavigatesWithoutStartingSession() {
