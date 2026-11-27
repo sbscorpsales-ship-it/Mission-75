@@ -5575,3 +5575,20 @@ Changes are on the existing isolated PR #137 branch; no PR was merged.
   - iOS PR #161 run #715 retry: project generation and source checks passed; full unit/UI test suite is in progress.
   - Android PR #137 run #190: SDK/Gradle setup and 25 source safeguards passed; JVM tests are in progress.
 - No pass/fail/cancelled counts are asserted for those three in-progress suites. The new iOS/Android code must not be considered accepted until the corresponding exact-head workflows finish and their logs/diagnostics are reviewed.
+
+
+## 2026-11-28 02:50 IST — Android exact-head CI #190 passed
+
+- PR #137 exact head `25ecb3a914590b5babadda2ea2b51a44bc0fd330`.
+- [Android run #190](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/46057928964) completed successfully.
+- Exact test result from the job log: **14 JVM tests passed, 0 failed, 0 skipped**. The 25 source safeguard assertions also all passed.
+- Android debug APK build succeeded and uploaded artifact #15227790518 (10,317,618-byte artifact archive).
+- Downloaded APK: 29,610,636 bytes. ZIP integrity check: **no errors**. SHA-256: `70cd7a24902d82e26a83093251624b0770ee88e26c37aca6075d57409e9db97b`.
+- This is a **debug APK**, not a signed release APK. No emulator/physical Android install, background walk, Health Connect permission or wearable behavior has been tested.
+- Moving duration is stored in encrypted local session history and shown separately from elapsed wall-clock time. The cloud route RPC still does not carry movingDurationSeconds, and the Android UI still has no member weight input or calorie/Activity Points display.
+
+### Exact-head artifact
+
+- Artifact: `GATIVX-Android-debug` (#15227790518)
+- Local integrity-checked copy: `/mnt/data/gativx-android-pr137-run190/app-debug.apk`
+- No iOS or production release artifact is claimed by this Android result.
