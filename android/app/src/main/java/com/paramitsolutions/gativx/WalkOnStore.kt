@@ -274,7 +274,7 @@ internal object WalkOnStore {
             decodePoint(pointsJson.getJSONObject(index))
         }
 
-    private fun decodeSession(json: JSONObject): WalkOnSession {
+    internal fun decodeSession(json: JSONObject): WalkOnSession {
         val pointsJson = json.optJSONArray("points") ?: JSONArray()
         // A malformed point makes the encrypted record unreadable. Never
         // silently drop route points and then overwrite the original payload.
