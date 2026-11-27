@@ -5,6 +5,8 @@ manifest = (ROOT / "android/app/src/main/AndroidManifest.xml").read_text()
 service = (ROOT / "android/app/src/main/java/com/paramitsolutions/gativx/WalkOnLocationService.kt").read_text()
 store = (ROOT / "android/app/src/main/java/com/paramitsolutions/gativx/WalkOnStore.kt").read_text()
 activity = (ROOT / "android/app/src/main/java/com/paramitsolutions/gativx/MainActivity.kt").read_text()
+policy_tests = (ROOT / "android/app/src/test/java/com/paramitsolutions/gativx/WalkOnStartPolicyTest.kt").read_text()
+decode_points = store.split("internal fun decodePointsStrict", 1)[1].split("private fun decodeSession", 1)[0]
 
 checks = {
     "Android Health Connect preserves existing non-Health-Connect step values": (
@@ -98,6 +100,35 @@ checks = {
         ".edit().remove(key).apply()" not in store
         and "getExistingKey()" in store
         and "encrypted original was preserved" in store
+    ),
+    "active draft read distinguishes missing from unreadable encrypted content": (
+        "fun activeDraftState(context: Context): ActiveWalkDraftState" in store
+        and "if (!preferences.contains(ACTIVE_KEY)) return ActiveWalkDraftState.ABSENT" in store
+        and "readEncrypted(context, ACTIVE_KEY) ?: return ActiveWalkDraftState.UNREADABLE" in store
+    ),
+    "unreadable active draft blocks new starts in both UI and foreground service": (
+        "WalkOnStartPolicy.shouldBlockNewSession(WalkOnStore.activeDraftState(context))" in activity
+        and "WalkOnStartPolicy.shouldBlockNewSession(WalkOnStore.activeDraftState(this))" in service
+        and "no new route was started" in service
+    ),
+    "unreadable active draft policy has focused JVM unit tests": all(
+        name in policy_tests for name in (
+            "allowsStartWhenNoActiveDraftExists",
+            "resumesReadableActiveDraftInsteadOfBlocking",
+            "blocksNewStartWhenExistingDraftIsUnreadable",
+            "unreadableCompletedHistoryNeverLooksFullyBackedUp",
+            "strictPointDecoderRetainsEveryValidPoint",
+            "strictPointDecoderRejectsMalformedPointInsteadOfDroppingIt"
+        )
+    ),
+    "unreadable completed route history cannot be reported as fully backed up": (
+        "fun completedHistoryIsUnreadable(context: Context): Boolean" in store
+        and "WalkOnStartPolicy.shouldBlockSyncSuccess(WalkOnStore.completedHistoryIsUnreadable(context))" in activity
+        and activity.index("WalkOnStartPolicy.shouldBlockSyncSuccess") < activity.index("val pending = WalkOnStore.pendingFor(context, currentSession.userId)")
+    ),
+    "malformed encrypted GPS points fail closed instead of being silently dropped": (
+        "decodePoint(pointsJson.getJSONObject(index))" in decode_points
+        and "mapNotNull" not in decode_points
     ),
     "corrupt route history blocks destructive rewrites and preserves active drafts": (
         "readSessions(context, COMPLETED_KEY) ?: run" in store
