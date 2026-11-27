@@ -2,13 +2,15 @@ name: GATIVX web release checks
 
 on:
   push:
-    branches: ["main", "gativx/dashboard-connected-data-v2", "fix/gativx/**"]
+    branches: ["main", "gativx/dashboard-connected-data-v2", "fix/gativx/**", "fix/gativx-*"]
     paths:
       - "index.html"
       - "app-v2.html"
       - "sw.js"
       - "scripts/check-web.mjs"
       - "scripts/browser-smoke.mjs"
+      - "ios/GATIVX/Cloud/SupabaseRESTClient.swift"
+      - "supabase/migrations/**"
       - ".github/workflows/web-checks.yml"
   pull_request:
     branches: [main]
