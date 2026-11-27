@@ -5400,3 +5400,44 @@ The run record reports **cancelled**, not failed. Its job #140594416353 conclude
 - Reran the failed #466 web job without changing or weakening tests. Retry job #140701097189 is in progress. Its logs and final result must be inspected before PR #157 is considered green.
 - PR #161 full iOS retry #715 is also still running; no Profile bottom-clearance result is claimed yet.
 - The report update before this note is commit `f1acbcca777ecdc4cd823761a9e047bc05797432`. No application feature code was changed in this follow-up; the only code commit remains the PR #157 test correction `32bae4f7bda8eb638015d20bf179f760dca878fa`.
+
+
+## 2026-11-28 01:30 IST — live Supabase privilege audit and CI rerun result
+
+### Live Supabase read-only evidence
+
+Project `mission75-cloud` (`crarbbsvcczwmtvxyrxo`) is `ACTIVE_HEALTHY`, PostgreSQL 17.11. This checkpoint used read-only project, migration, advisor and SQL queries only; **no production SQL or Auth settings were changed**.
+
+- Six public tables were returned; RLS is enabled on all six: `profiles`, `daily_logs`, `walk_sessions`, `activity_sessions`, `motion_daily_steps`, `daily_action_progress`.
+- Live table grants show `anon` has **DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE and UPDATE** on `public.daily_action_progress`. `authenticated` also has table-wide administrative privileges on that table in addition to CRUD. RLS policies are owner-scoped for `authenticated` and there is no `anon` policy; however, RLS does not protect TRUNCATE, so the broad grants still require hardening.
+- Existing public RPC execute grants are currently limited to `authenticated` for the seven listed sync functions; no existing `anon` execute grant was returned.
+- `pg_default_acl` shows broad future-object defaults for both grantors `postgres` **and** `supabase_admin` in schema `public`: API roles receive table, sequence and function privileges. PR #144's migration only revokes defaults for `postgres`; it does not address the `supabase_admin` default ACL entries.
+- The live connection is `postgres`, and `pg_has_role(current_user,'supabase_admin','member') = false` and `usage = false`. Therefore this connection cannot safely change `supabase_admin`'s default privileges. This is a concrete owner/admin blocker, not a reason to bypass permissions.
+- The Supabase security advisor returns `auth_leaked_password_protection`: **Leaked Password Protection Disabled**.
+- Live migration history contains **22 applied versions**. The PR #144 branch contains 11 migration files: 4 exact applied version matches, 6 files whose timestamps differ from the applied versions, 12 applied versions with no corresponding source file in that branch, and one new hardening migration `20261127010149_harden_gativx_postgres_default_privileges.sql` that is not applied. Do not apply this new migration until the missing history and role-specific default ACL strategy are reconciled.
+
+### Web Hub rerun result
+
+- [Web run #466](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/46056632791) initially failed in the existing mobile account-isolation smoke after reload. The failed job was rerun without code changes.
+- Retry job #140701097189 completed **successfully**. Its logs show the mobile smoke and desktop Web Hub smoke both passed; the latter verified the dashboard hero and navigation at 1440px and 390px and exercised all 11 section destinations plus search.
+- Together with [run #465](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/46056627532), the responsive hero test-order correction is now green on PR #157's exact head. The initial #466 failure remains recorded as an intermittent account-isolation symptom; it was not erased from the history.
+
+### Security ledger refinement
+
+| Item | Current status | Evidence / required next action |
+|---|---|---|
+| RLS enabled on six public GATIVX tables | **verified** | Live read-only table inventory. |
+| Owner-scoped RLS policies | **verified** | Live policy list for authenticated user_id/id. |
+| Anonymous table grants on daily_action_progress | **blocked / unsafe** | Live anon table-wide grants include TRUNCATE and other privileges; apply reviewed least-privilege migration only after migration reconciliation. |
+| Public default ACLs for postgres | **implemented-but-unverified** | PR #144 migration targets postgres defaults; CI fixture passes, production not changed. |
+| Public default ACLs for supabase_admin | **blocked** | Live defaults remain broad; current postgres connection is not a member of supabase_admin. Project owner must authorize an appropriately privileged maintenance session or approved platform-level remediation. |
+| Leaked password protection | **missing** | Live Supabase advisor warning remains; project owner must enable it in Auth security settings. |
+| Migration source/history reconciliation | **blocked** | 22 applied versions vs 11 branch source files; 12 missing source files and 6 timestamp/name mismatches must be resolved before applying new DDL. |
+
+### Work performed in this checkpoint
+
+- **Application source changes:** none.
+- **Web test source:** no change after commit `32bae4f7bda8eb638015d20bf179f760dca878fa`; exact-head runs #465 and #466 retry now pass.
+- **Production:** read-only audit only; no migration, grant, Auth setting or deployment mutation.
+- **PR #161:** full iOS retry #715 remains in progress; no final Profile clearance claim.
+- **Report branch prior commit:** `ae41650fb884b7bcb4b6a743236d4e70df337590`.
