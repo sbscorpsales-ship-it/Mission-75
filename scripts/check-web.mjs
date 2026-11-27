@@ -30,7 +30,9 @@ for (const [label, ok] of [
   ["Cloud backup retry is enabled when the device is online", app.includes("navigator.onLine&&cloudUser&&state.walks.some")],
   ["GPS walk controls and route history are present", ["gpsStart","gpsPause","gpsFinish","gpsHistory"].every(id => app.includes('id="'+id+'"'))],
   ["GURU purpose and next-action controls are present", ["guruPurpose","guruNextAction","reconnectGuru"].every(id => app.includes('id="'+id+'"'))],
-  ["No privileged Supabase secret is embedded in the browser app", !/service_role|service-role|sb_secret_/.test(app)]
+  ["No privileged Supabase secret is embedded in the browser app", !/service_role|service-role|sb_secret_/.test(app)],
+  ["No-session sign-up guidance does not disclose account existence", app.includes("If this is a new registration, check your inbox and spam") && !app.includes("This email is already registered")],
+  ["Password recovery requests and updates use Supabase Auth", app.includes("resetPasswordForEmail(email,{redirectTo:window.location.origin+window.location.pathname})") && app.includes("updateUser({password:next})")]
 ]) ok ? pass(label) : fail(label);
 
 const scripts = [...app.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)]
