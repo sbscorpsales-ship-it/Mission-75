@@ -4748,3 +4748,25 @@ PR #156 is open/draft/unmerged at head `9d16bd2d178cea9a5297776bc9d3f4b2d6274cfd
 - **Verified code change:** default-main native publishable-key typo corrected on PR #158; static contract test added. PR remains draft/unmerged.
 - **CI:** Web run 449 failed on the intentionally strict missing-migration-source assertion; iOS run 698 pending at checkpoint time. No test was weakened or skipped.
 - **Next action:** inspect iOS run 698 to completion; restore/reconcile the missing migration source and all other migration drift before rerunning the contract check; keep PR #158 draft until both workflows pass. Then complete live owner-account sign-in and cross-device data/GPS verification. PR #107 remains untouched; PR #112 remains unmerged; no PR is merged.
+
+
+## Checkpoint 19 — 27 November 2026, 19:03 IST (13:33 UTC)
+
+### PR #158 iOS CI completion
+
+- Exact-head run [#46007811942 / run 698](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/46007811942) completed **success** on `2ab96a56a273193bd0916a775bf692a8037e740d`.
+- Source tracking safeguards: **46 PASS, 0 FAIL** on this default-main workflow.
+- Xcode project generation and scheme validation: passed.
+- iPhone Simulator build: passed.
+- Packaged privacy/HealthKit entitlement validation: passed.
+- Unsigned iPhone device app build: passed.
+- IPA package integrity: `unzip -t` passed; artifact upload succeeded.
+- Artifacts: simulator ZIP #15200409865 (789,564 bytes; archive SHA-256 `3cdabf7bf8ca5803eaed17a4f33cb4ba4ec164386a38573f3984a47943151d50`); unsigned IPA ZIP #15202163457 (378,781 bytes; archive SHA-256 `126385b167a6bff2885fa3f2da2e6cd4df9664c35523a8a7970d571d46fb76da`).
+- This workflow does **not** execute the full 76-unit / 11-UI XCTest suite; that separate evidence remains PR #156 run #697. The IPA is unsigned and no physical-device/signing acceptance is implied.
+
+### PR #158 current disposition
+
+- iOS build/safeguard/package workflow: **passed**.
+- Web release workflow #46007811886 / run 449: **failed** on the strict missing `sync_activity_session_steps` migration-source assertion. Same-project, same-key and all four Web table-path checks passed. Four RPC source checks passed; one failed because the live routine is not represented by a checked-in migration file.
+- PR #158 remains open/draft/unmerged. Keep the failing migration assertion. The next safe task is migration-history reconciliation, not skipping the missing-source check.
+- No production schema, grants, auth settings, user records or deployments were changed. No PR was merged.
