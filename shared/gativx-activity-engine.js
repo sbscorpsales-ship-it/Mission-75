@@ -8,7 +8,7 @@
   if (root) root.GATIVXActivityEngine = api;
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
   "use strict";
-  const VERSION = "1.1.1";
+  const VERSION = "1.1.2";
   const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
   const finite = v => typeof v === "number" && Number.isFinite(v);
   const ANCHORS = [[1,1.8],[2,2],[2.5,2.3],[3,2.5],[3.5,2.8],[4,3],[4.5,3.5],[5,3.8],[5.5,4.3],[6,3.857],[6.5,5.5],[7,6],[7.5,6.5],[8,7],[9,8.3],[10,9.8],[11,11],[12,12.5]];
@@ -27,7 +27,10 @@
     const vo2=1.811+0.02014*cadenceSpm+0.0007427*cadenceSpm*cadenceSpm;
     return clamp(vo2/3.5,1,16);
   }
-  function estimateMET({speedKmh,grade=0,cadenceSpm=null}) {
+  function estimateMET({speedKmh,grade=0,cadenceSpm=null,activityType="walking"}) {
+    // This version has validated walking equations only. Never reuse walking
+    // MET anchors for running, hiking or an unmodelled activity type.
+    if (activityType !== "walking") return null;
     if (!finite(speedKmh)||speedKmh<=0) return null;
     const g=clamp(finite(grade)?grade:0,-0.10,0.15);
     const v=speedKmh*1000/60;
@@ -73,14 +76,15 @@
     const w=input&&input.weightKg, mins=input&&input.movingMinutes;
     if (!finite(w)||w<25||w>300) throw new RangeError("weightKg must be between 25 and 300 kg");
     if (!finite(mins)||mins<=0||mins>1440) throw new RangeError("movingMinutes must be >0 and <=1440");
+    const activityType = input.activityType ?? "walking";
     const speedAvailable=finite(input.speedKmh)&&input.speedKmh>0;
-    const cadenceFallback=!speedAvailable&&(input.activityType??"walking")==="walking";
+    const cadenceFallback=!speedAvailable&&activityType==="walking";
     const met=speedAvailable
-      ? estimateMET({speedKmh:input.speedKmh,grade:input.grade??0,cadenceSpm:input.cadenceSpm??null})
+      ? estimateMET({speedKmh:input.speedKmh,grade:input.grade??0,cadenceSpm:input.cadenceSpm??null,activityType})
       : cadenceFallback?estimateWalkingMETFromCadence(input.cadenceSpm):null;
     if (met===null) return {engineVersion:VERSION,status:"insufficient_data",activeCaloriesKcal:null,grossCaloriesKcal:null,met:null,calculationMethod:"none"};
     const gross=met*3.5*w*mins/200, resting=3.5*w*mins/200, active=Math.max(0,gross-resting);
-    const points=calculateActivityPoints({movingMinutes:mins,met,heartRateBpm:input.heartRateBpm??null,ageYears:input.ageYears??null,activityType:input.activityType??"walking"});
+    const points=calculateActivityPoints({movingMinutes:mins,met,heartRateBpm:input.heartRateBpm??null,ageYears:input.ageYears??null,activityType});
     return {engineVersion:VERSION,status:"estimated",activeCaloriesKcal:Math.round(active),grossCaloriesKcal:Math.round(gross),met:Math.round(met*100)/100,movingMinutes:Math.round(mins*10)/10,activityPoints:points.points,intensitySource:points.source,intensityMinutes:points.moderateMinutes+points.vigorousMinutes,moderateMinutes:points.moderateMinutes,vigorousMinutes:points.vigorousMinutes,calculationMethod:speedAvailable?"speed_grade_met":"cadence_met"};
   }
   function estimateDistanceFromSteps({steps,strideLengthMeters}) {

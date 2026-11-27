@@ -1,4 +1,4 @@
-# GATIVX Independent Activity Engine — v1.1.1
+# GATIVX Independent Activity Engine — v1.1.2
 
 ## Product rule
 GATIVX owns its calculations. Apple Health, Health Connect, Strava and wearables
@@ -6,15 +6,15 @@ are optional measured-data providers and comparison sources, never prerequisites
 Every metric carries provenance: measured, estimated, or unavailable.
 
 ## Inputs
-Required for calorie estimate: member weight (kg), moving duration (minutes), and either average moving speed (km/h) or walking cadence (steps/min). Optional: average grade (decimal), heart rate (bpm), age (years), activity type. Cadence-only walking estimates are available without GPS.
+Required for a walking calorie estimate: member weight (kg), moving duration (minutes), and either average moving speed (km/h) or walking cadence (steps/min). Optional: average grade (decimal), heart rate (bpm), and activity type. Cadence-only walking estimates are available without GPS. This version supports walking only; running, hiking and other activities must return unavailable until validated activity-specific equations and golden fixtures are added. Never apply walking MET anchors to another activity type.
 GPS distance is preferred for outdoor speed. Pedometer distance is fallback
 using a member-calibrated stride length. Do not add GPS and pedometer distances.
 Moving time excludes pauses/stops; keep elapsed time separately.
 
 ## Calorie method
-For 3–6 km/h, use ACSM walking VO2 equation:
+For walking at 3–6 km/h, use the ACSM walking VO2 equation:
 VO2 (ml/kg/min) = 0.1 × speed(m/min) + 1.8 × speed(m/min) × grade + 3.5.
-Outside that band, interpolate level-walking MET anchors in the JS engine with a conservative grade correction. The 6.0 km/h interpolation anchor is pinned to the ACSM boundary value (13.5 / 3.5 MET) so the model does not jump when speed moves just above 6 km/h. MET = VO2 / 3.5. When speed is unavailable but cadence is available for walking, use the simple cadence metabolic equation from Moore et al. (2021): VO2 = 1.811 + 0.02014 × cadence + 0.0007427 × cadence² (ml/kg/min); MET = VO2 / 3.5. Use only 40–140 steps/min; outside this study-supported operating range, return unavailable rather than extrapolate. Cadence-derived estimates assume level walking and cannot infer hills.
+For walking outside that band, interpolate level-walking MET anchors in the JS engine with a conservative grade correction. The 6.0 km/h interpolation anchor is pinned to the ACSM boundary value (13.5 / 3.5 MET) so the model does not jump when speed moves just above 6 km/h. MET = VO2 / 3.5. When speed is unavailable but cadence is available for walking, use the simple cadence metabolic equation from Moore et al. (2021): VO2 = 1.811 + 0.02014 × cadence + 0.0007427 × cadence² (ml/kg/min); MET = VO2 / 3.5. Use only 40–140 steps/min; outside this study-supported operating range, return unavailable rather than extrapolate. Cadence-derived estimates assume level walking and cannot infer hills.
 Gross kcal = MET × 3.5 × weight(kg) × minutes / 200.
 Active kcal = max(0, gross kcal − resting kcal), where resting kcal uses 1 MET
 over the same duration. Retain full precision internally; round for display.
@@ -61,6 +61,4 @@ report poor GPS separately.
 7. Never calibrate global formulas to one person's weight or sessions.
 
 ## Platform plan
-Web loads this engine when measured active energy is absent. iOS and Android
-receive equivalent Swift/Kotlin ports using the same constants and golden
-fixtures. HealthKit and Health Connect remain optional measured overrides.
+Web loads this engine when measured active energy is absent for supported walking sessions. Running, hiking and other activity types remain unavailable until activity-specific models are validated. iOS and Android receive equivalent Swift/Kotlin ports using the same constants and golden fixtures. HealthKit and Health Connect remain optional measured overrides.

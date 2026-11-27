@@ -45,7 +45,7 @@ const acsmBoundary=e.estimateMET({speedKmh:6,grade:0});
 near(acsmBoundary,13.5/3.5,0.001,"ACSM 6 km/h boundary");
 near(e.estimateMET({speedKmh:5.9999,grade:0}),acsmBoundary,0.001,"just below 6 km/h remains continuous");
 near(e.estimateMET({speedKmh:6.0001,grade:0}),acsmBoundary,0.002,"just above 6 km/h remains continuous");
-assert.equal(e.VERSION,"1.1.1");
+assert.equal(e.VERSION,"1.1.2");
 near(e.estimateMET({speedKmh:5,grade:0.20}),e.estimateMET({speedKmh:5,grade:0.15}),1e-9,"uphill grade clamp");
 near(e.estimateMET({speedKmh:5,grade:-0.20}),e.estimateMET({speedKmh:5,grade:-0.10}),1e-9,"downhill grade clamp");
 
@@ -79,6 +79,18 @@ assert.throws(()=>e.estimateActivity({weightKg:70,movingMinutes:0,speedKmh:5}),R
 assert.throws(()=>e.estimateActivity({weightKg:70,movingMinutes:1441,speedKmh:5}),RangeError);
 assert.throws(()=>e.estimateActivity({weightKg:24.9,movingMinutes:30,speedKmh:5}),RangeError);
 assert.equal(e.estimateActivity({weightKg:300,movingMinutes:30,speedKmh:5}).status,"estimated");
+
+for (const activityType of ["running", "hiking", "other"]) {
+  const unsupported = e.estimateActivity({
+    weightKg: 70,
+    movingMinutes: 20,
+    speedKmh: 5,
+    activityType
+  });
+  assert.equal(unsupported.status, "insufficient_data", activityType + " must not reuse walking MET anchors");
+  assert.equal(unsupported.activeCaloriesKcal, null, activityType + " calories must remain unavailable");
+  assert.equal(e.estimateMET({speedKmh: 5, activityType}), null, activityType + " speed MET must remain unavailable");
+}
 assert.equal(e.estimateDistanceFromSteps({steps:0,strideLengthMeters:0.72}),0);
 assert.throws(()=>e.estimateDistanceFromSteps({steps:-1,strideLengthMeters:0.72}),RangeError);
 assert.throws(()=>e.estimateDistanceFromSteps({steps:1,strideLengthMeters:0.2}),RangeError);
