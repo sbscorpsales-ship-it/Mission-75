@@ -102,6 +102,11 @@ final class GATIVXDashboardUITests: XCTestCase {
         let bottomNavigation = app.descendants(matching: .any)["gativx-bottom-navigation"].firstMatch
         XCTAssertTrue(bottomNavigation.waitForExistence(timeout: 10))
         XCTAssertTrue(bottomNavigation.isHittable, "The fixed dock must remain reachable while Home is selected.")
+        let homeViewport = app.descendants(matching: .any)["gativx-home-viewport"].firstMatch
+        XCTAssertTrue(homeViewport.waitForExistence(timeout: 5),
+                      "Home must expose its GeometryReader viewport separately from scroll content.")
+        XCTAssertLessThanOrEqual(homeViewport.frame.maxY, bottomNavigation.frame.minY + 1,
+                                 "The Home viewport itself must end above the fixed dock.")
         // XCTest exposes a SwiftUI ScrollView's backing accessibility frame, which
         // can include the safe-area region occupied by safeAreaInset. Validate the
         // actual visible content against the dock after scrolling instead of
