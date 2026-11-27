@@ -724,7 +724,7 @@ final class GATIVXActivitySessionTests: XCTestCase {
             GATIVXRoutePoint(
                 latitude: 15.8500 + Double(index) * latitudeStep,
                 longitude: 74.5000,
-                timestamp: start.addingTimeInterval(Double(index) * 30),
+                timestamp: start.addingTimeInterval(Double(index) * 18),
                 horizontalAccuracy: 4,
                 breakBefore: index == 0
             )
@@ -739,7 +739,9 @@ final class GATIVXActivitySessionTests: XCTestCase {
             motionDistanceMeters: nil
         )
         XCTAssertEqual(record.activeDurationSeconds, 720)
-        XCTAssertEqual(record.estimatedCaloriesKcal(weightKg: 80, heightCm: nil)!, 40, accuracy: 0.5)
+        // 1 km in 12 minutes is approximately 5 km/h. The canonical
+        // 3.8-MET walking estimate yields 47.04 active kcal at 80 kg.
+        XCTAssertEqual(record.estimatedCaloriesKcal(weightKg: 80, heightCm: nil)!, 47.04, accuracy: 0.6)
         XCTAssertEqual(record.estimatedActivityPoints(weightKg: 80, heightCm: nil), 12)
 
         let pedometerOnly = ActivitySessionRecord(
