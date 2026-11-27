@@ -5746,3 +5746,41 @@ Changes are on the existing isolated PR #137 branch; no PR was merged.
 - PR #107 remains untouched/open. PR #112 remains open/unmerged. PRs #136, #161, #162 and #163 remain open/unmerged. No PR was merged.
 - Default branch main was still at **143889db3e72540fb478b76c486082f45395e9bd** at this checkpoint; all current work remains in PR/feature branches.
 - Next action: inspect run #723 job logs as soon as available; fix genuine compiler, static-check, unit or UI failures without narrowing tests. Then continue historical metric provenance and Android/Web contract work.
+
+
+## 2026-11-28 03:52 IST — Android and Web metric/data contract audit
+
+### Android PR #137 — verified CI and remaining metric gap
+- PR #137 remains open/unmerged at exact head **25ecb3a914590b5babadda2ea2b51a44bc0fd330**.
+- Exact-head [Android run #190](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/46057928964) completed successfully: **14 JVM tests passed, 0 failed, 0 skipped**; the WalkOn privacy, GPS, encrypted-draft and cloud-sync static safeguards passed; debug APK build and artifact upload succeeded.
+- APK artifact #15227790518 was rechecked locally: ZIP integrity passed with no errors; AndroidManifest.xml and classes.dex are present. APK SHA-256 remains **70cd7a24902d82e26a83093251624b0770ee88e26c37aca6075d57409e9db97b**. Artifact is debug-only.
+- Android branch contains Kotlin calculation engine v1.1.2 and computes movingDurationSeconds from accepted GPS intervals. WalkOnSession persists movingDurationSeconds and the live/latest route UI displays it.
+- Verified gap: MainActivity has **no call** to GativxActivityCalculationEngine.estimate and no activeCaloriesKcal/weightKg integration. WalkOnSession stores no engineVersion, distanceSource or estimated-calorie value/provenance. Health Connect ActiveCaloriesBurnedRecord is a separate measured-energy input; it must not be conflated with a GATIVX estimate.
+- Android release signing, physical-device background GPS and Health Connect permission/read-back remain unverified.
+
+### Web Hub PR #157 — verified static UI, data integration missing
+- PR #157 remains open/unmerged at exact head **32bae4f7bda8eb638015d20bf179f760dca878fa**; exact-head [Web run #466](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/46056632791) completed successfully.
+- web-hub.html contains 12 data-view destinations and responsive layout; the browser smoke test checks desktop 1440x1000, mobile 390x844, all 11 non-dashboard sections and Guru search navigation.
+- Source audit: the page has no Supabase URL/key, sign-in or sign-up flow, fetch calls, external script imports, forms or shared activity-engine import. Its dashboard/health summary metrics are static presentation values, not connected member data.
+- Status: visual shell and navigation are implemented; authentication, real profile/goal/activity/health data, permissions and sync are missing from this Web Hub page.
+
+### PR #158 — native/web auth contract
+- PR #158 remains open/unmerged at exact head **e157d58a79a411a6223a684ed967fceee21bcfdb**.
+- [Web run #455](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/46025120481) passed its source-level contract checks. The check verifies web/iOS project URL and publishable-key equality plus the presence of matching RPC migration names.
+- The associated iOS run #705 ended with an overall failure and its iOS job was cancelled; this is not a successful iOS acceptance result. No live sign-in, account isolation, sync round-trip or production migration execution is established by source checks alone.
+
+### Cross-platform gap ledger
+| Item | Status | Evidence / next gate |
+|---|---|---|
+| Android GPS moving-time calculation and local persistence | **implemented-but-unverified** | JVM/static CI passed; no physical device/background acceptance |
+| Android estimated session calories and provenance | **missing** | Engine estimate API exists but has no MainActivity call site; no profile weight, engine-version or distance-source persistence |
+| Android Health Connect measured energy | **implemented-but-unverified** | Read permission and record query exist; device permission and data read-back not exercised |
+| Web Hub responsive shell/navigation | **verified** | PR #157 run #466 passed source/browser smoke |
+| Web Hub authentication and live account data | **missing** | No auth, fetch, Supabase client or shared engine in web-hub.html |
+| Cross-platform golden metrics contract (Swift/Kotlin/JS) | **missing** | Need shared fixtures and parity tests for distance, moving time, calories, provenance and unavailable states |
+| Native/Web live account isolation and sync round-trip | **implemented-but-unverified / blocked** | Source-level contract checks only; production security and real-account acceptance outstanding |
+
+### Next action
+- Keep Android calories unavailable until a valid local Profile weight and GPS-derived moving time/speed exist; then add the estimate to both live and saved WalkOn UI with engine version and source provenance. Add Kotlin golden-fixture parity tests before UI integration.
+- Wire Web Hub to authenticated, account-scoped data only after the shared schema and production security grants are reconciled. Do not substitute its static cards for live member data.
+- Continue polling iOS run #723 on exact head **bc76fdb523635ce9e992a95604a9aa5cf614f08a**; its XCTest step is running, but logs are not yet available from the job-log endpoint.
