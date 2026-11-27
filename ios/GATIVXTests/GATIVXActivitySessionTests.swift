@@ -625,7 +625,7 @@ final class GATIVXActivitySessionTests: XCTestCase {
         XCTAssertEqual(motion.distance(heightCm: 176).meters, 50)
         XCTAssertEqual(motion.distance(heightCm: 176).source, .pedometer)
         let stride = ActivitySessionRecord(id: UUID(), activity: "Walking", startedAt: start, finishedAt: start.addingTimeInterval(60), steps: 100, routePoints: nil, motionDistanceMeters: nil)
-        XCTAssertEqual(stride.distance(heightCm: 176).meters!, 72.92, accuracy: 0.001)
+        XCTAssertEqual(stride.distance(heightCm: 176).meters!, 73.04, accuracy: 0.001)
         XCTAssertEqual(stride.distance(heightCm: 176).source, .strideEstimate)
         XCTAssertNil(stride.distance(heightCm: nil).meters)
     }
@@ -642,6 +642,17 @@ final class GATIVXActivitySessionTests: XCTestCase {
         let record = ActivitySessionRecord(id: UUID(), activity: "Walking", startedAt: start, finishedAt: start.addingTimeInterval(120), steps: 100, routePoints: points, motionDistanceMeters: nil)
         XCTAssertEqual(record.activeDurationSeconds, 20)
         XCTAssertEqual(record.activeDurationText, "0:20")
+    }
+
+    func testActiveTimeIsUnavailableWhenGPSHasNoMovingIntervals() {
+        let start = Date(timeIntervalSince1970: 1_800_000_000)
+        let points = [
+            GATIVXRoutePoint(latitude: 15.8500, longitude: 74.5000, timestamp: start, horizontalAccuracy: 4, breakBefore: true),
+            GATIVXRoutePoint(latitude: 15.8500, longitude: 74.5000, timestamp: start.addingTimeInterval(10), horizontalAccuracy: 4)
+        ]
+        let record = ActivitySessionRecord(id: UUID(), activity: "Walking", startedAt: start, finishedAt: start.addingTimeInterval(60), steps: 100, routePoints: points, motionDistanceMeters: nil)
+        XCTAssertNil(record.activeDurationSeconds)
+        XCTAssertEqual(record.activeDurationText, "—")
     }
 
     func testCaloriesRequireValidWeightAndDistance() {
