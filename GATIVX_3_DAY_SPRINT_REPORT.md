@@ -3927,6 +3927,7 @@ This checkpoint re-read the live PR heads, latest workflow runs and the exact PR
 - PR #136 remains open/draft/unmerged at `31e5b70d85537113e74dd003d06b3ae95ba323f4`.
 - PR #152 remains open/draft/unmerged at `3d5221ed36b180436f81d5c00580f93dea820aa7`. GitHub compare reports PR #152 is 23 commits ahead and 0 behind the exact PR #136 head; it is a later stacked descendant, not the same commit.
 - PR #153 remains open/draft/unmerged at `a21ac8890047274699d66351b61c4f5ab7cfd8e9`; Web Hub run #45940205733 passed 25 checks, 0 failed. This is CI-only evidence; no deployment or real password-reset email delivery was verified.
+- PR #131 activity-engine branch was updated this hour to head `37b9866b13bcedc99fd0cbb1fbaf0cef7f8b8f95`; [run #45945159618](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45945159618) passed JavaScript syntax validation and the activity-engine regression suite. PR #131 remains open/draft/unmerged.
 - PR #118 report branch head before this update: `26cacbe3fb5c3b9ac8096ef094bf73290a51a09e`.
 
 ### PR #136 — exact-head verdict remains failed
@@ -3950,6 +3951,16 @@ This checkpoint re-read the live PR heads, latest workflow runs and the exact PR
 - Six PNG screenshots were extracted from the xcresult bundle and visually inspected: Activity, Profile, Welcome, Guru and two Home views. The simulator captures show a full-height portrait screen, compact five-item dock, Activity controls, Profile photo action, Guru goal/purpose/emotion/next-action form, and Home metrics that correctly display “Waiting for data” rather than fabricated readings. These are simulator captures, not physical-iPhone evidence.
 - The passing PR #152 result validates a descendant that includes PR #136's work plus 23 subsequent commits. It must not be rewritten as “PR #136 exact head passed.” Later commits separate the dock from the home-indicator safe area and add the launch-screen metadata that was missing in PR #136's IPA.
 
+### Independent activity-engine audit — PR #131
+
+[PR #131](https://github.com/sbscorpsales-ship-it/Mission-75/pull/131), new head `37b9866b13bcedc99fd0cbb1fbaf0cef7f8b8f95`; [run #45945159618](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45945159618) completed success.
+
+- Code review found a model-provenance defect in v1.1.1: speed-based running, hiking and other activities were passed through walking MET anchors, so the engine could return a plausible-looking but unsupported calorie estimate. The previous regression only checked cadence-only running and did not catch speed-based non-walking input.
+- Committed a fail-closed correction on the existing isolated PR #131 branch. Engine/spec version is now 1.1.2. `estimateMET` accepts the walking model only; `estimateActivity` returns `insufficient_data` and null calorie fields for running, hiking and other unmodelled types. Added three regression cases covering running, hiking and other speed-based inputs. Existing walking calculations and cadence fallback remain unchanged.
+- Exact commit changes only `shared/gativx-activity-engine.js`, `shared/gativx-activity-engine.test.js` and `docs/GATIVX_ACTIVITY_ENGINE_SPEC.md`.
+- CI job `activity-engine` completed successfully: JavaScript syntax validation passed; `node shared/gativx-activity-engine.test.js` printed `GATIVX activity engine tests passed`. No failures were logged.
+- This is a safety boundary, not completion of the activity engine: running/hiking/other calorie models remain unavailable until activity-specific equations and golden fixtures are validated. The JS walking engine is not yet integrated into the Web Hub, iOS Swift or Android Kotlin production paths; cross-platform parity and reference-set error analysis remain open.
+
 ### Cross-platform and release gap deltas
 
 | Area | Status | Current evidence / remaining gate |
@@ -3959,6 +3970,7 @@ This checkpoint re-read the live PR heads, latest workflow runs and the exact PR
 | Profile photo picker | verified (simulator flow) | Root-hosted placement safeguard and Profile open/cancel UI path pass; real photo selection, persistence and cloud image sync remain unverified. |
 | Guru keyboard dismissal | verified (simulator CI) | Keyboard appears and dismisses in the UI test; Guru goal/purpose state remains local and deterministic, not a verified remote AI service. |
 | Activity save/recovery, GPS and HealthKit | implemented-but-unverified | 76 unit tests and 121 source safeguards pass, but no physical iPhone Finish & Save, HealthKit export or locked-screen/background GPS acceptance was performed. |
+| Independent activity engine | implemented-but-unverified | PR #131 walking-only JS engine v1.1.2 passes syntax and regression CI; not integrated into iOS/Android/Web production paths, and no reference-set MAPE/bias validation exists. Running/hiking/other remain unavailable. |
 | Android / Health Connect | implemented-but-unverified | Prior PR #137 evidence remains 25 source safeguards + 6 JVM tests + Debug APK build; no new emulator/device run or Health Connect provider acceptance in this checkpoint. |
 | Web Hub auth recovery | implemented-but-unverified | PR #153 CI run #45940205733: 25 PASS, 0 FAIL; PR remains unmerged, deployed redirect allowlist and actual reset-email delivery are unverified. |
 | Missions / Community / Notifications | missing or gated | Missions remains a starter consistency card, Community is gated, and Notifications explicitly state inactive. |
@@ -3968,6 +3980,6 @@ This checkpoint re-read the live PR heads, latest workflow runs and the exact PR
 
 ### Work performed this hour
 
-- No product-code commit and no new CI run were created this hour. The work was a live-state verification of PR #136, its exact attempt-3 failure, the later passing PR #152 descendant, its logs/artifacts/screenshots, and PR #153's latest CI.
+- One isolated product-code commit was made on PR #131 (`37b9866b13bcedc99fd0cbb1fbaf0cef7f8b8f95`) and its new CI run #45945159618 passed. The rest of the work was live-state verification of PR #136's exact attempt-3 failure, the later passing PR #152 descendant, its logs/artifacts/screenshots, and PR #153's latest CI.
 - The report's screenshot status is corrected: simulator screenshot extraction and visual review are now complete; physical-device visual/functional acceptance remains open.
 - Next: continue from PR #152's green simulator baseline without merging; prioritize owner-approved physical-device/signing path and cross-platform/device acceptance. Keep PR #107 untouched, PR #112 unmerged and every PR unmerged.
