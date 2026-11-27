@@ -3667,3 +3667,14 @@ No production SQL, grants, migrations or Auth settings were changed. PR #144's i
 ### QA governance note
 
 PR #150's PR body was updated and a detailed QA comment was posted (comment `7208077550`). GitHub rejected a formal REQUEST_CHANGES review with HTTP 422 because the connected bot is the PR author; the comment and PR-body disposition remain recorded. PR #150 stays open/draft and not accepted.
+
+
+### Supplemental security detail — same live read-only session
+
+The live public-schema function/sequence audit found:
+- 8 current public functions. `anon` has no EXECUTE on any of them.
+- The 6 member sync RPCs are executable by `authenticated`; the 2 trigger functions are not executable by API roles. The sync RPCs are SECURITY INVOKER.
+- No public sequences exist.
+- No role memberships were found for `anon` or `authenticated`.
+
+This narrows the current exposure to the table grants and future-object default ACLs identified above; the proposed PR #144 does not need to remove existing RPC execute grants. Fresh live findings were posted on PR #144 in comment `7208109605`. No production writes occurred.
