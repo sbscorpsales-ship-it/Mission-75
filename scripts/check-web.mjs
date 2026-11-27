@@ -55,7 +55,7 @@ if (scripts.length && !failed) pass("All inline GATIVX v2 JavaScript blocks pass
  */
 const nativeClient = read("ios/GATIVX/Cloud/SupabaseRESTClient.swift");
 const webProject = app.match(/const SUPABASE_URL='([^']+)'/)?.[1];
-const nativeProject = nativeClient.match(/private let baseURL = URL\\(string: "([^"]+)"\\)!/)?.[1];
+const nativeProject = nativeClient.match(/private let baseURL = URL\(string: "([^"]+)"\)!/)?.[1];
 const webPublishableKey = app.match(/const SUPABASE_PUBLISHABLE_KEY='([^']+)'/)?.[1];
 const nativePublishableKey = nativeClient.match(/private let publishableKey = "([^"]+)"/)?.[1];
 if (!webProject || !nativeProject || webProject !== nativeProject) {
@@ -73,7 +73,7 @@ const migrationDirectory = path.resolve("supabase/migrations");
 const migrationText = fs.readdirSync(migrationDirectory)
   .filter(name => name.endsWith(".sql"))
   .map(name => read(path.join(migrationDirectory, name)))
-  .join("\\n");
+  .join("\n");
 for (const rpc of [
   "sync_healthkit_daily_steps",
   "sync_healthkit_daily_energy",
