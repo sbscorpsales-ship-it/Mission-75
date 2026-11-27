@@ -697,7 +697,8 @@ struct ContentView: View {
         GeometryReader { geometry in
             homeDashboardContent(width: geometry.size.width, height: geometry.size.height)
         }
-        .accessibilityIdentifier("gativx-home-dashboard")
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("gativx-home-viewport")
     }
 
     private func homeDashboardContent(width: CGFloat, height: CGFloat) -> some View {
@@ -2000,11 +2001,10 @@ struct ContentView: View {
         case 4:
             profileScreen
         default:
-            NavigationStack {
-                homeDashboard
-                    .navigationTitle("")
-                    .toolbar(.hidden, for: .navigationBar)
-            }
+            // Home has no navigation destinations. Keep its GeometryReader and
+            // ScrollView directly in the member shell so the root safe-area inset
+            // for the fixed dock constrains the dashboard viewport as intended.
+            homeDashboard
         }
     }
 
