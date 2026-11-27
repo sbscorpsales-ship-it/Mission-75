@@ -4383,3 +4383,10 @@ The xcresult log lists seven visual attachments: Activity full viewport/fixed na
 3. Pursue physical iPhone testing separately from simulator CI. Required evidence: a signed installable build, HealthKit permission and workout write, background/locked-screen GPS, and a real walk saved/reopened.
 4. Continue Android/Health Connect, live auth email, backend ACL and production deployment gates with account/device evidence.
 5. Keep PR #107 untouched, PR #112 unmerged, and never merge any PR during this sprint.
+
+
+### Checkpoint 14 QA evidence clarification
+
+- The 11 UI tests on PR #156 and 10 UI tests on PR #152 cover the Activity viewport, all five destination switches, the dock viewport assertion, Guru keyboard dismissal, Home/dashboard, Profile screen navigation, notifications and Welcome. Neither listed UI suite contains a PhotosUI picker open/cancel/selection interaction test.
+- The 130 passing source safeguards do verify that the Profile photo picker sheet is hosted at the root rather than inside the Profile tab. Therefore classify **root-sheet ownership as source-verified**, but classify actual PhotosUI presentation, selection, cancellation and photo persistence as **implemented-but-unverified** until an interaction test or device evidence is recorded.
+- XCTest logs record named screenshot attachments and the xcresult archives are present and ZIP-readable. The simulator screenshot pixels were not individually rendered/visually inspected in this environment; layout claims above are based on the corresponding passing UI assertions and accessibility frames, not a claim of fresh human visual review.
