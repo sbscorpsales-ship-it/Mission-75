@@ -586,7 +586,6 @@ private fun GativxAndroidScreen() {
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth()
                         )
-                        .accessibilityIdentifier("gativx-android-profile-weight-kg")
                         val foreignActiveWalk = WalkOnStore.active(context) != null && activeWalk == null
                         if (foreignActiveWalk) {
                             Text("A WalkOn route from another account or an offline session is active. Its route details are hidden here.", color = Color(0xFFFFC66D), fontSize = 12.sp)
