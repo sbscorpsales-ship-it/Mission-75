@@ -30,6 +30,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.Alignment
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -112,6 +113,7 @@ private fun GativxAndroidScreen() {
     var confirmPassword by remember { mutableStateOf("") }
     var isRegistering by remember { mutableStateOf(false) }
     var selectedFeature by remember { mutableStateOf("Home") }
+    var selectedSubsection by remember { mutableStateOf<String?>(null) }
     var session by remember { mutableStateOf(SessionVault.load(context)) }
     var busy by remember { mutableStateOf(false) }
     var status by remember { mutableStateOf("Connect Health Connect to read today's measured activity.") }
@@ -459,238 +461,162 @@ private fun GativxAndroidScreen() {
 
     MaterialTheme {
         Surface(Modifier.fillMaxSize(), color = Color(0xFF0B1115)) {
-            Column(
-                modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp)
-            ) {
-                Text("GATIVX", color = Color(0xFFD8FF3E), fontSize = 34.sp, fontWeight = FontWeight.Black)
-                Text("MOVE. GROW. EXCEL.", color = Color(0xFF9DAEB6), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            Column(Modifier.fillMaxSize()) {
+                Column(
+                    modifier = Modifier.weight(1f).fillMaxWidth()
+                        .verticalScroll(rememberScrollState()).padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    Text("GATIVX", color = Color(0xFFD8FF3E), fontSize = 32.sp, fontWeight = FontWeight.Black)
+                    Text("MOVE. GROW. EXCEL.", color = Color(0xFF9DAEB6), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    Text(
+                        when (selectedFeature) {
+                            "Home" -> "YOUR DAILY COMMAND CENTRE"
+                            "Mission" -> "PURPOSE · GOALS · COMMITMENTS"
+                            "Activity" -> "MEASURED MOVEMENT · WALKON"
+                            "Guru" -> "YOUR PERSONAL GROWTH COMPANION"
+                            else -> "YOUR IDENTITY · DEVICES · SETTINGS"
+                        },
+                        color = Color(0xFFD8FF3E), fontSize = 11.sp, fontWeight = FontWeight.Bold
+                    )
 
-                Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF17232A))) {
-                    Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text("EXPLORE GATIVX", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                            Text("EARLY ACCESS", color = Color(0xFFFFC66D), fontWeight = FontWeight.Bold, fontSize = 10.sp)
-                        }
-                        Text("Your fitness journey, all in one place. Tap any section to explore its current status.", color = Color(0xFF9DAEB6), fontSize = 11.sp)
-                        val featureRows = listOf(
-                            listOf("Home", "Mission", "Activity"),
-                            listOf("Wellness", "Strength", "GURU"),
-                            listOf("Community", "Motion 3D", "Rewards"),
-                            listOf("Referrals", "Profile", "Settings")
+                    if (selectedSubsection != null) {
+                        GativxSubsectionScreen(
+                            parent = selectedFeature,
+                            title = selectedSubsection!!,
+                            onBack = { selectedSubsection = null }
                         )
-                        featureRows.forEach { row ->
-                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                                row.forEach { feature ->
-                                    FeatureHubTile(
-                                        name = feature,
-                                        status = when (feature) {
-                                            "Home", "Activity", "Profile" -> "Available"
-                                            "Mission" -> "Testing"
-                                            else -> "Coming soon"
-                                        },
-                                        selected = selectedFeature == feature,
-                                        modifier = Modifier.weight(1f),
-                                        onClick = {
-                                            selectedFeature = feature
-                                            status = when (feature) {
-                                                "Home" -> "Home dashboard: your GATIVX starting point."
-                                                "Activity" -> "Activity tracking: WalkOn GPS is available for testing. Health data depends on device permissions."
-                                                "Mission" -> "Mission setup is being tested. Full goal planning and milestones are expanding soon."
-                                                "Profile" -> "Profile and account access are available in the cloud backup section below."
-                                                "Wellness" -> "Wellness journal, food, water and sleep tracking — coming soon."
-                                                "Strength" -> "Strength workouts and guided exercise library — expanding soon."
-                                                "GURU" -> "GURU personal guidance and daily coaching — under development."
-                                                "Community" -> "Friends, groups and community challenges — coming soon."
-                                                "Motion 3D" -> "3D route replay and elevation insights — under development."
-                                                "Rewards" -> "Achievements, learning rewards and milestones — coming soon."
-                                                "Referrals" -> "Invite and referral rewards — coming soon."
-                                                else -> "Settings and preferences — expanding soon."
-                                            }
+                    } else {
+                        when (selectedFeature) {
+                            "Home" -> {
+                                Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF17232A))) {
+                                    Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                        Text("TODAY, ONE STEP AT A TIME", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                                        Text("Your measured progress, your personal mission and one achievable next action.", color = Color(0xFF9DAEB6), fontSize = 12.sp)
+                                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                            MetricTile("TODAY'S STEPS", steps?.toString() ?: "—", Modifier.weight(1f))
+                                            MetricTile("ACTIVE ENERGY", activeEnergy?.let { "${it.toInt()} kcal" } ?: "—", Modifier.weight(1f))
                                         }
-                                    )
-                                }
-                            }
-                        }
-                        Text(
-                            when (selectedFeature) {
-                                "Home", "Activity", "Profile" -> "SELECTED: $selectedFeature · AVAILABLE FOR TESTING"
-                                "Mission" -> "SELECTED: MISSION · TESTING IN PROGRESS"
-                                else -> "SELECTED: $selectedFeature · COMING SOON"
-                            },
-                            color = Color(0xFFD8FF3E), fontSize = 10.sp, fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
-                Text("Android Health Connect", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
-
-                Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF17232A))) {
-                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Text("TODAY'S MEASURED ACTIVITY", color = Color(0xFFD8FF3E), fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                        Text(measuredDate, color = Color(0xFF9DAEB6), fontSize = 12.sp)
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            MetricTile("STEPS", steps?.toString() ?: "—", Modifier.weight(1f))
-                            MetricTile("ACTIVE ENERGY", activeEnergy?.let { "${it.toInt()} kcal" } ?: "—", Modifier.weight(1f))
-                        }
-                        Button(
-                            onClick = { connectHealthConnect() },
-                            enabled = !busy,
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD8FF3E), contentColor = Color(0xFF111820))
-                        ) { Text("Connect / refresh Health Connect", fontWeight = FontWeight.Bold) }
-                        Text(
-                            if (healthReady) "SOURCE: HEALTH CONNECT · AGGREGATED" else "SOURCE: NOT CONNECTED",
-                            color = if (healthReady) Color(0xFFD8FF3E) else Color(0xFF9DAEB6),
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
-
-                Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF17232A))) {
-                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Text("WalkOn · GPS ROUTE TRACKING", color = Color(0xFFD8FF3E), fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                        val foreignActiveWalk = WalkOnStore.active(context) != null && activeWalk == null
-                        if (foreignActiveWalk) {
-                            Text("A WalkOn route from another account or an offline session is active. Its route details are hidden here.", color = Color(0xFFFFC66D), fontSize = 12.sp)
-                            Button(onClick = { stopWalkOn() }, enabled = !busy && !walkSyncBusy, modifier = Modifier.fillMaxWidth()) {
-                                Text("Finish active device route")
-                            }
-                        } else if (activeWalk != null) {
-                            Text("RECORDING · %.2f km · %d GPS points".format(activeWalk!!.distanceMeters / 1000.0, activeWalk!!.points.size), color = Color.White, fontWeight = FontWeight.Bold)
-                            Button(onClick = { stopWalkOn() }, enabled = !busy && !walkSyncBusy, modifier = Modifier.fillMaxWidth()) {
-                                Text("Finish & save WalkOn")
-                            }
-                        } else {
-                            Text("Record a GPS route while your screen is locked. Precise location and the ongoing notification are required.", color = Color(0xFF9DAEB6), fontSize = 12.sp)
-                            Button(
-                                onClick = { startWalkOn() },
-                                enabled = !busy && !walkSyncBusy,
-                                modifier = Modifier.fillMaxWidth(),
-                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD8FF3E), contentColor = Color(0xFF111820))
-                            ) { Text("Start WalkOn", fontWeight = FontWeight.Bold) }
-                        }
-                        val routePreviewPoints = activeWalk?.points?.takeIf { it.size > 1 }
-                            ?: latestWalk?.points?.takeIf { it.size > 1 }
-                        if (routePreviewPoints != null) {
-                            WalkOnRoutePreview(routePreviewPoints)
-                            Text("GPS route trace preview · not a street map", color = Color(0xFF9DAEB6), fontSize = 10.sp)
-                        }
-                        latestWalk?.let { walk ->
-                            Text(
-                                "Last route · %.2f km · %d seconds · %d measured steps".format(walk.distanceMeters / 1000.0, walk.durationSeconds, walk.sessionSteps),
-                                color = Color.White,
-                                fontSize = 12.sp
-                            )
-                            Text(
-                                if (walk.synced) "CLOUD BACKUP · COMPLETE" else "SAVED ON DEVICE · BACKUP PENDING",
-                                color = if (walk.synced) Color(0xFFD8FF3E) else Color(0xFFFFC66D),
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                        val pendingWalkCount = session?.userId?.let { WalkOnStore.pendingFor(context, it).size } ?: 0
-                        val unassignedWalkCount = WalkOnStore.unassigned(context).size
-                        if (session != null && unassignedWalkCount > 0) {
-                            Button(
-                                onClick = {
-                                    val userId = session?.userId
-                                    if (userId != null) {
-                                        WalkOnStore.assignUnowned(context, userId)
-                                        WalkOnStore.setStatus(context, "Device-only routes assigned to this account by your request.")
-                                        walkStatus = WalkOnStore.status(context)
-                                        syncWalkOnRoutes()
+                                        Text(
+                                            if (healthReady) "Measured source: Health Connect" else "Connect a health data source in Activity to see measured progress.",
+                                            color = if (healthReady) Color(0xFFD8FF3E) else Color(0xFF9DAEB6),
+                                            fontSize = 11.sp
+                                        )
+                                        Button(
+                                            onClick = { if (activeWalk == null) startWalkOn() else selectedFeature = "Activity" },
+                                            modifier = Modifier.fillMaxWidth(),
+                                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD8FF3E), contentColor = Color(0xFF111820))
+                                        ) {
+                                            Text(if (activeWalk == null) "Start WalkOn" else "View active WalkOn", fontWeight = FontWeight.Bold)
+                                        }
+                                        Text("Your detailed movement records live in Activity. Your goals live in Mission. Your wellbeing guidance lives in Guru.", color = Color(0xFF9DAEB6), fontSize = 11.sp)
                                     }
-                                },
-                                enabled = !busy && !walkSyncBusy && activeWalk == null && !foreignActiveWalk,
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Text("Assign offline routes to this account ($unassignedWalkCount)")
-                            }
-                        } else if (session == null && unassignedWalkCount > 0) {
-                            Text("$unassignedWalkCount device-only route(s) saved while signed out. Sign in to choose an account before uploading.", color = Color(0xFF9DAEB6), fontSize = 11.sp)
-                        }
-                        if (pendingWalkCount > 0) {
-                            Button(
-                                onClick = { syncWalkOnRoutes() },
-                                enabled = session != null && !busy && !walkSyncBusy && activeWalk == null && !foreignActiveWalk,
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Text(if (walkSyncBusy) "Backing up routes…" else "Sync saved routes ($pendingWalkCount)")
-                            }
-                        }
-                        Text(walkStatus, color = Color(0xFF9DAEB6), fontSize = 11.sp)
-                    }
-                }
-
-                Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF17232A))) {
-                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Text("PRIVATE CLOUD BACKUP", color = Color.White, fontWeight = FontWeight.Bold)
-                        if (session == null) {
-                            Text(
-                                if (isRegistering) "Create your free GATIVX account to keep your walks and measured activity backed up privately."
-                                else "Sign in to access your private GATIVX cloud backup, or create a free account to get started.",
-                                color = Color(0xFF9DAEB6),
-                                fontSize = 12.sp
-                            )
-                            OutlinedTextField(value = email, onValueChange = { email = it }, label = { Text("Email") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                            OutlinedTextField(value = password, onValueChange = { password = it }, label = { Text(if (isRegistering) "Create password (8+ characters)" else "Password") }, visualTransformation = PasswordVisualTransformation(), singleLine = true, modifier = Modifier.fillMaxWidth())
-                            if (isRegistering) {
-                                OutlinedTextField(value = confirmPassword, onValueChange = { confirmPassword = it }, label = { Text("Confirm password") }, visualTransformation = PasswordVisualTransformation(), singleLine = true, modifier = Modifier.fillMaxWidth())
-                                Button(onClick = { register() }, enabled = !busy, modifier = Modifier.fillMaxWidth()) {
-                                    Text(if (busy) "Creating account…" else "Create GATIVX Account")
                                 }
-                                TextButtonCompat(
-                                    text = "Already have an account? Sign in",
-                                    enabled = !busy,
-                                    onClick = { isRegistering = false; password = ""; confirmPassword = "" }
-                                )
-                            } else {
-                                Button(onClick = { signIn() }, enabled = !busy, modifier = Modifier.fillMaxWidth()) { Text(if (busy) "Signing in…" else "Sign in to GATIVX") }
-                                TextButtonCompat(
-                                    text = "New to GATIVX? Create a free account",
-                                    enabled = !busy,
-                                    onClick = { isRegistering = true; password = ""; confirmPassword = "" }
-                                )
                             }
-                        } else {
-                            Text("Signed in · ${session?.userId?.take(8)}…", color = Color(0xFFD8FF3E))
-                            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                                Button(onClick = { syncToCloud() }, enabled = !busy && healthReady) { Text("Sync measured data") }
-                                Button(
-                                    onClick = {
-                                        val activeSession = session
-                                        scope.launch {
-                                            busy = true
-                                            try {
-                                                if (activeSession != null) SupabaseApi.signOut(activeSession)
-                                                status = "Signed out. Health readings remain on this device."
-                                            } catch (_: Exception) {
-                                                status = "Signed out on this device. Server revocation could not be confirmed."
-                                            } finally {
-                                                SessionVault.clear(context)
-                                                session = null
-                                                busy = false
-                                            }
-                                        }
-                                    },
-                                    enabled = !busy && !walkSyncBusy && WalkOnStore.active(context) == null
-                                ) { Text("Sign out") }
+                            "Mission" -> GativxSectionLanding(
+                                title = "Your mission starts with your why",
+                                description = "Connect each goal to the purpose and feeling that make it matter.",
+                                sections = listOf(
+                                    "My Purpose" to "Your personal why and the outcome that matters",
+                                    "My Goals" to "30, 90, 180 and 365-day goals",
+                                    "Challenges" to "Mission 75 and future personal challenges",
+                                    "Milestones & Habits" to "Commitments, consistency and achievements"
+                                ),
+                                onOpen = { selectedSubsection = it }
+                            )
+                            "Activity" -> {
+                                $health
+                                $walk
+                                $status
+                            }
+                            "Guru" -> GativxSectionLanding(
+                                title = "Guidance for your whole journey",
+                                description = "A single place for coaching, wellbeing, nutrition and personal growth.",
+                                sections = listOf(
+                                    "Guru Coach" to "Purpose-led reflection and your next achievable action",
+                                    "Wellness & Recovery" to "Sleep, rest, stress and hydration",
+                                    "Nutrition" to "Food diary and practical nutrition guidance",
+                                    "Music & Meditation" to "Mindfulness, meditation and calming audio",
+                                    "Videos & Podcasts" to "Guided sessions and learning audio",
+                                    "Learning Library" to "Habits, NLP, discipline and personal development"
+                                ),
+                                onOpen = { selectedSubsection = it }
+                            )
+                            "Profile" -> {
+                                $cloud
+                                Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF17232A))) {
+                                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        Text("PARAM IT SOLUTIONS", color = Color(0xFFD8FF3E), fontWeight = FontWeight.Bold)
+                                        Text("GATIVX · MOVE. GROW. EXCEL.", color = Color.White, fontWeight = FontWeight.Bold)
+                                        Text("Company information, connected devices, privacy, preferences, referrals and support belong here as their respective workflows are released.", color = Color(0xFF9DAEB6), fontSize = 12.sp)
+                                    }
+                                }
                             }
                         }
                     }
                 }
-
-                Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF17232A))) {
-                    Column(Modifier.padding(16.dp)) {
-                        Text("STATUS", color = Color(0xFFD8FF3E), fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                        Spacer(Modifier.height(8.dp))
-                        Text(status, color = Color.White, fontSize = 14.sp)
-                        Text("GATIVX reads aggregated Health Connect totals to reduce duplicate-source counting. It does not estimate missing steps or calories.", color = Color(0xFF9DAEB6), fontSize = 11.sp)
-                        Text("Your session is encrypted with Android Keystore and can be revoked when you sign out.", color = Color(0xFF9DAEB6), fontSize = 11.sp)
+                Row(
+                    Modifier.fillMaxWidth().background(Color(0xFF111B21)).padding(horizontal = 4.dp, vertical = 5.dp),
+                    horizontalArrangement = Arrangement.spacedBy(2.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    listOf("Home", "Mission", "Activity", "Guru", "Profile").forEach { destination ->
+                        TextButton(
+                            onClick = { selectedFeature = destination; selectedSubsection = null },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text(
+                                destination,
+                                color = if (selectedFeature == destination) Color(0xFFD8FF3E) else Color(0xFF9DAEB6),
+                                fontSize = 10.sp,
+                                fontWeight = if (selectedFeature == destination) FontWeight.Bold else FontWeight.Medium
+                            )
+                        }
                     }
                 }
             }
+        }
+    }
+}
+
+
+@Composable
+private fun GativxSectionLanding(
+    title: String,
+    description: String,
+    sections: List<Pair<String, String>>,
+    onOpen: (String) -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text(title, color = Color.White, fontSize = 21.sp, fontWeight = FontWeight.Bold)
+        Text(description, color = Color(0xFF9DAEB6), fontSize = 13.sp)
+        sections.forEach { (name, detail) ->
+            Card(
+                modifier = Modifier.fillMaxWidth().clickable { onOpen(name) },
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF17232A)),
+                shape = RoundedCornerShape(14.dp)
+            ) {
+                Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                    Text(name, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                    Text(detail, color = Color(0xFF9DAEB6), fontSize = 12.sp)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun GativxSubsectionScreen(parent: String, title: String, onBack: () -> Unit) {
+    Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF17232A))) {
+        Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text(parent.uppercase(), color = Color(0xFFD8FF3E), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+            Text(title, color = Color.White, fontSize = 21.sp, fontWeight = FontWeight.Bold)
+            Text(
+                "This destination is now separated in the app structure. Its data and actions will be connected in a verified implementation pass. No sample records or invented measurements are displayed.",
+                color = Color(0xFF9DAEB6), fontSize = 13.sp
+            )
+            Text("MODULE STATUS · NOT YET CONNECTED", color = Color(0xFFFFC66D), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+            Button(onClick = onBack, modifier = Modifier.fillMaxWidth()) { Text("Back to $parent") }
         }
     }
 }
