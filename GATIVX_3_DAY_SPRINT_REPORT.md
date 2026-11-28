@@ -5999,3 +5999,56 @@ Changes are on the existing isolated PR #137 branch; no PR was merged.
 - Corrected the assertion argument order in commit \`899db531b646af7a19a3318084863f60b7d3d351\`. No assertion was removed or weakened.
 - New exact-head run [#198](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/46088750510) has passed Java 17, Android SDK 36, Gradle 8.11.1 and all static safeguard checks; JVM tests are now running. No test counts or APK artifact yet.
 - PR #164 run #724 remains in full serial simulator XCTest execution on exact head \`f232bc8ae63a54e2984e37da7dc9e995f7f97388\`; no result bundle or test counts published yet.
+
+
+## 2026-11-28 06:50 IST — exact-head CI audit and iOS follow-up correction
+
+### Repository and PR state
+- Default branch `main` is still at `143889db3e72540fb478b76c486082f45395e9bd` (latest commit dated 2026-11-17T04:38:35Z).
+- PR #107 remains open/draft and untouched: head `c19bdbd307df7048cefd86bd3e6064ac4f4e3042`.
+- PR #112 remains open/draft and unmerged: head `b6c04d41dc67bd191ed0cf8966331eb5661a9887`.
+- No PR was merged. PRs #164 and #165 remain open/draft.
+
+### PR #164 — iOS historical metric snapshot
+- Prior exact head: `f232bc8ae63a54e2984e37da7dc9e995f7f97388`.
+- Prior run [#724](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/46087695050) completed failure.
+- XCTest: 98 cases total; 97 passed, 1 failed, 0 skipped. Test-case log shows 13/13 UI cases passed and 84/85 unit cases passed. No cancelled case was reported.
+- The sole unit failure was `testHistoricalMetricSnapshotSurvivesLocalStoreAndProfileEdits`: fixture expected 1,000 m ±1, but Core Location calculated 995.1634901118272 m from the supplied coordinates. This was an inaccurate test-fixture expectation, not evidence that the snapshot changed the production route distance.
+- The legacy-record decode test passed. The cloud-payload allowlist/privacy test passed. The snapshot round-trip and Profile-edit stability assertions passed up to the inaccurate distance expectation.
+- Tracking safeguards: 126 passed, 3 failed. The three stale structural checks looked for inline route-distance/unknown-step JSON expressions in `SupabaseRESTClient.swift` after PR #164 extracted them into `ActivitySessionCloudPayload.route`. The production helper retains the segment-break check and explicit JSON-null step behavior; checks were not removed.
+- HealthKit source entitlement check passed. Simulator build, simulator privacy/entitlement check, unsigned Release build, IPA packaging and upload passed. The overall workflow correctly failed because XCTest and tracking safeguards failed.
+- Artifacts: XCTest diagnostics #15240752014 (outer digest `7d19c09f0330cede790c2b8dfb29906bb11a3a13fc7514f9308b0517d64725bf`); simulator #15240702339 (digest `efd13f1121db636cb3b2c4aabdc4117253b07140a7fa9a23d11570e2bdb2ba68`); xcresult #15240652380 (digest `babbf5d0955d056b9be58dc53aafd9c39dc7e93542e30399cfe64605bbc5e719`); unsigned IPA artifact #15240383816 (outer ZIP 811,021 bytes, digest `b1226ade8fbe3389d1988d55702461ac2bbb586f0cf2a47041d4f1a644a63707`).
+- Extracted inner IPA: 817,481 bytes, SHA-256 `8d6c09093617f2ba5a0f08c05d8df8078c19b42a4d85a392cc85c60172344c37`. ZIP integrity passed; bundle `com.paramitsolutions.gativx`, version `1.0.0 (1)`, executable `GATIVX` verified. No `_CodeSignature` or `embedded.mobileprovision`: unsigned, not directly installable.
+- Corrective commit `3db0bac6a56272695203c849a50cab31a8058d6b` is now on branch `feat/gativx-historical-metric-snapshots-20261128`, PR #164 open/draft. Files changed: `.github/workflows/gativx-ios.yml` and `ios/GATIVXTests/GATIVXActivitySessionTests.swift`.
+- The test now compares the persisted GPS snapshot with the route's actual `measured.gpsDistanceMeters`, avoiding a false 1,000 m assumption. The workflow's three source checks now inspect `ActivitySessionCloudPayload.route` and its actual `points[index].breakBefore` / `record.steps` allowlist expressions. No product behavior was changed and no safeguard was removed.
+- New exact-head run [#725](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/46092805162) is in progress on commit `3db0bac6a56272695203c849a50cab31a8058d6b`. At the latest poll, project generation passed and scheme validation was in progress; no XCTest or safeguard counts are available on this head yet.
+
+### PR #165 — Android metric parity
+- Exact head `899db531b646af7a19a3318084863f60b7d3d351`, branch `feat/gativx-android-activity-metrics-history-20261128`, PR #165 open/draft, based on PR #137 head `25ecb3a914590b5babadda2ea2b51a44bc0fd330`.
+- Exact-head run [#198](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/46088750510) completed successfully.
+- Static GPS/privacy/cloud-sync safeguards: 28 passed, 0 failed.
+- Android JVM tests: 18 passed, 0 failed, 0 skipped. Gradle debug assembly: BUILD SUCCESSFUL. Debug APK artifact #15239723353 uploaded.
+- Artifact ZIP: 10,320,944 bytes, SHA-256 `2a3731035aa4eef2dcd3a6575105846b2061630dad805f944f010eda0b97f93d`; ZIP integrity passed. Extracted `app-debug.apk`: 29,627,020 bytes, SHA-256 `6c0ba42714ad1d14fcd968be3b36d47211f2f8666b0085923d833202cf81635b`. Debug-only; not a release-signed APK. No emulator, physical Android or Health Connect acceptance is claimed.
+- The prior run #197 compile failure was caused by reversed JUnit `assertTrue` arguments and was corrected in commit `899db531...`; no assertion was removed or weakened.
+
+### Gap ledger — current classification
+| Area | Status | Evidence / remaining gate |
+|---|---|---|
+| iOS historical local snapshot and cloud allowlists | implemented-but-unverified | PR #164 implementation and focused tests present; exact-head run #725 pending after corrective commit |
+| iOS live metrics | verified (simulator) | PR #163 run #723: 82 unit +13 UI passed; synthetic GPS only |
+| Android local calorie estimate and provenance | verified (JVM/static only) | PR #165 run #198: 18 JVM +28 safeguards passed; device/Health Connect not tested |
+| Android debug installer | verified (artifact integrity only) | PR #165 run #198 debug APK; no release signing or device acceptance |
+| iOS signed installer | blocked | Apple signing team/certificate and provisioning or approved sideload route required |
+| Physical iPhone GPS/HealthKit/background behavior | blocked | Real iPhone, permissions and locked-screen walking acceptance required |
+| Web Hub auth/live metrics | missing | Current Web Hub remains static; no verified account-scoped data round trip |
+| Shared iOS/Android/Web metric contract | missing | Golden fixtures and cross-platform provenance parity remain incomplete |
+| Supabase security | blocked | anon grants, future-object ACLs, migration reconciliation and leaked-password protection require owner-approved remediation |
+| Missions/Community/notifications | missing/partial | Community remains explicitly inactive in an inspected simulator capture; feature acceptance incomplete |
+| Production deployment | blocked | No production deployment or database mutation performed |
+
+### Next actions
+1. Poll exact-head PR #164 run #725 and inspect all job logs, test counts, safeguards and artifacts; do not reuse #724 as acceptance for the new head.
+2. If #725 fails, correct only the actual defect or stale structural assertion and rerun the full suite.
+3. Continue Android shared golden-fixture parity and inspect the debug APK manifest/build metadata; keep Health Connect measured energy separate from GATIVX estimates.
+4. Continue Web Hub authentication/account-isolation and shared dashboard contract only after backend security grants are reviewed.
+5. Preserve PR #136's dock failure and PR #161's passing layout baseline. Keep PR #107 untouched, PR #112 unmerged, and all PRs unmerged.
