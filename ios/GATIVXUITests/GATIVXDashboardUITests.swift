@@ -15,11 +15,17 @@ final class GATIVXDashboardUITests: XCTestCase {
         start.press(forDuration: 0.05, thenDragTo: end)
     }
 
-    private func launchFreshGuestApp(_ app: XCUIApplication, additionalArguments: [String] = []) {
+    private func launchFreshGuestApp(_ app: XCUIApplication, additionalArguments: [String] = [], captureCoreGraphicsBacktrace: Bool = false) {
         // UserDefaults persist between XCTest methods on the same simulator.
         // Force the local-only entry flag off so every test starts at Welcome,
         // independent of a guest choice made by an earlier test run.
         app.launchArguments += ["-gativx-ui-test-reset-local-mode"] + additionalArguments
+        if captureCoreGraphicsBacktrace {
+            // Ask CoreGraphics to include a stack trace for invalid numeric values
+            // emitted by the app process during the two dashboard/Guru regressions.
+            // This is confined to these UI-test launches; production app behavior is unchanged.
+            app.launchEnvironment["CG_NUMERICS_SHOW_BACKTRACE"] = "1"
+        }
         app.launch()
     }
 
@@ -29,7 +35,7 @@ final class GATIVXDashboardUITests: XCTestCase {
 
     func testDashboardSectionsMetricsAndPrimaryNavigation() {
         let app = XCUIApplication()
-        launchFreshGuestApp(app)
+        launchFreshGuestApp(app, captureCoreGraphicsBacktrace: true)
 
         XCTAssertTrue(app.staticTexts["CREATE YOUR GATIVX ACCOUNT"].waitForExistence(timeout: 10),
                       "First launch must show registration/sign-in before the member dashboard.")
@@ -741,7 +747,7 @@ final class GATIVXDashboardUITests: XCTestCase {
 
     func testGuruKeyboardAndDismissalFromFreshHome() {
         let app = XCUIApplication()
-        launchFreshGuestApp(app)
+        launchFreshGuestApp(app, captureCoreGraphicsBacktrace: true)
 
         let guestEntry = app.buttons["gativx-continue-guest"]
         XCTAssertTrue(guestEntry.waitForExistence(timeout: 10))
