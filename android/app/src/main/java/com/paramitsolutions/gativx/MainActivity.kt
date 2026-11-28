@@ -122,8 +122,10 @@ private fun GativxAndroidScreen() {
     var profileWeightKgText by remember {
         mutableStateOf(WalkOnStore.profileWeightKg(context)?.toString() ?: "")
     }
-    val validProfileWeightKg = profileWeightKgText.trim().toDoubleOrNull()
+    var profileWeightSaveVerified by remember { mutableStateOf(true) }
+    val parsedProfileWeightKg = profileWeightKgText.trim().toDoubleOrNull()
         ?.takeIf { it.isFinite() && it in 25.0..300.0 }
+    val validProfileWeightKg = parsedProfileWeightKg.takeIf { profileWeightSaveVerified }
     var walkStatus by remember { mutableStateOf(WalkOnStore.status(context)) }
     var walkSyncBusy by remember { mutableStateOf(false) }
     var walkRevision by remember { mutableStateOf(0) }
@@ -571,7 +573,10 @@ private fun GativxAndroidScreen() {
                                 profileWeightKgText = value
                                 val validWeight = value.trim().toDoubleOrNull()
                                     ?.takeIf { it.isFinite() && it in 25.0..300.0 }
-                                WalkOnStore.saveProfileWeightKg(context, validWeight)
+                                profileWeightSaveVerified = WalkOnStore.saveProfileWeightKg(context, validWeight)
+                                if (!profileWeightSaveVerified) {
+                                    walkStatus = "Local weight could not be encrypted and verified. Calorie estimates are disabled until storage recovers."
+                                }
                             },
                             label = { Text("Weight (kg) · optional · local only") },
                             supportingText = {
@@ -581,6 +586,7 @@ private fun GativxAndroidScreen() {
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth()
                         )
+                        .accessibilityIdentifier("gativx-android-profile-weight-kg")
                         val foreignActiveWalk = WalkOnStore.active(context) != null && activeWalk == null
                         if (foreignActiveWalk) {
                             Text("A WalkOn route from another account or an offline session is active. Its route details are hidden here.", color = Color(0xFFFFC66D), fontSize = 12.sp)
@@ -597,6 +603,7 @@ private fun GativxAndroidScreen() {
                             )
                             Text("RECORDING · %.2f km · %d GPS points".format(currentWalk.distanceMeters / 1000.0, currentWalk.points.size), color = Color.White, fontWeight = FontWeight.Bold)
                             Text("ACTIVE MOVING TIME · ${movingSeconds?.let(::formatWalkDuration) ?: "Not yet available"}", color = Color(0xFFD8FF3E), fontSize = 12.sp)
+                            Text("GPS DISTANCE · MEASURED", color = Color(0xFF9DAEB6), fontSize = 10.sp)
                             Text("ESTIMATED ACTIVE CALORIES · ${liveEstimate.activeCaloriesKcal?.let { "%.0f kcal".format(it) } ?: "Not available"}", color = Color.White, fontSize = 12.sp)
                             Text("GATIVX estimate · v${GativxActivityCalculationEngine.VERSION} · not Health Connect", color = Color(0xFF9DAEB6), fontSize = 10.sp)
                             Button(onClick = { stopWalkOn() }, enabled = !busy && !walkSyncBusy, modifier = Modifier.fillMaxWidth()) {
@@ -882,9 +889,6 @@ internal object SupabaseApi {
     suspend fun syncWalkSessionRoute(context: Context, session: GativxSession, walk: WalkOnSession): GativxSession = withContext(Dispatchers.IO) {
         require(walk.ownerUserId == session.userId) { "This WalkOn route belongs to a different account." }
         if (walk.points.isEmpty() || walk.finishedAt == null) return@withContext session
-        val cloudPoints = if (walk.points.size > 20_000) {
-            (0 until 20_000).map { index -> walk.points[index * (walk.points.size - 1) / 19_999] }
-        } else walk.points
         val body = WalkOnCloudPayload.route(walk)
         var activeSession = session
         var response = request("POST", "/rest/v1/rpc/sync_walk_session_route", activeSession.accessToken, body.toString())
