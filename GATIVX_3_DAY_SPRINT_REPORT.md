@@ -6659,3 +6659,10 @@ Changes are on the existing isolated PR #137 branch; no PR was merged.
 - The prior checkpoint section used `#?` placeholders for two older iOS workflow runs. Exact live Actions metadata confirms: PR #107 uses **run #618**, ID `45592615914`, head `c19bdbd307df7048cefd86bd3e6064ac4f4e3042`, conclusion failure; PR #112 uses **run #636**, ID `45652420651`, head `b6c04d41dc67bd191ed0cf8966331eb5661a9887`, conclusion failure.
 - Run #618 log: 2 UI tests executed, 5 failures; run #636 log: 2 UI tests executed, 1 failure. Both remain unresolved acceptance blockers.
 - This correction is append-only and does not change the earlier source/test evidence.
+
+
+## 2026-11-28 13:56 IST — cross-platform Auth endpoint and iPhone package verification
+- Source inspection confirms native Android PR #171, native iOS `ios/GATIVX/Cloud/SupabaseRESTClient.swift`, and Web Hub `app-v2.html` all point to the same hosted Supabase project URL `https://crarbbsvcczwmtvxyrxo.supabase.co`. Therefore the hosted Auth email quota is shared across the three surfaces; the observed Web Hub 429 events can consume the same project-wide allowance used by Android and iOS.
+- PR #167 / iOS CI run #726 also produced unsigned IPA artifact ID `15249421376`. Extracted IPA SHA-256: `db8f82768c9c678863f26578cb4e810863ba80ba25c7c5cee630e8d878d102bf`. Bundle identifier `com.paramitsolutions.gativx`, minimum iOS `17.0`, version `1.0.0`. The IPA contains no `_CodeSignature` and no `embedded.mobileprovision`; it is not directly installable as delivered and requires signing (e.g. the founder's Windows/Sideloadly workflow). HealthKit entitlement availability is not verified in that unsigned package.
+- This iOS package is from the simulator-tested PR #167 head `54335ddc948d10d53a749f3a929834c3da08fb4b`, not a signed production or accepted physical-device build. Its associated simulator diagnostics still contain 1,008 CoreGraphics NaN warnings; only exploratory visual/navigation testing should be attempted after signing, not HealthKit acceptance.
+- No custom SMTP configuration or account-security setting was changed. Keep email confirmation enabled.
