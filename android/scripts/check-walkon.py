@@ -82,7 +82,19 @@ checks = {
     ),
     "cloud route sync preserves unknown steps": (
         "/rest/v1/rpc/sync_walk_session_route" in activity
-        and '.put("p_steps", walk.sessionSteps.takeIf { it > 0 }?.let { it } ?: JSONObject.NULL)' in activity
+        and "WalkOnCloudPayload.route(walk)" in activity
+        and '.put("p_steps", walk.sessionSteps.takeIf { it > 0 }?.let { it } ?: JSONObject.NULL)' in store.split("internal object WalkOnCloudPayload", 1)[1]
+    ),
+    "local profile weight is encrypted and verified": (
+        "readEncrypted(context, PROFILE_WEIGHT_KEY)" in store
+        and "writeEncrypted(context, PROFILE_WEIGHT_KEY, weightKg.toString())" in store
+        and ".commit()" in store.split("fun saveProfileWeightKg", 1)[1].split("fun saveActive", 1)[0]
+    ),
+    "local calorie provenance is excluded from the cloud route allowlist": (
+        "WalkOnCloudPayload.route(walk)" in activity
+        and '"estimatedActiveCaloriesKcal"' not in store.split("internal object WalkOnCloudPayload", 1)[1]
+        and '"weightKgUsedForEstimate"' not in store.split("internal object WalkOnCloudPayload", 1)[1]
+        and '"calculationEngineVersion"' not in store.split("internal object WalkOnCloudPayload", 1)[1]
     ),
     "Android route sync acknowledgement is verified before backup is reported complete": (
         "fun markSynced(context: Context, id: String)" in store
