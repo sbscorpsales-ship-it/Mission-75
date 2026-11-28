@@ -815,7 +815,7 @@ final class GATIVXActivitySessionTests: XCTestCase {
 
         XCTAssertEqual(restored.metricSnapshot, saved.metricSnapshot)
         XCTAssertEqual(restored.historicalDistanceResult.source, .gps)
-        XCTAssertEqual(restored.historicalDistanceResult.meters!, 1_000, accuracy: 1)
+        XCTAssertEqual(restored.historicalDistanceResult.meters!, measured.gpsDistanceMeters, accuracy: 0.001)
         XCTAssertEqual(restored.historicalActiveDurationSeconds, 720)
         XCTAssertEqual(restored.historicalActiveCaloriesKcal!, 40, accuracy: 0.5)
         XCTAssertEqual(restored.metricSnapshot?.weightKgUsedForEstimate, 80)
