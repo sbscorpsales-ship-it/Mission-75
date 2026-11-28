@@ -6802,3 +6802,9 @@ Founder sources: Issue #166 founder comments 7232358044 (Purpose & Ikigai), 7232
 10. Keep all PRs open/unmerged and do not deploy. No application source files were changed in this checkpoint; this append changes only the engineering report.
 
 Next action: continue on the existing frozen branches, prioritising repeatable Android signing, Android theme/input QA, iOS diagnostics/signing, backend grant hardening in isolated CI, SMTP configuration dependency, and the missing Purpose / Explore & Listen / Community implementations. No scope additions authorized.
+
+## Correction — exact historical iOS CI run identifiers (2026-11-28 15:51 IST)
+The previous checkpoint's traceability table used temporary “#?” placeholders for two historical iOS failures. Exact identifiers are:
+- PR #107 head `c19bdbd307df7048cefd86bd3e6064ac4f4e3042`: run #618, ID `45592615914`, conclusion `failure`. Job log: 58 unit tests passed; 2 UI tests ran with 5 failed assertions (dashboard entry/header identifiers and Start Walk query).
+- PR #112 head `b6c04d41dc67bd191ed0cf8966331eb5661a9887`: run #636, ID `45652420651`, conclusion `failure`. Job log: 58 unit tests passed; 2 UI tests ran with 1 failed assertion (dashboard snapshot timed out).
+These runs remain failures and are not acceptance evidence.
