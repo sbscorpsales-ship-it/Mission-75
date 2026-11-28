@@ -6871,3 +6871,16 @@ Keep each of these comments as explicit traceability sources:
 8. Complete Purpose & Ikigai, Explore & Listen, Community, brand assets, company pages and live Web Hub parity from frozen sources.
 
 **This checkpoint changed documentation only. No application source, production Auth configuration, database schema or user data was changed. No new CI run or physical-device test was performed.**
+
+
+## Live Supabase security/Auth recheck — 2026-11-28 16:45 IST
+
+- Project `mission75-cloud` (`crarbbsvcczwmtvxyrxo`) is `ACTIVE_HEALTHY`, PostgreSQL 17.11.0.011. Six public tables were returned; all six have RLS enabled. No Edge Functions are configured.
+- Live migration history currently returns **22 applied versions** (latest `20261113200433 enable_daily_action_progress_realtime`). Current source inventory previously recorded 10 migration files; source/history parity remains unresolved. No migration was applied.
+- Fresh read-only privilege query confirms `anon` on `public.daily_action_progress` still has DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE and UPDATE. `authenticated` also has REFERENCES, TRIGGER and TRUNCATE in addition to CRUD. RLS does not protect TRUNCATE.
+- `pg_default_acl` confirms broad default privileges on future public-schema tables, sequences and functions for both `postgres` and `supabase_admin`, including anon/authenticated table privileges (including TRUNCATE), sequence SELECT/UPDATE/USAGE, and function EXECUTE. No privilege changes were made.
+- Security advisor still reports `auth_leaked_password_protection` = WARN / disabled. No change was made.
+- Fresh `auth_logs` aggregation for 2026-11-27 11:15Z–2026-11-28 11:15Z: 10 HTTP 429 `over_email_send_rate_limit` events (first 05:21:05Z, last 06:01:53Z); 29 HTTP 400 `invalid_credentials` events (27 from the Mission-75 Web Hub referer and 2 from the root GitHub Pages referer); and 1 HTTP 400 `email_not_confirmed`. The 429 requests carry the Web Hub referer, not handset-identifying evidence. No successful external mailbox delivery is verified.
+- Keep new-account email verification blocked for alpha until verified custom SMTP or an approved email hook is configured and a non-team mailbox/device receipt is confirmed. Do not disable email confirmation. Restrict alpha onboarding to guest mode or existing confirmed accounts until then.
+
+No live database, Auth configuration, SMTP settings, schema, or user data was changed in this recheck.
