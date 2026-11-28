@@ -7,6 +7,7 @@ import android.util.Base64
 import org.json.JSONArray
 import org.json.JSONObject
 import java.security.KeyStore
+import java.security.MessageDigest
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
@@ -44,7 +45,7 @@ internal object WalkOnStore {
     private const val ACTIVE_KEY = "active_route"
     private const val COMPLETED_KEY = "completed_routes"
     private const val STATUS_KEY = "status"
-    private const val PROFILE_WEIGHT_KEY = "profile_weight_kg"
+    private const val PROFILE_WEIGHT_KEY_PREFIX = "profile_weight_kg:"
     private const val KEY_ALIAS = "gativx_walkon_route_key_v1"
     private const val KEYSTORE = "AndroidKeyStore"
 
@@ -107,19 +108,26 @@ internal object WalkOnStore {
             .apply()
     }
 
-    fun profileWeightKg(context: Context): Double? {
-        val raw = readEncrypted(context, PROFILE_WEIGHT_KEY) ?: return null
+    internal fun profileWeightStorageKey(ownerUserId: String?): String {
+        val scope = ownerUserId?.takeIf { it.isNotBlank() } ?: "guest"
+        val digest = MessageDigest.getInstance("SHA-256").digest(scope.toByteArray(Charsets.UTF_8))
+        return PROFILE_WEIGHT_KEY_PREFIX + digest.joinToString("") { "%02x".format(it) }
+    }
+
+    fun profileWeightKg(context: Context, ownerUserId: String?): Double? {
+        val raw = readEncrypted(context, profileWeightStorageKey(ownerUserId)) ?: return null
         return raw.toDoubleOrNull()?.takeIf { it.isFinite() && it in 25.0..300.0 }
     }
 
-    fun saveProfileWeightKg(context: Context, weightKg: Double?): Boolean {
+    fun saveProfileWeightKg(context: Context, ownerUserId: String?, weightKg: Double?): Boolean {
+        val key = profileWeightStorageKey(ownerUserId)
         if (weightKg == null) {
             return context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
-                .remove(PROFILE_WEIGHT_KEY)
+                .remove(key)
                 .commit()
         }
         if (!weightKg.isFinite() || weightKg !in 25.0..300.0) return false
-        return writeEncrypted(context, PROFILE_WEIGHT_KEY, weightKg.toString())
+        return writeEncrypted(context, key, weightKg.toString())
     }
 
     fun saveActive(context: Context, session: WalkOnSession): Boolean =
