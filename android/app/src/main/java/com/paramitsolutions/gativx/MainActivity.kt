@@ -119,10 +119,10 @@ private fun GativxAndroidScreen() {
     var status by remember { mutableStateOf("Connect Health Connect to read today's measured activity.") }
     var activeWalk by remember { mutableStateOf(WalkOnStore.active(context)?.takeIf { it.ownerUserId == session?.userId }) }
     var latestWalk by remember { mutableStateOf(session?.userId?.let { WalkOnStore.completedFor(context, it).firstOrNull() } ?: if (session == null) WalkOnStore.unassigned(context).firstOrNull() else null) }
-    var profileWeightKgText by remember {
-        mutableStateOf(WalkOnStore.profileWeightKg(context)?.toString() ?: "")
+    var profileWeightKgText by remember(session?.userId) {
+        mutableStateOf(WalkOnStore.profileWeightKg(context, session?.userId)?.toString() ?: "")
     }
-    var profileWeightSaveVerified by remember { mutableStateOf(true) }
+    var profileWeightSaveVerified by remember(session?.userId) { mutableStateOf(true) }
     val parsedProfileWeightKg = profileWeightKgText.trim().toDoubleOrNull()
         ?.takeIf { it.isFinite() && it in 25.0..300.0 }
     val validProfileWeightKg = parsedProfileWeightKg.takeIf { profileWeightSaveVerified }
@@ -573,7 +573,7 @@ private fun GativxAndroidScreen() {
                                 profileWeightKgText = value
                                 val validWeight = value.trim().toDoubleOrNull()
                                     ?.takeIf { it.isFinite() && it in 25.0..300.0 }
-                                profileWeightSaveVerified = WalkOnStore.saveProfileWeightKg(context, validWeight)
+                                profileWeightSaveVerified = WalkOnStore.saveProfileWeightKg(context, session?.userId, validWeight)
                                 if (!profileWeightSaveVerified) {
                                     walkStatus = "Local weight could not be encrypted and verified. Calorie estimates are disabled until storage recovers."
                                 }
