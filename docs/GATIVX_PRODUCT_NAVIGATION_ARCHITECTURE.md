@@ -134,3 +134,95 @@ A destination is complete only when:
 7. The exact commit's CI succeeds; physical device acceptance is reported separately.
 
 Do not claim the five destinations or nested modules are complete merely because navigation labels or placeholder cards exist. Implement in vertical slices and verify each slice before expanding scope.
+
+
+## GativX™ Six-Pillar Transformation Engine
+
+The six pillars are the permanent member transformation framework. Preserve the exact pillar names and order:
+
+1. **G — Goal**
+2. **A — Aim**
+3. **T — Train**
+4. **I — Inherit**
+5. **V — Vigorously**
+6. **X — Xcellence**
+
+Do not replace, merge, reorder or rename these pillars. The branded spelling is **GativX™**. The branded outcome word is **Xcellence**; ordinary explanatory prose may use the standard word “excellence”.
+
+### Member-facing philosophy
+
+“Dream with a Goal & Aim with purpose, Train with commitment to Inherit the discipline, perform Vigorously till you achieve Xcellence.”
+
+This is the founder's motivational expression. Preserve its meaning and the six pillar words in brand materials. In polished editorial copy, grammar may be improved without changing the six pillar names or their sequence.
+
+### Pillar intent and member outcomes
+
+- **Goal — discover the dream:** Help the member name a personally meaningful desired outcome, understand why it matters and define a clear starting point.
+- **Aim — connect to purpose:** Help the member articulate the personal reason, values and desired life impact behind the goal. Capture the member's own words; do not invent emotional motivations.
+- **Train — create the methodology:** Guru translates the goal, current baseline, available time, preferences and constraints into a realistic plan, small daily actions, milestones and review cadence. Training methods must be appropriate to the goal and the member's stated capabilities.
+- **Inherit — internalise discipline:** Help the member repeat useful actions until they become sustainable habits and part of their self-identity. Treat “inherit” as the founder's metaphor for internalising discipline, not a claim that discipline is biologically inherited.
+- **Vigorously — perform and improve:** Encourage energetic, consistent effort and personal bests. Compare progress against the member's own baseline and history rather than pressuring them to compete with others.
+- **Xcellence — achieve and evolve:** Recognise verified milestones, reflect on what the member learned, celebrate progress and invite the member to choose the next meaningful goal.
+
+### Onboarding and discovery conversation
+
+Onboarding is a guided conversation, not a long compulsory questionnaire. Ask one useful question at a time, explain why it matters and allow the member to skip or revisit nonessential questions.
+
+Capture, with explicit member confirmation:
+- Goal statement and goal category.
+- Why the goal matters, in the member's own words.
+- Desired outcome and target date or review horizon.
+- Starting baseline and confidence level, where relevant.
+- Available time, preferred schedule and practical constraints.
+- Skills, resources, support and barriers.
+- Preferred coaching tone and check-in frequency.
+- First small action the member is willing to take.
+
+Do not infer sensitive personal motivations. Do not require members to disclose private family, medical, financial or emotional details to use the product. Ask only for information relevant to the chosen goal.
+
+### Guru coaching loop
+
+Guru is the guide and methodology partner; the member retains agency and ownership.
+
+1. **Discover:** Clarify the Goal and Aim through the member's own answers.
+2. **Plan:** Build a realistic Train methodology with an achievable first action.
+3. **Practise:** Support the member in repeating actions and building Inherit-stage habits.
+4. **Review:** Use actual activity, completed actions and member reflections to understand progress.
+5. **Reconnect:** When a member misses a commitment or reports low motivation, respectfully remind them of the purpose they chose, acknowledge the setback without shame, and offer one small next action.
+6. **Adapt:** Ask before materially changing the plan; adjust for new constraints, injury, illness, workload or a changed goal.
+7. **Recognise:** Celebrate evidence-based progress and help the member set the next milestone.
+
+### Personalisation and data integrity
+
+- Keep each member's goals, purpose statements, coaching history and plans scoped to that member's authenticated account.
+- Respect consent, privacy controls, deletion requests and data minimisation.
+- Clearly distinguish member-entered reflections, device-measured activity and Guru-generated suggestions.
+- Never fabricate a completed action, activity reading, streak, milestone or achievement.
+- If data is unavailable, say so and offer a manual check-in where appropriate.
+- Do not treat a missed day as failure or reset a member's identity, progress or worth.
+- Never use shame, fear, humiliation, coercive “brainwashing”, manipulative streak pressure or claims that a member must obey Guru.
+- Encourage sustainable effort, rest and safe modification. For health or exercise goals, avoid medical diagnosis and adapt recommendations to stated limitations.
+
+### Required product surfaces
+
+- **Mission:** Owns Goal, Aim, the purpose statement, milestones and commitments.
+- **Guru:** Owns discovery prompts, personalised methodology guidance, habit coaching, purpose reconnection and reflective check-ins.
+- **Activity:** Supplies verified movement and workout evidence when relevant; it does not define the member's purpose.
+- **Home:** Shows one relevant next action and a concise, truthful progress summary.
+- **Profile:** Provides controls for coaching preferences, consent, connected data and privacy.
+
+### Acceptance criteria for the first vertical slice
+
+The first implementation is not complete until:
+1. A member can create and save a Goal and their own Aim/purpose statement.
+2. The app preserves all six pillar names and their order in the member journey.
+3. Guru can turn the saved Goal, baseline and constraints into a small actionable Train plan.
+4. The member can accept, edit, skip or pause suggested actions.
+5. A check-in can record completion, difficulty or a missed action without fabricating data.
+6. Guru can reconnect the member to their saved purpose and suggest one manageable next action.
+7. The member can review progress and change or retire a goal.
+8. Data is account-scoped and survives app restart and supported sync paths.
+9. Tests cover onboarding, persistence, plan generation states, check-ins, missed-action recovery, privacy boundaries and navigation.
+10. CI passes for the exact proposed commit; physical-device testing is reported separately.
+
+Implement this as a measured vertical slice. Do not represent a prompt, static card or mock response as a working Guru intelligence feature.
