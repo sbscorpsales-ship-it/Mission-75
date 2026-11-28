@@ -634,7 +634,7 @@ private fun GativxAndroidScreen() {
                             Text("ESTIMATED ACTIVE CALORIES · $caloriesLabel", color = Color.White, fontSize = 12.sp)
                             Text(
                                 if (walk.estimatedActiveCaloriesKcal != null) {
-                                    "GATIVX v${walk.calculationEngineVersion ?: GativxActivityCalculationEngine.VERSION} · weight ${walk.weightKgUsedForEstimate} kg · not Health Connect"
+                                    "GATIVX v${walk.calculationEngineVersion} · weight ${walk.weightKgUsedForEstimate} kg · not Health Connect"
                                 } else {
                                     "No estimate stored · valid weight and GPS moving-time evidence were unavailable at save"
                                 },
