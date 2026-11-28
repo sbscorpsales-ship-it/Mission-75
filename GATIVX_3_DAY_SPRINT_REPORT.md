@@ -6376,3 +6376,81 @@ Changes are on the existing isolated PR #137 branch; no PR was merged.
 4. Brand/product owner: implement the exact visible `GativX™` wordmark and native/PWA icon family; retain all existing company-address placement restrictions and Design C.
 5. Platform owners: continue HealthKit export queue, account sync, RunJeet import, Android shared golden-fixture parity and Web Hub auth/account isolation. Implement Walk & Listen only after reliability gates; YouTube remains first-class and all six languages remain required.
 6. Keep PR #107 untouched, PR #112 unmerged, and all PRs unmerged. No PR may be merged.
+
+
+## 2026-11-28 12:48 IST — Android five-destination draft audit and fresh debug APK
+
+### Live repository and exact source/report identity
+- Live default branch `main` remains `143889db3e72540fb478b76c486082f45395e9bd` (commit date `2026-11-17T04:38:35Z`). No main source change was observed.
+- Report branch before this append: `docs/gativx-sprint-report-20261125`, head `fc5ac308f189d8e9a941d4efed0a6dbb8ea1428c`; report blob SHA before append `bf77d827e4c56f11f0d344230bb97fb8b89fd7b6`. This update appends a new section; earlier audit history is retained.
+- PR #107 remains open/draft and untouched: `feat/consolidated-gativx-runjeet`, exact head `c19bdbd307df7048cefd86bd3e6064ac4f4e3042`.
+- PR #112 remains open/draft and unmerged: `fix/gativx-ui-test-guest-reset`, exact head `b6c04d41dc67bd191ed0cf8966331eb5661a9887`.
+- PR #118 remains open/draft/unmerged on the report branch. No PR was merged.
+- PR #164 remains open/draft at `3db0bac6a56272695203c849a50cab31a8058d6b`; its latest verified run remains #725.
+- PR #165 remains open/draft at `899db531b646af7a19a3318084863f60b7d3d351`; its latest verified run remains #198.
+- PR #167 remains open/draft at `54335ddc948d10d53a749f3a929834c3da08fb4b`; its latest verified run remains #726.
+- PR #168 remains open/draft at `54265f97c6c2085a6fa1d51dff731056464f9192`, branch `fix/gativx-android-auth-contrast-ratelimit-20261128`; latest exact-head run remains #199.
+- New PR #170 is open/draft, not merged: `feat/gativx-android-primary-navigation-20261128`, exact head `3b4be1337675a9e4a0e9c5dbb92444dc233d148e`, base `main`, 8 commits and 3 changed files. Its exact-head workflow run #203 succeeded. PR #170 remains branch/PR-only; it is not on main.
+- No PR has been merged. PR #107 was not modified; PR #112 remains unmerged.
+
+### PR #170 source audit — five bottom items are not the approved five destinations
+- Exact-head source file SHA values:
+  - `android/app/src/main/java/com/paramitsolutions/gativx/MainActivity.kt`: `728762a81d64b33f6ad4022095764994583759f2` (1,037 lines).
+  - `android/app/src/main/AndroidManifest.xml`: `fd3b543716a4f4b361d5c05ac2ac296f5311634e`.
+  - `android/app/src/main/res/values/strings.xml`: `84b2e670a629a71d9a7c92bbe22828e1f75f012d`.
+  - `.github/workflows/gativx-android.yml`: `e889db36bec61066bafad9bb61720dfcbc380a24`.
+  - `android/scripts/check-walkon.py`: `484408783099e92c74b07d72d6163c5d99ad84b8`.
+- PR #170 changed only three files: AndroidManifest.xml (+1/-1), MainActivity.kt (+185/-98), and strings.xml (+1/-1). The manifest label and app_name resource now use the exact visible wordmark `GativX™`; this PR does not add launcher icon assets.
+- MainActivity.kt defines bottom destinations as `Home`, `Mission`, `Activity`, `Guru`, `Profile`. This is a direct deviation from approved Design C, whose five destinations are `Home`, `Activity`, `Missions`, `Community`, `Profile`. Community is missing; Guru has replaced it; Mission is singular. Guru must be contextual from Home/Missions, not a bottom destination.
+- Mission and Guru landing cards call `GativxSubsectionScreen`. That generic screen explicitly says its data/actions “will be connected in a verified implementation pass” and shows `MODULE STATUS · NOT YET CONNECTED`. Therefore these sections are placeholders, not working feature modules. The Community screen and its actions are absent.
+- Guru lists “Music & Meditation” and “Videos & Podcasts”, but each is only a placeholder subsection. No dedicated YouTube channel/video/playlist discovery, first-class YouTube Guru Gyan source, six-language catalogue, or dedicated Purpose & Ikigai page is implemented in this PR.
+- PR #170 is based directly on `main`, not PR #168. Its MainActivity still uses plain `MaterialTheme { }` and does not include PR #168’s explicit dark Material 3 contrast color scheme or `over_email_send_rate_limit` feedback. These independent branches must be reconciled deliberately so the PR #168 fix is not lost.
+- Independent QA comment posted to PR #170 (comment ID 7235881332) records these findings and requests the correct five destinations, functional modules rather than placeholder navigation, navigation regression tests, and preservation of PR #168 changes. This is a QA comment, not approval. PR #170 remains draft and unmerged.
+
+### PR #170 CI — exact-head run #203 and prior branch attempts
+- Exact-head [Android CI run #203](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/46118272829), run ID `46118272829`, job `build-android` ID `140896859897`, completed success on commit `3b4be1337675a9e4a0e9c5dbb92444dc233d148e`.
+- All 17 returned job-step records completed successfully. The safeguard script emitted **19 PASS assertions, 0 FAIL assertions**.
+- **No JVM unit-test task ran and no Android instrumentation/UI test task ran** in run #203; the workflow definition on this branch contains only the static safeguard script, debug assembly and artifact upload. Unit/UI test counts are therefore **not run / not applicable**, not zero passing tests.
+- Gradle debug APK build reported `BUILD SUCCESSFUL`; upload completed. Non-blocking CI toolchain warnings remain: `actions/setup-java@v4` is deprecated; several workflow actions target Node.js 20 and are being forced to Node.js 24.
+- Earlier PR #170 branch attempts: run #200 on `072550a34b3365036a8fb01e5261240fbe366721` completed success; run #201 on `9ed44775d40f17a22471220015ab3dbf8853b074` was cancelled; run #202 on `5fb27af884b3c9d49a8e3e978357d26f165b1045` completed success. The exact current head is run #203.
+- The 19 safeguards verify existing GPS, persistence, account isolation, cloud route allowlist, Health Connect source preservation and token-refresh conditions. They do not verify navigation labels, Community presence, screen actions, module completeness, YouTube discovery or accessibility.
+
+### PR #170 Android artifact #15252308106 — downloaded and hash-verified
+- Artifact name `GATIVX-Android-debug`, artifact ID `15252308106`, outer ZIP size 10,318,667 bytes. GitHub digest and downloaded SHA-256 both equal `a809e5f45b259a059df6d170e098162a73b41732a20baf5cdd20583e2acb5089`.
+- Downloaded ZIP integrity check passed. Inner `app-debug.apk` size 29,627,024 bytes; SHA-256 `5320d6bd33237997e313286bbceb161f36134288c4e29740617f1acea8e4ec3a`.
+- This is a Gradle **debug APK**, not a release package. No Android device installation, physical UI review, Motorola/POCO acceptance, Health Connect permission/read acceptance or production auth test is claimed.
+
+### PR #168 exact-head CI — prior contrast/auth change remains separate
+- PR #168 head remains `54265f97c6c2085a6fa1d51dff731056464f9192`; [run #199](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/46115366074), job ID `140887867048`, succeeded.
+- Exact run #199 log reports **18 JVM tests passed, 0 failed, 0 skipped, 0 cancelled**; **28 static safeguard assertions passed, 0 failed**; debug APK build and upload succeeded. Artifact #15251168904 outer ZIP SHA-256 `cc41f7978e48fc9fad105ba48a604faf0ba8a47e3ed72cd57f33436bb4db1f8f`; inner APK SHA-256 `8521fddc88354ba0e4fbc4b4dd3bfe657a804ce3eb18f415e5eec98c058cdad4`.
+- PR #168 adds a Material 3 dark color scheme and Supabase email-rate-limit explanation, but is a separate open branch based on the Android metrics branch. PR #170 is based on main and does not contain these changes. Keep both branches separate until a reviewed integration strategy exists.
+
+### iOS exact-head status — no new iOS run
+- PR #167 remains at `54335ddc948d10d53a749f3a929834c3da08fb4b`; latest [run #726](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/46107133951), job ID `140862285046`: **85 unit +13 UI =98 passed, 0 failed, 0 skipped, 0 cancelled; 122 tracking safeguards passed**. Simulator/CI only.
+- The downloaded diagnostics artifact #15249605662 (135,505,301 bytes) remains the evidence for **1,008 CoreGraphics NaN messages and 2 invalid-frame runtime issues**. The backtrace narrows the issue to UIKit scroll-view accessibility/hit-testing around Guru/keyboard interactions but does not identify an actionable GativX Swift source value. Root cause remains unresolved; passing XCTest does not close this defect.
+- Release compiler warnings at `ios/GATIVX/ContentView.swift:613` and `:730` remain. No iOS production source correction or new iOS CI run occurred in this audit.
+- Latest iOS IPA artifact #15249421376 remains unsigned: outer ZIP SHA-256 `ab06d433942145bcf1e85491ec6413ac29bdb2a38432e1d81c91a04f40f50e4d`; inner IPA SHA-256 `db8f82768c9c678863f26578cb4e810863ba80ba25c7c5cee630e8d878d102bf`. No `_CodeSignature` or `embedded.mobileprovision`; not directly installable on iPhone.
+
+### Files changed in this scheduled audit
+- Application source: **none**. No Android/iOS application code, test, workflow, database, production setting, UI layout or Design C implementation was changed by this audit.
+- QA action: one independent comment added to PR #170 (comment ID 7235881332).
+- QA record: this report only, appended on `docs/gativx-sprint-report-20261125`; PR #118 remains open/draft/unmerged.
+- Separate open PR #170 contains the three Android files listed above; PR #168 contains its separate MainActivity contrast/auth change. No PR merged.
+
+### Updated checklist and gap ledger
+- **Done (verified):** live main/PR/ref/commit/Actions inspection; #107 untouched and #112 unmerged; PR #170 exact-head run #203 successful; 19/19 static safeguards passed; debug APK ZIP downloaded, integrity-checked and SHA-256 verified; PR #168 exact-head run #199 rechecked (18/18 JVM tests and 28/28 safeguards); PR #167 exact-head run #726 rechecked (98/98 XCTest and 122/122 safeguards); QA findings posted to PR #170; report append completed.
+- **In progress:** restore the exact five Design C destinations; add Community; keep Guru contextual; replace Mission/Guru placeholder routes with real implemented screens/actions; add navigation UI/instrumentation regression tests; reconcile PR #168 contrast/auth changes with the PR #170 branch; continue iOS Guru/ScrollView invalid-geometry investigation and Release warning cleanup.
+- **Verified (CI only):** Android debug APK assembles on PR #170 head; existing 19 GPS/privacy/cloud safeguards pass; PR #168’s 18 JVM tests and 28 safeguards pass on its separate head; PR #167’s 98 XCTest and 122 safeguards pass on simulator CI.
+- **Implemented-but-unverified:** PR #170’s five-item Android navigation shell, Home/Activity/Health Connect/GPS code and GativX™ app label compile in a debug APK; this does not verify approved navigation composition, actual screen functionality, physical GPS/background tracking, Health Connect or account sync. PR #168 contrast/rate-limit source compiles and tests pass on its separate branch, with device acceptance outstanding.
+- **Missing:** correct Design C bottom destinations (Community absent, Guru incorrectly occupies a tab, Mission label singular); functional Community and complete Mission/Guru workflows; dedicated Purpose & Ikigai page; YouTube-first Explore & Listen (YouTube, Music, Podcasts, Guided Audio) with all six languages; native iOS AppIcon asset set and matching PWA/web icon family; complete reusable custom GativX™ wordmark and remaining visible casing cleanup; Web Hub live account-data parity and shared cross-platform golden fixture; full Missions/Community/notifications acceptance.
+- **Blocked:** signed iOS IPA; physical iPhone HealthKit/GPS/background acceptance; physical Android Motorola/POCO and Health Connect acceptance; live account sync proof; Supabase production security remediation and production deployment. No production mutation or deployment occurred.
+- Installer state: latest inspected Android artifact is PR #170 debug APK #15252308106 (ZIP SHA `a809e5f45b259a059df6d170e098162a73b41732a20baf5cdd20583e2acb5089`, inner APK SHA `5320d6bd33237997e313286bbceb161f36134288c4e29740617f1acea8e4ec3a`); no physical-device acceptance. Latest iOS artifact remains unsigned and not installable directly.
+- PR state: #107 open/draft untouched; #112 open/draft unmerged; #118, #164, #165, #167, #168 and #170 open/draft; **no PR merged**.
+
+### Owner action and next action
+1. Android UI owner: correct the bottom destinations to exactly Home, Activity, Missions, Community and Profile; keep Guru contextual from Home/Missions. Do not substitute Guru for Community.
+2. Android feature owners: replace generic `GativxSubsectionScreen` placeholders with genuinely implemented flows or keep the modules clearly deferred; add automated tests that assert exact destination labels/order, navigation behavior and core touchpoints.
+3. Android integration owner: reconcile PR #168 dark contrast and rate-limit changes into the reviewed navigation branch without losing the metric-history branch’s safeguards. Add direct tests for the error-code parser and validate the actual provider rate limit before promising a fixed wait.
+4. Product owner: preserve Purpose & Ikigai, YouTube-first Explore & Listen and all six languages as mandatory product scope; no sixth tab.
+5. iOS QA/engineering: isolate the exact Guru/ScrollView invalid geometry, make a source-level fix only after identifying it, rerun full tests and diagnostics, and remove the two Release warnings without weakening assertions.
+6. Keep PR #107 untouched, PR #112 unmerged, all PRs open/draft as appropriate, and **never merge any PR**.
