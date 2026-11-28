@@ -6454,3 +6454,56 @@ Changes are on the existing isolated PR #137 branch; no PR was merged.
 4. Product owner: preserve Purpose & Ikigai, YouTube-first Explore & Listen and all six languages as mandatory product scope; no sixth tab.
 5. iOS QA/engineering: isolate the exact Guru/ScrollView invalid geometry, make a source-level fix only after identifying it, rerun full tests and diagnostics, and remove the two Release warnings without weakening assertions.
 6. Keep PR #107 untouched, PR #112 unmerged, all PRs open/draft as appropriate, and **never merge any PR**.
+
+
+---
+
+## 2026-11-28 13:24 IST — founder-requested correction pass (PR #171; CI pending)
+
+### Live repository checkpoint
+- `main` remains at the previously verified baseline `143889db3e72540fb478b76c486082f45395e9bd`; this correction branch does not modify main.
+- PR #107 remains open/draft and untouched at `c19bdbd307df7048cefd86bd3e6064ac4f4e3042`.
+- PR #112 remains open/draft and unmerged at `b6c04d41dc67bd191ed0cf8966331eb5661a9887`.
+- PR #170 remains open/draft, unmerged, head `3b4be1337675a9e4a0e9c5dbb92444dc233d148e`. Its exact-head Android run #203 (https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/46118272829) succeeded with 19 static safeguards and a debug APK build, but it had no JVM unit tests and no Android UI/instrumentation tests.
+- PR #171 opened as a draft correction PR based on PR #170. Branch `fix/gativx-design-c-purpose-explore-20261128`; final head `cc3e2f4f7d49cceaf4fff94afe92a6af24020e99`. It is open and unmerged. PR #171 exact-head run #204 (https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/46123519592) was in progress at report time; no test result is claimed.
+- PR #168 remains separate and open/draft at `54265f97c6c2085a6fa1d51dff731056464f9192`; its contrast/auth changes have been manually carried into the PR #171 correction branch. PR #164/#165/#167 remain separate and open/draft. No PR has been merged.
+
+### Defects confirmed in prior implementation
+- PR #170 bottom navigation was Home, Mission, Activity, Guru, Profile. This contradicted approved Design C: Home, Activity, Missions, Community, Profile.
+- Community was absent; Guru incorrectly occupied a bottom destination.
+- Mission/Guru cards opened a generic `GativxSubsectionScreen` that explicitly declared the modules “NOT YET CONNECTED”.
+- No dedicated Purpose & Ikigai page existed.
+- “Music & Meditation” / “Videos & Podcasts” were subsection labels, not YouTube discovery or an editorially verified multilingual catalogue.
+- PR #170 had no automated navigation acceptance tests and omitted PR #168's contrast/auth changes.
+
+### Correction implementation — PR #171
+- Files changed in PR #171 diff:
+  1. `android/app/src/main/java/com/paramitsolutions/gativx/MainActivity.kt` — exact five approved bottom destinations; Guru moved to a contextual Home action; new Purpose & Ikigai reflection page; Explore & Listen page; Community destination with share/invite action; dark Material 3 contrast scheme and email-rate-limit error handling carried forward.
+  2. `android/scripts/check-walkon.py` — eight new static safeguards for destination order, contextual Guru, purpose prompts/local save, six languages, YouTube discovery, music/podcast/guided-audio links, metrics separation, honest Community state, contrast and rate-limit message.
+- MainActivity source commit: `f6cfb6473ffc62a8a040823e1b2b079e50612372`; file blob SHA: `6bc919e55caf0637bf32e053e8c4e0133a8f1094`.
+- Safeguard script commit / PR head: `cc3e2f4f7d49cceaf4fff94afe92a6af24020e99`; script blob SHA: `008c01055cd05b7f191bb8c35ccead7bae2932ff`.
+- PR #171: https://github.com/sbscorpsales-ship-it/Mission-75/pull/171; parent/base PR #170 head `3b4be1337675a9e4a0e9c5dbb92444dc233d148e`; exact-head run #204 / ID `46123519592`.
+- Purpose & Ikigai now stores four reflections and the personal-purpose statement locally on device. It is not account-synced in this version.
+- Explore & Listen now opens YouTube search results in the selected one of six languages and provides search entry points for music, podcasts and guided audio. This is a working discovery entry point, NOT an editorially vetted list of official channels/videos/playlists. Provider restrictions apply; listening time is not connected to activity metrics.
+- Community now has the correct destination and a share/invite action. Live member feed, posts, comments, moderation and account-scoped backend are still missing/blocked; no fabricated community content is displayed.
+- PR #168 contrast and rate-limit handling are included in this branch; the exact provider retry window is not hardcoded or promised.
+
+### Checklist and gap ledger at report time
+- **Done (code committed, CI pending):** exact five-destination navigation source correction; Guru contextual action; local Purpose & Ikigai reflection screen; six-language YouTube search discovery entry point; Music/Podcasts/Guided Audio search entry points; Community invite/share action with explicit no-feed state; PR #168 contrast/auth source carried forward; eight static safeguards added.
+- **In progress:** PR #171 Android CI run #204; review compilation and safeguard results; after CI passes, produce a new debug APK and inspect it before offering it as a test build.
+- **Verified:** source changes and exact branch/commit/blob SHAs are recorded; PR #171 is open/draft and not merged; #107 remains untouched and #112 unmerged.
+- **Implemented-but-unverified:** Compose navigation and screens compile status pending run #204; local Purpose reflection persistence not yet device-tested; external YouTube intents not yet device-tested; dark field contrast not yet physically checked on Motorola/POCO; Community share intent not device-tested.
+- **Missing:** editorially approved channel/video/playlist catalogue with rights/embed status and last-verified metadata; native iOS equivalent and Web Hub parity; account sync for Purpose reflections; live Community feed/posts/comments/moderation; true Community backend security/account isolation; six-language catalogue curation rather than generic search.
+- **Blocked:** physical Android acceptance, Health Connect device read validation, signed iOS installer and physical iPhone HealthKit/GPS/background acceptance, production Supabase remediation and deployment.
+- Installer: PR #171 has no new artifact at report time. PR #170 artifact #15252308106 remains a debug APK only; do not call it the PR #171 build.
+- Exact test counts for run #204: **pending; not yet available**. No JVM or UI pass count is claimed.
+
+### Owner action / next action
+1. Inspect run #204 jobs, steps, logs and artifact; fix any compile or safeguard failure before calling the branch buildable.
+2. Add proper Android Compose UI/instrumentation tests for five-tab order and route actions; static checks alone are not UI acceptance.
+3. After CI, verify the Purpose reflection persistence and YouTube deep-link behavior on physical Android devices.
+4. Implement editorially reviewed six-language content metadata and official creator/channel/playlist links; retain free-first, rights-aware provider behavior.
+5. Build a secure account-scoped Community backend only after Supabase grants/policies are reviewed; do not display sample feed data.
+6. Port the approved screens and navigation to iOS and Web Hub with Design C parity; preserve the five destinations.
+7. Continue iOS Guru/ScrollView invalid-geometry root-cause work and release warning cleanup independently.
+8. Never merge any PR. Keep PR #107 untouched and PR #112 unmerged.
