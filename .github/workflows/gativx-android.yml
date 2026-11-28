@@ -42,6 +42,27 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.11.1"
+      - name: Run Android JVM unit tests
+        run: gradle -p android :app:testDebugUnitTest
+      - name: Summarize Android JVM unit-test counts
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+
+          reports = sorted(Path("android/app/build/test-results/testDebugUnitTest").glob("TEST-*.xml"))
+          if not reports:
+              raise SystemExit("No Android JVM JUnit XML reports were generated.")
+          totals = {"tests": 0, "failures": 0, "errors": 0, "skipped": 0}
+          for report in reports:
+              root = ET.parse(report).getroot()
+              for key in totals:
+                  totals[key] += int(root.attrib.get(key, 0))
+          print(f"Android JVM tests: {totals['tests']} total, {totals['failures']} failures, {totals['errors']} errors, {totals['skipped']} skipped")
+          if totals["tests"] < 1 or totals["failures"] or totals["errors"]:
+              raise SystemExit("Android JVM regression test gate did not pass.")
+          PY
       - name: Verify WalkOn GPS, privacy and cloud-sync safeguards
         run: python android/scripts/check-walkon.py
       - name: Build debug APK

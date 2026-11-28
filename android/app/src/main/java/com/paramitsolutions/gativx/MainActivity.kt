@@ -5,6 +5,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.IntentFilter
 import android.content.Intent
+import android.net.Uri
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -30,8 +31,10 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.darkColorScheme
 import androidx.compose.ui.Alignment
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -96,6 +99,28 @@ class MainActivity : ComponentActivity() {
 private fun GativxAndroidScreen() {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    // Explicit high-contrast auth field colours prevent OEM/theme defaults from
+    // making typed email/password text disappear on darker handset displays.
+    val authFieldColors = OutlinedTextFieldDefaults.colors(
+        focusedTextColor = Color.White,
+        unfocusedTextColor = Color.White,
+        disabledTextColor = Color(0xFF9DAEB6),
+        errorTextColor = Color(0xFFFFDAD6),
+        focusedContainerColor = Color(0xFF17232A),
+        unfocusedContainerColor = Color(0xFF17232A),
+        disabledContainerColor = Color(0xFF17232A),
+        errorContainerColor = Color(0xFF17232A),
+        cursorColor = Color(0xFFD8FF3E),
+        errorCursorColor = Color(0xFFFFB4AB),
+        focusedBorderColor = Color(0xFFD8FF3E),
+        unfocusedBorderColor = Color(0xFF9DAEB6),
+        disabledBorderColor = Color(0xFF60727B),
+        errorBorderColor = Color(0xFFFFB4AB),
+        focusedLabelColor = Color(0xFFD8FF3E),
+        unfocusedLabelColor = Color(0xFFB8C5CC),
+        disabledLabelColor = Color(0xFF9DAEB6),
+        errorLabelColor = Color(0xFFFFB4AB)
+    )
     val healthPermissions = remember {
         setOf(
             HealthPermission.getReadPermission(StepsRecord::class),
@@ -459,7 +484,15 @@ private fun GativxAndroidScreen() {
         }
     }
 
-    MaterialTheme {
+    MaterialTheme(
+        colorScheme = darkColorScheme(
+            primary = Color(0xFFD8FF3E), onPrimary = Color(0xFF111820),
+            background = Color(0xFF0B1115), onBackground = Color.White,
+            surface = Color(0xFF17232A), onSurface = Color.White,
+            onSurfaceVariant = Color(0xFFB8C5CC), outline = Color(0xFF9DAEB6),
+            secondary = Color(0xFFD8FF3E), onSecondary = Color(0xFF111820)
+        )
+    ) {
         Surface(Modifier.fillMaxSize(), color = Color(0xFF0B1115)) {
             Column(Modifier.fillMaxSize()) {
                 Column(
@@ -472,8 +505,9 @@ private fun GativxAndroidScreen() {
                     Text(
                         when (selectedFeature) {
                             "Home" -> "YOUR DAILY COMMAND CENTRE"
-                            "Mission" -> "PURPOSE · GOALS · COMMITMENTS"
+                            "Missions" -> "PURPOSE · GOALS · COMMITMENTS"
                             "Activity" -> "MEASURED MOVEMENT · GativX™ Activity"
+                            "Community" -> "GROW TOGETHER · SUPPORT EACH OTHER"
                             "Guru" -> "YOUR PERSONAL GROWTH COMPANION"
                             else -> "YOUR IDENTITY · DEVICES · SETTINGS"
                         },
@@ -481,11 +515,15 @@ private fun GativxAndroidScreen() {
                     )
 
                     if (selectedSubsection != null) {
-                        GativxSubsectionScreen(
-                            parent = selectedFeature,
-                            title = selectedSubsection!!,
-                            onBack = { selectedSubsection = null }
-                        )
+                        when (selectedSubsection) {
+                            "Purpose & Ikigai" -> GativxPurposeScreen(onBack = { selectedSubsection = null })
+                            "Explore & Listen" -> GativxExploreListenScreen(onBack = { selectedSubsection = null })
+                            else -> GativxSubsectionScreen(
+                                parent = selectedFeature,
+                                title = selectedSubsection!!,
+                                onBack = { selectedSubsection = null }
+                            )
+                        }
                     } else {
                         when (selectedFeature) {
                             "Home" -> {
@@ -509,21 +547,26 @@ private fun GativxAndroidScreen() {
                                         ) {
                                             Text(if (activeWalk == null) "Start GativX™ Activity" else "View active GativX™ Activity", fontWeight = FontWeight.Bold)
                                         }
-                                        Text("Your detailed movement records live in Activity. Your goals live in Mission. Your wellbeing guidance lives in Guru.", color = Color(0xFF9DAEB6), fontSize = 11.sp)
+                                        Text("Your movement records live in Activity. Your goals live in Missions. Your purpose reflections live in Purpose & Ikigai. Guru helps you reconnect with your why.", color = Color(0xFFB8C5CC), fontSize = 11.sp)
+                                        Button(onClick = { selectedFeature = "Guru" }, modifier = Modifier.fillMaxWidth()) { Text("Talk to Guru") }
+                                        Button(onClick = { selectedSubsection = "Purpose & Ikigai" }, modifier = Modifier.fillMaxWidth()) { Text("Open Purpose & Ikigai") }
+                                        Button(onClick = { selectedSubsection = "Explore & Listen" }, modifier = Modifier.fillMaxWidth()) { Text("Explore & Listen") }
                                     }
                                 }
                             }
-                            "Mission" -> GativxSectionLanding(
-                                title = "Your mission starts with your why",
-                                description = "Connect each goal to the purpose and feeling that make it matter.",
+                            "Missions" -> GativxSectionLanding(
+                                title = "Your goals begin with your purpose",
+                                description = "Connect each goal to the personal meaning and emotion that make it matter.",
                                 sections = listOf(
-                                    "My Purpose" to "Your personal why and the outcome that matters",
-                                    "My Goals" to "30, 90, 180 and 365-day goals",
-                                    "Challenges" to "Personal Challenge and future personal challenges",
-                                    "Milestones & Habits" to "Commitments, consistency and achievements"
+                                    "Purpose & Ikigai" to "Explore what you love, your strengths, what the world needs and what gives you energy",
+                                    "My Goals" to "Set meaningful 30, 90, 180 and 365-day goals",
+                                    "Challenges" to "Track commitments and shared challenges",
+                                    "Milestones & Habits" to "Build consistency through achievable next actions",
+                                    "Explore & Listen" to "YouTube, music, podcasts and guided audio"
                                 ),
                                 onOpen = { selectedSubsection = it }
                             )
+                            "Community" -> GativxCommunityScreen()
                             "Activity" -> {
                                                 Text("Android Health Connect", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
 
@@ -641,9 +684,8 @@ private fun GativxAndroidScreen() {
                                     "Guru Coach" to "Purpose-led reflection and your next achievable action",
                                     "Wellness & Recovery" to "Sleep, rest, stress and hydration",
                                     "Nutrition" to "Food diary and practical nutrition guidance",
-                                    "Music & Meditation" to "Mindfulness, meditation and calming audio",
-                                    "Videos & Podcasts" to "Guided sessions and learning audio",
-                                    "Learning Library" to "Habits, NLP, discipline and personal development"
+                                    "Explore & Listen" to "YouTube-first discovery, music, podcasts and guided audio",
+                                    "Learning Library" to "Habits, self-control and personal development"
                                 ),
                                 onOpen = { selectedSubsection = it }
                             )
@@ -658,10 +700,10 @@ private fun GativxAndroidScreen() {
                                 color = Color(0xFF9DAEB6),
                                 fontSize = 12.sp
                             )
-                            OutlinedTextField(value = email, onValueChange = { email = it }, label = { Text("Email") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                            OutlinedTextField(value = password, onValueChange = { password = it }, label = { Text(if (isRegistering) "Create password (8+ characters)" else "Password") }, visualTransformation = PasswordVisualTransformation(), singleLine = true, modifier = Modifier.fillMaxWidth())
+                            OutlinedTextField(value = email, onValueChange = { email = it }, label = { Text("Email") }, singleLine = true, modifier = Modifier.fillMaxWidth(), colors = authFieldColors)
+                            OutlinedTextField(value = password, onValueChange = { password = it }, label = { Text(if (isRegistering) "Create password (8+ characters)" else "Password") }, visualTransformation = PasswordVisualTransformation(), singleLine = true, modifier = Modifier.fillMaxWidth(), colors = authFieldColors)
                             if (isRegistering) {
-                                OutlinedTextField(value = confirmPassword, onValueChange = { confirmPassword = it }, label = { Text("Confirm password") }, visualTransformation = PasswordVisualTransformation(), singleLine = true, modifier = Modifier.fillMaxWidth())
+                                OutlinedTextField(value = confirmPassword, onValueChange = { confirmPassword = it }, label = { Text("Confirm password") }, visualTransformation = PasswordVisualTransformation(), singleLine = true, modifier = Modifier.fillMaxWidth(), colors = authFieldColors)
                                 Button(onClick = { register() }, enabled = !busy, modifier = Modifier.fillMaxWidth()) {
                                     Text(if (busy) "Creating account…" else "Create GativX™ Account")
                                 }
@@ -721,7 +763,7 @@ private fun GativxAndroidScreen() {
                     horizontalArrangement = Arrangement.spacedBy(2.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    listOf("Home", "Mission", "Activity", "Guru", "Profile").forEach { destination ->
+                    listOf("Home", "Activity", "Missions", "Community", "Profile").forEach { destination ->
                         TextButton(
                             onClick = { selectedFeature = destination; selectedSubsection = null },
                             modifier = Modifier.weight(1f)
@@ -737,6 +779,97 @@ private fun GativxAndroidScreen() {
                 }
             }
         }
+    }
+}
+
+
+
+@Composable
+private fun GativxPurposeScreen(onBack: () -> Unit) {
+    val context = LocalContext.current
+    val prefs = remember(context) { context.getSharedPreferences("gativx_purpose_reflections", Context.MODE_PRIVATE) }
+    var love by remember { mutableStateOf(prefs.getString("love", "") ?: "") }
+    var strengths by remember { mutableStateOf(prefs.getString("strengths", "") ?: "") }
+    var needs by remember { mutableStateOf(prefs.getString("needs", "") ?: "") }
+    var energy by remember { mutableStateOf(prefs.getString("energy", "") ?: "") }
+    var purpose by remember { mutableStateOf(prefs.getString("purpose", "") ?: "") }
+    var saved by remember { mutableStateOf(false) }
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        TextButton(onClick = onBack) { Text("Back to Missions", color = Color(0xFFD8FF3E)) }
+        Text("PURPOSE & IKIGAI", color = Color(0xFFD8FF3E), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        Text("Find the meaning behind the goal", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+        Text("Your reflections are saved on this device only in this version; they are not uploaded to your account.", color = Color(0xFFB8C5CC), fontSize = 12.sp)
+        OutlinedTextField(love, { love = it; saved = false }, label = { Text("What do I love?") }, modifier = Modifier.fillMaxWidth(), minLines = 2)
+        OutlinedTextField(strengths, { strengths = it; saved = false }, label = { Text("What am I good at?") }, modifier = Modifier.fillMaxWidth(), minLines = 2)
+        OutlinedTextField(needs, { needs = it; saved = false }, label = { Text("What does the world need that I care about?") }, modifier = Modifier.fillMaxWidth(), minLines = 2)
+        OutlinedTextField(energy, { energy = it; saved = false }, label = { Text("What gives me energy, and what can I be paid for?") }, modifier = Modifier.fillMaxWidth(), minLines = 2)
+        OutlinedTextField(purpose, { purpose = it; saved = false }, label = { Text("My purpose — in my own words") }, modifier = Modifier.fillMaxWidth(), minLines = 3)
+        Button(onClick = {
+            prefs.edit().putString("love", love).putString("strengths", strengths).putString("needs", needs).putString("energy", energy).putString("purpose", purpose).apply()
+            saved = true
+        }, modifier = Modifier.fillMaxWidth()) { Text("Save my reflections on this device") }
+        if (saved) Text("Saved on this device.", color = Color(0xFFD8FF3E), fontSize = 12.sp)
+        Text("Next step: connect this purpose to one meaningful goal and one small action.", color = Color(0xFFB8C5CC), fontSize = 12.sp)
+    }
+}
+
+@Composable
+private fun GativxExploreListenScreen(onBack: () -> Unit) {
+    val context = LocalContext.current
+    var language by remember { mutableStateOf("English") }
+    val languages = listOf("Hindi", "Kannada", "Marathi", "English", "Telugu", "Tamil")
+    val topics = listOf("Walking motivation and self-control", "Personal growth and discipline", "Mindfulness and meditation", "Yoga and Tai Chi walking", "Zumba, gym and strength training", "Diet and nutrition")
+    fun openYouTube(query: String) {
+        val url = "https://www.youtube.com/results?search_query=" + Uri.encode(query)
+        runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }
+    }
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        TextButton(onClick = onBack) { Text("Back", color = Color(0xFFD8FF3E)) }
+        Text("EXPLORE & LISTEN", color = Color(0xFFD8FF3E), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        Text("Learn, move and reset your mind", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+        Text("Free-first discovery. YouTube opens in its official app or website. Check the creator, content and provider restrictions before playing.", color = Color(0xFFB8C5CC), fontSize = 12.sp)
+        Text("Choose language", color = Color.White, fontWeight = FontWeight.Bold)
+        languages.chunked(3).forEach { row ->
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                row.forEach { item ->
+                    TextButton(onClick = { language = item }) {
+                        Text(item, color = if (language == item) Color(0xFFD8FF3E) else Color(0xFFB8C5CC), fontWeight = if (language == item) FontWeight.Bold else FontWeight.Normal)
+                    }
+                }
+            }
+        }
+        Text("YouTube · first-class discovery", color = Color(0xFFD8FF3E), fontWeight = FontWeight.Bold)
+        topics.forEach { topic ->
+            Card(modifier = Modifier.fillMaxWidth().clickable { openYouTube("$topic $language") }, colors = CardDefaults.cardColors(containerColor = Color(0xFF17232A))) {
+                Column(Modifier.fillMaxWidth().padding(14.dp)) {
+                    Text(topic, color = Color.White, fontWeight = FontWeight.Bold)
+                    Text("Search YouTube in $language", color = Color(0xFFB8C5CC), fontSize = 11.sp)
+                }
+            }
+        }
+        Text("Music · Podcasts · Guided Audio", color = Color(0xFFD8FF3E), fontWeight = FontWeight.Bold)
+        listOf("Walking music", "Personal-growth podcasts", "Guided meditation and breathing").forEach { topic ->
+            Button(onClick = { openYouTube("$topic $language") }, modifier = Modifier.fillMaxWidth()) { Text("$topic · $language") }
+        }
+        Text("This is discovery search, not an editorially verified channel catalogue. Provider ads, account limits, background play and offline rules apply. Listening time never contributes to activity metrics.", color = Color(0xFFB8C5CC), fontSize = 11.sp)
+    }
+}
+
+@Composable
+private fun GativxCommunityScreen() {
+    val context = LocalContext.current
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text("COMMUNITY", color = Color(0xFFD8FF3E), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        Text("Grow together", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+        Text("The Community destination is restored in the approved navigation. A live member feed, posts, comments and moderation are not yet connected to an account-scoped backend, so no sample members or fabricated posts are shown.", color = Color(0xFFB8C5CC), fontSize = 13.sp)
+        Button(onClick = {
+            val share = Intent(Intent.ACTION_SEND).apply {
+                type = "text/plain"
+                putExtra(Intent.EXTRA_TEXT, "I'm working towards a meaningful goal with GativX™. Join me in moving with purpose.")
+            }
+            context.startActivity(Intent.createChooser(share, "Share your GativX™ journey"))
+        }, modifier = Modifier.fillMaxWidth()) { Text("Invite someone to join your journey") }
+        Text("Live community feed: pending backend security review and account isolation.", color = Color(0xFFFFC66D), fontSize = 11.sp)
     }
 }
 
@@ -1029,8 +1162,11 @@ internal object SupabaseApi {
 
     private fun parseError(body: String, fallback: String): String = try {
         val json = JSONObject(body)
-        json.optString("msg").ifBlank {
-            json.optString("message").ifBlank { json.optString("error_description").ifBlank { fallback } }
+        when (json.optString("error_code")) {
+            "over_email_send_rate_limit" -> "Email verification is temporarily rate-limited. Please wait before requesting another email. If you already created an account, try signing in."
+            else -> json.optString("msg").ifBlank {
+                json.optString("message").ifBlank { json.optString("error_description").ifBlank { fallback } }
+            }
         }
     } catch (_: Exception) { fallback }
 }

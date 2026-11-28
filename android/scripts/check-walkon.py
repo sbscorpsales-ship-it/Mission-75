@@ -99,6 +99,87 @@ checks = {
     "rotated Supabase tokens are saved before retry": activity.count("SessionVault.save(context, activeSession)") >= 3,
 }
 
+
+checks.update({
+    "Design C bottom navigation is exactly Home, Activity, Missions, Community, Profile": (
+        'listOf("Home", "Activity", "Missions", "Community", "Profile")' in activity
+    ),
+    "Guru is contextual and not a bottom navigation destination": (
+        'listOf("Home", "Activity", "Missions", "Community", "Profile")' in activity
+        and 'listOf("Home", "Mission", "Activity", "Guru", "Profile")' not in activity
+        and 'Button(onClick = { selectedFeature = "Guru" }' in activity
+    ),
+    "Purpose and Ikigai reflections have four prompts and a saved purpose statement": (
+        "private fun GativxPurposeScreen(onBack:" in activity
+        and "What do I love?" in activity
+        and "What am I good at?" in activity
+        and "What does the world need that I care about?" in activity
+        and "What gives me energy, and what can I be paid for?" in activity
+        and 'putString("purpose", purpose)' in activity
+    ),
+    "Explore and Listen supports all six approved languages and YouTube discovery": (
+        "private fun GativxExploreListenScreen(onBack:" in activity
+        and all(f'"{language}"' in activity for language in ("Hindi", "Kannada", "Marathi", "English", "Telugu", "Tamil"))
+        and "youtube.com/results?search_query=" in activity
+        and "YouTube · first-class discovery" in activity
+    ),
+    "Explore and Listen includes music, podcasts and guided audio entry points": (
+        '"Walking music"' in activity
+        and '"Personal-growth podcasts"' in activity
+        and '"Guided meditation and breathing"' in activity
+        and "Listening time never contributes to activity metrics" in activity
+    ),
+    "Community destination does not fabricate feed members or posts": (
+        "private fun GativxCommunityScreen()" in activity
+        and "no sample members or fabricated posts are shown" in activity
+        and "Intent.ACTION_SEND" in activity
+    ),
+    "Android auth fields explicitly separate typed text, field surface, labels and focus border": (
+        "OutlinedTextFieldDefaults.colors(" in activity
+        and "focusedTextColor = Color.White" in activity
+        and "unfocusedTextColor = Color.White" in activity
+        and "focusedContainerColor = Color(0xFF17232A)" in activity
+        and "unfocusedContainerColor = Color(0xFF17232A)" in activity
+        and "focusedBorderColor = Color(0xFFD8FF3E)" in activity
+        and "unfocusedBorderColor = Color(0xFF9DAEB6)" in activity
+        and activity.count("colors = authFieldColors") >= 3
+    ),
+    "Android readable dark theme is applied to the app": (
+        "darkColorScheme(" in activity
+        and "onSurfaceVariant = Color(0xFFB8C5CC)" in activity
+    ),
+    "Supabase email rate-limit errors receive a dedicated explanation": (
+        '"over_email_send_rate_limit"' in activity
+        and "temporarily rate-limited" in activity
+    ),
+})
+
+finish_active = store.split("fun finishActive", 1)[1].split("fun markSynced", 1)[0]
+assign_unowned = store.split("fun assignUnowned", 1)[1].split("fun status", 1)[0]
+mark_synced = store.split("fun markSynced", 1)[1].split("private fun readSession", 1)[0]
+
+checks.update({
+    "Android saves measured step-only activities when GPS has no route points": (
+        "!WalkOnSessionRules.hasPersistableActivity(finished.points.size, finished.sessionSteps)" in finish_active
+        and "internal object WalkOnSessionRules" in (ROOT / "android/app/src/main/java/com/paramitsolutions/gativx/WalkOnSessionRules.kt").read_text()
+        and "Measured walking steps saved and verified on this device." in finish_active
+        and "return finished" in finish_active
+    ),
+    "Android preserves the active draft when neither GPS points nor measured steps exist": (
+        "your active draft is preserved" in finish_active
+        and finish_active.index("return null", finish_active.index("if (!WalkOnSessionRules.hasPersistableActivity"))
+        < finish_active.index("clearActive(context)")
+    ),
+    "Android verifies local account-ownership writes before continuing": (
+        "if (!writeEncrypted(context, COMPLETED_KEY, encodeSessions(history)))" in assign_unowned
+        and "ownership could not be verified" in assign_unowned
+    ),
+    "Android verifies local sync markers and retains retry visibility on failure": (
+        "if (!writeEncrypted(context, COMPLETED_KEY" in mark_synced
+        and "remains queued for a safe retry" in mark_synced
+    ),
+})
+
 failed = [name for name, passed in checks.items() if not passed]
 for name, passed in checks.items():
     print(("PASS" if passed else "FAIL") + ": " + name)
