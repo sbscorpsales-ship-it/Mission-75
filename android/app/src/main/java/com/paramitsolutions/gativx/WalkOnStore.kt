@@ -338,3 +338,31 @@ internal object WalkOnStore {
     private fun encodeSessions(sessions: List<WalkOnSession>): String =
         JSONArray().also { array -> sessions.forEach { array.put(JSONObject(encodeSession(it))) } }.toString()
 }
+
+/** Explicit route RPC allowlist. Local weight/calorie snapshots never leave encrypted storage. */
+internal object WalkOnCloudPayload {
+    fun route(walk: WalkOnSession): JSONObject {
+        val cloudPoints = if (walk.points.size > 20_000) {
+            (0 until 20_000).map { index -> walk.points[index * (walk.points.size - 1) / 19_999] }
+        } else walk.points
+        val route = JSONArray()
+        cloudPoints.forEach { point ->
+            route.put(
+                JSONObject()
+                    .put("latitude", point.latitude)
+                    .put("longitude", point.longitude)
+                    .put("timestamp", point.timestampMillis)
+                    .put("accuracy", point.accuracyMeters)
+                    .put("breakBefore", point.breakBefore)
+            )
+        }
+        return JSONObject()
+            .put("p_session_id", walk.id)
+            .put("p_started_at", walk.startedAt)
+            .put("p_finished_at", walk.finishedAt)
+            .put("p_duration_seconds", walk.durationSeconds.coerceIn(0, 86_400))
+            .put("p_distance_m", walk.distanceMeters.coerceAtLeast(0.0))
+            .put("p_steps", walk.sessionSteps.takeIf { it > 0 }?.let { it } ?: JSONObject.NULL)
+            .put("p_route_points", route)
+    }
+}
