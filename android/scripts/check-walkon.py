@@ -110,15 +110,15 @@ checks.update({
         and 'Button(onClick = { selectedFeature = "Guru" }' in activity
     ),
     "Purpose and Ikigai reflections have four prompts and a saved purpose statement": (
-        "private fun GativxPurposeScreen()" in activity
+        "private fun GativxPurposeScreen(onBack:" in activity
         and "What do I love?" in activity
         and "What am I good at?" in activity
         and "What does the world need that I care about?" in activity
-        and "What gives me energy and can sustain me?" in activity
+        and "What gives me energy, and what can I be paid for?" in activity
         and 'putString("purpose", purpose)' in activity
     ),
     "Explore and Listen supports all six approved languages and YouTube discovery": (
-        "private fun GativxExploreListenScreen()" in activity
+        "private fun GativxExploreListenScreen(onBack:" in activity
         and all(f'"{language}"' in activity for language in ("Hindi", "Kannada", "Marathi", "English", "Telugu", "Tamil"))
         and "youtube.com/results?search_query=" in activity
         and "YouTube · first-class discovery" in activity
