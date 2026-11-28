@@ -96,6 +96,11 @@ class WalkOnStartPolicyTest {
         assertFalse(payload.has("estimatedActiveCaloriesKcal"))
         assertFalse(payload.has("weightKgUsedForEstimate"))
         assertFalse(payload.has("calculationEngineVersion"))
+
+        val unknownStepsPayload = WalkOnCloudPayload.route(restored.copy(sessionSteps = 0L))
+        assertTrue(unknownStepsPayload.has("p_steps"))
+        assertTrue(unknownStepsPayload.isNull("p_steps"),
+            "Unknown step count must remain JSON null, never be converted to zero.")
     }
 
     @Test
