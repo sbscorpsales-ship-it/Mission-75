@@ -6808,3 +6808,66 @@ The previous checkpoint's traceability table used temporary “#?” placeholder
 - PR #107 head `c19bdbd307df7048cefd86bd3e6064ac4f4e3042`: run #618, ID `45592615914`, conclusion `failure`. Job log: 58 unit tests passed; 2 UI tests ran with 5 failed assertions (dashboard entry/header identifiers and Start Walk query).
 - PR #112 head `b6c04d41dc67bd191ed0cf8966331eb5661a9887`: run #636, ID `45652420651`, conclusion `failure`. Job log: 58 unit tests passed; 2 UI tests ran with 1 failed assertion (dashboard snapshot timed out).
 These runs remain failures and are not acceptance evidence.
+
+
+## Live engineering checkpoint — 2026-11-28 16:45 IST
+
+### Repository / PR state
+- Live GitHub PR search returned **70 open PRs**.
+- PR #171 remains open/draft/unmerged at `a3bcbec32909b622d1dc35859d8aa060b00fca66`, based on PR #170 head `3b4be1337675a9e4a0e9c5dbb92444dc233d148e`.
+- PR #118 report branch remains open/draft/unmerged at `d6df0018052b126365a3bb861c5da364ccb6d265` before this append.
+- PR #107 remains untouched/open/draft at `c19bdbd307df7048cefd86bd3e6064ac4f4e3042`; PR #112 remains open/draft/unmerged at `b6c04d41dc67bd191ed0cf8966331eb5661a9887`. No PR was merged or deployed.
+
+### PR #171 exact-head Android CI and artifact
+- Changed files: `android/app/src/main/java/com/paramitsolutions/gativx/MainActivity.kt`; `android/scripts/check-walkon.py`.
+- [Run #207](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/46125333076), ID `46125333076`, job `build-android` ID `140918628113`, conclusion `success`. Steps included Java 17, Android SDK 36, Gradle 8.11.1, 28 static safeguards, `:app:assembleDebug`, and artifact upload. Log: `BUILD SUCCESSFUL in 27s`; 35 Gradle tasks executed.
+- No Android JVM unit tests, Compose UI/instrumentation tests, emulator tests or physical-device tests ran on this exact head. This is compile/static-safeguard evidence only.
+- Artifact #`15254863413`, `GATIVX-Android-debug.zip`, 10,338,891 bytes; archive digest `sha256:074260ef8e790261f2a9e173c0dbebec693af783f4212015decebc4dd4f117e2`. Downloaded archive matched the digest. Extracted APK SHA-256 verified: `bd94acca6a8f202ec51cb9cef54178c45ac35e5599939b9b6261dca2f047a228`; package `com.paramitsolutions.gativx`, version `0.1.0`, minSdk 28.
+- Existing signer comparison from the 14:50 IST checkpoint: PR #170 fingerprint `de5cd85711686c1c7ce59510ec52a8e0dc14ec79564796bf08ea000d2eade6ff`; PR #171 fingerprint `f1ea3642f123ded2d51806004f6282ee29170e046da666c3752cc71ae040381b`. They differ. PR #171 cannot update PR #170 in place. Founder-installed build signer remains unknown; do not uninstall/overwrite. Stable protected alpha signing is still blocked.
+- Status: five-tab navigation and auth-field contrast **CI-tested** only. Day/Night Android **Missing** (darkColorScheme only). Purpose & Ikigai **In progress** (local fields only; full diagram, account sync, goal/Guru linkage incomplete). Explore & Listen **In progress** (YouTube search shortcuts only). Community **Missing** (no live secure feed/backend).
+
+### Cross-platform CI recheck
+- PR #107 run #618 (`45592615914`) remains **failure**: 58 unit tests passed; 2 UI tests with 5 failed assertions (dashboard entry/header and Start Walk query).
+- PR #112 run #636 (`45652420651`) remains **failure**: 58 unit tests passed; 2 UI tests with 1 failed dashboard snapshot assertion.
+- PR #164 run #725 (`46092805162`) and PR #167 run #726 (`46107133951`) are simulator-only successes: 85 iOS unit + 13 UI tests passed. PR #167 Release log still reports `ContentView.swift:613` and `:730` “will never be executed” warnings. Issue #111 records 1,008 CoreGraphics invalid-NaN warnings in diagnostics artifact #`15249605662`, backtracing through UIKit `UIScrollViewAccessibility accessibilityPath`; root cause unresolved.
+- PR #167 unsigned IPA artifact #`15249421376` downloaded and inspected. Archive digest matched GitHub metadata `sha256:ab06d433942145bcf1e85491ec6413ac29bdb2a38432e1d81c91a04f40f50e4d`; extracted IPA SHA-256 `db8f82768c9c678863f26578cb4e810863ba80ba25c7c5cee630e8d878d102bf`. Bundle ID `com.paramitsolutions.gativx`, minimum iOS 17.0; no `_CodeSignature` or `embedded.mobileprovision`. It is not installable as delivered. iPhone 11 Pro Max / iPhone 13 device acceptance remains blocked.
+- PR #157 Web Hub run #466 (`46056632791`) passed browser smoke at 1440px and 390px; 11 sections and search navigation verified. This does not prove live authenticated data/account parity; its PR description labels data illustrative.
+- Android parent/adjacent runs #198 (PR #165), #199 (PR #168), #203 (PR #170) and #207 (PR #171) succeeded at Android CI/debug-build/static-safeguard level; none is physical-device acceptance.
+
+### Issue #166 founder-source reconciliation
+Keep each of these comments as explicit traceability sources:
+- 7232358044: dedicated full-screen Purpose & Ikigai; four prompts, central My Purpose, save, goal/Guru/next-action linkage; native iOS and Web Hub parity; no sixth tab.
+- 7232437780: founder-history/named-challenge words only; universal member wording; exact GativX casing.
+- 7232471960: one custom wordmark asset across surfaces; editable vector master (prefer SVG), transparent raster/sticker exports, clear space/minimum size/light/dark variants and correct ™ placement; legal review.
+- 7232566097: complete screen inventory and four-pillar Explore & Listen, six languages, approved topics, Design C/five tabs/day-night, parity, no fitness-metric contamination.
+- 7233012082: fluorescent-yellow app-icon field, black G/X runner/up-arrow emblem, lime/green X; no illegible microcopy; native AppIcon and PWA/web icon family; installed-device verification.
+- 7233646200 / 7233693561: Param IT attribution and exact office address. The later explicit restriction in 7233693561 controls address placement: only Complete Company Profile, Company Vision/Mission/Values, in-depth Company Profile, and About the Company / The Vision Behind the App. Never a global footer/header or routine member screen.
+- 7236286183: current-version hard scope freeze and complete cross-platform implementation; no placeholders substituted for behavior.
+- Source gap remains: original Design C screenshot pack and editable master wordmark are not present in repository handoff. Existing SVGs embed raster JPEGs, not editable vector lettering; no native iOS `AppIcon.appiconset` is present. Do not recreate or approximate these assets.
+
+### Traceability refresh
+| Requirement | iOS | Android | Web Hub | Shared backend/content |
+|---|---|---|---|---|
+| Five destinations / Guru contextual | CI-tested (simulator only) | CI-tested (static safeguard only) | In progress (legacy nav differs) | Not applicable |
+| Auth input contrast | In progress | CI-tested (static only) | In progress | Email verification Missing (rate limit/provider) |
+| Day/Night appearance | In progress | Missing (dark scheme only) | In progress | Not applicable |
+| Purpose & Ikigai full page/linkage | Missing | In progress (local-only prompts) | Missing | Missing |
+| Guru purpose-to-action | CI-tested (simulator) | In progress | In progress | In progress |
+| Explore & Listen four pillars/catalogue | Missing | In progress (search shortcuts) | Missing | Missing |
+| Activity/GPS/Finish & Save/Health | CI-tested (simulator; diagnostics unresolved) | In progress (no PR #171 UI/device run) | In progress (browser-only) | In progress (security/migration blockers) |
+| Secure Community | Missing | Missing | Missing | Missing |
+| Exact wordmark/icon/approved assets | Missing | Missing | Missing | Missing (source gap) |
+| Company pages/restricted address | Missing | Missing | Missing | Not applicable |
+| Live account-scoped data/parity | In progress | In progress | In progress | In progress |
+
+### Owner actions
+1. Keep all PRs draft/unmerged; PR #107 untouched; PR #112 unmerged; no deployment.
+2. Establish protected stable Android alpha signing via CI secrets; never commit private keys. Compare with founder-installed APK before any update.
+3. Recover exact approved Design C screenshots and editable master wordmark; do not guess the Night palette.
+4. Configure verified custom SMTP and prove real non-team mailbox delivery plus POCO C65/Motorola receipt; keep email confirmation enabled.
+5. Harden live anon TRUNCATE/default ACL/leaked-password protection and reconcile migration history before Community data work.
+6. Resolve iOS NaN root cause and Release warnings; sign/provision IPA before iPhone 11 Pro Max/iPhone 13 testing.
+7. Add Android JVM/Compose UI tests to exact PR #171 head before physical-device testing.
+8. Complete Purpose & Ikigai, Explore & Listen, Community, brand assets, company pages and live Web Hub parity from frozen sources.
+
+**This checkpoint changed documentation only. No application source, production Auth configuration, database schema or user data was changed. No new CI run or physical-device test was performed.**
