@@ -91,7 +91,7 @@ checks = {
         and ".commit()" in store.split("fun saveProfileWeightKg", 1)[1].split("fun saveActive", 1)[0]
     ),
     "local profile weight is isolated by account": (
-        "profileWeightStorageKey(session?.userId)" in activity
+        "saveProfileWeightKg(context, session?.userId, validWeight)" in activity
         and "profileWeightKg(this, ownerUserId)" in service
         and "MessageDigest.getInstance(\"SHA-256\")" in store
     ),
