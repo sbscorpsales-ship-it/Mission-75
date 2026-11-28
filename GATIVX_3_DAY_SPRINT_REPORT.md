@@ -6520,3 +6520,16 @@ Changes are on the existing isolated PR #137 branch; no PR was merged.
 - Latest PR #171 head `203504e367efefc52b6869c769b870693e3a626b` now has workflow run #205 / ID `46123587324`: queued, not started. [Run #205](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/46123587324).
 - Earlier run #204 / ID `46123519592` was triggered against the previous head `cc3e2f4f7d49cceaf4fff94afe92a6af24020e99`; it is now completed with conclusion cancelled. It is not acceptance evidence for latest PR #171 head.
 - Current latest-head test counts: not yet available. No PR #171 APK artifact is available. Continue to treat build and tests as pending.
+
+
+---
+
+## 2026-11-28 13:30 IST — founder hard scope freeze and master ledger
+- Founder explicitly froze current-version scope: no new additions, deletions, substitutions, redesigns or deviation. Implement all previously discussed and approved work across iOS, Android and Web Hub; only after full implementation and acceptance may a future version be considered.
+- Created master frozen requirements/acceptance ledger: [Issue #172](https://github.com/sbscorpsales-ship-it/Mission-75/issues/172). It records the cross-platform scope, invariants, known release gates and permitted evidence-based status labels. It references source blockers #111 and detailed Walk & Listen / YouTube / Purpose / brand decisions in #166.
+- Added explicit freeze comments to [PR #171](https://github.com/sbscorpsales-ship-it/Mission-75/pull/171) and [Issue #166](https://github.com/sbscorpsales-ship-it/Mission-75/issues/166). Issue #172 comment records current CI/head caveat.
+- Updated hourly automation `6b06dfa5ef988191aafe22b8d8b04edf` to use Issue #172 as controlling scope, maintain a cross-platform traceability matrix, retain append-only reports, and prevent merge/release before founder acceptance. Schedule remains hourly; next run 13:46 IST.
+- Current PR #171 latest head after return-navigation follow-up: `203504e367efefc52b6869c769b870693e3a626b`. It remains draft/open/unmerged.
+- Run #204 (`46123519592`) was triggered against prior head `cc3e2f4f7d49cceaf4fff94afe92a6af24020e99`, not latest head. It must not be used to claim the latest source has passed CI. At the last inspection, safeguards passed, APK build was still running, no artifact was uploaded and no test totals were available. Latest commit has no verified CI run/artifact at this checkpoint.
+- No PR merged. PR #107 remains untouched; PR #112 remains unmerged.
+- This section records scope and process only; it does not change the product requirements or count as implementation acceptance.
