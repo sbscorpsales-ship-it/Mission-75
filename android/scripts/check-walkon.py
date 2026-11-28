@@ -160,7 +160,8 @@ mark_synced = store.split("fun markSynced", 1)[1].split("private fun readSession
 
 checks.update({
     "Android saves measured step-only activities when GPS has no route points": (
-        "if (finished.points.isEmpty() && finished.sessionSteps <= 0L)" in finish_active
+        "!WalkOnSessionRules.hasPersistableActivity(finished.points.size, finished.sessionSteps)" in finish_active
+        and "internal object WalkOnSessionRules" in (ROOT / "android/app/src/main/java/com/paramitsolutions/gativx/WalkOnSessionRules.kt").read_text()
         and "Measured walking steps saved and verified on this device." in finish_active
         and "return finished" in finish_active
     ),
