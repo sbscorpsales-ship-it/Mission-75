@@ -5958,3 +5958,28 @@ Changes are on the existing isolated PR #137 branch; no PR was merged.
 3. Investigate the Guru keyboard invalid-frame warning with targeted diagnostics; preserve passing layout assertions.
 4. Continue shared iOS/Android/Web metric golden fixtures and account-scoped sync contract.
 5. Keep PR #107 untouched, PR #112 unmerged, and all PRs unmerged.
+
+
+## 2026-11-28 06:04 IST — CI follow-up and Android account isolation
+
+### PR #164 iOS historical snapshot
+- Exact head remains \`f232bc8ae63a54e2984e37da7dc9e995f7f97388\`.
+- Run #724 remains in progress at the serial simulator unit/UI test step. Project generation, scheme validation and first-run/auth/portrait/permission checks passed. The GitHub log endpoint has not published the active XCTest log yet; no test counts or new IPA artifact are available.
+
+### PR #165 Android metric parity — exact-head progression
+- Branch \`feat/gativx-android-activity-metrics-history-20261128\` advanced to exact head \`3437ad87716932df834798e341b2c72dd5762558\`.
+- Draft PR #165 remains open and unmerged; base is PR #137 branch \`fix/gativx-android-unreadable-active-draft-20261126\` at \`25ecb3a914590b5babadda2ea2b51a44bc0fd330\`.
+- PR #165 files: \`GativxActivityCalculationEngine.kt\`, \`MainActivity.kt\`, \`WalkOnLocationService.kt\`, \`WalkOnStore.kt\`, \`GativxActivityCalculationEngineTest.kt\`, \`WalkOnStartPolicyTest.kt\`, plus \`android/scripts/check-walkon.py\`.
+- A privacy hardening pass now scopes encrypted local weight values to a SHA-256-derived account key (including a separate guest scope). The active WalkOn owner selects the weight at finish; account IDs are not written into the preference key. A JVM test verifies account isolation.
+- Added a route estimate adapter with distance/moving-time/weight validation and speed bounds, local-only saved calorie/weight/engine provenance, a tested cloud route allowlist, unknown-step JSON-null preservation, and legacy decode tests.
+
+### Android CI history
+- Run #191 (head \`8b76e379e2b0921d1a3c86d7568e5dcd92eb77f1\`) failed before JVM tests because the static safeguard still searched for \`p_steps\` in \`MainActivity.kt\` after the production JSON builder had been deliberately extracted to \`WalkOnCloudPayload.route\` in \`WalkOnStore.kt\`. Exact log: “WalkOn safeguards missing: cloud route sync preserves unknown steps”. The check was corrected to inspect the actual production builder and to assert encrypted/account-scoped local weight plus exclusion of local calorie fields.
+- Run #192 (intermediate head \`5bd43bf1e4aa025671fd0029f648a948e8b04465\`) then passed all 27 static safeguards and 17 JVM tests (17 passed, 0 failed, 0 skipped). Kotlin compilation and \`:app:assembleDebug\` reached \`BUILD SUCCESSFUL\`; GitHub cancelled the job before artifact upload when a newer branch commit arrived. Therefore run #192 is partial evidence only, not a completed APK result.
+- Latest exact head \`3437ad87716932df834798e341b2c72dd5762558\` has new run [#197](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/46088599275). Java setup passed; Android 36 SDK installation is in progress. No tests or build have run on this latest head yet.
+
+### Next actions
+1. Complete exact-head run #724 and inspect all XCTest results, warning diagnostics, Release build and unsigned IPA.
+2. Complete Android run #197 on head \`3437ad87716932df834798e341b2c72dd5762558\`; inspect the static safeguard, exact JVM counts, APK build, artifact upload and SHA-256.
+3. If either workflow reports a genuine defect, fix it on its isolated branch and inspect the resulting exact-head run. Do not reuse intermediate run #192 as final acceptance.
+4. Keep PR #107 untouched, PR #112 unmerged, and all PRs unmerged.
