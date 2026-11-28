@@ -29,6 +29,29 @@ class GativxActivityCalculationEngineTest {
     }
 
     @Test
+    fun routeEstimateUsesGPSMovingTimeAndRequiresValidLocalWeight() {
+        val estimate = GativxActivityCalculationEngine.estimateWalkingRoute(
+            distanceMeters = 1_000.0,
+            movingSeconds = 720L,
+            weightKg = 80.0
+        )
+        assertEquals(GativxActivityCalculationResult.Status.ESTIMATED, estimate.status)
+        assertEquals("1.1.2", estimate.engineVersion)
+        assertEquals(40.0, estimate.activeCaloriesKcal!!, 0.5)
+
+        val missingWeight = GativxActivityCalculationEngine.estimateWalkingRoute(1_000.0, 720L, null)
+        val missingMovingTime = GativxActivityCalculationEngine.estimateWalkingRoute(1_000.0, null, 80.0)
+        val implausibleSpeed = GativxActivityCalculationEngine.estimateWalkingRoute(10_000.0, 60L, 80.0)
+
+        assertEquals(GativxActivityCalculationResult.Status.INSUFFICIENT_DATA, missingWeight.status)
+        assertEquals(GativxActivityCalculationResult.Status.INSUFFICIENT_DATA, missingMovingTime.status)
+        assertEquals(GativxActivityCalculationResult.Status.INSUFFICIENT_DATA, implausibleSpeed.status)
+        assertNull(missingWeight.activeCaloriesKcal)
+        assertNull(missingMovingTime.activeCaloriesKcal)
+        assertNull(implausibleSpeed.activeCaloriesKcal)
+    }
+
+    @Test
     fun cadenceFallbackMatchesSharedGoldenValues() {
         val result = GativxActivityCalculationEngine.estimate(
             weightKg = 70.0,
