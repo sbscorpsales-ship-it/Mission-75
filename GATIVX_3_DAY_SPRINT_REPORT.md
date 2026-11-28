@@ -5859,3 +5859,102 @@ Changes are on the existing isolated PR #137 branch; no PR was merged.
 - Application source commit **bc76fdb** changed `ios/GATIVX/GPSRouteRecorder.swift`, `ios/GATIVX/ContentView.swift`, `ios/GATIVXUITests/GATIVXDashboardUITests.swift`, `ios/GATIVXTests/GPSRouteDraftPersistenceTests.swift`, and `.github/workflows/gativx-ios.yml`.
 - This reporting cycle made no additional application-code commit. It verified the complete exact-head CI and artifacts and updated this report.
 - Next: add backward-compatible local-only metric snapshots (weight/height values used, distance source, moving-time source, calculation-engine version and derived values) to saved history; prove the cloud serializer omits all local body-metric snapshots. Then add Kotlin golden-fixture parity and Android UI/history integration, followed by Web Hub contract work.
+
+
+## 2026-11-28 06:01 IST — exact-head audit and cross-platform metric work
+
+### Repository state and safety
+- Repository: \`sbscorpsales-ship-it/Mission-75\`
+- Default branch \`main\`: \`143889db3e72540fb478b76c486082f45395e9bd\` (still unchanged at this checkpoint).
+- PR #107 remains open and untouched. PR #112 remains open and unmerged. No PR was merged.
+- Design C and previously approved product decisions remain unchanged.
+- All new work is on isolated draft PRs #164 and #165. No production database mutation or deployment occurred.
+
+### Exact branch heads and CI evidence
+| PR / branch | Exact head | Latest verified run | Result |
+|---|---|---|---|
+| #136 \`fix/gativx-single-navigation-dock-20261126\` | \`31e5b70d85537113e74dd003d06b3ae95ba323f4\` | [#670](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/45847572105) | 76 unit passed; 9 UI executed, 8 passed / 1 failed. Dock 113.0625 pt > 76 pt. Overall failed. |
+| #161 \`fix/gativx-profile-bottom-clearance-20261127\` | \`c92dc7505320b63fabf13f79dceacf12d6978b59\` | [#715](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/46048494016) | 76 unit + 13 UI passed; 0 failures. Five destinations, full-screen Activity, <=76 pt dock, Guru keyboard dismissal, Finish & Save/history and Profile/photo-picker paths passed in simulator. |
+| #162 \`fix/gativx-session-metrics-engine-20261127\` | \`f41fb5df967358094cb70e7cd3eb86b96ceb2d03\` | [#720](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/46057280800) | 81 unit executed / 3 failed; 12 UI passed. Three assertions were caused by a 1,200 s fixture route versus 720 s finish time and resulting 41.8375 kcal / 0 activity points. |
+| #163 \`feat/gativx-activity-metrics-ui-20261128\` | \`bc76fdb523635ce9e992a95604a9aa5cf614f08a\` | [#723](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/46076080143) | 82 unit + 13 UI = 95 passed; 0 failed / skipped / cancelled. 148 tracking safeguards passed. Simulator, unsigned Release build and IPA packaging passed. |
+| #164 \`feat/gativx-historical-metric-snapshots-20261128\` | \`f232bc8ae63a54e2984e37da7dc9e995f7f97388\` | [#724](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/46087695050) | In progress. Project validation and first-run/auth/privacy checks passed; full unit/UI test step still executing. No exact-head test counts yet. |
+| #165 \`feat/gativx-android-activity-metrics-history-20261128\` | \`8b76e379e2b0921d1a3c86d7568e5dcd92eb77f1\` | [#191](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/46088220367) | In progress. Android 36 SDK installation step running; JVM tests/build have not started. No test counts yet. |
+| #137 Android base \`fix/gativx-android-unreadable-active-draft-20261126\` | \`25ecb3a914590b5babadda2ea2b51a44bc0fd330\` | [#190](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/46057928964) | 14 JVM tests passed, 0 failed / skipped; 25 safeguards passed. Debug APK only. |
+
+### PR #164 — local historical metric snapshot
+- Draft PR #164, base PR #163 branch; not merged.
+- Files changed:
+  - \`ios/GATIVX/Models/ActivitySessionRecord.swift\`
+  - \`ios/GATIVX/ContentView.swift\`
+  - \`ios/GATIVX/Cloud/SupabaseRESTClient.swift\`
+  - \`ios/GATIVXTests/GATIVXActivitySessionTests.swift\`
+- Finish & Save captures distance and source, GPS moving time, estimated active calories, capture time and engine version. Weight is retained only when used for a valid calorie estimate; height only when used for a stride-distance estimate.
+- Saved history reads the immutable snapshot. Legacy records can still show sensor-measured GPS/pedometer distance and GPS moving time, but do not recalculate historical stride distance or calories using today's Profile measurements.
+- Recovery merge preserves an unchanged snapshot and invalidates it when incoming sensor inputs change, rather than displaying stale derived values.
+- The two actual iOS RPC payload builders were refactored to explicit field allowlists and unit-tested. They accept the session record but serialize only session identifiers/activity/timestamps/steps and route/distance data; snapshot, weight, height, calories and engine metadata are excluded.
+- Added tests for legacy Codable decode, local encrypted/file-store round-trip, stability after Profile weight/height edits, and exact cloud payload keys/privacy exclusion.
+- Current exact-head run #724 is still in progress; no test or IPA result may be claimed yet.
+
+### PR #165 — Android WalkOn metric parity
+- Draft PR #165, stacked on PR #137; not merged.
+- Files changed:
+  - \`android/app/src/main/java/com/paramitsolutions/gativx/GativxActivityCalculationEngine.kt\`
+  - \`android/app/src/main/java/com/paramitsolutions/gativx/MainActivity.kt\`
+  - \`android/app/src/main/java/com/paramitsolutions/gativx/WalkOnLocationService.kt\`
+  - \`android/app/src/main/java/com/paramitsolutions/gativx/WalkOnStore.kt\`
+  - \`android/app/src/test/java/com/paramitsolutions/gativx/GativxActivityCalculationEngineTest.kt\`
+  - \`android/app/src/test/java/com/paramitsolutions/gativx/WalkOnStartPolicyTest.kt\`
+- Optional weight input is encrypted using the existing Android Keystore-backed WalkOn store. If local encrypted write/read-back fails, live estimates are disabled.
+- The route estimate requires valid GPS distance, accepted moving time, valid local weight and plausible average speed (0.5–8.0 m/s). Elapsed wall time is not substituted; missing/implausible inputs yield unavailable, not zero.
+- Live and saved WalkOn displays label the value as a GATIVX estimate, show the saved engine version/weight provenance, and keep Health Connect measured active energy separate.
+- Estimated calories, weight used and engine version are persisted only in encrypted local history. The route RPC uses a tested explicit allowlist that excludes all three fields.
+- Added tests for the 1 km / 12 min / 80 kg golden value (~40 kcal), missing weight/distance/moving-time rejection, legacy decode, local snapshot round-trip, incomplete provenance rejection and cloud payload exclusion.
+- Exact-head run #191 is still installing Android SDK components; no test/build result or APK exists yet. No emulator/physical-device/Health Connect acceptance is claimed.
+- The weight input currently appears on the WalkOn Activity card because the Android Profile experience is not yet a complete native profile surface. This is an integration gap, not a final product-design acceptance.
+
+### Artifacts and hashes
+- PR #163 run #723 outer artifact #15235849227: ZIP 801,388 bytes; SHA-256 \`a4de1f6e89b4a17254d71b35a67213e82978aac423461294aceff3c55caf9a4a\`.
+- Inner \`GATIVX-unsigned.ipa\`: 808,442 bytes; SHA-256 \`50cd1201ac793667bf8164f2e9b62ca78b08966906727da09b181d8144d3a581\`. ZIP integrity, Info.plist, bundle ID \`com.paramitsolutions.gativx\`, version 1.0.0 (1), and arm64 Mach-O verified. No \`_CodeSignature\` or \`embedded.mobileprovision\`: unsigned and not directly installable.
+- PR #137 run #190 Android debug APK artifact #15227790518: SHA-256 \`70cd7a24902d82e26a83093251624b0770ee88e26c37aca6075d57409e9db97b\`. ZIP integrity verified. Debug-only, not release-signed.
+- PR #164 and #165 have no completed-run artifacts at this checkpoint.
+
+### Runtime warning investigation
+- PR #163 run #723 had two non-failing SwiftUI warnings: “Invalid frame dimension (negative or non-finite)” in \`testDashboardSectionsMetricsAndPrimaryNavigation\` and \`testGuruKeyboardAndDismissalFromFreshHome\`.
+- Downloaded the XCTest diagnostics artifact and inspected the activity JSON. Both warnings occurred while the Guru goal text field was being focused and the keyboard was presented. The diagnostics do not contain a SwiftUI layout backtrace; the diagnostics screenshot manifest is empty. The tests still passed.
+- Do not alter Design C or loosen the keyboard/layout tests based on this evidence alone. Next investigation: add a targeted layout diagnostic around Guru keyboard presentation and inspect the first invalid geometry source.
+
+### Gap ledger
+| Area | Status | Evidence / remaining gap |
+|---|---|---|
+| iOS five-destination navigation / full-screen Activity | verified (simulator) | PR #161 run #715 passed; PR #136 run #670 remains failed. |
+| iOS Finish & Save / history recovery | verified (simulator) | PR #161 and #163 suites passed; real-device acceptance pending. |
+| iOS live and saved Activity metrics | verified (simulator) | PR #163 run #723 synthetic GPS fixture; PR #164 historical snapshot work is implemented but unverified until run #724 completes. |
+| iOS HealthKit permissions/export | implemented-but-unverified | Source entitlement and simulator checks pass; physical HealthKit write/read-back not tested. |
+| iOS background GPS / sensor accuracy | blocked | Requires physical iPhone walk with permissions, background/locked-screen and route validation. |
+| Android GPS/steps/route safeguards | verified (JVM/static) | PR #137 run #190; physical Android remains untested. |
+| Android live/saved calorie estimates | implemented-but-unverified | PR #165; run #191 pending. |
+| Android Health Connect | blocked | Requires device, app permissions and read/write verification; measured energy remains separate from GATIVX estimate. |
+| Web Hub responsive shell/navigation | verified (automated smoke) | PR #157 run #466. |
+| Web Hub authentication/live metrics | missing | Current Web Hub remains static; no proven live Supabase auth/data fetch/account isolation. |
+| Shared cross-platform metrics contract | missing | Golden fixture parity and provenance contract across iOS/Android/Web not complete. |
+| Goals/purpose, Guru | implemented-but-unverified | Core iOS UI exists; real service/account isolation and full journey acceptance incomplete. |
+| Missions / Community / notifications | missing / partial | Community was explicitly disabled in PR #136 capture; product features not accepted. |
+| Profile parity | implemented-but-unverified | iOS root photo picker path tested; Android local weight field is currently on WalkOn card, not a complete Profile surface. |
+| Supabase security | blocked | Excessive anon grants on \`daily_action_progress\`, broad future-object ACLs for \`supabase_admin\`, migration source/history mismatch, leaked-password protection disabled. No production changes. |
+| iOS signed installer | blocked | Unsigned IPA only; requires Apple signing certificate/team and provisioning or approved sideload route. |
+| Android release installer | blocked | Debug APK only; requires release keystore/signing and device acceptance. |
+| Production deployment | blocked | No production deployment or database mutation performed. |
+
+### Owner actions required for release acceptance
+1. Supply an authorized Apple Developer signing team/certificate and provisioning profile, or approve a supported sideload path; then install and test on a physical iPhone.
+2. Supply an Android release keystore/signing configuration and a physical Android device with Health Connect installed and permissions granted.
+3. Perform a real walking session on both platforms with screen locked/backgrounded; verify sensor readings, Finish & Save, relaunch recovery and HealthKit/Health Connect read-back.
+4. Have the Supabase project owner review and approve the grant/ACL/migration/password-protection remediation before any production change.
+5. Approve the Web Hub authentication/account-isolation contract before connecting live member data.
+
+### Next actions
+1. Poll exact-head iOS PR #164 run #724; inspect full logs and artifacts. Fix only genuine failures.
+2. Poll Android PR #165 run #191; inspect safeguard, JVM test and debug build logs. Fix any compile/test failures without weakening checks.
+3. Investigate the Guru keyboard invalid-frame warning with targeted diagnostics; preserve passing layout assertions.
+4. Continue shared iOS/Android/Web metric golden fixtures and account-scoped sync contract.
+5. Keep PR #107 untouched, PR #112 unmerged, and all PRs unmerged.
