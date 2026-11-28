@@ -6653,3 +6653,9 @@ Changes are on the existing isolated PR #137 branch; no PR was merged.
 4. Continue iOS NaN root-cause investigation and remove the release compiler warnings; rerun simulator diagnostics and perform physical iPhone checks when a properly signed build is available.
 5. Complete missing Purpose, Explore & Listen, Community, iOS parity and Web Hub parity against Issue #172. Preserve the approved Design C and all working functionality.
 6. Keep every PR draft/unmerged until all frozen rows are accepted with founder evidence. No merge, production release, deployment or claim of completion is authorized by this alpha artifact.
+
+
+## 2026-11-28 13:54 IST — exact CI run-number correction
+- The prior checkpoint section used `#?` placeholders for two older iOS workflow runs. Exact live Actions metadata confirms: PR #107 uses **run #618**, ID `45592615914`, head `c19bdbd307df7048cefd86bd3e6064ac4f4e3042`, conclusion failure; PR #112 uses **run #636**, ID `45652420651`, head `b6c04d41dc67bd191ed0cf8966331eb5661a9887`, conclusion failure.
+- Run #618 log: 2 UI tests executed, 5 failures; run #636 log: 2 UI tests executed, 1 failure. Both remain unresolved acceptance blockers.
+- This correction is append-only and does not change the earlier source/test evidence.
