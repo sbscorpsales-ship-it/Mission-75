@@ -493,8 +493,8 @@ private fun GativxAndroidScreen() {
 
                     if (selectedSubsection != null) {
                         when (selectedSubsection) {
-                            "Purpose & Ikigai" -> GativxPurposeScreen()
-                            "Explore & Listen" -> GativxExploreListenScreen()
+                            "Purpose & Ikigai" -> GativxPurposeScreen(onBack = { selectedSubsection = null })
+                            "Explore & Listen" -> GativxExploreListenScreen(onBack = { selectedSubsection = null })
                             else -> GativxSubsectionScreen(
                                 parent = selectedFeature,
                                 title = selectedSubsection!!,
@@ -762,7 +762,7 @@ private fun GativxAndroidScreen() {
 
 
 @Composable
-private fun GativxPurposeScreen() {
+private fun GativxPurposeScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     val prefs = remember(context) { context.getSharedPreferences("gativx_purpose_reflections", Context.MODE_PRIVATE) }
     var love by remember { mutableStateOf(prefs.getString("love", "") ?: "") }
@@ -772,6 +772,7 @@ private fun GativxPurposeScreen() {
     var purpose by remember { mutableStateOf(prefs.getString("purpose", "") ?: "") }
     var saved by remember { mutableStateOf(false) }
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        TextButton(onClick = onBack) { Text("Back to Missions", color = Color(0xFFD8FF3E)) }
         Text("PURPOSE & IKIGAI", color = Color(0xFFD8FF3E), fontSize = 12.sp, fontWeight = FontWeight.Bold)
         Text("Find the meaning behind the goal", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
         Text("Your reflections are saved on this device only in this version; they are not uploaded to your account.", color = Color(0xFFB8C5CC), fontSize = 12.sp)
@@ -790,7 +791,7 @@ private fun GativxPurposeScreen() {
 }
 
 @Composable
-private fun GativxExploreListenScreen() {
+private fun GativxExploreListenScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     var language by remember { mutableStateOf("English") }
     val languages = listOf("Hindi", "Kannada", "Marathi", "English", "Telugu", "Tamil")
@@ -800,6 +801,7 @@ private fun GativxExploreListenScreen() {
         runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }
     }
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        TextButton(onClick = onBack) { Text("Back", color = Color(0xFFD8FF3E)) }
         Text("EXPLORE & LISTEN", color = Color(0xFFD8FF3E), fontSize = 12.sp, fontWeight = FontWeight.Bold)
         Text("Learn, move and reset your mind", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
         Text("Free-first discovery. YouTube opens in its official app or website. Check the creator, content and provider restrictions before playing.", color = Color(0xFFB8C5CC), fontSize = 12.sp)
