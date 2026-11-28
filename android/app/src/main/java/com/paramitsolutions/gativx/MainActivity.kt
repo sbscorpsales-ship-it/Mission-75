@@ -779,7 +779,7 @@ private fun GativxPurposeScreen(onBack: () -> Unit) {
         OutlinedTextField(love, { love = it; saved = false }, label = { Text("What do I love?") }, modifier = Modifier.fillMaxWidth(), minLines = 2)
         OutlinedTextField(strengths, { strengths = it; saved = false }, label = { Text("What am I good at?") }, modifier = Modifier.fillMaxWidth(), minLines = 2)
         OutlinedTextField(needs, { needs = it; saved = false }, label = { Text("What does the world need that I care about?") }, modifier = Modifier.fillMaxWidth(), minLines = 2)
-        OutlinedTextField(energy, { energy = it; saved = false }, label = { Text("What gives me energy and can sustain me?") }, modifier = Modifier.fillMaxWidth(), minLines = 2)
+        OutlinedTextField(energy, { energy = it; saved = false }, label = { Text("What gives me energy, and what can I be paid for?") }, modifier = Modifier.fillMaxWidth(), minLines = 2)
         OutlinedTextField(purpose, { purpose = it; saved = false }, label = { Text("My purpose — in my own words") }, modifier = Modifier.fillMaxWidth(), minLines = 3)
         Button(onClick = {
             prefs.edit().putString("love", love).putString("strengths", strengths).putString("needs", needs).putString("energy", energy).putString("purpose", purpose).apply()
