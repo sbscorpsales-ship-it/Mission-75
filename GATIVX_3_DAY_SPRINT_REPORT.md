@@ -5990,3 +5990,12 @@ Changes are on the existing isolated PR #137 branch; no PR was merged.
 - PR #164 run #724: exact head \`f232bc8ae63a54e2984e37da7dc9e995f7f97388\`; Xcode selection, project generation, scheme validation and first-run/auth/portrait/permission checks passed. Full serial simulator XCTest step remains in progress. No logs/artifacts yet.
 - PR #165 run #197: exact head \`3437ad87716932df834798e341b2c72dd5762558\`; Java 17, Android 36 SDK, Gradle 8.11.1 and the updated WalkOn GPS/privacy/cloud-sync safeguard step all passed. Android JVM unit tests are in progress; no test counts, APK build or artifact upload yet.
 - Prior PR #165 run #192 is cancelled and remains intermediate-only: 27 safeguards and 17 JVM tests passed; Gradle debug assemble logged BUILD SUCCESSFUL, but GitHub cancelled the job before APK upload. Do not treat it as a release artifact.
+
+
+## 2026-11-28 06:06 IST — Android test compile failure and correction
+
+- PR #165 exact head \`899db531b646af7a19a3318084863f60b7d3d351\`; the PR API confirms it remains draft/open, base branch \`fix/gativx-android-unreadable-active-draft-20261126\` at \`25ecb3a914590b5babadda2ea2b51a44bc0fd330\`, merged=false.
+- Run #197 failed during \`compileDebugUnitTestKotlin\` after all 28 static safeguard checks passed. Compiler errors in \`WalkOnStartPolicyTest.kt:102-103\` showed the JUnit \`assertTrue\` overload had message and Boolean arguments reversed. No JVM tests ran; debug APK build was skipped.
+- Corrected the assertion argument order in commit \`899db531b646af7a19a3318084863f60b7d3d351\`. No assertion was removed or weakened.
+- New exact-head run [#198](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/46088750510) has passed Java 17, Android SDK 36, Gradle 8.11.1 and all static safeguard checks; JVM tests are now running. No test counts or APK artifact yet.
+- PR #164 run #724 remains in full serial simulator XCTest execution on exact head \`f232bc8ae63a54e2984e37da7dc9e995f7f97388\`; no result bundle or test counts published yet.
