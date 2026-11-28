@@ -47,6 +47,10 @@ final class GATIVXDashboardUITests: XCTestCase {
                       "Existing members must be able to start password recovery.")
         authModeToggle.tap()
         XCTAssertTrue(app.staticTexts["CREATE YOUR GATIVX ACCOUNT"].exists)
+        XCTAssertTrue(app.buttons["gativx-connect-apple-health"].exists,
+                      "Welcome must offer explicit Apple Health permission setup.")
+        XCTAssertTrue(app.buttons["gativx-enable-motion-tracking"].exists,
+                      "Welcome must offer explicit Motion & Fitness permission setup.")
         let guestEntry = app.buttons["gativx-continue-guest"]
         XCTAssertTrue(guestEntry.exists, "Local-only access must be an explicit choice.")
         guestEntry.tap()
