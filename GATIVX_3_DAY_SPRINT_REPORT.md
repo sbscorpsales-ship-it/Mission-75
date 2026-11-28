@@ -6052,3 +6052,62 @@ Changes are on the existing isolated PR #137 branch; no PR was merged.
 3. Continue Android shared golden-fixture parity and inspect the debug APK manifest/build metadata; keep Health Connect measured energy separate from GATIVX estimates.
 4. Continue Web Hub authentication/account-isolation and shared dashboard contract only after backend security grants are reviewed.
 5. Preserve PR #136's dock failure and PR #161's passing layout baseline. Keep PR #107 untouched, PR #112 unmerged, and all PRs unmerged.
+
+
+## 2026-11-28 07:44 IST — exact-head iOS history acceptance and Walk & Listen product scope
+
+### Live repository verification
+- Re-read the open PR collection, current heads, branch refs, recent commits and latest Actions runs from GitHub.
+- main remains at 143889db3e72540fb478b76c486082f45395e9bd; the latest main commit remains dated 2026-11-17.
+- PR #164 is open/draft, not merged. Branch feat/gativx-historical-metric-snapshots-20261128, exact head 3db0bac6a56272695203c849a50cab31a8058d6b, base PR #163 head bc76fdb523635ce9e992a95604a9aa5cf614f08a. Compare reports 5 commits ahead, 0 behind. Changed files across the PR: .github/workflows/gativx-ios.yml, ios/GATIVX/Cloud/SupabaseRESTClient.swift, ios/GATIVX/ContentView.swift, ios/GATIVX/Models/ActivitySessionRecord.swift, ios/GATIVXTests/GATIVXActivitySessionTests.swift.
+- Latest corrective commit 3db0bac6a56272695203c849a50cab31a8058d6b changed only .github/workflows/gativx-ios.yml and ios/GATIVXTests/GATIVXActivitySessionTests.swift; it corrected the expected GPS fixture to use measured distance and aligned source safeguards with the explicit payload builder.
+- PR #165 remains open/draft, not merged; branch feat/gativx-android-activity-metrics-history-20261128, exact head 899db531b646af7a19a3318084863f60b7d3d351.
+- PR #107 remains open/draft and untouched at c19bdbd307df7048cefd86bd3e6064ac4f4e3042. PR #112 remains open/draft and unmerged at b6c04d41dc67bd191ed0cf8966331eb5661a9887. No PR was merged.
+
+### PR #164 — exact-head iOS historical snapshot acceptance
+- Exact-head run #725 (run ID 46092805162), job build-ios ID 140817356454, completed success on 3db0bac6a56272695203c849a50cab31a8058d6b.
+- XCTest: 85 unit tests passed, 13 UI tests passed; total 98 passed, 0 failed, 0 skipped, 0 cancelled. Unit suite summary: 85/85. UI suite summary: 13/13.
+- Focused test evidence: testHistoricalMetricSnapshotSurvivesLocalStoreAndProfileEdits passed; testLegacyActivityWithoutHistoricalMetricSnapshotDecodes passed; testActivityCloudPayloadAllowlistsExcludeHistoricalProfileMetrics passed.
+- The snapshot is captured in finishActivitySession before local history persistence. History uses the saved snapshot, so later Profile edits do not recalculate old distance/calorie estimates. Legacy records without a snapshot decode without invented profile inputs.
+- Cloud serialization audit: ActivitySessionCloudPayload.steps and .route construct explicit allowlisted dictionaries; syncActivitySession and syncActivitySessionRoute serialize only those dictionaries. The passing privacy test asserts the exact keys and verifies serialized RPC payloads do not contain weight, height, calories, metricSnapshot or engine-version fields. The full Codable record remains in local history/outbox storage; it is not directly JSON-encoded into the two RPC bodies.
+- Tracking safeguard script: 122 named assertions printed PASS, 0 FAIL. All 21 workflow steps completed successfully.
+- Project/scheme validation and first-run auth/portrait/permission checks passed; generated target HealthKit source entitlement check passed; iPhone Simulator build passed; simulator privacy/entitlement checks passed; unsigned iPhone Release build passed; IPA packaging and upload passed. This remains CI/simulator evidence only.
+- Two non-failing Release compiler warnings remain in ios/GATIVX/ContentView.swift: lines 613 and 730 say code “will never be executed” because DEBUG-only simulated-walk flags compile to constant false in Release. The plain job log does not show the prior runtime “Invalid frame dimension” warning. The diagnostics artifact was produced but is 129,810,216 bytes and exceeded the 100 MiB materialization limit, so those prior runtime warnings are not yet conclusively resolved. Do not claim the warning investigation complete.
+- Artifacts: XCTest result #15243611214, 137,196,903 bytes, SHA-256 a44491913907b2670f7b60465c65fdb3daf3ce930bcf35d91e4618ae03b8147a; diagnostics #15243541609, 129,810,216 bytes, SHA-256 8a3b1bf316763440bbc3950df107365ecd413796ba10931ce11be607bb2fbd3a; simulator #15242468628, 2,954,030 bytes, SHA-256 45abeae99fe885e4b165c8320af13b3363b524bba9ddf9c7f4717d700de04316; unsigned IPA artifact #15242738243, outer ZIP 811,021 bytes, SHA-256 ebf638ae0edaaeaeb9d2719d4ba9834ca3c6fd395b0182de4ee68c330c23a5aa.
+- Downloaded outer IPA artifact ZIP passed integrity; inner GATIVX-unsigned.ipa is 817,481 bytes, SHA-256 9cb1c760d1dbd9a30ce9a2e00a93ceb21aaaf145a17d4657ff85950b625dec1d. Inner ZIP integrity passed; bundle ID com.paramitsolutions.gativx, version 1.0.0 (1), executable GATIVX verified. No _CodeSignature or embedded.mobileprovision: unsigned and not directly installable.
+- Physical iPhone HealthKit, GPS/background recording, signing and installation remain unverified/manual gates.
+
+### PR #165 — Android exact-head baseline rechecked
+- Exact head 899db531b646af7a19a3318084863f60b7d3d351, open/draft. Run #198 success; job build-android ID 140804406583.
+- Static GPS/privacy/cloud safeguards: 28 passed. JVM unit tests: 18 passed, 0 failed, 0 skipped. Gradle assembleDebug: BUILD SUCCESSFUL; artifact upload succeeded.
+- Debug APK artifact #15239723353, outer ZIP 10,320,944 bytes, SHA-256 2a3731035aa4eef2dcd3a6575105846b2061630dad805f944f010eda0b97f93d; extracted APK 29,627,020 bytes, SHA-256 6c0ba42714ad1d14fcd968be3b36d47211f2f8666b0085923d833202cf81635b. Debug-only; no emulator/device or Health Connect acceptance; no release signing.
+
+### Approved product scope — GATIVX Walk & Listen / Guru Gyan
+- Approved for launch planning: music + podcasts + guided audio, all six languages (Hindi, Kannada, Marathi, English, Telugu, Tamil). YouTube is a non-negotiable first-class pillar, not optional or subordinate to music/podcast links.
+- Include dedicated YouTube discovery for reputable/official channels, playlists and individual videos, with Guru Gyan using curated YouTube knowledge as a prominent learning/motivation source. Content domains: walking motivation/self-control, personal growth, mindfulness/meditation, yoga, Tai Chi walking, Zumba, gym/strength, diet and nutrition.
+- Keep the existing five-destination Design C navigation unchanged. Walk & Listen belongs inside Home; contextual recommendations can surface in Missions. Do not add a sixth tab.
+- Free-first curated catalogue; no paid APIs/subscriptions or self-hosted music streaming. Use official links/embeds and supported platform mechanisms only; respect creator rights, YouTube/Spotify platform terms, ads, API quotas and Premium/background/offline restrictions. Never promise playback modes the provider/account does not allow.
+- Catalogue metadata must include provider, channel/creator/title, language, category/topic, duration, level, source URL, free/paid restrictions, rights/embed status, editorial approval and last-checked timestamp. Listening/watching time must never be counted as steps, exercise, distance or calories.
+- This is approved product scope, not implemented code. Reliability work remains ahead of feature implementation: HealthKit entitlement/export queue, account/sync, RunJeet import, core tracking correctness and backend security.
+
+### Gap ledger delta
+| Area | Status | Evidence / remaining gate |
+|---|---|---|
+| iOS historical metric snapshot + RPC exclusion | verified (CI/simulator) | PR #164 run #725; 85 unit +13 UI passed, 122 safeguards passed; physical-device acceptance still separate |
+| iOS Release package integrity | verified (unsigned artifact only) | IPA hashes and bundle metadata verified; signing/provisioning absent |
+| iOS Release compile warnings | implemented-but-unverified / follow-up | Two DEBUG-fixture unreachable-code warnings; prior runtime frame warnings not conclusively inspected |
+| Android metric estimate | verified (JVM/static only) | PR #165 run #198: 18 JVM +28 safeguards; no device/Health Connect test |
+| Walk & Listen / Guru Gyan content product scope | verified (decision only) | Approved scope; implementation missing and intentionally deferred behind reliability |
+| YouTube channel/video discovery | missing | Non-negotiable first-class launch requirement; content catalogue, rights checks and UI not implemented |
+| Six-language audio/video curation | missing | Editorial catalogue and language validation not implemented |
+| Web Hub auth/live data + shared cross-platform metrics contract | missing | Static Web Hub only; account-scoped round-trip/golden contract incomplete |
+| Supabase production security | blocked | Anon grants, future-object ACLs, migration reconciliation and leaked-password protection require owner-approved remediation |
+| Signed iOS/Android release installers and physical device acceptance | blocked | Signing credentials, devices and permission-based acceptance required |
+| Production deployment | blocked | No production deployment or database mutation performed |
+
+### Next actions
+1. Preserve PR #164 run #725 as the current passing exact-head baseline; do not merge. Investigate the two Release compile warnings and retrieve/inspect the large XCTest diagnostics by a supported route if available.
+2. Keep PR #165 open and debug-only; plan shared golden fixtures and Android device/Health Connect validation.
+3. Continue HealthKit entitlement/export queue, account sync and RunJeet import audit before implementing Walk & Listen.
+4. Create a read-only, editorially curated YouTube/music/podcast content-catalogue specification/prototype only after reliability audit; YouTube remains first-class and mandatory, six languages included, five tabs unchanged.
+5. Preserve PR #107 untouched and PR #112 unmerged; do not merge any PR.
