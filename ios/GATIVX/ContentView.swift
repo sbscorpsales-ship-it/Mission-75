@@ -1676,7 +1676,14 @@ struct ContentView: View {
                         Label("Connect Apple Health", systemImage: "heart.text.square")
                             .font(.subheadline.weight(.semibold)).frame(maxWidth: .infinity).padding(12)
                     }.buttonStyle(.bordered).tint(neon)
-                    Text("You control your health permissions. Connect Apple Health now or later in Profile. Local-only use does not require an account.")
+                    .accessibilityIdentifier("gativx-connect-apple-health")
+                    Button { updateMotionMonitoringPreference(true) } label: {
+                        Label("Enable Motion & Fitness", systemImage: "figure.walk")
+                            .font(.subheadline.weight(.semibold)).frame(maxWidth: .infinity).padding(12)
+                    }
+                    .buttonStyle(.bordered).tint(neon)
+                    .accessibilityIdentifier("gativx-enable-motion-tracking")
+                    Text("Apple Health and Motion & Fitness are separate permissions. Connect Apple Health for combined available sources and enable iPhone step tracking as a live fallback. You control both permissions; you can also change them later in Profile.")
                         .font(.caption2).foregroundStyle(.secondary)
                     Spacer(minLength: 24)
                 }.padding(.horizontal, 22)
