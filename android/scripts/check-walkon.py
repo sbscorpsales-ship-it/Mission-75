@@ -99,6 +99,51 @@ checks = {
     "rotated Supabase tokens are saved before retry": activity.count("SessionVault.save(context, activeSession)") >= 3,
 }
 
+
+checks.update({
+    "Design C bottom navigation is exactly Home, Activity, Missions, Community, Profile": (
+        'listOf("Home", "Activity", "Missions", "Community", "Profile")' in activity
+    ),
+    "Guru is contextual and not a bottom navigation destination": (
+        'listOf("Home", "Activity", "Missions", "Community", "Profile")' in activity
+        and 'listOf("Home", "Mission", "Activity", "Guru", "Profile")' not in activity
+        and 'Button(onClick = { selectedFeature = "Guru" }' in activity
+    ),
+    "Purpose and Ikigai reflections have four prompts and a saved purpose statement": (
+        "private fun GativxPurposeScreen()" in activity
+        and "What do I love?" in activity
+        and "What am I good at?" in activity
+        and "What does the world need that I care about?" in activity
+        and "What gives me energy and can sustain me?" in activity
+        and 'putString("purpose", purpose)' in activity
+    ),
+    "Explore and Listen supports all six approved languages and YouTube discovery": (
+        "private fun GativxExploreListenScreen()" in activity
+        and all(f'"{language}"' in activity for language in ("Hindi", "Kannada", "Marathi", "English", "Telugu", "Tamil"))
+        and "youtube.com/results?search_query=" in activity
+        and "YouTube · first-class discovery" in activity
+    ),
+    "Explore and Listen includes music, podcasts and guided audio entry points": (
+        '"Walking music"' in activity
+        and '"Personal-growth podcasts"' in activity
+        and '"Guided meditation and breathing"' in activity
+        and "Listening time never contributes to activity metrics" in activity
+    ),
+    "Community destination does not fabricate feed members or posts": (
+        "private fun GativxCommunityScreen()" in activity
+        and "no sample members or fabricated posts are shown" in activity
+        and "Intent.ACTION_SEND" in activity
+    ),
+    "Android readable dark theme is applied to the app": (
+        "darkColorScheme(" in activity
+        and "onSurfaceVariant = Color(0xFFB8C5CC)" in activity
+    ),
+    "Supabase email rate-limit errors receive a dedicated explanation": (
+        '"over_email_send_rate_limit"' in activity
+        and "temporarily rate-limited" in activity
+    ),
+})
+
 failed = [name for name, passed in checks.items() if not passed]
 for name, passed in checks.items():
     print(("PASS" if passed else "FAIL") + ": " + name)
