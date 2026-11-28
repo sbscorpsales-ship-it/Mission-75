@@ -6884,3 +6884,60 @@ Keep each of these comments as explicit traceability sources:
 - Keep new-account email verification blocked for alpha until verified custom SMTP or an approved email hook is configured and a non-team mailbox/device receipt is confirmed. Do not disable email confirmation. Restrict alpha onboarding to guest mode or existing confirmed accounts until then.
 
 No live database, Auth configuration, SMTP settings, schema, or user data was changed in this recheck.
+
+
+## Principal engineering / QA checkpoint — 2026-11-28 17:50 IST (12:20 UTC)
+
+### Live repository and PR inventory
+- Repository default branch: `main`. GitHub search returned **70 open PRs**. Titles were inventoried; detailed head/CI review was concentrated on the controlling and platform-critical PRs below.
+- PR #107 remains open/draft at `c19bdbd307df7048cefd86bd3e6064ac4f4e3042`; PR #112 remains open/draft at `b6c04d41dc67bd191ed0cf8966331eb5661a9887`; PR #118 remains open/draft at `5680ba233b6d6ee4926f72b6d7a2b2b4839a078f`; PR #167 remains open/draft at `54335ddc948d10d53a749f3a929834c3da08fb4b`; PR #171 remains open/draft at `a3bcbec32909b622d1dc35859d8aa060b00fca66`. No merge or deployment was performed. PR #107 was not modified; PR #112 remains unmerged.
+- PR #171 currently targets `feat/gativx-android-primary-navigation-20261128`; changed files are `android/app/src/main/java/com/paramitsolutions/gativx/MainActivity.kt` and `android/scripts/check-walkon.py`. Its changes include explicit high-contrast auth-field colors, contextual Guru entry, Purpose & Ikigai and Explore & Listen entry points, and static safeguards. The PR is still draft; the current change is not full feature acceptance.
+
+### Exact latest CI, jobs, logs and artifacts
+- **Android PR #171:** exact head `a3bcbec32909b622d1dc35859d8aa060b00fca66`; run #207 / ID `46125333076`; job `build-android` ID `140918628113`; conclusion **success**. Job log shows **28/28 static safeguards PASS**, `BUILD SUCCESSFUL`, and `assembleDebug` completed (35 actionable Gradle tasks). No JVM unit tests or Compose UI/instrumentation tests were run. Artifact #`15254863413`, name `GATIVX-Android-debug`, GitHub artifact ZIP digest `sha256:074260ef8e790261f2a9e173c0dbebec693af783f4212015decebc4dd4f117e2`; extracted APK SHA-256 previously independently recorded as `bd94acca6a8f202ec51cb9cef54178c45ac35e5599939b9b6261dca2f047a228`. Run: https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/46125333076. This is build/static CI evidence only, not device acceptance.
+- **iOS PR #167:** exact head `54335ddc948d10d53a749f3a929834c3da08fb4b`; run #726 / ID `46107133951`; job `build-ios` ID `140862285046`; conclusion **success**. Logs confirm **85 unit tests + 13 UI tests passed; 0 failures**. The existing Issue #111 evidence records 122 tracking safeguard assertions passed. Artifacts: simulator #`15249690679` (digest `sha256:cbfcc00b6a412d1f9bc28c2511edc801a4fe07ac32c34c8d00ab2e05c4b30f95`); XCTest diagnostics #`15249605662` (digest `sha256:df149e2171b1c3d845ff9a4a6edf7f49a5a17af390f0d57cff3bded126a37c64`); xcresult #`15249550782` (digest `sha256:a0c85648268fd40a0d4e05b94ce5c9c0681fd1d27979d84d69089a786e97c7b0`); unsigned IPA #`15249421376` (archive digest `sha256:ab06d433942145bcf1e85491ec6413ac29bdb2a38432e1d81c91a04f40f50e4d`; extracted IPA SHA-256 previously recorded as `db8f82768c9c678863f26578cb4e810863ba80ba25c7c5cee630e8d878d102bf`). The diagnostics still contain 1,008 CoreGraphics NaN errors and two invalid-frame XCTest issues; the captured stack reaches UIKit `UIScrollViewAccessibility accessibilityPath`, but no app source frame identifies the origin. Release compiler warnings remain. IPA has no code signature or embedded provisioning profile. Simulator success does not establish iPhone 13 or iPhone 11 Pro Max acceptance.
+- **iOS PR #107:** exact head `c19bdbd307df7048cefd86bd3e6064ac4f4e3042`; run #618 / ID `45592615914`; job ID `139193855451`; conclusion **failure**. Logs show 58 unit tests passed, but 2 UI test cases failed with 5 assertions. This is not a passing iOS release baseline.
+- **PR #112:** still open/draft and unmerged; its previously recorded run #636 failed one dashboard snapshot assertion. No new passing run was found for its current head.
+- No new physical-device test was performed in this checkpoint.
+
+### iPhone 13 pedometer / HealthKit source diagnosis
+Founder report: iPhone 13 Health app shows steps; GATIVX does not. Founder also reports no GATIVX-originated step samples appear in Apple Health.
+
+Source files inspected on PR #107 branch `feat/consolidated-gativx-runjeet`:
+- `ios/GATIVX/ContentView.swift`, blob SHA `8f694bcfd376906327ba705cafa997f47705a95c`.
+- `ios/GATIVX/HealthKit/HealthKitManager.swift`, blob SHA `b566a6adefec620ac304d13811ba5931ff682b73`.
+- `ios/gativx-project.yml` declares `com.apple.developer.healthkit` and `com.apple.developer.healthkit.background-delivery` in source. Source declarations do not prove those entitlements are present in the installed signed app.
+
+Exact code path findings:
+1. Dashboard daily steps are `displayedDailySteps = health.todaySteps ?? liveMotionSteps`. The dashboard therefore prefers HealthKit's all-source aggregate and falls back to Core Motion only when a daily pedometer value exists.
+2. HealthKit read is explicitly opt-in. `HealthKitManager.requestReadAccessAndStart()` requests read access for `stepType` and related metrics. The app sets `gativx.healthkit.connectionRequested` after the authorization callback and then queries daily aggregates. `resumeIfPreviouslyConnected()` returns immediately unless that local flag is true; `refreshRecentDays()` also returns without querying if the flag is false. A fresh install that never taps **Connect Apple Health** will not import the Health app's existing step total.
+3. The fallback daily Core Motion monitor is separately opt-in: `@AppStorage("gativx.motion.dailyTrackingEnabled")` defaults to `false`. On app appearance/foreground, `startLiveMotionMonitor()` is called only if that preference is already true. If the user has not enabled Profile > Settings > Motion & Fitness > Daily iPhone step tracking, the fallback is stopped and the UI remains without a measured daily total.
+4. Walk-session pedometer is a third, separate path: `startActivitySession()` starts `CMPedometer.startUpdates(from: sessionStart)` when a walk begins. It should be tested independently from the daily total.
+5. Current HealthKit export writes completed workout and measured distance samples; it does **not** write the daily CMPedometer total as an HKQuantityType.stepCount sample. Therefore no GATIVX-originated daily step-count source in Apple Health is consistent with current source behavior. Do not add a daily step sample without a frozen/approved contract and a deduplication design; that could double-count steps.
+6. HealthKit does not disclose per-type read denial through the authorization callback. The local `hasRequestedAccess` flag means the request callback completed, not proof that Steps read permission was granted. Confirm read permissions in iOS Health settings and verify actual query results on-device.
+7. The generated project source declares HealthKit entitlements and Info.plist usage descriptions, but the recovered IPA is unsigned and lacks provisioning. The installed founder build's signed entitlements and runtime permission state remain unknown.
+
+**Current iPhone 13 classification:** HealthKit/Core Motion source paths are implemented, but device behavior is **In progress** pending confirmation of the Connect Apple Health action, the Daily iPhone step tracking toggle/status, Health > Data Access & Devices > GATIVX permissions, and the actual installed build's signed entitlements. Most likely configuration gate is that both the HealthKit connection flag and the default-OFF Core Motion preference are unset; this is a source-supported explanation, not a confirmed device root cause. Do not mark the iPhone 13 Device-tested or Accepted.
+
+### Refreshed traceability rows
+| Requirement | iOS | Android | Web Hub | Shared backend/content |
+|---|---|---|---|---|
+| Daily steps source and truthful permission states | In progress — HealthKit read + Core Motion fallback present; both opt-in paths and signed entitlement/device behavior unverified | In progress — Health Connect safeguards static-tested only; no handset evidence | In progress — live HealthKit/Health Connect data parity not established | In progress — account sync contracts and security still require verification |
+| Walk-session steps / Finish & Save / history | CI-tested — simulator tests pass; physical iPhone and NaN blocker remain | In progress — debug build/static safeguards only; no JVM/Compose/device run | In progress — browser smoke only; no live session/device parity | In progress — durable sync/account-isolation acceptance outstanding |
+| HealthKit daily step export to Apple Health | Not in current implementation; current contract exports workout/distance, not daily step-count samples. Do not invent this write or risk double counting without approved contract | Not applicable to iOS HealthKit; Android Health Connect is a separate platform contract | Not applicable | Source/contract gap if founder expects a GATIVX-originated daily step source; requires explicit founder-approved semantics before implementation |
+
+### Defects, owner actions and next steps
+- Do not ask the founder to uninstall or overwrite an existing iOS or Android installation. Android PR #171 signer differs from the previously inspected PR #170 signer; stable protected signing and installed-certificate comparison are required before in-place update.
+- For iPhone 13, obtain the on-device HealthKit connection state, Daily iPhone step tracking state/status, Health app permissions, installed build/commit and signed entitlement evidence. Then reproduce HealthKit query and Core Motion daily/session feeds separately.
+- Add focused tests for first-launch HealthKit connection state, daily Core Motion opt-in/default-off status, HealthKit no-sample/error status, dashboard fallback selection, and session-vs-daily non-duplication. Do not claim these tests exist until committed and run.
+- Keep Issue #111 open. No iOS source change, signing change, permission change, Health data write, production data change or PR merge was made in this checkpoint.
+
+### Report provenance
+- Report branch before this append: `docs/gativx-sprint-report-20261125`; PR #118 head `5680ba233b6d6ee4926f72b6d7a2b2b4839a078f`.
+- Report file blob SHA before this append: `8f2415abf8f92effe7ff4ced69a5a18a466fa9c3`.
+- Application source SHAs inspected: ContentView `8f694bcfd376906327ba705cafa997f47705a95c`; HealthKitManager `b566a6adefec620ac304d13811ba5931ff682b73`.
+- Files changed in this checkpoint: only `GATIVX_3_DAY_SPRINT_REPORT.md` (append-only). No application files changed.
+- Owner action: maintain draft/unmerged state; resolve the iPhone 13 permission/entitlement reproduction; fix NaN diagnostics; add platform tests; preserve founder data.
+- Next action: validate the two iPhone step sources independently on a properly signed iPhone build, then fix the confirmed failing path and rerun exact-head CI plus physical-device checks.
+
+**No verified application-code progress this hour.** This checkpoint performed live repository/PR/CI/artifact/source inspection and documentation-only traceability updates. No physical-device test or production change was performed.
