@@ -5983,3 +5983,10 @@ Changes are on the existing isolated PR #137 branch; no PR was merged.
 2. Complete Android run #197 on head \`3437ad87716932df834798e341b2c72dd5762558\`; inspect the static safeguard, exact JVM counts, APK build, artifact upload and SHA-256.
 3. If either workflow reports a genuine defect, fix it on its isolated branch and inspect the resulting exact-head run. Do not reuse intermediate run #192 as final acceptance.
 4. Keep PR #107 untouched, PR #112 unmerged, and all PRs unmerged.
+
+
+## 2026-11-28 06:05 IST — latest in-progress job state
+
+- PR #164 run #724: exact head \`f232bc8ae63a54e2984e37da7dc9e995f7f97388\`; Xcode selection, project generation, scheme validation and first-run/auth/portrait/permission checks passed. Full serial simulator XCTest step remains in progress. No logs/artifacts yet.
+- PR #165 run #197: exact head \`3437ad87716932df834798e341b2c72dd5762558\`; Java 17, Android 36 SDK, Gradle 8.11.1 and the updated WalkOn GPS/privacy/cloud-sync safeguard step all passed. Android JVM unit tests are in progress; no test counts, APK build or artifact upload yet.
+- Prior PR #165 run #192 is cancelled and remains intermediate-only: 27 safeguards and 17 JVM tests passed; Gradle debug assemble logged BUILD SUCCESSFUL, but GitHub cancelled the job before APK upload. Do not treat it as a release artifact.
