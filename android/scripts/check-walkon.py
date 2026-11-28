@@ -154,6 +154,31 @@ checks.update({
     ),
 })
 
+finish_active = store.split("fun finishActive", 1)[1].split("fun markSynced", 1)[0]
+assign_unowned = store.split("fun assignUnowned", 1)[1].split("fun status", 1)[0]
+mark_synced = store.split("fun markSynced", 1)[1].split("private fun readSession", 1)[0]
+
+checks.update({
+    "Android saves measured step-only activities when GPS has no route points": (
+        "if (finished.points.isEmpty() && finished.sessionSteps <= 0L)" in finish_active
+        and "Measured walking steps saved and verified on this device." in finish_active
+        and "return finished" in finish_active
+    ),
+    "Android preserves the active draft when neither GPS points nor measured steps exist": (
+        "your active draft is preserved" in finish_active
+        and finish_active.index("return null", finish_active.index("if (finished.points.isEmpty() && finished.sessionSteps <= 0L)"))
+        < finish_active.index("clearActive(context)")
+    ),
+    "Android verifies local account-ownership writes before continuing": (
+        "if (!writeEncrypted(context, COMPLETED_KEY, encodeSessions(history)))" in assign_unowned
+        and "ownership could not be verified" in assign_unowned
+    ),
+    "Android verifies local sync markers and retains retry visibility on failure": (
+        "if (!writeEncrypted(context, COMPLETED_KEY" in mark_synced
+        and "remains queued for a safe retry" in mark_synced
+    ),
+})
+
 failed = [name for name, passed in checks.items() if not passed]
 for name, passed in checks.items():
     print(("PASS" if passed else "FAIL") + ": " + name)
