@@ -316,7 +316,7 @@ class WalkOnLocationService : Service(), LocationListener, SensorEventListener {
         val finishedMillis = System.currentTimeMillis()
         val duration = ((finishedMillis - startedAtMillis).coerceAtLeast(0L) / 1000L).coerceAtMost(86_400L)
         val movingDuration = GativxActivityCalculationEngine.movingDurationSeconds(points)
-        val localWeightKg = WalkOnStore.profileWeightKg(this)
+        val localWeightKg = WalkOnStore.profileWeightKg(this, ownerUserId)
         val estimate = GativxActivityCalculationEngine.estimateWalkingRoute(
             distanceMeters = distanceMeters,
             movingSeconds = movingDuration,
