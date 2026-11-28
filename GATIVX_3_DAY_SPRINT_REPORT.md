@@ -6161,3 +6161,69 @@ Changes are on the existing isolated PR #137 branch; no PR was merged.
 3. Platform owners: continue HealthKit export queue, account sync, RunJeet import, Android metric parity and Web Hub account isolation; do not begin YouTube/media streaming until reliability and rights/terms gates are satisfied.
 4. Product owner: provide Apple signing identity/provisioning, physical iPhone and Android test access, and explicit Supabase security remediation approval when ready. Until then keep these release gates blocked.
 5. Keep PR #107 untouched, PR #112 unmerged, and all PRs unmerged.
+
+
+## 2026-11-28 09:52 IST — live re-audit, artifact re-verification and targeted CoreGraphics diagnostic PR
+
+### Exact repository, PR and report identity
+- Live default branch `main`: `143889db3e72540fb478b76c486082f45395e9bd` (commit dated 2026-11-17T04:38:35Z). No main-branch source change was observed.
+- PR #107 remains open/draft and untouched: branch `feat/consolidated-gativx-runjeet`, exact head `c19bdbd307df7048cefd86bd3e6064ac4f4e3042`.
+- PR #112 remains open/draft and unmerged: branch `fix/gativx-ui-test-guest-reset`, exact head `b6c04d41dc67bd191ed0cf8966331eb5661a9887`.
+- PR #164 remains open/draft: branch `feat/gativx-historical-metric-snapshots-20261128`, exact head `3db0bac6a56272695203c849a50cab31a8058d6b`; base PR #163 head `bc76fdb523635ce9e992a95604a9aa5cf614f08a`.
+- PR #165 remains open/draft: branch `feat/gativx-android-activity-metrics-history-20261128`, exact head `899db531b646af7a19a3318084863f60b7d3d351`.
+- New diagnostic PR #167 is open/draft, unmerged: branch `qa/gativx-coregraphics-backtrace-20261128`, exact head `54335ddc948d10d53a749f3a929834c3da08fb4b`, based on PR #164 exact head `3db0bac6a56272695203c849a50cab31a8058d6b`. One commit, one changed file: `ios/GATIVXUITests/GATIVXDashboardUITests.swift`; commit changed that file by +9/-3. This is test-only diagnostic instrumentation; no production app source or layout changed.
+- PR #118 remains open/draft and unmerged, base `main`. Before this report append, branch head was `fa9789866312a4241c3987eb2e497232da07e747`; report blob SHA was `fe00b0d6d22020a25c3c8879649b4629a5ed647a`.
+- No PR has been merged. PR #107 was not modified; PR #112 was not merged.
+
+### New diagnostic action — PR #167
+- Inspected run #725 app-process diagnostics and confirmed the log itself recommends `CG_NUMERICS_SHOW_BACKTRACE`. The original UI-test launch helper did not set it.
+- Added an opt-in `captureCoreGraphicsBacktrace` parameter to `launchFreshGuestApp`. Only `testDashboardSectionsMetricsAndPrimaryNavigation` and `testGuruKeyboardAndDismissalFromFreshHome` opt in, setting `app.launchEnvironment["CG_NUMERICS_SHOW_BACKTRACE"] = "1"` before the app is launched.
+- This is limited to those two simulator UI-test launches. It does not change Release or production behavior, test assertions, Design C, the five-tab navigation, or any tracking logic.
+- Exact source commit: `54335ddc948d10d53a749f3a929834c3da08fb4b`. Changed-file blob SHA: `a55b1c71a6ebb4f01d9bb04fa06dcec75144a346`.
+- Exact-head CI run #726, run ID `46107133951`, job `build-ios` ID `140862285046`, was `in_progress` at the time of this audit. Checkout completed; Xcode selection was in progress; no XCTest/safeguard result or artifact is available yet. Do not claim this diagnostic change has passed.
+- CI link: https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/46107133951
+- PR link: https://github.com/sbscorpsales-ship-it/Mission-75/pull/167
+
+### Live exact-head CI results and failure history
+- PR #164 exact-head run #725, run ID `46092805162`, job ID `140817356454`, head `3db0bac6a56272695203c849a50cab31a8058d6b`: **85 unit + 13 UI = 98 passed; 0 failed, 0 skipped, 0 cancelled**. Tracking safeguards: **122 passed, 0 failed**. All 21 workflow steps completed successfully. The simulator build, unsigned Release build, IPA packaging and uploads succeeded. CI/simulator only.
+- PR #164's immediately preceding run #724, run ID `46087695050`, head `f232bc8ae63a54e2984e37da7dc9e995f7f97388`, failed before the corrective exact-head #725 run. XCTest unit suite: **85 total, 84 passed, 1 failed** (`testHistoricalMetricSnapshotSurvivesLocalStoreAndProfileEdits)); UI suite: **13 passed, 0 failed**. Tracking safeguard script: **120 passed, 3 failed**. The three failed checks concerned cloud-distance segment breaks, unknown-step route upload allowlisting, and discontinuous-segment cloud distance. The subsequent exact-head #725 run passed its full suite and 122 safeguards; retain #724 as historical failure evidence.
+- PR #165 exact-head Android run #198, run ID `46088750510`, job ID `140804406583`, head `899db531b646af7a19a3318084863f60b7d3d351`: **18 JVM tests passed, 0 failed, 0 skipped, 0 cancelled**; **28 static safeguards passed**; Gradle debug assembly and artifact upload succeeded. This is JVM/static plus debug packaging, not emulator/device acceptance.
+- PR #157 Web Hub run #466, run ID `46056632791`, job ID `140701097189`: web release checks and browser smoke succeeded, including desktop Web Hub smoke at 1440px and 390px and 11-section/search navigation. This does not establish live auth, live Supabase fetch, or production deployment.
+- Earlier regression evidence remains unchanged: PR #136 run #670 had 76 unit + 8 UI passed and 1 UI failure (dock 113.0625 pt >76 pt); PR #161 run #715 passed 76 unit +13 UI; PR #163 run #723 passed 82 unit +13 UI =95 with 148 safeguards. Do not replace or erase historical failures.
+
+### Re-downloaded artifact integrity checks
+- PR #164 run #725 XCTest result artifact #15243611214, 137,196,903 bytes, SHA-256 `a44491913907b2670f7b60465c65fdb3daf3ce930bcf35d91e4618ae03b8147a`; downloaded again and ZIP integrity passed.
+- PR #164 run #725 diagnostics artifact #15243541609, 129,810,216 bytes, SHA-256 `8a3b1bf316763440bbc3950df107365ecd413796ba10931ce11be607bb2fbd3a`; downloaded again and ZIP integrity passed.
+- PR #164 run #725 simulator artifact #15242468628, 2,954,030 bytes, SHA-256 `45abeae99fe885e4b165c8320af13b3363b524bba9ddf9c7f4717d700de04316`; downloaded again and ZIP integrity passed.
+- PR #164 run #725 unsigned IPA artifact #15242738243, outer ZIP 811,021 bytes, SHA-256 `ebf638ae0edaaeaeb9d2719d4ba9834ca3c6fd395b0182de4ee68c330c23a5aa`; downloaded again and ZIP integrity passed. Inner `GATIVX-unsigned.ipa` is 817,481 bytes, SHA-256 `9cb1c760d1dbd9a30ce9a2e00a93ceb21aaaf145a17d4657ff85950b625dec1d`. Bundle ID `com.paramitsolutions.gativx`, version `1.0.0 (1)`. No `_CodeSignature` or `embedded.mobileprovision`: unsigned and not installable directly.
+- PR #165 run #198 Android debug artifact #15239723353, outer ZIP 10,320,944 bytes, SHA-256 `2a3731035aa4eef2dcd3a6575105846b2061630dad805f944f010eda0b97f93d`; downloaded again and ZIP integrity passed. Inner `app-debug.apk` is 29,627,020 bytes, SHA-256 `6c0ba42714ad1d14fcd968be3b36d47211f2f8666b0085923d833202cf81635b`. Debug-only; no release signing or device acceptance.
+- The run #725 build log still contains two non-failing Release compiler warnings at `ios/GATIVX/ContentView.swift` lines 613 and 730: DEBUG-only simulated-walk branches compile as unreachable in Release. The unrelated AppIntents metadata-extraction warning is also non-failing.
+
+### Confirmed unresolved CoreGraphics runtime diagnostics
+- Re-opened and inspected the downloaded run #725 app-process log `StandardOutputAndStandardError-com.paramitsolutions.gativx.txt`.
+- Exact count: **990** CoreGraphics NaN numeric-value errors between `2026-11-28 01:45:34.337589Z` and `2026-11-28 01:48:57.477075Z`.
+- XCTest diagnostics record **2** “Invalid frame dimension (negative or non-finite)” runtime issues during `testDashboardSectionsMetricsAndPrimaryNavigation` and `testGuruKeyboardAndDismissalFromFreshHome`.
+- Each NaN log entry also printed the instruction to set `CG_NUMERICS_SHOW_BACKTRACE`. The parent run did not set the variable; it did not capture a useful source stack. Both UI tests nevertheless passed, so this is a non-failing but unresolved runtime/layout defect.
+- PR #167 is the isolated attempt to collect the missing app-process stack trace. Root cause remains **unresolved** until run #726 diagnostics are inspected and the source value/view is identified. Do not close the defect merely because the new UI tests pass.
+
+### Founder-approved brand and company-address placement clarification
+- Exact visible product wordmark: **GativX™** (capital G, lowercase ativ, capital X, with ™ as a small marker where appropriate). The high-visibility app-icon direction remains a fluorescent-yellow field with a bold black G/X runner/upward-arrow emblem and lime/green X accent; omit tiny slogan/company text from the small icon.
+- Native source still contains uppercase `GATIVX` labels; the conventional native `ios/GATIVX/Assets.xcassets/AppIcon.appiconset` is still absent in the inspected tree. The icon and exact wordmark are not implemented/installed yet.
+- Issue #166 comment #7233693561 supersedes the earlier broader address-placement comment #7233646200. Office address placement is restricted to: (1) complete Company Profile, (2) Company Vision, Mission & Values page, (3) in-depth Company Profile, and (4) About the Company / “The Vision Behind the App”. It must **not** appear in the general app header/footer, dashboard, Home, Activity or other routine member-facing screens. “A product of Param IT Solutions™, Belgaum” belongs only in the appropriate company/about context; do not turn the office address into a global footer element. This is a requirement only until source, responsive preview and CI evidence confirm implementation.
+- The address-placement restriction is recorded in public Issue #166 comment #7233693561. Preserve the exact address wording supplied there; do not duplicate or silently alter it.
+
+### Current checklist and gap ledger
+- **Done (verified):** live main/PR/ref/Actions inspection; PR #107 untouched and #112 unmerged; exact-head iOS run #725 (98/98 XCTest, 122 safeguards); exact-head Android run #198 (18/18 JVM, 28 safeguards); re-download and hash/integrity verification of iOS XCTest, diagnostics, simulator, unsigned IPA and Android debug artifacts; issue #166 company-address placement clarification; isolated diagnostic commit and open draft PR #167.
+- **In progress:** PR #167 exact-head run #726; collect CoreGraphics backtraces; resolve the two invalid-frame events and 990 NaN messages; clean up the two Release unreachable-code warnings; implement exact GativX™ brand assets and the restricted company/about address surfaces; continue shared metric parity and Web Hub account isolation.
+- **Implemented-but-unverified:** iOS HealthKit export queue, durable sensor/activity outboxes, local history snapshot and cloud allowlists (source/simulator CI only); Android local estimate/provenance and route cloud allowlist (JVM/static CI only); RunJeet import/archive path (automated tests only). No physical sensor, HealthKit, Health Connect or live-account behavior is claimed.
+- **Missing:** native AppIcon asset set; complete shared GativX™ custom wordmark/vector family and uppercase-label cleanup; approved company profile, Vision/Mission/Values and “The Vision Behind the App” content/placement implementation; full Purpose & Ikigai page; YouTube-first Explore & Listen implementation and six-language curated catalogue; complete Web Hub account-scoped live data parity; Missions/Community/notifications acceptance.
+- **Blocked:** signed iOS installer (Apple signing identity and provisioning profile required); physical iPhone HealthKit/GPS/background acceptance; Android physical-device/Health Connect acceptance; Supabase production security remediation (owner approval required); production deployment.
+- Installer state: iOS **unsigned IPA only, not directly installable**; Android **debug APK only, not release-signed**. No physical-device install, GPS, HealthKit, Health Connect, background tracking, live sync or production deployment is claimed.
+- PR state: #107 open/draft and untouched; #112 open/draft and unmerged; #118, #164, #165 and #167 open/draft; no PR merged.
+
+### Owner action and next action
+1. QA owner: poll exact-head run #726, inspect the app-process diagnostics, confirm whether backtraces are emitted, and isolate the originating SwiftUI/CoreGraphics value. Keep the root-cause defect open until fixed and a full suite is clean.
+2. Engineering owner: make the smallest source-level correction only after the backtrace identifies the faulty view/value; preserve Design C, all touch targets, the five destinations and all existing assertions.
+3. Brand owner: add the native AppIcon asset family and exact GativX™ wordmark; implement the Param IT Solutions™ attribution and office address only in the four approved company/about contexts, never as a global header/footer.
+4. Platform owners: continue HealthKit export, account sync, RunJeet import, Android golden-fixture parity and Web Hub auth/account isolation; keep physical-device, signing and Supabase production gates blocked until required owner access/approval exists.
+5. Keep PR #107 untouched, PR #112 unmerged, and every PR unmerged.
