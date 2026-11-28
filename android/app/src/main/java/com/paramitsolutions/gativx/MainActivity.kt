@@ -75,7 +75,7 @@ import java.time.ZoneId
 private const val SUPABASE_URL = "https://crarbbsvcczwmtvxyrxo.supabase.co"
 private const val SUPABASE_PUBLISHABLE_KEY = "sb_publishable_XAGRFtrWrFqJ-SfXh2WbRQ_jCcPnr-6"
 private const val HEALTH_CONNECT_PROVIDER = "com.google.android.apps.healthdata"
-private const val ACTION_GATIVX_APP_RESUMED = "com.paramitsolutions.gativx.APP_RESUMED"
+private const val ACTION_GativX_APP_RESUMED = "com.paramitsolutions.gativx.APP_RESUMED"
 
 data class GativxSession(val userId: String, val accessToken: String, val refreshToken: String)
 data class DailyHealthSnapshot(val date: String, val steps: Long?, val activeEnergyKcal: Double?, val measuredAt: String)
@@ -88,7 +88,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        sendBroadcast(Intent(ACTION_GATIVX_APP_RESUMED).setPackage(packageName))
+        sendBroadcast(Intent(ACTION_GativX_APP_RESUMED).setPackage(packageName))
     }
 }
 
@@ -128,16 +128,16 @@ private fun GativxAndroidScreen() {
     ) { result ->
         if (result[Manifest.permission.ACCESS_FINE_LOCATION] == true) {
             startWalkOnService(context)
-            walkStatus = "Starting GATIVX™ Activity GPS tracking…"
+            walkStatus = "Starting GativX™ Activity GPS tracking…"
         } else {
-            walkStatus = "Precise location permission is required for reliable GATIVX™ Activity route recording."
+            walkStatus = "Precise location permission is required for reliable GativX™ Activity route recording."
         }
     }
 
     fun startWalkOn() {
         val existingWalk = WalkOnStore.active(context)
         if (existingWalk != null && existingWalk.ownerUserId != session?.userId) {
-            walkStatus = "A GATIVX™ Activity route belongs to another account or was recorded offline. Finish or explicitly assign it before starting a new route."
+            walkStatus = "A GativX™ Activity route belongs to another account or was recorded offline. Finish or explicitly assign it before starting a new route."
             return
         }
         val requested = buildList {
@@ -156,7 +156,7 @@ private fun GativxAndroidScreen() {
         }
         if (requested.isEmpty()) {
             startWalkOnService(context)
-            walkStatus = "Starting GATIVX™ Activity GPS and measured step tracking…"
+            walkStatus = "Starting GativX™ Activity GPS and measured step tracking…"
         } else {
             locationPermissionLauncher.launch(requested.toTypedArray())
         }
@@ -166,12 +166,12 @@ private fun GativxAndroidScreen() {
         context.startService(
             Intent(context, WalkOnLocationService::class.java).setAction(WalkOnLocationService.ACTION_STOP)
         )
-        walkStatus = "Finishing and saving your GATIVX™ Activity route…"
+        walkStatus = "Finishing and saving your GativX™ Activity route…"
     }
 
     fun syncWalkOnRoutes() {
         val currentSession = session ?: run {
-            walkStatus = "Sign in to back up saved GATIVX™ Activity routes."
+            walkStatus = "Sign in to back up saved GativX™ Activity routes."
             return
         }
         val pending = WalkOnStore.pendingFor(context, currentSession.userId)
@@ -179,7 +179,7 @@ private fun GativxAndroidScreen() {
             walkStatus = if (WalkOnStore.unassigned(context).isNotEmpty()) {
                 "Some routes were recorded while signed out. Assign them to this account explicitly before upload."
             } else {
-                "All saved GATIVX™ Activity routes for this account are already backed up."
+                "All saved GativX™ Activity routes for this account are already backed up."
             }
             return
         }
@@ -193,11 +193,11 @@ private fun GativxAndroidScreen() {
                     WalkOnStore.markSynced(context, walk.id)
                 }
                 session = activeSession
-                walkStatus = "GATIVX™ Activity route backup complete. Your GPS history is in your GATIVX™ account."
+                walkStatus = "GativX™ Activity route backup complete. Your GPS history is in your GativX™ account."
                 WalkOnStore.setStatus(context, walkStatus)
             } catch (error: Exception) {
                 session = SessionVault.load(context) ?: currentSession
-                walkStatus = error.message ?: "GATIVX™ Activity cloud backup failed. Your encrypted local route remains saved."
+                walkStatus = error.message ?: "GativX™ Activity cloud backup failed. Your encrypted local route remains saved."
                 WalkOnStore.setStatus(context, walkStatus)
             } finally {
                 latestWalk = WalkOnStore.completedFor(context, currentSession.userId).firstOrNull()
@@ -275,7 +275,7 @@ private fun GativxAndroidScreen() {
         }
 
         // A successful device read should not require a second manual button press
-        // to reach the signed-in member's private GATIVX account.
+        // to reach the signed-in member's private GativX account.
         val currentSession = session
         if (currentSession != null && (steps != null || activeEnergy != null)) {
             val snapshot = DailyHealthSnapshot(
@@ -329,7 +329,7 @@ private fun GativxAndroidScreen() {
                 }
             }
         }
-        ContextCompat.registerReceiver(context, receiver, IntentFilter(ACTION_GATIVX_APP_RESUMED), ContextCompat.RECEIVER_NOT_EXPORTED)
+        ContextCompat.registerReceiver(context, receiver, IntentFilter(ACTION_GativX_APP_RESUMED), ContextCompat.RECEIVER_NOT_EXPORTED)
         onDispose { runCatching { context.unregisterReceiver(receiver) } }
     }
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -383,7 +383,7 @@ private fun GativxAndroidScreen() {
     fun register() {
         val cleanEmail = email.trim()
         if (cleanEmail.isBlank() || !android.util.Patterns.EMAIL_ADDRESS.matcher(cleanEmail).matches()) {
-            status = "Enter a valid email address to create your GATIVX™ account."
+            status = "Enter a valid email address to create your GativX™ account."
             return
         }
         if (password.length < 8) {
@@ -404,13 +404,13 @@ private fun GativxAndroidScreen() {
                     SessionVault.save(context, createdSession)
                     session = createdSession
                     isRegistering = false
-                    status = "Welcome to GATIVX™! Your account is created and you are signed in securely."
+                    status = "Welcome to GativX™! Your account is created and you are signed in securely."
                 } else {
                     isRegistering = false
                     status = "Account request received. Check your email and confirm your address, then return here and sign in."
                 }
             } catch (error: Exception) {
-                status = error.message ?: "Could not create your GATIVX™ account. Please try again."
+                status = error.message ?: "Could not create your GativX™ account. Please try again."
             } finally { busy = false }
         }
     }
@@ -467,13 +467,13 @@ private fun GativxAndroidScreen() {
                         .verticalScroll(rememberScrollState()).padding(20.dp),
                     verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
-                    Text("GATIVX™", color = Color(0xFFD8FF3E), fontSize = 32.sp, fontWeight = FontWeight.Black)
+                    Text("GativX™", color = Color(0xFFD8FF3E), fontSize = 32.sp, fontWeight = FontWeight.Black)
                     Text("MOVE. GROW. EXCEL.", color = Color(0xFF9DAEB6), fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     Text(
                         when (selectedFeature) {
                             "Home" -> "YOUR DAILY COMMAND CENTRE"
                             "Mission" -> "PURPOSE · GOALS · COMMITMENTS"
-                            "Activity" -> "MEASURED MOVEMENT · GATIVX™ Activity"
+                            "Activity" -> "MEASURED MOVEMENT · GativX™ Activity"
                             "Guru" -> "YOUR PERSONAL GROWTH COMPANION"
                             else -> "YOUR IDENTITY · DEVICES · SETTINGS"
                         },
@@ -507,7 +507,7 @@ private fun GativxAndroidScreen() {
                                             modifier = Modifier.fillMaxWidth(),
                                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD8FF3E), contentColor = Color(0xFF111820))
                                         ) {
-                                            Text(if (activeWalk == null) "Start GATIVX™ Activity" else "View active GATIVX™ Activity", fontWeight = FontWeight.Bold)
+                                            Text(if (activeWalk == null) "Start GativX™ Activity" else "View active GativX™ Activity", fontWeight = FontWeight.Bold)
                                         }
                                         Text("Your detailed movement records live in Activity. Your goals live in Mission. Your wellbeing guidance lives in Guru.", color = Color(0xFF9DAEB6), fontSize = 11.sp)
                                     }
@@ -551,17 +551,17 @@ private fun GativxAndroidScreen() {
                 }
                                                 Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF17232A))) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Text("GATIVX™ Activity · GPS ROUTE TRACKING", color = Color(0xFFD8FF3E), fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        Text("GativX™ Activity · GPS ROUTE TRACKING", color = Color(0xFFD8FF3E), fontWeight = FontWeight.Bold, fontSize = 12.sp)
                         val foreignActiveWalk = WalkOnStore.active(context) != null && activeWalk == null
                         if (foreignActiveWalk) {
-                            Text("A GATIVX™ Activity route from another account or an offline session is active. Its route details are hidden here.", color = Color(0xFFFFC66D), fontSize = 12.sp)
+                            Text("A GativX™ Activity route from another account or an offline session is active. Its route details are hidden here.", color = Color(0xFFFFC66D), fontSize = 12.sp)
                             Button(onClick = { stopWalkOn() }, enabled = !busy && !walkSyncBusy, modifier = Modifier.fillMaxWidth()) {
                                 Text("Finish active device route")
                             }
                         } else if (activeWalk != null) {
                             Text("RECORDING · %.2f km · %d GPS points".format(activeWalk!!.distanceMeters / 1000.0, activeWalk!!.points.size), color = Color.White, fontWeight = FontWeight.Bold)
                             Button(onClick = { stopWalkOn() }, enabled = !busy && !walkSyncBusy, modifier = Modifier.fillMaxWidth()) {
-                                Text("Finish & save GATIVX™ Activity")
+                                Text("Finish & save GativX™ Activity")
                             }
                         } else {
                             Text("Record a GPS route while your screen is locked. Precise location and the ongoing notification are required.", color = Color(0xFF9DAEB6), fontSize = 12.sp)
@@ -570,7 +570,7 @@ private fun GativxAndroidScreen() {
                                 enabled = !busy && !walkSyncBusy,
                                 modifier = Modifier.fillMaxWidth(),
                                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD8FF3E), contentColor = Color(0xFF111820))
-                            ) { Text("Start GATIVX™ Activity", fontWeight = FontWeight.Bold) }
+                            ) { Text("Start GativX™ Activity", fontWeight = FontWeight.Bold) }
                         }
                         val routePreviewPoints = activeWalk?.points?.takeIf { it.size > 1 }
                             ?: latestWalk?.points?.takeIf { it.size > 1 }
@@ -629,7 +629,7 @@ private fun GativxAndroidScreen() {
                         Text("STATUS", color = Color(0xFFD8FF3E), fontWeight = FontWeight.Bold, fontSize = 12.sp)
                         Spacer(Modifier.height(8.dp))
                         Text(status, color = Color.White, fontSize = 14.sp)
-                        Text("GATIVX™ reads aggregated Health Connect totals to reduce duplicate-source counting. It does not estimate missing steps or calories.", color = Color(0xFF9DAEB6), fontSize = 11.sp)
+                        Text("GativX™ reads aggregated Health Connect totals to reduce duplicate-source counting. It does not estimate missing steps or calories.", color = Color(0xFF9DAEB6), fontSize = 11.sp)
                         Text("Your session is encrypted with Android Keystore and can be revoked when you sign out.", color = Color(0xFF9DAEB6), fontSize = 11.sp)
                     }
                 }
@@ -653,8 +653,8 @@ private fun GativxAndroidScreen() {
                         Text("PRIVATE CLOUD BACKUP", color = Color.White, fontWeight = FontWeight.Bold)
                         if (session == null) {
                             Text(
-                                if (isRegistering) "Create your free GATIVX™ account to keep your walks and measured activity backed up privately."
-                                else "Sign in to access your private GATIVX™ cloud backup, or create a free account to get started.",
+                                if (isRegistering) "Create your free GativX™ account to keep your walks and measured activity backed up privately."
+                                else "Sign in to access your private GativX™ cloud backup, or create a free account to get started.",
                                 color = Color(0xFF9DAEB6),
                                 fontSize = 12.sp
                             )
@@ -663,7 +663,7 @@ private fun GativxAndroidScreen() {
                             if (isRegistering) {
                                 OutlinedTextField(value = confirmPassword, onValueChange = { confirmPassword = it }, label = { Text("Confirm password") }, visualTransformation = PasswordVisualTransformation(), singleLine = true, modifier = Modifier.fillMaxWidth())
                                 Button(onClick = { register() }, enabled = !busy, modifier = Modifier.fillMaxWidth()) {
-                                    Text(if (busy) "Creating account…" else "Create GATIVX™ Account")
+                                    Text(if (busy) "Creating account…" else "Create GativX™ Account")
                                 }
                                 TextButtonCompat(
                                     text = "Already have an account? Sign in",
@@ -671,9 +671,9 @@ private fun GativxAndroidScreen() {
                                     onClick = { isRegistering = false; password = ""; confirmPassword = "" }
                                 )
                             } else {
-                                Button(onClick = { signIn() }, enabled = !busy, modifier = Modifier.fillMaxWidth()) { Text(if (busy) "Signing in…" else "Sign in to GATIVX™") }
+                                Button(onClick = { signIn() }, enabled = !busy, modifier = Modifier.fillMaxWidth()) { Text(if (busy) "Signing in…" else "Sign in to GativX™") }
                                 TextButtonCompat(
-                                    text = "New to GATIVX™? Create a free account",
+                                    text = "New to GativX™? Create a free account",
                                     enabled = !busy,
                                     onClick = { isRegistering = true; password = ""; confirmPassword = "" }
                                 )
@@ -708,7 +708,7 @@ private fun GativxAndroidScreen() {
                                 Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF17232A))) {
                                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                         Text("PARAM IT SOLUTIONS", color = Color(0xFFD8FF3E), fontWeight = FontWeight.Bold)
-                                        Text("GATIVX™ · MOVE. GROW. EXCEL.", color = Color.White, fontWeight = FontWeight.Bold)
+                                        Text("GativX™ · MOVE. GROW. EXCEL.", color = Color.White, fontWeight = FontWeight.Bold)
                                         Text("Company information, connected devices, privacy, preferences, referrals and support belong here as their respective workflows are released.", color = Color(0xFF9DAEB6), fontSize = 12.sp)
                                     }
                                 }
@@ -905,7 +905,7 @@ internal object SupabaseApi {
     }
 
     suspend fun syncWalkSessionRoute(context: Context, session: GativxSession, walk: WalkOnSession): GativxSession = withContext(Dispatchers.IO) {
-        require(walk.ownerUserId == session.userId) { "This GATIVX™ Activity route belongs to a different account." }
+        require(walk.ownerUserId == session.userId) { "This GativX™ Activity route belongs to a different account." }
         if (walk.points.isEmpty() || walk.finishedAt == null) return@withContext session
         val cloudPoints = if (walk.points.size > 20_000) {
             (0 until 20_000).map { index -> walk.points[index * (walk.points.size - 1) / 19_999] }
@@ -937,7 +937,7 @@ internal object SupabaseApi {
             response = request("POST", "/rest/v1/rpc/sync_walk_session_route", activeSession.accessToken, body.toString())
         }
         if (response.first !in 200..299) {
-            throw IllegalStateException(parseError(response.second, "GATIVX™ Activity route cloud sync failed."))
+            throw IllegalStateException(parseError(response.second, "GativX™ Activity route cloud sync failed."))
         }
         activeSession
     }
