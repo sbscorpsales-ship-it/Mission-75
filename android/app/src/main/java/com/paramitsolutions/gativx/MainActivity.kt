@@ -14,6 +14,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -51,6 +52,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.health.connect.client.HealthConnectClient
@@ -117,6 +119,13 @@ private fun GativxAndroidScreen() {
     var status by remember { mutableStateOf("Connect Health Connect to read today's measured activity.") }
     var activeWalk by remember { mutableStateOf(WalkOnStore.active(context)?.takeIf { it.ownerUserId == session?.userId }) }
     var latestWalk by remember { mutableStateOf(session?.userId?.let { WalkOnStore.completedFor(context, it).firstOrNull() } ?: if (session == null) WalkOnStore.unassigned(context).firstOrNull() else null) }
+    var profileWeightKgText by remember(session?.userId) {
+        mutableStateOf(WalkOnStore.profileWeightKg(context, session?.userId)?.toString() ?: "")
+    }
+    var profileWeightSaveVerified by remember(session?.userId) { mutableStateOf(true) }
+    val parsedProfileWeightKg = profileWeightKgText.trim().toDoubleOrNull()
+        ?.takeIf { it.isFinite() && it in 25.0..300.0 }
+    val validProfileWeightKg = parsedProfileWeightKg.takeIf { profileWeightSaveVerified }
     var walkStatus by remember { mutableStateOf(WalkOnStore.status(context)) }
     var walkSyncBusy by remember { mutableStateOf(false) }
     var walkRevision by remember { mutableStateOf(0) }
@@ -558,6 +567,25 @@ private fun GativxAndroidScreen() {
                 Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF17232A))) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Text("WalkOn · GPS ROUTE TRACKING", color = Color(0xFFD8FF3E), fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        OutlinedTextField(
+                            value = profileWeightKgText,
+                            onValueChange = { value ->
+                                profileWeightKgText = value
+                                val validWeight = value.trim().toDoubleOrNull()
+                                    ?.takeIf { it.isFinite() && it in 25.0..300.0 }
+                                profileWeightSaveVerified = WalkOnStore.saveProfileWeightKg(context, session?.userId, validWeight)
+                                if (!profileWeightSaveVerified) {
+                                    walkStatus = "Local weight could not be encrypted and verified. Calorie estimates are disabled until storage recovers."
+                                }
+                            },
+                            label = { Text("Weight (kg) · optional · local only") },
+                            supportingText = {
+                                Text("Used for future GATIVX walking estimates. Encrypted on this device; never uploaded.")
+                            },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
                         val foreignActiveWalk = WalkOnStore.active(context) != null && activeWalk == null
                         if (foreignActiveWalk) {
                             Text("A WalkOn route from another account or an offline session is active. Its route details are hidden here.", color = Color(0xFFFFC66D), fontSize = 12.sp)
@@ -567,8 +595,16 @@ private fun GativxAndroidScreen() {
                         } else if (activeWalk != null) {
                             val currentWalk = activeWalk!!
                             val movingSeconds = GativxActivityCalculationEngine.movingDurationSeconds(currentWalk.points)
+                            val liveEstimate = GativxActivityCalculationEngine.estimateWalkingRoute(
+                                currentWalk.distanceMeters,
+                                movingSeconds,
+                                validProfileWeightKg
+                            )
                             Text("RECORDING · %.2f km · %d GPS points".format(currentWalk.distanceMeters / 1000.0, currentWalk.points.size), color = Color.White, fontWeight = FontWeight.Bold)
                             Text("ACTIVE MOVING TIME · ${movingSeconds?.let(::formatWalkDuration) ?: "Not yet available"}", color = Color(0xFFD8FF3E), fontSize = 12.sp)
+                            Text("GPS DISTANCE · MEASURED", color = Color(0xFF9DAEB6), fontSize = 10.sp)
+                            Text("ESTIMATED ACTIVE CALORIES · ${liveEstimate.activeCaloriesKcal?.let { "%.0f kcal".format(it) } ?: "Not available"}", color = Color.White, fontSize = 12.sp)
+                            Text("GATIVX estimate · v${GativxActivityCalculationEngine.VERSION} · not Health Connect", color = Color(0xFF9DAEB6), fontSize = 10.sp)
                             Button(onClick = { stopWalkOn() }, enabled = !busy && !walkSyncBusy, modifier = Modifier.fillMaxWidth()) {
                                 Text("Finish & save WalkOn")
                             }
@@ -589,10 +625,21 @@ private fun GativxAndroidScreen() {
                         }
                         latestWalk?.let { walk ->
                             val activeLabel = walk.movingDurationSeconds?.let(::formatWalkDuration) ?: "Not available"
+                            val caloriesLabel = walk.estimatedActiveCaloriesKcal?.let { "%.0f kcal".format(it) } ?: "Not available"
                             Text(
                                 "Last route · %.2f km · %s active · %d seconds elapsed · %d measured steps".format(walk.distanceMeters / 1000.0, activeLabel, walk.durationSeconds, walk.sessionSteps),
                                 color = Color.White,
                                 fontSize = 12.sp
+                            )
+                            Text("ESTIMATED ACTIVE CALORIES · $caloriesLabel", color = Color.White, fontSize = 12.sp)
+                            Text(
+                                if (walk.estimatedActiveCaloriesKcal != null) {
+                                    "GATIVX v${walk.calculationEngineVersion} · weight ${walk.weightKgUsedForEstimate} kg · not Health Connect"
+                                } else {
+                                    "No estimate stored · valid weight and GPS moving-time evidence were unavailable at save"
+                                },
+                                color = Color(0xFF9DAEB6),
+                                fontSize = 10.sp
                             )
                             Text(
                                 if (walk.synced) "CLOUD BACKUP · COMPLETE" else "SAVED ON DEVICE · BACKUP PENDING",
@@ -841,28 +888,7 @@ internal object SupabaseApi {
     suspend fun syncWalkSessionRoute(context: Context, session: GativxSession, walk: WalkOnSession): GativxSession = withContext(Dispatchers.IO) {
         require(walk.ownerUserId == session.userId) { "This WalkOn route belongs to a different account." }
         if (walk.points.isEmpty() || walk.finishedAt == null) return@withContext session
-        val cloudPoints = if (walk.points.size > 20_000) {
-            (0 until 20_000).map { index -> walk.points[index * (walk.points.size - 1) / 19_999] }
-        } else walk.points
-        val route = JSONArray()
-        cloudPoints.forEach { point ->
-            route.put(
-                JSONObject()
-                    .put("latitude", point.latitude)
-                    .put("longitude", point.longitude)
-                    .put("timestamp", point.timestampMillis)
-                    .put("accuracy", point.accuracyMeters)
-                    .put("breakBefore", point.breakBefore)
-            )
-        }
-        val body = JSONObject()
-            .put("p_session_id", walk.id)
-            .put("p_started_at", walk.startedAt)
-            .put("p_finished_at", walk.finishedAt)
-            .put("p_duration_seconds", walk.durationSeconds.coerceIn(0, 86_400))
-            .put("p_distance_m", walk.distanceMeters.coerceAtLeast(0.0))
-            .put("p_steps", walk.sessionSteps.takeIf { it > 0 }?.let { it } ?: JSONObject.NULL)
-            .put("p_route_points", route)
+        val body = WalkOnCloudPayload.route(walk)
         var activeSession = session
         var response = request("POST", "/rest/v1/rpc/sync_walk_session_route", activeSession.accessToken, body.toString())
         if (response.first == 401) {

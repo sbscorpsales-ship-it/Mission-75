@@ -7,6 +7,7 @@ import android.util.Base64
 import org.json.JSONArray
 import org.json.JSONObject
 import java.security.KeyStore
+import java.security.MessageDigest
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
@@ -32,7 +33,10 @@ internal data class WalkOnSession(
     val stepCounterLastValue: Float? = null,
     val synced: Boolean = false,
     val ownerUserId: String? = null,
-    val movingDurationSeconds: Long? = null
+    val movingDurationSeconds: Long? = null,
+    val estimatedActiveCaloriesKcal: Double? = null,
+    val weightKgUsedForEstimate: Double? = null,
+    val calculationEngineVersion: String? = null
 )
 
 /** Encrypted local storage for sensitive GPS route drafts and completed walks. */
@@ -41,6 +45,7 @@ internal object WalkOnStore {
     private const val ACTIVE_KEY = "active_route"
     private const val COMPLETED_KEY = "completed_routes"
     private const val STATUS_KEY = "status"
+    private const val PROFILE_WEIGHT_KEY_PREFIX = "profile_weight_kg:"
     private const val KEY_ALIAS = "gativx_walkon_route_key_v1"
     private const val KEYSTORE = "AndroidKeyStore"
 
@@ -103,6 +108,28 @@ internal object WalkOnStore {
             .apply()
     }
 
+    internal fun profileWeightStorageKey(ownerUserId: String?): String {
+        val scope = ownerUserId?.takeIf { it.isNotBlank() } ?: "guest"
+        val digest = MessageDigest.getInstance("SHA-256").digest(scope.toByteArray(Charsets.UTF_8))
+        return PROFILE_WEIGHT_KEY_PREFIX + digest.joinToString("") { "%02x".format(it) }
+    }
+
+    fun profileWeightKg(context: Context, ownerUserId: String?): Double? {
+        val raw = readEncrypted(context, profileWeightStorageKey(ownerUserId)) ?: return null
+        return raw.toDoubleOrNull()?.takeIf { it.isFinite() && it in 25.0..300.0 }
+    }
+
+    fun saveProfileWeightKg(context: Context, ownerUserId: String?, weightKg: Double?): Boolean {
+        val key = profileWeightStorageKey(ownerUserId)
+        if (weightKg == null) {
+            return context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+                .remove(key)
+                .commit()
+        }
+        if (!weightKg.isFinite() || weightKg !in 25.0..300.0) return false
+        return writeEncrypted(context, key, weightKg.toString())
+    }
+
     fun saveActive(context: Context, session: WalkOnSession): Boolean =
         writeEncrypted(context, ACTIVE_KEY, encodeSession(session))
 
@@ -120,16 +147,30 @@ internal object WalkOnStore {
         durationSeconds: Long,
         distanceMeters: Double,
         points: List<WalkOnPoint>,
-        movingDurationSeconds: Long? = null
+        movingDurationSeconds: Long? = null,
+        estimatedActiveCaloriesKcal: Double? = null,
+        weightKgUsedForEstimate: Double? = null,
+        calculationEngineVersion: String? = null
     ): WalkOnSession? {
         val current = active(context) ?: return null
+        val candidateCalories = estimatedActiveCaloriesKcal?.takeIf { it.isFinite() && it >= 0.0 }
+        val candidateWeight = weightKgUsedForEstimate?.takeIf { it.isFinite() && it in 25.0..300.0 }
+        val candidateEngineVersion = calculationEngineVersion?.takeIf { it.isNotBlank() }
+        val hasCompleteProvenance = candidateCalories != null &&
+            candidateWeight != null && candidateEngineVersion != null
+        val validCalories = candidateCalories.takeIf { hasCompleteProvenance }
+        val validWeight = candidateWeight.takeIf { hasCompleteProvenance }
+        val validEngineVersion = candidateEngineVersion.takeIf { hasCompleteProvenance }
         val finished = current.copy(
             finishedAt = finishedAt,
             durationSeconds = durationSeconds.coerceIn(0, 86_400),
             movingDurationSeconds = movingDurationSeconds?.coerceIn(0, 86_400),
             distanceMeters = distanceMeters.coerceAtLeast(0.0),
             points = points.toList(),
-            synced = false
+            synced = false,
+            estimatedActiveCaloriesKcal = validCalories,
+            weightKgUsedForEstimate = validWeight,
+            calculationEngineVersion = validEngineVersion
         )
         if (finished.points.isNotEmpty()) {
             val history = readSessions(context, COMPLETED_KEY)?.filterNot { it.id == finished.id }
@@ -254,13 +295,16 @@ internal object WalkOnStore {
         breakBefore = json.optBoolean("breakBefore", false)
     )
 
-    private fun encodeSession(session: WalkOnSession): String = JSONObject()
+    internal fun encodeSession(session: WalkOnSession): String = JSONObject()
         .put("id", session.id)
         .put("activity", session.activity)
         .put("startedAt", session.startedAt)
         .put("finishedAt", session.finishedAt ?: JSONObject.NULL)
         .put("durationSeconds", session.durationSeconds)
         .put("movingDurationSeconds", session.movingDurationSeconds ?: JSONObject.NULL)
+        .put("estimatedActiveCaloriesKcal", session.estimatedActiveCaloriesKcal ?: JSONObject.NULL)
+        .put("weightKgUsedForEstimate", session.weightKgUsedForEstimate ?: JSONObject.NULL)
+        .put("calculationEngineVersion", session.calculationEngineVersion ?: JSONObject.NULL)
         .put("distanceMeters", session.distanceMeters)
         .put("sessionSteps", session.sessionSteps)
         .put("stepCounterLastValue", session.stepCounterLastValue?.toDouble() ?: JSONObject.NULL)
@@ -279,6 +323,19 @@ internal object WalkOnStore {
         // A malformed point makes the encrypted record unreadable. Never
         // silently drop route points and then overwrite the original payload.
         val points = decodePointsStrict(pointsJson)
+        val candidateCalories = if (json.isNull("estimatedActiveCaloriesKcal")) null else {
+            json.optDouble("estimatedActiveCaloriesKcal").takeIf { it.isFinite() && it >= 0.0 }
+        }
+        val candidateWeight = if (json.isNull("weightKgUsedForEstimate")) null else {
+            json.optDouble("weightKgUsedForEstimate").takeIf { it.isFinite() && it in 25.0..300.0 }
+        }
+        val candidateEngineVersion = json.optString("calculationEngineVersion")
+            .takeIf { it.isNotBlank() && it != "null" }
+        val hasCompleteProvenance = candidateCalories != null &&
+            candidateWeight != null && candidateEngineVersion != null
+        val calories = candidateCalories.takeIf { hasCompleteProvenance }
+        val weightUsed = candidateWeight.takeIf { hasCompleteProvenance }
+        val engineVersion = candidateEngineVersion.takeIf { hasCompleteProvenance }
         return WalkOnSession(
             id = json.getString("id"),
             activity = json.optString("activity", "Walking"),
@@ -291,10 +348,41 @@ internal object WalkOnStore {
             sessionSteps = json.optLong("sessionSteps", 0).coerceAtLeast(0),
             stepCounterLastValue = if (json.isNull("stepCounterLastValue")) null else json.optDouble("stepCounterLastValue").toFloat(),
             synced = json.optBoolean("synced", false),
-            ownerUserId = json.optString("ownerUserId").takeIf { it.isNotBlank() && it != "null" }
+            ownerUserId = json.optString("ownerUserId").takeIf { it.isNotBlank() && it != "null" },
+            estimatedActiveCaloriesKcal = calories,
+            weightKgUsedForEstimate = weightUsed,
+            calculationEngineVersion = engineVersion
         )
     }
 
     private fun encodeSessions(sessions: List<WalkOnSession>): String =
         JSONArray().also { array -> sessions.forEach { array.put(JSONObject(encodeSession(it))) } }.toString()
+}
+
+/** Explicit route RPC allowlist. Local weight/calorie snapshots never leave encrypted storage. */
+internal object WalkOnCloudPayload {
+    fun route(walk: WalkOnSession): JSONObject {
+        val cloudPoints = if (walk.points.size > 20_000) {
+            (0 until 20_000).map { index -> walk.points[index * (walk.points.size - 1) / 19_999] }
+        } else walk.points
+        val route = JSONArray()
+        cloudPoints.forEach { point ->
+            route.put(
+                JSONObject()
+                    .put("latitude", point.latitude)
+                    .put("longitude", point.longitude)
+                    .put("timestamp", point.timestampMillis)
+                    .put("accuracy", point.accuracyMeters)
+                    .put("breakBefore", point.breakBefore)
+            )
+        }
+        return JSONObject()
+            .put("p_session_id", walk.id)
+            .put("p_started_at", walk.startedAt)
+            .put("p_finished_at", walk.finishedAt)
+            .put("p_duration_seconds", walk.durationSeconds.coerceIn(0, 86_400))
+            .put("p_distance_m", walk.distanceMeters.coerceAtLeast(0.0))
+            .put("p_steps", walk.sessionSteps.takeIf { it > 0 }?.let { it } ?: JSONObject.NULL)
+            .put("p_route_points", route)
+    }
 }

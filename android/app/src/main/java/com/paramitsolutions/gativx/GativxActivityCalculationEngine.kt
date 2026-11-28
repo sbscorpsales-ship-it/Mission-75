@@ -61,6 +61,29 @@ internal object GativxActivityCalculationEngine {
         return movingSeconds.roundToLong().coerceIn(1L, 86_400L)
     }
 
+    /**
+     * Estimate a walking session only from a valid GPS distance, accepted moving
+     * time and a locally supplied weight. Elapsed wall-clock time is never used.
+     */
+    fun estimateWalkingRoute(
+        distanceMeters: Double?,
+        movingSeconds: Long?,
+        weightKg: Double?
+    ): GativxActivityCalculationResult {
+        val validDistance = distanceMeters?.takeIf { it.isFinite() && it > 0.0 }
+        val validMovingSeconds = movingSeconds?.takeIf { it in 1L..86_400L }
+        val speedKmh = if (validDistance != null && validMovingSeconds != null) {
+            val metersPerSecond = validDistance / validMovingSeconds.toDouble()
+            metersPerSecond.takeIf { it.isFinite() && it in 0.5..8.0 }?.times(3.6)
+        } else null
+        return estimate(
+            weightKg = weightKg,
+            movingMinutes = validMovingSeconds?.div(60.0),
+            speedKmh = speedKmh,
+            activityType = "walking"
+        )
+    }
+
     fun estimate(
         weightKg: Double?,
         movingMinutes: Double?,
