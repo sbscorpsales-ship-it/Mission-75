@@ -77,6 +77,13 @@ class WalkOnStartPolicyTest {
         assertEquals(80.0, restored.weightKgUsedForEstimate!!, 0.001)
         assertEquals("1.1.2", restored.calculationEngineVersion)
 
+        val incompleteSnapshot = JSONObject(WalkOnStore.encodeSession(saved))
+            .put("calculationEngineVersion", JSONObject.NULL)
+        val incomplete = WalkOnStore.decodeSession(incompleteSnapshot)
+        assertNull(incomplete.estimatedActiveCaloriesKcal)
+        assertNull(incomplete.weightKgUsedForEstimate)
+        assertNull(incomplete.calculationEngineVersion)
+
         val payload = WalkOnCloudPayload.route(restored)
         val keys = mutableSetOf<String>()
         val iterator = payload.keys()
