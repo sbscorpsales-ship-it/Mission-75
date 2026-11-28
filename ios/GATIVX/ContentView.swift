@@ -197,6 +197,54 @@ struct ContentView: View {
         return "Estimated · GATIVX \(GATIVXActivityCalculationEngine.version) · not HealthKit"
     }
 
+    /// Saved history must use its immutable finish-time snapshot. Legacy records
+    /// may show sensor-measured GPS/pedometer distance, but cannot use today's
+    /// Profile values to recreate old stride or calorie estimates.
+    private func historicalDistanceValue(for record: ActivitySessionRecord) -> String {
+        guard let meters = record.historicalDistanceResult.meters else { return "—" }
+        return String(format: "%.2f km", meters / 1_000)
+    }
+
+    private func historicalDistanceDetail(for record: ActivitySessionRecord) -> String {
+        switch record.historicalDistanceResult.source {
+        case .gps:
+            return "GPS route · measured"
+        case .pedometer:
+            return "iPhone pedometer · measured"
+        case .strideEstimate:
+            return "Stride estimate · saved height snapshot"
+        case .unavailable:
+            if record.metricSnapshot == nil && record.steps != nil {
+                return "No historical height snapshot; stride estimate unavailable"
+            }
+            return "No valid distance evidence was saved"
+        }
+    }
+
+    private func historicalActiveCaloriesValue(for record: ActivitySessionRecord) -> String {
+        guard let calories = record.historicalActiveCaloriesKcal else { return "—" }
+        return String(format: "%.0f kcal", calories)
+    }
+
+    private func historicalActiveCaloriesDetail(for record: ActivitySessionRecord) -> String {
+        guard record.activity.caseInsensitiveCompare("Walking") == .orderedSame else {
+            return "GATIVX estimate currently supports walking only"
+        }
+        guard let snapshot = record.metricSnapshot else {
+            return "Historical weight was not recorded; calorie estimate unavailable"
+        }
+        guard snapshot.estimatedActiveCaloriesKcal != nil else {
+            if snapshot.weightKgUsedForEstimate == nil {
+                return "No valid weight was saved for this estimate"
+            }
+            if snapshot.movingTimeSeconds == nil {
+                return "No valid GPS moving-time evidence was saved"
+            }
+            return "No valid distance or calculation result was saved"
+        }
+        return "Estimated · GATIVX \(snapshot.calculationEngineVersion ?? "unknown") · not HealthKit"
+    }
+
     private func activityMetricCard(
         title: String,
         value: String,
@@ -593,6 +641,10 @@ struct ContentView: View {
                     routePoints: routePoints,
                     motionDistanceMeters: finalDistance,
                     ownerID: self.routeRecorder.activityOwnerID
+                ).withHistoricalMetricSnapshot(
+                    weightKg: self.validProfileWeightKg,
+                    heightCm: self.validProfileHeightCm,
+                    capturedAt: finishedAt
                 )
                 var history: [ActivitySessionRecord]
                 do {
@@ -1444,11 +1496,11 @@ struct ContentView: View {
                             HStack { Text(item.activity).font(.headline); Spacer(); Text(item.startedAt.formatted(date: .abbreviated, time: .shortened)).font(.caption).foregroundStyle(.secondary) }
                             HStack(spacing: 12) {
                                 Label(item.steps.map { $0.formatted() } ?? "—", systemImage: "figure.walk")
-                                Label("Distance " + activityDistanceValue(for: item), systemImage: "location")
-                                Label("Moving time " + item.activeDurationText, systemImage: "clock")
-                                Label("Estimated active calories " + activeCaloriesValue(for: item), systemImage: "flame")
+                                Label("Distance " + historicalDistanceValue(for: item), systemImage: "location")
+                                Label("Moving time " + item.historicalActiveDurationText, systemImage: "clock")
+                                Label("Estimated active calories " + historicalActiveCaloriesValue(for: item), systemImage: "flame")
                             }.font(.caption).foregroundStyle(.secondary)
-                            Text(activityDistanceDetail(for: item) + " · " + activeCaloriesDetail(for: item))
+                            Text(historicalDistanceDetail(for: item) + " · " + historicalActiveCaloriesDetail(for: item))
                                 .font(.caption2).foregroundStyle(.secondary)
                         }.padding(14).frame(maxWidth: .infinity, alignment: .leading).background(cardBackground, in: RoundedRectangle(cornerRadius: 16))
                             .accessibilityElement(children: .combine)

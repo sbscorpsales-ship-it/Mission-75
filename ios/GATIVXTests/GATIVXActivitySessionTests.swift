@@ -59,6 +59,20 @@ final class GATIVXActivitySessionTests: XCTestCase {
         XCTAssertNil(decoded.ownerID)
     }
 
+    func testLegacyActivityWithoutHistoricalMetricSnapshotDecodes() throws {
+        let record = activityRecord()
+        let encoded = try JSONEncoder().encode(record)
+        var legacyObject = try XCTUnwrap(JSONSerialization.jsonObject(with: encoded) as? [String: Any])
+        legacyObject.removeValue(forKey: "metricSnapshot")
+        let legacyData = try JSONSerialization.data(withJSONObject: legacyObject)
+
+        let decoded = try JSONDecoder().decode(ActivitySessionRecord.self, from: legacyData)
+
+        XCTAssertEqual(decoded.id, record.id)
+        XCTAssertNil(decoded.metricSnapshot,
+                      "Older activity-history files must decode without fabricated historical profile inputs.")
+    }
+
     func testMetadataOnlyImportedSessionIsNotCloudSyncEligible() {
         let metadataOnly = activityRecord(steps: nil)
         let withMeasuredSteps = activityRecord(steps: 12)
@@ -767,6 +781,133 @@ final class GATIVXActivitySessionTests: XCTestCase {
         )
         XCTAssertNil(empty.estimatedCaloriesKcal(weightKg: 80, heightCm: nil))
     }
+    func testHistoricalMetricSnapshotSurvivesLocalStoreAndProfileEdits() throws {
+        let start = Date(timeIntervalSince1970: 1_800_000_000)
+        let latitudeStep = 25.0 / 111_195.0
+        let points = (0...40).map { index in
+            GATIVXRoutePoint(
+                latitude: 15.8500 + Double(index) * latitudeStep,
+                longitude: 74.5000,
+                timestamp: start.addingTimeInterval(Double(index) * 18),
+                horizontalAccuracy: 4,
+                breakBefore: index == 0
+            )
+        }
+        let measured = ActivitySessionRecord(
+            id: UUID(),
+            activity: "Walking",
+            startedAt: start,
+            finishedAt: start.addingTimeInterval(720),
+            steps: 1_000,
+            routePoints: points,
+            motionDistanceMeters: nil
+        )
+        let saved = measured.withHistoricalMetricSnapshot(
+            weightKg: 80,
+            heightCm: 176,
+            capturedAt: start.addingTimeInterval(720)
+        )
+        let (store, directory, defaults, suiteName) = makeActivityStore()
+        defer { cleanUpActivityStore(directory, defaults: defaults, suiteName: suiteName) }
+
+        try store.save([saved])
+        let restored = try XCTUnwrap(store.load().first)
+
+        XCTAssertEqual(restored.metricSnapshot, saved.metricSnapshot)
+        XCTAssertEqual(restored.historicalDistanceResult.source, .gps)
+        XCTAssertEqual(restored.historicalDistanceResult.meters!, measured.gpsDistanceMeters, accuracy: 0.001)
+        XCTAssertEqual(restored.historicalActiveDurationSeconds, 720)
+        XCTAssertEqual(restored.historicalActiveCaloriesKcal!, 40, accuracy: 0.5)
+        XCTAssertEqual(restored.metricSnapshot?.weightKgUsedForEstimate, 80)
+        XCTAssertNil(restored.metricSnapshot?.heightCmUsedForStrideEstimate)
+
+        // A changed Profile weight may produce a different live estimate, but the
+        // saved history value must remain the one calculated at Finish & Save.
+        let recalculatedWithEditedProfile = restored.estimatedCaloriesKcal(
+            weightKg: 100,
+            heightCm: 190
+        )
+        XCTAssertNotEqual(recalculatedWithEditedProfile, restored.historicalActiveCaloriesKcal)
+        XCTAssertEqual(restored.historicalActiveCaloriesKcal!, 40, accuracy: 0.5)
+
+        // The stride fallback also retains only the height actually used at save time.
+        let strideRecord = ActivitySessionRecord(
+            id: UUID(),
+            activity: "Walking",
+            startedAt: start,
+            finishedAt: start.addingTimeInterval(60),
+            steps: 100,
+            routePoints: nil,
+            motionDistanceMeters: nil
+        ).withHistoricalMetricSnapshot(
+            weightKg: 80,
+            heightCm: 176,
+            capturedAt: start.addingTimeInterval(60)
+        )
+        XCTAssertEqual(strideRecord.historicalDistanceResult.meters!, 73.04, accuracy: 0.001)
+        XCTAssertEqual(strideRecord.metricSnapshot?.heightCmUsedForStrideEstimate, 176)
+        XCTAssertNotEqual(
+            strideRecord.distance(heightCm: 190).meters,
+            strideRecord.historicalDistanceResult.meters
+        )
+    }
+
+    func testActivityCloudPayloadAllowlistsExcludeHistoricalProfileMetrics() throws {
+        let start = Date(timeIntervalSince1970: 1_800_000_000)
+        let points = [
+            GATIVXRoutePoint(
+                latitude: 15.8500,
+                longitude: 74.5000,
+                timestamp: start,
+                horizontalAccuracy: 4,
+                breakBefore: true
+            ),
+            GATIVXRoutePoint(
+                latitude: 15.8502,
+                longitude: 74.5000,
+                timestamp: start.addingTimeInterval(18),
+                horizontalAccuracy: 4
+            )
+        ]
+        let record = ActivitySessionRecord(
+            id: UUID(),
+            activity: "Walking",
+            startedAt: start,
+            finishedAt: start.addingTimeInterval(18),
+            steps: 25,
+            routePoints: points,
+            motionDistanceMeters: nil
+        ).withHistoricalMetricSnapshot(
+            weightKg: 80,
+            heightCm: 176,
+            capturedAt: start.addingTimeInterval(18)
+        )
+        XCTAssertNotNil(record.metricSnapshot)
+
+        let stepsPayload = ActivitySessionCloudPayload.steps(record: record, steps: 25)
+        let routePayload = ActivitySessionCloudPayload.route(record: record, points: points)
+
+        XCTAssertEqual(
+            Set(stepsPayload.keys),
+            Set(["p_session_id", "p_activity", "p_started_at", "p_finished_at", "p_steps"])
+        )
+        XCTAssertEqual(
+            Set(routePayload.keys),
+            Set(["p_session_id", "p_started_at", "p_finished_at", "p_duration_seconds",
+                 "p_distance_m", "p_steps", "p_route_points"])
+        )
+
+        let serialized = try JSONSerialization.data(
+            withJSONObject: [stepsPayload, routePayload],
+            options: [.sortedKeys]
+        )
+        let json = String(decoding: serialized, as: UTF8.self).lowercased()
+        for forbidden in ["weight", "height", "calorie", "metricsnapshot", "engineversion"] {
+            XCTAssertFalse(json.contains(forbidden),
+                           "Cloud activity payload must not contain local-only key material: \(forbidden)")
+        }
+    }
+
     private func makeActivityStore() -> (ActivitySessionStore, URL, UserDefaults, String) {
         let suiteName = "GATIVXTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!

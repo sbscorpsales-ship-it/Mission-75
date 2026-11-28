@@ -30,6 +30,48 @@ struct PendingActivitySession: Codable, Identifiable, Equatable {
     var id: String { ownerID + ":" + record.id.uuidString }
 }
 
+/// Explicit cloud allowlists for completed activity sessions. Local historical
+/// profile inputs and derived estimates are deliberately not part of either RPC.
+enum ActivitySessionCloudPayload {
+    private static func timestamp(_ date: Date) -> String {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter.string(from: date)
+    }
+
+    static func steps(record: ActivitySessionRecord, steps: Int) -> [String: Any] {
+        [
+            "p_session_id": record.id.uuidString,
+            "p_activity": record.activity,
+            "p_started_at": timestamp(record.startedAt),
+            "p_finished_at": timestamp(record.finishedAt),
+            "p_steps": steps
+        ]
+    }
+
+    static func route(record: ActivitySessionRecord, points: [GATIVXRoutePoint]) -> [String: Any] {
+        let coordinates = points.map {
+            CLLocation(latitude: $0.latitude, longitude: $0.longitude)
+        }
+        var distanceMeters = 0.0
+        if coordinates.count > 1 {
+            for index in 1..<coordinates.count {
+                if points[index].breakBefore { continue }
+                distanceMeters += coordinates[index - 1].distance(from: coordinates[index])
+            }
+        }
+        return [
+            "p_session_id": record.id.uuidString,
+            "p_started_at": timestamp(record.startedAt),
+            "p_finished_at": timestamp(record.finishedAt),
+            "p_duration_seconds": max(0, min(86_400, Int(record.finishedAt.timeIntervalSince(record.startedAt)))),
+            "p_distance_m": distanceMeters,
+            "p_steps": record.steps.map { $0 as Any } ?? NSNull(),
+            "p_route_points": points.map { $0.cloudValue }
+        ]
+    }
+}
+
 /// Pure revision-aware reconciliation for completed activity uploads.
 /// A crash-recovered session can improve an already-pending payload without
 /// allowing an older in-flight acknowledgement to remove the newer revision.
@@ -254,10 +296,10 @@ final class SupabaseRESTClient: ObservableObject {
             }
             var allAcknowledged = true
             if let steps = record.steps {
-                allAcknowledged = await syncActivitySession(id: record.id, activity: record.activity, startedAt: record.startedAt, finishedAt: record.finishedAt, steps: steps) && allAcknowledged
+                allAcknowledged = await syncActivitySession(record: record, steps: steps) && allAcknowledged
             }
             if let points = record.routePoints, !points.isEmpty {
-                allAcknowledged = await syncActivitySessionRoute(id: record.id, startedAt: record.startedAt, finishedAt: record.finishedAt, steps: record.steps, points: points) && allAcknowledged
+                allAcknowledged = await syncActivitySessionRoute(record: record, points: points) && allAcknowledged
             }
             guard allAcknowledged else { continue }
             guard let current = loadActivityOutbox() else { return }
@@ -528,8 +570,8 @@ final class SupabaseRESTClient: ObservableObject {
         guard (200..<300).contains(http.statusCode) else { throw Self.serverError(data) }
     }
 
-    func syncActivitySession(id: UUID, activity: String, startedAt: Date, finishedAt: Date, steps: Int, retryAfterRefresh: Bool = true) async -> Bool {
-        guard steps >= 0, finishedAt >= startedAt else { return false }
+    func syncActivitySession(record: ActivitySessionRecord, steps: Int, retryAfterRefresh: Bool = true) async -> Bool {
+        guard steps >= 0, record.finishedAt >= record.startedAt else { return false }
         do {
             guard let token = accessToken else { throw ClientError.notSignedIn }
             var request = URLRequest(url: baseURL.appendingPathComponent("rest/v1/rpc/sync_activity_session_steps"))
@@ -537,20 +579,14 @@ final class SupabaseRESTClient: ObservableObject {
             request.setValue(publishableKey, forHTTPHeaderField: "apikey")
             request.setValue("Bearer " + token, forHTTPHeaderField: "Authorization")
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-            let formatter = ISO8601DateFormatter()
-            formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-            request.httpBody = try JSONSerialization.data(withJSONObject: [
-                "p_session_id": id.uuidString,
-                "p_activity": activity,
-                "p_started_at": formatter.string(from: startedAt),
-                "p_finished_at": formatter.string(from: finishedAt),
-                "p_steps": steps
-            ])
+            request.httpBody = try JSONSerialization.data(
+                withJSONObject: ActivitySessionCloudPayload.steps(record: record, steps: steps)
+            )
             let (data, response) = try await URLSession.shared.data(for: request)
             guard let http = response as? HTTPURLResponse else { throw ClientError.invalidResponse }
             if http.statusCode == 401 && retryAfterRefresh {
                 try await refreshSession()
-                return await syncActivitySession(id: id, activity: activity, startedAt: startedAt, finishedAt: finishedAt, steps: steps, retryAfterRefresh: false)
+                return await syncActivitySession(record: record, steps: steps, retryAfterRefresh: false)
             }
             guard (200..<300).contains(http.statusCode) else { throw Self.serverError(data) }
             status = "Activity session synced to your GATIVX account."
@@ -560,9 +596,9 @@ final class SupabaseRESTClient: ObservableObject {
             return false
         }
     }
-    func syncActivitySessionRoute(id: UUID, startedAt: Date, finishedAt: Date, steps: Int?, points: [GATIVXRoutePoint], retryAfterRefresh: Bool = true) async -> Bool {
+    func syncActivitySessionRoute(record: ActivitySessionRecord, points: [GATIVXRoutePoint], retryAfterRefresh: Bool = true) async -> Bool {
         guard !points.isEmpty else { return false }
-        guard steps == nil || (steps! >= 0 && steps! <= 200_000) else {
+        guard record.steps == nil || (record.steps! >= 0 && record.steps! <= 200_000) else {
             status = "GPS route saved on this iPhone; cloud sync is pending because the session step count is invalid."
             return false
         }
@@ -579,42 +615,22 @@ final class SupabaseRESTClient: ObservableObject {
         }
         do {
             guard let token = accessToken else { throw ClientError.notSignedIn }
-            let formatter = ISO8601DateFormatter()
-            formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
             // GPS route persistence is independent of step-session persistence.
-            // sync_activity_session_route only UPDATEs activity_sessions and fails
-            // when pedometer steps were unavailable, preventing the walk_sessions
-            // write below. The walk RPC is the canonical route-history writer.
-            // Mirror native GPS routes into walk_sessions, which the web dashboard reads.
-            let coordinates = cloudPoints.map { CLLocation(latitude: $0.latitude, longitude: $0.longitude) }
-            var distanceMeters = 0.0
-            if coordinates.count > 1 {
-                for index in 1..<coordinates.count {
-                    // A breakBefore point begins a new segment after a GPS outage,
-                    // invalid fix or implausible jump. Never count across that gap.
-                    if cloudPoints[index].breakBefore { continue }
-                    distanceMeters += coordinates[index - 1].distance(from: coordinates[index])
-                }
-            }
+            // The explicit allowlist mirrors route samples and sensor-derived
+            // distance only; local profile inputs and estimated calories stay local.
             var walkRequest = URLRequest(url: baseURL.appendingPathComponent("rest/v1/rpc/sync_walk_session_route"))
             walkRequest.httpMethod = "POST"
             walkRequest.setValue(publishableKey, forHTTPHeaderField: "apikey")
             walkRequest.setValue("Bearer " + token, forHTTPHeaderField: "Authorization")
             walkRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
-            walkRequest.httpBody = try JSONSerialization.data(withJSONObject: [
-                "p_session_id": id.uuidString,
-                "p_started_at": formatter.string(from: startedAt),
-                "p_finished_at": formatter.string(from: finishedAt),
-                "p_duration_seconds": max(0, min(86400, Int(finishedAt.timeIntervalSince(startedAt)))),
-                "p_distance_m": distanceMeters,
-                "p_steps": steps.map { $0 as Any } ?? NSNull(),
-                "p_route_points": cloudPoints.map { $0.cloudValue }
-            ])
+            walkRequest.httpBody = try JSONSerialization.data(
+                withJSONObject: ActivitySessionCloudPayload.route(record: record, points: cloudPoints)
+            )
             let (walkData, walkResponse) = try await URLSession.shared.data(for: walkRequest)
             guard let walkHTTP = walkResponse as? HTTPURLResponse else { throw ClientError.invalidResponse }
             if walkHTTP.statusCode == 401 && retryAfterRefresh {
                 try await refreshSession()
-                return await syncActivitySessionRoute(id: id, startedAt: startedAt, finishedAt: finishedAt, steps: steps, points: points, retryAfterRefresh: false)
+                return await syncActivitySessionRoute(record: record, points: points, retryAfterRefresh: false)
             }
             guard (200..<300).contains(walkHTTP.statusCode) else { throw Self.serverError(walkData) }
             status = "GPS route synced to GATIVX walking history."

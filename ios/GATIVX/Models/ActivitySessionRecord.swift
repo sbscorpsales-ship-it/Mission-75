@@ -12,6 +12,9 @@ struct ActivitySessionRecord: Codable, Identifiable, Equatable {
     let steps: Int?
     let routePoints: [GATIVXRoutePoint]?
     let motionDistanceMeters: Double?
+    /// Local-only values captured when this session was saved. This is never sent
+    /// as a whole record to Supabase; cloud payloads use explicit field allowlists.
+    let metricSnapshot: HistoricalMetricSnapshot?
 
     init(
         id: UUID,
@@ -21,7 +24,8 @@ struct ActivitySessionRecord: Codable, Identifiable, Equatable {
         steps: Int?,
         routePoints: [GATIVXRoutePoint]?,
         motionDistanceMeters: Double?,
-        ownerID: String? = nil
+        ownerID: String? = nil,
+        metricSnapshot: HistoricalMetricSnapshot? = nil
     ) {
         self.id = id
         self.ownerID = ownerID
@@ -31,6 +35,21 @@ struct ActivitySessionRecord: Codable, Identifiable, Equatable {
         self.steps = steps
         self.routePoints = routePoints
         self.motionDistanceMeters = motionDistanceMeters
+        self.metricSnapshot = metricSnapshot
+    }
+
+    /// Local historical estimate inputs and results captured at Finish & Save.
+    /// Only the inputs actually used are retained: weight for a calorie estimate,
+    /// height for a stride-distance estimate. Missing values remain unavailable.
+    struct HistoricalMetricSnapshot: Codable, Equatable {
+        let capturedAt: Date
+        let distanceMeters: Double?
+        let distanceSource: DistanceSource
+        let movingTimeSeconds: Int?
+        let estimatedActiveCaloriesKcal: Double?
+        let weightKgUsedForEstimate: Double?
+        let heightCmUsedForStrideEstimate: Double?
+        let calculationEngineVersion: String?
     }
 
     /// Distance from accepted GPS fixes. Segment breaks and invalid GPS gaps are
@@ -159,6 +178,91 @@ struct ActivitySessionRecord: Codable, Identifiable, Equatable {
         return result.status == .estimated ? result.activityPoints : nil
     }
 
+    /// Capture a stable, local-only history snapshot at Finish & Save. Later edits
+    /// to the member's Profile must not recalculate an older session with new inputs.
+    func withHistoricalMetricSnapshot(
+        weightKg: Double?,
+        heightCm: Double?,
+        capturedAt: Date = Date()
+    ) -> ActivitySessionRecord {
+        let validWeightKg = weightKg.flatMap {
+            $0.isFinite && (25...300).contains($0) ? $0 : nil
+        }
+        let validHeightCm = heightCm.flatMap {
+            $0.isFinite && (100...250).contains($0) ? $0 : nil
+        }
+        let distanceResult = distance(heightCm: validHeightCm)
+        let storedDistanceMeters = distanceResult.meters.flatMap {
+            $0.isFinite && $0 > 0 ? $0 : nil
+        }
+        let movingSeconds = activeDurationSeconds
+
+        let calculation: GATIVXActivityCalculationResult?
+        if activity.caseInsensitiveCompare("Walking") == .orderedSame,
+           let weight = validWeightKg,
+           let movingSeconds, movingSeconds > 0,
+           storedDistanceMeters != nil {
+            let candidate = activityCalculation(weightKg: weight, heightCm: validHeightCm)
+            calculation = candidate.status == .estimated ? candidate : nil
+        } else {
+            calculation = nil
+        }
+
+        let calories = calculation?.activeCaloriesKcal
+        let snapshot = HistoricalMetricSnapshot(
+            capturedAt: capturedAt,
+            distanceMeters: storedDistanceMeters,
+            distanceSource: storedDistanceMeters == nil ? .unavailable : distanceResult.source,
+            movingTimeSeconds: movingSeconds,
+            estimatedActiveCaloriesKcal: calories,
+            weightKgUsedForEstimate: calories == nil ? nil : validWeightKg,
+            heightCmUsedForStrideEstimate: distanceResult.source == .strideEstimate
+                && storedDistanceMeters != nil ? validHeightCm : nil,
+            calculationEngineVersion: calories == nil ? nil : calculation?.engineVersion
+        )
+
+        return ActivitySessionRecord(
+            id: id,
+            activity: activity,
+            startedAt: startedAt,
+            finishedAt: finishedAt,
+            steps: steps,
+            routePoints: routePoints,
+            motionDistanceMeters: motionDistanceMeters,
+            ownerID: ownerID,
+            metricSnapshot: snapshot
+        )
+    }
+
+    /// History uses the saved snapshot when present. Legacy records can still
+    /// show GPS/pedometer measurements, but never derive a stride estimate from
+    /// today's Profile height or calories from today's Profile weight.
+    var historicalDistanceResult: DistanceResult {
+        if let metricSnapshot {
+            return DistanceResult(
+                meters: metricSnapshot.distanceMeters,
+                source: metricSnapshot.distanceSource
+            )
+        }
+        return distance(heightCm: nil)
+    }
+
+    var historicalActiveDurationSeconds: Int? {
+        if let metricSnapshot {
+            return metricSnapshot.movingTimeSeconds
+        }
+        return activeDurationSeconds
+    }
+
+    var historicalActiveDurationText: String {
+        guard let seconds = historicalActiveDurationSeconds else { return "—" }
+        return String(format: "%d:%02d", seconds / 60, seconds % 60)
+    }
+
+    var historicalActiveCaloriesKcal: Double? {
+        metricSnapshot?.estimatedActiveCaloriesKcal
+    }
+
     /// A session can be uploaded to the activity cloud only when it contains
     /// a measured step count or a GPS route. Metadata-only legacy imports stay local.
     var hasCloudSyncPayload: Bool {
@@ -174,6 +278,12 @@ struct ActivitySessionRecord: Codable, Identifiable, Equatable {
             (incoming.gpsDistanceMeters == gpsDistanceMeters && incomingPoints.count > existingPoints.count)
         let mergedSteps = [steps, incoming.steps].compactMap { $0 }.max()
         let mergedMotionDistance = [motionDistanceMeters, incoming.motionDistanceMeters].compactMap { $0 }.max()
+        let metricsChanged = useIncomingRoute ||
+            mergedSteps != steps ||
+            mergedMotionDistance != motionDistanceMeters
+        let mergedMetricSnapshot = metricsChanged
+            ? incoming.metricSnapshot
+            : (metricSnapshot ?? incoming.metricSnapshot)
 
         return ActivitySessionRecord(
             id: id,
@@ -183,7 +293,8 @@ struct ActivitySessionRecord: Codable, Identifiable, Equatable {
             steps: mergedSteps,
             routePoints: useIncomingRoute ? incoming.routePoints : routePoints,
             motionDistanceMeters: mergedMotionDistance,
-            ownerID: ownerID
+            ownerID: ownerID,
+            metricSnapshot: mergedMetricSnapshot
         )
     }
 
