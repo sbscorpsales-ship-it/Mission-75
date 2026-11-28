@@ -15,7 +15,7 @@
 
     <application
         android:allowBackup="false"
-        android:label="GATIVX"
+        android:label="GativX™"
         android:supportsRtl="true"
         android:theme="@android:style/Theme.Material.Light.NoActionBar">
         <activity
