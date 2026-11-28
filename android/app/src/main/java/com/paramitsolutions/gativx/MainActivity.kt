@@ -31,6 +31,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -474,7 +475,20 @@ private fun GativxAndroidScreen() {
         }
     }
 
-    MaterialTheme {
+    MaterialTheme(
+        colorScheme = darkColorScheme(
+            primary = Color(0xFFD8FF3E),
+            onPrimary = Color(0xFF111820),
+            background = Color(0xFF0B1115),
+            onBackground = Color.White,
+            surface = Color(0xFF17232A),
+            onSurface = Color.White,
+            onSurfaceVariant = Color(0xFFB8C5CC),
+            outline = Color(0xFF9DAEB6),
+            secondary = Color(0xFFD8FF3E),
+            onSecondary = Color(0xFF111820)
+        )
+    ) {
         Surface(Modifier.fillMaxSize(), color = Color(0xFF0B1115)) {
             Column(
                 modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
@@ -989,8 +1003,12 @@ internal object SupabaseApi {
 
     private fun parseError(body: String, fallback: String): String = try {
         val json = JSONObject(body)
-        json.optString("msg").ifBlank {
-            json.optString("message").ifBlank { json.optString("error_description").ifBlank { fallback } }
+        when (json.optString("error_code")) {
+            "over_email_send_rate_limit" ->
+                "Email verification is temporarily rate-limited. Please wait at least 60 seconds before requesting another email. If you already created an account, use Sign in instead."
+            else -> json.optString("msg").ifBlank {
+                json.optString("message").ifBlank { json.optString("error_description").ifBlank { fallback } }
+            }
         }
     } catch (_: Exception) { fallback }
 }
