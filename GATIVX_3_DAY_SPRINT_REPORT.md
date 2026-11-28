@@ -6722,3 +6722,10 @@ Changes are on the existing isolated PR #137 branch; no PR was merged.
 5. Configure custom SMTP or approved Send Email Auth Hook with verified sender and test delivery to non-team inboxes; do not disable email confirmation or commit credentials.
 6. Continue implementing missing Purpose, Explore & Listen, Community, Web Hub parity, approved brand assets and shared contracts from Issues #166/#172. Preserve working features/data.
 7. No verified code or CI progress was produced in this checkpoint; this run performed independent source/artifact/log verification and documented a new Android signing-compatibility blocker. No PR was merged, no deployment was made, and no physical-device test was claimed.
+
+
+## 2026-11-28 14:53 IST — refreshed Supabase Auth evidence
+- Rechecked live project `mission75-cloud` (`crarbbsvcczwmtvxyrxo`): status `ACTIVE_HEALTHY`; organization plan is Free. Edge Functions list is empty. No SMTP/provider settings were changed.
+- Queried the 24-hour Auth log window `2026-11-27T09:20:00Z` to `2026-11-28T09:20:00Z`. It still contains exactly **10** `429 over_email_send_rate_limit` events, all from the Web Hub referer, first at `2026-11-28T05:21:05Z`, last at `06:01:53Z`. No later 429 in this window was returned.
+- The newest visible Auth events at `09:14:36Z–09:14:37Z` were three `400 invalid_credentials` password-token requests from the Web Hub referer. These are credential failures, not email-rate-limit events; the logs do not establish who initiated them.
+- No successful real email delivery to a non-team mailbox or physical handset has been evidenced. Keep new-account email verification blocked for alpha until a verified sender/custom SMTP or approved email hook is configured and tested. Do not disable email confirmation.
