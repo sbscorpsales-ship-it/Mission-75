@@ -99,6 +99,18 @@ class WalkOnStartPolicyTest {
     }
 
     @Test
+    fun localProfileWeightStorageKeyIsScopedAndDoesNotExposeAccountId() {
+        val first = WalkOnStore.profileWeightStorageKey("member-one")
+        val second = WalkOnStore.profileWeightStorageKey("member-two")
+        val guest = WalkOnStore.profileWeightStorageKey(null)
+
+        assertFalse(first == second)
+        assertFalse(first == guest)
+        assertFalse(first.contains("member-one"))
+        assertEquals(first, WalkOnStore.profileWeightStorageKey("member-one"))
+    }
+
+    @Test
     fun strictPointDecoderRetainsEveryValidPoint() {
         val point = JSONObject()
             .put("latitude", 12.9716)
