@@ -1,11 +1,11 @@
-# GATIVX Product Navigation & Information Architecture
+# GATIVX™ Product Navigation & Information Architecture
 
 Status: Founder direction captured; implementation baseline and acceptance rules.
 Date: 2026-11-28
 
 ## Product principle
 
-GATIVX is a multi-screen product, not a single long webpage and not a six-tile feature directory. Use a small number of primary destinations with meaningful nested destinations inside each. A feature has one canonical home. Other screens may show a compact summary or a deep link, but must not duplicate the full feature.
+GATIVX™ is a multi-screen product, not a single long webpage and not a six-tile feature directory. Use a small number of primary destinations with meaningful nested destinations inside each. A feature has one canonical home. Other screens may show a compact summary or a deep link, but must not duplicate the full feature.
 
 Preserve the founder-approved Design C direction: balanced iOS-first composition, portrait-first, premium and vibrant with restrained neon/lime accents, clear hierarchy, generous spacing, and deliberate screen boundaries. Do not redesign the approved visual identity while implementing navigation.
 
@@ -28,7 +28,7 @@ Canonical content:
 - Greeting and member identity (when signed in)
 - Today's goal and concise progress
 - Compact today's activity snapshot (steps, active energy, heart points only when genuinely available)
-- Primary WalkOn action and active-session state
+- Primary GATIVX™ Activity action and active-session state
 - One relevant Guru insight / next action
 - Shortcuts to the owning screens
 
@@ -38,7 +38,7 @@ Home is a summary, not the full activity history, food diary, sleep dashboard, o
 Nested destinations:
 - My Purpose / My Why
 - Goal setup and goal periods: 30, 90, 180 and 365 days
-- Mission challenges (including Mission 75)
+- Mission challenges (including personal challenges)
 - Milestones and progress
 - Habits and daily commitments
 - Achievements
@@ -48,7 +48,7 @@ Mission owns the user's goals, reasons and commitments. Guru may coach the user 
 ### 3. Activity — measured movement and exercise
 Nested destinations:
 - Today's Activity
-- WalkOn live tracking
+- GATIVX™ Activity live tracking
 - Walking / running sessions
 - Activity history and session details
 - GPS routes and route maps
@@ -61,7 +61,7 @@ Activity owns steps, recorded movement, workouts, routes and session history. Do
 Data rules:
 - Prefer measured device/provider values and show their source and freshness.
 - Unknown or unavailable values remain unknown; never invent sample values or silently estimate.
-- Clearly distinguish device-measured totals from a WalkOn session's own values to avoid double counting.
+- Clearly distinguish device-measured totals from a GATIVX™ Activity session's own values to avoid double counting.
 - Permission denial, disconnected providers, empty history and sync failure each need explicit useful states.
 - Preserve existing local records and account ownership during navigation refactors.
 
@@ -94,7 +94,7 @@ Nested destinations:
 - Appearance (system / light / dark)
 - Subscription and billing (only when implemented)
 - Referrals and rewards (only when implemented)
-- Help, support and about GATIVX
+- Help, support and about GATIVX™
 - Company information: Param IT Solutions, Belgaum; company vision, mission and values
 
 Profile owns identity and settings. Referral and reward features must not appear as functional if their flows and backend are not implemented.
@@ -117,12 +117,12 @@ Profile owns identity and settings. Referral and reward features must not appear
 - Nested destinations open as distinct screens with a clear title and back navigation; do not stack every section into one endless vertical page.
 - Use cards only when they help grouping or action. Avoid a grid of inactive feature tiles as the main experience.
 - Keep primary actions obvious; use consistent spacing, typography, iconography and restrained accent color.
-- Support Android back navigation and state restoration. Do not lose an active WalkOn session when changing screens.
+- Support Android back navigation and state restoration. Do not lose an active GATIVX™ Activity session when changing screens.
 - Keep accessibility: readable contrast, touch targets, text scaling and meaningful labels.
 
 ## Implementation truth and release gates
 
-This document defines intended product architecture; it does not claim all destinations are implemented. Existing Android code currently combines Health Connect, WalkOn, authentication and status panels in one scrollable Compose screen, and the feature hub contains tiles whose taps only update selection/status. The refactor must reuse the existing working data/service logic while moving UI responsibilities into real destinations.
+This document defines intended product architecture; it does not claim all destinations are implemented. Existing Android code currently combines Health Connect, GATIVX™ Activity, authentication and status panels in one scrollable Compose screen, and the feature hub contains tiles whose taps only update selection/status. The refactor must reuse the existing working data/service logic while moving UI responsibilities into real destinations.
 
 A destination is complete only when:
 1. It opens through real navigation.
