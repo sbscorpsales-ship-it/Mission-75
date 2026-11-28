@@ -6507,3 +6507,10 @@ Changes are on the existing isolated PR #137 branch; no PR was merged.
 6. Port the approved screens and navigation to iOS and Web Hub with Design C parity; preserve the five destinations.
 7. Continue iOS Guru/ScrollView invalid-geometry root-cause work and release warning cleanup independently.
 8. Never merge any PR. Keep PR #107 untouched and PR #112 unmerged.
+
+
+### PR #171 follow-up — 2026-11-28 13:27 IST
+- Added explicit return navigation from Purpose & Ikigai and Explore & Listen to the parent Missions context. This is a source correction made after reviewing the new routes; it supersedes the first PR #171 source head.
+- Updated `android/app/src/main/java/com/paramitsolutions/gativx/MainActivity.kt` commit: `203504e367efefc52b6869c769b870693e3a626b`; blob SHA: `81ac90c8ee8c0b7104c6b12338149ad2cb3bed20`.
+- PR #171 latest head is now `203504e367efefc52b6869c769b870693e3a626b`. The earlier run #204 / `46123519592` was started against prior head `cc3e2f4f7d49cceaf4fff94afe92a6af24020e99` and must not be treated as validation of the latest commit. A workflow run for the latest head was not yet visible at this checkpoint.
+- No final CI counts or new APK are available for the latest head. Keep installer state unchanged: PR #170 debug APK only; PR #171 has no verified artifact.
