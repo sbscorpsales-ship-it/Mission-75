@@ -86,9 +86,14 @@ checks = {
         and '.put("p_steps", walk.sessionSteps.takeIf { it > 0 }?.let { it } ?: JSONObject.NULL)' in store.split("internal object WalkOnCloudPayload", 1)[1]
     ),
     "local profile weight is encrypted and verified": (
-        "readEncrypted(context, PROFILE_WEIGHT_KEY)" in store
-        and "writeEncrypted(context, PROFILE_WEIGHT_KEY, weightKg.toString())" in store
+        "readEncrypted(context, profileWeightStorageKey(ownerUserId))" in store
+        and "writeEncrypted(context, key, weightKg.toString())" in store
         and ".commit()" in store.split("fun saveProfileWeightKg", 1)[1].split("fun saveActive", 1)[0]
+    ),
+    "local profile weight is isolated by account": (
+        "profileWeightStorageKey(session?.userId)" in activity
+        and "profileWeightKg(this, ownerUserId)" in service
+        and "MessageDigest.getInstance(\"SHA-256\")" in store
     ),
     "local calorie provenance is excluded from the cloud route allowlist": (
         "WalkOnCloudPayload.route(walk)" in activity
