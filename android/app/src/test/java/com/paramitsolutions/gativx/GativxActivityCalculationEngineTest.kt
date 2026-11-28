@@ -41,13 +41,16 @@ class GativxActivityCalculationEngineTest {
 
         val missingWeight = GativxActivityCalculationEngine.estimateWalkingRoute(1_000.0, 720L, null)
         val missingMovingTime = GativxActivityCalculationEngine.estimateWalkingRoute(1_000.0, null, 80.0)
+        val missingDistance = GativxActivityCalculationEngine.estimateWalkingRoute(null, 720L, 80.0)
         val implausibleSpeed = GativxActivityCalculationEngine.estimateWalkingRoute(10_000.0, 60L, 80.0)
 
         assertEquals(GativxActivityCalculationResult.Status.INSUFFICIENT_DATA, missingWeight.status)
         assertEquals(GativxActivityCalculationResult.Status.INSUFFICIENT_DATA, missingMovingTime.status)
+        assertEquals(GativxActivityCalculationResult.Status.INSUFFICIENT_DATA, missingDistance.status)
         assertEquals(GativxActivityCalculationResult.Status.INSUFFICIENT_DATA, implausibleSpeed.status)
         assertNull(missingWeight.activeCaloriesKcal)
         assertNull(missingMovingTime.activeCaloriesKcal)
+        assertNull(missingDistance.activeCaloriesKcal)
         assertNull(implausibleSpeed.activeCaloriesKcal)
     }
 
