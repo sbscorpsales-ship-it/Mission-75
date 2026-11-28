@@ -112,7 +112,7 @@ internal object WalkOnStore {
         )
         // A measured step-only session is still a valid activity when GPS is
         // unavailable. Never discard it merely because the route has no points.
-        if (finished.points.isEmpty() && finished.sessionSteps <= 0L) {
+        if (!WalkOnSessionRules.hasPersistableActivity(finished.points.size, finished.sessionSteps)) {
             setStatus(context, "No reliable GPS points or measured session steps were recorded. Nothing was counted; your active draft is preserved so you can retry after checking permissions.")
             return null
         }
