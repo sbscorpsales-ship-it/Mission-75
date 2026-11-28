@@ -55,3 +55,12 @@
 3. Resolve Android stable internal signing and iOS signing/provisioning before requesting in-place installation.
 4. Continue the iPhone 13 HealthKit/Core Motion and Finish & Save verification; do not add daily step samples to HealthKit without a deduplication-safe design.
 5. Keep all device statuses at Not device-tested until physical evidence exists.
+
+
+## 2026-11-28 — CI follow-up checkpoint
+
+- Android run #213 (`46146649495`) completed successfully on the source code containing the persistence fix and JVM tests: `:app:testDebugUnitTest` succeeded, all 32 static safeguards passed, `:app:assembleDebug` succeeded, and APK artifact #15264465201 was uploaded.
+- Android run #214 (`46146806480`) ran the exact JUnit XML summary step successfully: **3 tests, 0 failures, 0 errors, 0 skipped**. All 32 static safeguards also passed. The run was subsequently cancelled before its APK build/upload stage, so it is not counted as a complete build. Run #213 remains the completed APK build for the same application source.
+- iOS run #727 (`46146738909`) remains in progress. Project generation, scheme validation and the first-run permission/static validation step passed. XCTest and later packaging stages have not yet reported completion.
+- PR #171 current branch also contains this append-only report; latest report commit: `3e9f3f7406b5d08ddb620dc4b3e4b42f09087302`.
+- No physical device acceptance is claimed for Motorola, POCO C65 or iPhone 13.
