@@ -134,6 +134,16 @@ checks.update({
         and "no sample members or fabricated posts are shown" in activity
         and "Intent.ACTION_SEND" in activity
     ),
+    "Android auth fields explicitly separate typed text, field surface, labels and focus border": (
+        "OutlinedTextFieldDefaults.colors(" in activity
+        and "focusedTextColor = Color.White" in activity
+        and "unfocusedTextColor = Color.White" in activity
+        and "focusedContainerColor = Color(0xFF17232A)" in activity
+        and "unfocusedContainerColor = Color(0xFF17232A)" in activity
+        and "focusedBorderColor = Color(0xFFD8FF3E)" in activity
+        and "unfocusedBorderColor = Color(0xFF9DAEB6)" in activity
+        and activity.count("colors = authFieldColors") >= 3
+    ),
     "Android readable dark theme is applied to the app": (
         "darkColorScheme(" in activity
         and "onSurfaceVariant = Color(0xFFB8C5CC)" in activity
