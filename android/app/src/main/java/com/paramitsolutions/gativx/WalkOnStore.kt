@@ -145,6 +145,13 @@ internal object WalkOnStore {
         calculationEngineVersion: String? = null
     ): WalkOnSession? {
         val current = active(context) ?: return null
+        val validCalories = estimatedActiveCaloriesKcal?.takeIf { it.isFinite() && it >= 0.0 }
+        val validWeight = if (validCalories != null) {
+            weightKgUsedForEstimate?.takeIf { it.isFinite() && it in 25.0..300.0 }
+        } else null
+        val validEngineVersion = if (validCalories != null) {
+            calculationEngineVersion?.takeIf { it.isNotBlank() }
+        } else null
         val finished = current.copy(
             finishedAt = finishedAt,
             durationSeconds = durationSeconds.coerceIn(0, 86_400),
@@ -152,13 +159,9 @@ internal object WalkOnStore {
             distanceMeters = distanceMeters.coerceAtLeast(0.0),
             points = points.toList(),
             synced = false,
-            estimatedActiveCaloriesKcal = estimatedActiveCaloriesKcal?.takeIf { it.isFinite() && it >= 0.0 },
-            weightKgUsedForEstimate = weightKgUsedForEstimate?.takeIf {
-                it.isFinite() && it in 25.0..300.0 && estimatedActiveCaloriesKcal != null
-            },
-            calculationEngineVersion = calculationEngineVersion?.takeIf {
-                estimatedActiveCaloriesKcal != null && it.isNotBlank()
-            }
+            estimatedActiveCaloriesKcal = validCalories,
+            weightKgUsedForEstimate = validWeight,
+            calculationEngineVersion = validEngineVersion
         )
         if (finished.points.isNotEmpty()) {
             val history = readSessions(context, COMPLETED_KEY)?.filterNot { it.id == finished.id }
@@ -311,6 +314,15 @@ internal object WalkOnStore {
         // A malformed point makes the encrypted record unreadable. Never
         // silently drop route points and then overwrite the original payload.
         val points = decodePointsStrict(pointsJson)
+        val calories = if (json.isNull("estimatedActiveCaloriesKcal")) null else {
+            json.optDouble("estimatedActiveCaloriesKcal").takeIf { it.isFinite() && it >= 0.0 }
+        }
+        val weightUsed = if (calories == null || json.isNull("weightKgUsedForEstimate")) null else {
+            json.optDouble("weightKgUsedForEstimate").takeIf { it.isFinite() && it in 25.0..300.0 }
+        }
+        val engineVersion = if (calories == null) null else {
+            json.optString("calculationEngineVersion").takeIf { it.isNotBlank() && it != "null" }
+        }
         return WalkOnSession(
             id = json.getString("id"),
             activity = json.optString("activity", "Walking"),
@@ -324,14 +336,9 @@ internal object WalkOnStore {
             stepCounterLastValue = if (json.isNull("stepCounterLastValue")) null else json.optDouble("stepCounterLastValue").toFloat(),
             synced = json.optBoolean("synced", false),
             ownerUserId = json.optString("ownerUserId").takeIf { it.isNotBlank() && it != "null" },
-            estimatedActiveCaloriesKcal = if (json.isNull("estimatedActiveCaloriesKcal")) null else {
-                json.optDouble("estimatedActiveCaloriesKcal").takeIf { it.isFinite() && it >= 0.0 }
-            },
-            weightKgUsedForEstimate = if (json.isNull("weightKgUsedForEstimate")) null else {
-                json.optDouble("weightKgUsedForEstimate").takeIf { it.isFinite() && it in 25.0..300.0 }
-            },
-            calculationEngineVersion = json.optString("calculationEngineVersion")
-                .takeIf { it.isNotBlank() && it != "null" }
+            estimatedActiveCaloriesKcal = calories,
+            weightKgUsedForEstimate = weightUsed,
+            calculationEngineVersion = engineVersion
         )
     }
 
