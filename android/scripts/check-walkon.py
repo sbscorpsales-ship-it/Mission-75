@@ -167,7 +167,7 @@ checks.update({
     ),
     "Android preserves the active draft when neither GPS points nor measured steps exist": (
         "your active draft is preserved" in finish_active
-        and finish_active.index("return null", finish_active.index("if (finished.points.isEmpty() && finished.sessionSteps <= 0L)"))
+        and finish_active.index("return null", finish_active.index("if (!WalkOnSessionRules.hasPersistableActivity"))
         < finish_active.index("clearActive(context)")
     ),
     "Android verifies local account-ownership writes before continuing": (
