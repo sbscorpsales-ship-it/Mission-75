@@ -64,3 +64,51 @@
 - iOS run #727 (`46146738909`) remains in progress. Project generation, scheme validation and the first-run permission/static validation step passed. XCTest and later packaging stages have not yet reported completion.
 - PR #171 current branch also contains this append-only report; latest report commit: `3e9f3f7406b5d08ddb620dc4b3e4b42f09087302`.
 - No physical device acceptance is claimed for Motorola, POCO C65 or iPhone 13.
+
+
+## GATIVX Self-Diagnostic & Test Report — 2026-11-28 12:55 UTC
+
+### Verified Android artifact inspection
+
+- Source/PR: #171, working branch `fix/gativx-design-c-purpose-explore-20261128`
+- Completed build: Android CI run #213 / `46146649495`
+- Artifact: `GATIVX-Android-debug.zip`, artifact ID `15264465201`
+- Artifact archive SHA-256 independently checked after download: `6dee85fa0bc4ea67ef96143474b9643509e71225b8d7f6c36c554595568c1f57`
+- Archive contains one file: `app-debug.apk`, 29,676,176 bytes.
+- Extracted APK SHA-256: `dcd795be6e87af84a7f07002a2e63921682b9ee724de3bf5604cb45458d98cfe`
+- Package contents and archive integrity were inspected. APK certificate fingerprint / installed-app signer compatibility were **not** verified in this environment because Android SDK `apksigner` is unavailable here. Do not treat the archive hash as a signing-certificate fingerprint.
+- Do not uninstall existing Motorola or POCO C65 installations or clear application data to work around a signer mismatch.
+
+### Android automated checks
+
+- Completed run #213: JVM unit-test Gradle task succeeded; debug APK built and uploaded.
+- Separate exact JUnit XML summary in run #214: **3 total, 0 failures, 0 errors, 0 skipped**.
+- All **32 static safeguards** passed in run #213 and were repeated successfully in run #214 before its cancellation.
+- Run #214 was cancelled after the JUnit summary and before the remaining safeguard/build/upload steps. It is not counted as a completed APK build.
+- No real Android handset was attached to CI; sensor accuracy, Health Connect permission grant, screen-off tracking, GPS, OEM battery optimization and local save/read-back remain physical-device acceptance items.
+
+### iOS automated checks
+
+- PR #173 / CI run #727 remains in progress at the latest check.
+- Completed stages: checkout, Xcode 26 selection, XcodeGen installation, project generation, scheme validation and first-run permission validation.
+- XCTest and all subsequent entitlement/build/package stages have not yet reported completion.
+- No iPhone 13 was attached to CI. HealthKit authorization, Core Motion delivery, background behavior, actual daily-step display and Finish & Save read-back remain device acceptance items.
+- Current IPA path remains unsigned for direct handset installation unless a separate signing/provisioning step is completed.
+
+### Self-diagnostic outcome
+
+- Android activity-save fallback: **CI-tested** (three focused JVM cases plus 32 static safeguards).
+- Android debug APK artifact: **built and archive hash verified**.
+- Motorola installation / runtime tracking: **Not device-tested**.
+- POCO C65 installation / runtime tracking: **Not device-tested**.
+- iPhone first-run permission controls: **CI static validation passed; XCTest pending**.
+- iPhone 13 HealthKit / Core Motion runtime: **Not device-tested**.
+- Cross-platform account isolation, sync, background tracking and sensor values: **not accepted solely on the basis of this report**.
+
+### Immediate next actions
+
+1. Complete iOS run #727; inspect XCTest result bundle, runtime diagnostics and IPA packaging.
+2. Verify Android APK signer with Android `apksigner` and compare it with the currently installed app before any in-place update.
+3. Obtain a correctly signed iOS build before installation on iPhone 13.
+4. Run and record the same walk/save/read-back sequence on Motorola, POCO C65 and iPhone 13, separately recording OS permissions, sensor readings, GPS availability, foreground/background state, saved history after relaunch and cloud sync.
+5. Keep the three physical-device statuses as **Not device-tested** until this evidence is recorded.
