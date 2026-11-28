@@ -145,13 +145,14 @@ internal object WalkOnStore {
         calculationEngineVersion: String? = null
     ): WalkOnSession? {
         val current = active(context) ?: return null
-        val validCalories = estimatedActiveCaloriesKcal?.takeIf { it.isFinite() && it >= 0.0 }
-        val validWeight = if (validCalories != null) {
-            weightKgUsedForEstimate?.takeIf { it.isFinite() && it in 25.0..300.0 }
-        } else null
-        val validEngineVersion = if (validCalories != null) {
-            calculationEngineVersion?.takeIf { it.isNotBlank() }
-        } else null
+        val candidateCalories = estimatedActiveCaloriesKcal?.takeIf { it.isFinite() && it >= 0.0 }
+        val candidateWeight = weightKgUsedForEstimate?.takeIf { it.isFinite() && it in 25.0..300.0 }
+        val candidateEngineVersion = calculationEngineVersion?.takeIf { it.isNotBlank() }
+        val hasCompleteProvenance = candidateCalories != null &&
+            candidateWeight != null && candidateEngineVersion != null
+        val validCalories = candidateCalories.takeIf { hasCompleteProvenance }
+        val validWeight = candidateWeight.takeIf { hasCompleteProvenance }
+        val validEngineVersion = candidateEngineVersion.takeIf { hasCompleteProvenance }
         val finished = current.copy(
             finishedAt = finishedAt,
             durationSeconds = durationSeconds.coerceIn(0, 86_400),
@@ -314,15 +315,19 @@ internal object WalkOnStore {
         // A malformed point makes the encrypted record unreadable. Never
         // silently drop route points and then overwrite the original payload.
         val points = decodePointsStrict(pointsJson)
-        val calories = if (json.isNull("estimatedActiveCaloriesKcal")) null else {
+        val candidateCalories = if (json.isNull("estimatedActiveCaloriesKcal")) null else {
             json.optDouble("estimatedActiveCaloriesKcal").takeIf { it.isFinite() && it >= 0.0 }
         }
-        val weightUsed = if (calories == null || json.isNull("weightKgUsedForEstimate")) null else {
+        val candidateWeight = if (json.isNull("weightKgUsedForEstimate")) null else {
             json.optDouble("weightKgUsedForEstimate").takeIf { it.isFinite() && it in 25.0..300.0 }
         }
-        val engineVersion = if (calories == null) null else {
-            json.optString("calculationEngineVersion").takeIf { it.isNotBlank() && it != "null" }
-        }
+        val candidateEngineVersion = json.optString("calculationEngineVersion")
+            .takeIf { it.isNotBlank() && it != "null" }
+        val hasCompleteProvenance = candidateCalories != null &&
+            candidateWeight != null && candidateEngineVersion != null
+        val calories = candidateCalories.takeIf { hasCompleteProvenance }
+        val weightUsed = candidateWeight.takeIf { hasCompleteProvenance }
+        val engineVersion = candidateEngineVersion.takeIf { hasCompleteProvenance }
         return WalkOnSession(
             id = json.getString("id"),
             activity = json.optString("activity", "Walking"),
