@@ -34,6 +34,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.ui.Alignment
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -98,6 +99,28 @@ class MainActivity : ComponentActivity() {
 private fun GativxAndroidScreen() {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    // Explicit high-contrast auth field colours prevent OEM/theme defaults from
+    // making typed email/password text disappear on darker handset displays.
+    val authFieldColors = OutlinedTextFieldDefaults.colors(
+        focusedTextColor = Color.White,
+        unfocusedTextColor = Color.White,
+        disabledTextColor = Color(0xFF9DAEB6),
+        errorTextColor = Color(0xFFFFDAD6),
+        focusedContainerColor = Color(0xFF17232A),
+        unfocusedContainerColor = Color(0xFF17232A),
+        disabledContainerColor = Color(0xFF17232A),
+        errorContainerColor = Color(0xFF17232A),
+        cursorColor = Color(0xFFD8FF3E),
+        errorCursorColor = Color(0xFFFFB4AB),
+        focusedBorderColor = Color(0xFFD8FF3E),
+        unfocusedBorderColor = Color(0xFF9DAEB6),
+        disabledBorderColor = Color(0xFF60727B),
+        errorBorderColor = Color(0xFFFFB4AB),
+        focusedLabelColor = Color(0xFFD8FF3E),
+        unfocusedLabelColor = Color(0xFFB8C5CC),
+        disabledLabelColor = Color(0xFF9DAEB6),
+        errorLabelColor = Color(0xFFFFB4AB)
+    )
     val healthPermissions = remember {
         setOf(
             HealthPermission.getReadPermission(StepsRecord::class),
@@ -677,10 +700,10 @@ private fun GativxAndroidScreen() {
                                 color = Color(0xFF9DAEB6),
                                 fontSize = 12.sp
                             )
-                            OutlinedTextField(value = email, onValueChange = { email = it }, label = { Text("Email") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                            OutlinedTextField(value = password, onValueChange = { password = it }, label = { Text(if (isRegistering) "Create password (8+ characters)" else "Password") }, visualTransformation = PasswordVisualTransformation(), singleLine = true, modifier = Modifier.fillMaxWidth())
+                            OutlinedTextField(value = email, onValueChange = { email = it }, label = { Text("Email") }, singleLine = true, modifier = Modifier.fillMaxWidth(), colors = authFieldColors)
+                            OutlinedTextField(value = password, onValueChange = { password = it }, label = { Text(if (isRegistering) "Create password (8+ characters)" else "Password") }, visualTransformation = PasswordVisualTransformation(), singleLine = true, modifier = Modifier.fillMaxWidth(), colors = authFieldColors)
                             if (isRegistering) {
-                                OutlinedTextField(value = confirmPassword, onValueChange = { confirmPassword = it }, label = { Text("Confirm password") }, visualTransformation = PasswordVisualTransformation(), singleLine = true, modifier = Modifier.fillMaxWidth())
+                                OutlinedTextField(value = confirmPassword, onValueChange = { confirmPassword = it }, label = { Text("Confirm password") }, visualTransformation = PasswordVisualTransformation(), singleLine = true, modifier = Modifier.fillMaxWidth(), colors = authFieldColors)
                                 Button(onClick = { register() }, enabled = !busy, modifier = Modifier.fillMaxWidth()) {
                                     Text(if (busy) "Creating account…" else "Create GativX™ Account")
                                 }
