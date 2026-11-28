@@ -69,7 +69,9 @@ internal object WalkOnStore {
         val history = existing.map {
             if (it.ownerUserId == null && !it.synced) it.copy(ownerUserId = userId) else it
         }
-        writeEncrypted(context, COMPLETED_KEY, encodeSessions(history))
+        if (!writeEncrypted(context, COMPLETED_KEY, encodeSessions(history))) {
+            setStatus(context, "Saved route ownership could not be verified. The encrypted history remains unchanged; cloud sync was not started.")
+        }
     }
 
     fun status(context: Context): String =
@@ -108,24 +110,34 @@ internal object WalkOnStore {
             points = points.toList(),
             synced = false
         )
-        if (finished.points.isNotEmpty()) {
-            val history = readSessions(context, COMPLETED_KEY)?.filterNot { it.id == finished.id }
-                ?.toMutableList() ?: run {
-                    setStatus(context, "Saved route history could not be read. Your active route draft is preserved; no history was replaced.")
-                    return null
-                }
-            history.add(0, finished)
-            val encodedHistory = encodeSessions(history.take(100))
-            if (!writeEncrypted(context, COMPLETED_KEY, encodedHistory)) {
-                setStatus(context, "WalkOn could not verify the completed route history write. Your active GPS draft is preserved; do not clear app data.")
+        // A measured step-only session is still a valid activity when GPS is
+        // unavailable. Never discard it merely because the route has no points.
+        if (finished.points.isEmpty() && finished.sessionSteps <= 0L) {
+            setStatus(context, "No reliable GPS points or measured session steps were recorded. Nothing was counted; your active draft is preserved so you can retry after checking permissions.")
+            return null
+        }
+
+        val history = readSessions(context, COMPLETED_KEY)?.filterNot { it.id == finished.id }
+            ?.toMutableList() ?: run {
+                setStatus(context, "Saved activity history could not be read. Your active route draft is preserved; no history was replaced.")
                 return null
             }
-            setStatus(context, "WalkOn route saved and verified on this device. Cloud backup is pending.")
-        } else {
-            setStatus(context, "No reliable GPS points were recorded. No route was saved.")
+        history.add(0, finished)
+        val encodedHistory = encodeSessions(history.take(100))
+        if (!writeEncrypted(context, COMPLETED_KEY, encodedHistory)) {
+            setStatus(context, "WalkOn could not verify the completed activity history write. Your active draft is preserved; do not clear app data.")
+            return null
         }
+        setStatus(
+            context,
+            if (finished.points.isNotEmpty()) {
+                "WalkOn route saved and verified on this device. Cloud backup is pending."
+            } else {
+                "Measured walking steps saved and verified on this device. GPS route was unavailable; cloud backup is pending."
+            }
+        )
         clearActive(context)
-        return finished.takeIf { it.points.isNotEmpty() }
+        return finished
     }
 
     fun markSynced(context: Context, id: String) {
@@ -133,7 +145,9 @@ internal object WalkOnStore {
             setStatus(context, "Saved route history could not be read. The encrypted original is preserved; sync status was not changed.")
             return
         }
-        writeEncrypted(context, COMPLETED_KEY, encodeSessions(history.map { if (it.id == id) it.copy(synced = true) else it }))
+        if (!writeEncrypted(context, COMPLETED_KEY, encodeSessions(history.map { if (it.id == id) it.copy(synced = true) else it }))) {
+            setStatus(context, "Cloud sync completed, but the local sync marker could not be verified. The activity remains queued for a safe retry.")
+        }
     }
 
     private fun readSession(context: Context, key: String): WalkOnSession? {
