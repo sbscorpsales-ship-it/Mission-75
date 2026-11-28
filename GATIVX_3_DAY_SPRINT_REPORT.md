@@ -6666,3 +6666,59 @@ Changes are on the existing isolated PR #137 branch; no PR was merged.
 - PR #167 / iOS CI run #726 also produced unsigned IPA artifact ID `15249421376`. Extracted IPA SHA-256: `db8f82768c9c678863f26578cb4e810863ba80ba25c7c5cee630e8d878d102bf`. Bundle identifier `com.paramitsolutions.gativx`, minimum iOS `17.0`, version `1.0.0`. The IPA contains no `_CodeSignature` and no `embedded.mobileprovision`; it is not directly installable as delivered and requires signing (e.g. the founder's Windows/Sideloadly workflow). HealthKit entitlement availability is not verified in that unsigned package.
 - This iOS package is from the simulator-tested PR #167 head `54335ddc948d10d53a749f3a929834c3da08fb4b`, not a signed production or accepted physical-device build. Its associated simulator diagnostics still contain 1,008 CoreGraphics NaN warnings; only exploratory visual/navigation testing should be attempted after signing, not HealthKit acceptance.
 - No custom SMTP configuration or account-security setting was changed. Keep email confirmation enabled.
+
+
+---
+
+## 2026-11-28 14:50 IST — independent artifact/installability and cross-platform recheck
+
+### Live repository state
+- Re-read live GitHub repository state and PR metadata before this checkpoint.
+- Main remains `143889db3e72540fb478b76c486082f45395e9bd`.
+- Open PR search returned **70** open PRs. No merge or deployment was performed.
+- PR #171 remains open/draft/unmerged at `a3bcbec32909b622d1dc35859d8aa060b00fca66`; changed files remain `android/app/src/main/java/com/paramitsolutions/gativx/MainActivity.kt` and `android/scripts/check-walkon.py`.
+- PR #107 remains open/draft at `c19bdbd307df7048cefd86bd3e6064ac4f4e3042`; no changes made. PR #112 remains open/draft/unmerged at `b6c04d41dc67bd191ed0cf8966331eb5661a9887`.
+- PR #118 report branch remains open/draft at `a1e3dc090b22f833c6effe3daf432459a7c21d63`; this checkpoint is appended to that branch only.
+
+### Android PR #171 — exact-head CI and artifact verification
+- Exact head `a3bcbec32909b622d1dc35859d8aa060b00fca66` maps to [Android CI run #207](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/46125333076), run ID `46125333076`, job ID `140918628113`, completed/success.
+- The job ran the Python safeguard script and `gradle -p android :app:assembleDebug`. It logged **28 PASS safeguards** and `BUILD SUCCESSFUL`; there were no Android JVM unit-test or Compose UI/instrumentation-test steps in this run. Do not describe it as a full Android test pass.
+- Artifact ID `15254863413`, name `GATIVX-Android-debug`, ZIP size 10,338,891 bytes, GitHub artifact digest `sha256:074260ef8e790261f2a9e173c0dbebec693af783f4212015decebc4dd4f117e2`.
+- Downloaded artifact and extracted APK. APK size **29,676,176 bytes**; SHA-256 `bd94acca6a8f202ec51cb9cef54178c45ac35e5599939b9b6261dca2f047a228`. Parsed APK v2 signing block and recorded signer certificate SHA-256 `f1ea3642f123ded2d51806004f6282ee29170e046da666c3752cc71ae040381b`.
+- Source build configuration at `android/app/build.gradle.kts` blob `0cd0d9a3763d0fdb618caaac0dce90f5af408a90`: application ID `com.paramitsolutions.gativx`, minSdk 28 (Android 9), targetSdk 36, versionCode 1, versionName `0.1.0`.
+- **New installability finding — signing mismatch:** downloaded prior PR #170 debug APK artifact ID `15252308106` (run #203, exact PR #170 head `3b4be1337675a9e4a0e9c5dbb92444dc233d148e`) and parsed its v2 signer certificate SHA-256: `de5cd85711686c1c7ce59510ec52a8e0dc14ec79564796bf08ea000d2eade6ff`. This differs from PR #171's signer fingerprint. Android therefore cannot install PR #171 as an in-place update over the PR #170 debug-signed build. The founder's currently installed APK signer is unknown; do not tell the founder to uninstall or overwrite an existing app until its signer is compared. A stable internal signing key/protected CI secret or a separately identified fresh-install test path is needed for repeatable upgrades. Do not commit a private signing key to the repository.
+- The APK is a signed debug build suitable for a fresh-install controlled alpha on compatible Android 9+ devices, subject to the onboarding limitation below. No physical device was tested by CI.
+- The high-contrast auth-field source uses white typed text, dark field surface, lime focus border and visible unfocused border/labels for email/password/confirmation fields. This is source/CI evidence only; actual OEM rendering still needs POCO C65 and Motorola screenshots in both required appearance modes.
+
+### iOS PR #167 — latest available test package reverified
+- PR #167 remains open/draft at `54335ddc948d10d53a749f3a929834c3da08fb4b`; exact-head [iOS CI run #726](https://github.com/sbscorpsales-ship-it/Mission-75/actions/runs/46107133951) completed successfully.
+- Job `140862285046` executed 85 unit tests (0 failures) and 13 UI tests (0 failures) on an iPhone simulator. It also built the simulator app and an unsigned Release IPA. This is simulator CI evidence, not physical-device acceptance.
+- Downloaded IPA artifact ID `15249421376`; inner IPA SHA-256 `db8f82768c9c678863f26578cb4e810863ba80ba25c7c5cee630e8d878d102bf`. Inspected `Payload/GATIVX.app/Info.plist`: bundle ID `com.paramitsolutions.gativx`, version `1.0.0`, build `1`, minimum iOS `17.0`, iPhone-only device family, portrait orientation. Archive has neither `_CodeSignature` nor `embedded.mobileprovision`; it is unsigned and not installable as delivered. No IPA is ready for iPhone 11 Pro Max or iPhone 13 testing.
+- CI logs retain Release compiler warnings at `ContentView.swift:613` and `:730`; the prior diagnostics artifact records 1,008 CoreGraphics invalid-NaN warnings with UIKit ScrollView accessibility-path frames. Root cause is unresolved. Keep Issue #111 open.
+
+### Cross-platform live evidence and traceability snapshot
+| Frozen requirement / source | iOS | Android | Web Hub / shared | Current evidence and blocker |
+|---|---|---|---|---|
+| Design C five destinations; Guru contextual (#111, #166) | In progress | CI-tested | In progress | Android static check on #171 verifies Home, Activity, Missions, Community, Profile and Guru outside dock; no physical UI test. iOS founder acceptance remains blocked by #111. Existing Web Hub is not yet parity-accepted. |
+| Login text contrast, Day/Night, usable onboarding (#172 quality gate) | Not audited | CI-tested | In progress | Android explicit field colors pass a source safeguard; physical OEM render and full Day/Night verification absent. Email confirmation remains provider-limited; no successful POCO inbox proof. |
+| Purpose & Ikigai editable/savable page and Guru link (#166 founder comment 7232358044) | In progress | In progress | In progress | Android has local-only reflection prompts; full approved four-circle visual/central intersection and durable account sync are not accepted. Cross-platform parity not evidenced. |
+| Explore & Listen, four pillars, six languages and official/reputable catalogue (#166 founder comment 7232566097) | Missing | In progress | In progress | Android opens YouTube search and Music/Podcast/Guided Audio search shortcuts only. No editorially verified shared catalogue/provider integration is evidenced. |
+| Real account-scoped Community (#166 founder freeze comment 7236286183) | Missing | Missing | In progress | Android source explicitly says live feed/posts/comments/moderation are not connected and displays no fake feed; that is honest but not implementation. Secure shared backend/RLS and working UI remain missing. |
+| Activity/GPS, Finish & Save, history, sync, HealthKit/Health Connect | CI-tested | In progress | CI-tested | iOS simulator suite: 85 unit + 13 UI tests, but NaN diagnostics and physical HealthKit/GPS/background/save are unresolved. Android #171 has 28 static safeguards/build only; older #165 run #198 passed 18 JVM tests on a different head. Web #157 run #466 browser smoke passed 1440px/390px, 11 sections/search navigation; no physical/mobile browser or live backend acceptance. |
+| Web Hub approved design/auth/data and parity (#111, #166) | Not audited | Not audited | In progress | PR #157 head `32bae4f7bda8eb638015d20bf179f760dca878fa`, run #466 / `46056632791`: structural checks and Playwright smoke passed, including 1440px and 390px, but this does not establish full live auth/data, community, purpose, content or parity. |
+| Shared email verification and account onboarding | In progress | In progress | In progress | Earlier live Auth log investigation recorded 10 `429 over_email_send_rate_limit` failures; no custom SMTP change or real multi-device email receipt is verified. Keep email confirmation enabled; restrict alpha new-account testing until SMTP/provider is configured. |
+| Brand wordmark/icon and restricted company address placement (#166 founder comments 7232471960, 7233012082, 7233646200, 7233693561) | Not audited | Not audited | Not audited | Exact approved master asset placement and installed icon still require platform-by-platform source/visual/device audit. Later comment 7233693561 restricts full office address to the Company Profile, Vision/Mission/Values, in-depth Company Profile, and About the Company / The Vision Behind the App only; no routine header/footer/dashboard placement. |
+
+### Other exact-head CI evidence inspected
+- PR #165 head `899db531b646af7a19a3318084863f60b7d3d351`, run #198 / `46088750510`: 18 Android JVM tests passed, 0 failed/skipped; 28 safeguards passed; debug APK built. This is an earlier, separate head and does not validate PR #171.
+- PR #168 head `54265f97c6c2085a6fa1d51dff731056464f9192`, run #199 / `46115366074`: Android JVM tests and APK build succeeded on that separate auth-fix branch; it is not the PR #171 head.
+- PR #157 Web Hub head `32bae4f7bda8eb638015d20bf179f760dca878fa`, run #466 / `46056632791`: browser smoke verified 1440px and 390px, all 11 sections and search navigation. This is not full product acceptance.
+
+### Owner actions / next run
+1. Keep the PR #171 APK available as a fresh-install alpha only. Before an in-place update on any handset, compare its currently installed GativX signing certificate; never uninstall and risk local data just to work around a signature mismatch.
+2. Establish a stable protected internal Android signing key for repeatable alpha upgrades. The key must be stored as a protected CI secret or other secure signing service, never committed to Git. If the founder's existing app signer is not available, obtain a safe fresh-install test handset/path.
+3. Add Android JVM and Compose UI/instrumentation tests to the PR #171 workflow and run them against the exact head; retain physical POCO C65 and Motorola checks for contrast, login/guest, Health Connect, GPS, Finish & Save, history and sync.
+4. Obtain proper Apple signing/provisioning before offering an iPhone IPA; keep iPhone 11 Pro Max and iPhone 13 device acceptance blocked until signed installation, HealthKit entitlement/runtime, GPS/background and durable save are tested.
+5. Configure custom SMTP or approved Send Email Auth Hook with verified sender and test delivery to non-team inboxes; do not disable email confirmation or commit credentials.
+6. Continue implementing missing Purpose, Explore & Listen, Community, Web Hub parity, approved brand assets and shared contracts from Issues #166/#172. Preserve working features/data.
+7. No verified code or CI progress was produced in this checkpoint; this run performed independent source/artifact/log verification and documented a new Android signing-compatibility blocker. No PR was merged, no deployment was made, and no physical-device test was claimed.
